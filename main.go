@@ -2,7 +2,6 @@ package main
 
 import (
 	"embed"
-	"ffxresources/backend/spira"
 	"log"
 	"os"
 
@@ -99,7 +98,6 @@ func main() {
 			app.CollectionService,
 			app.ExtractService,
 			app.CompressService,
-			spira.Progress,
 		},
 		// Windows platform specific options
 		Windows: &windows.Options{
