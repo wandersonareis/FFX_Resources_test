@@ -1,0 +1,38 @@
+package fileFormat
+
+import "ffxresources/backend/lib"
+
+func kernelTextPacker(kernelFileInfo lib.FileInfo) error {
+	handler, err := getKernelFileHandler()
+	if err != nil {
+		return err
+	}
+
+	defer lib.RemoveFile(handler)
+
+	targetFile := kernelFileInfo.AbsolutePath
+	extractedFile := kernelFileInfo.ExtractLocation.TargetFile
+	translatedFile := kernelFileInfo.TranslatedFile
+	translatedPath := kernelFileInfo.TranslatedPath
+
+	err = lib.EnsurePathExists(translatedPath)
+	if err != nil {
+		return err
+	}
+
+	args, codeTable, err := encoderArgs()
+	if err != nil {
+		return err
+	}
+
+	defer lib.RemoveFile(codeTable)
+
+	args = append(args, targetFile, extractedFile, translatedFile)
+
+	err = lib.RunCommand(handler, args)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

@@ -1,0 +1,10 @@
+<p-dialog modal="true" [(visible)]="visible">
+  <p-editor
+    [(ngModel)]="text"
+    [style]="{ height: '320px' }"
+    (onTextChange)="onTextChange($event)"
+    maximizable="true"
+  >
+  </p-editor>
+  <button p-button type="button" (click)="saveToSpiraFile()">Close</button>
+</p-dialog>

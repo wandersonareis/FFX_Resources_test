@@ -1,0 +1,8 @@
+build/bin
+node_modules
+frontend/dist
+.angular
+package-lock.json
+package.json.md5
+.idea
+.vscode

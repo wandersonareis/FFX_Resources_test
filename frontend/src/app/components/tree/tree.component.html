@@ -1,0 +1,11 @@
+  <p-tree
+    class="w-full md:w-[30rem]"
+    [value]="files()"
+    selectionMode="single"
+    [(selection)]="file"
+    [contextMenu]="cm"
+    (onNodeExpand)="onNodeExpand($event)"
+  />
+  <p-contextMenu #cm [model]="items" />
+  <p-toast preventOpenDuplicates="true" />
+  <app-editor-modal />

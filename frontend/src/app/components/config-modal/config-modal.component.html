@@ -1,0 +1,42 @@
+<p-button icon="pi pi-cog" (onClick)="showConfigModal()" />
+<p-dialog
+  header="Configurações"
+  [modal]="true"
+  [(visible)]="visible"
+  [style]="{ width: '80%', height: '80%' }"
+>
+  <form>
+    @for (input of inputs; track input.label) {
+    <div class="flex items-center gap-1 mb-2">
+      <label
+        for="{{ input.label }}"
+        class="font-semibold w-[8rem] overflow-hidden"
+        >{{ input.label }}</label
+      >
+      <input
+        pInputText
+        id="{{ input.label }}"
+        class="flex-auto p-1 border-2 border-blue-400"
+        value="{{ input.value() }}"
+      />
+      <button
+        id="{{ input.eventName }}"
+        type="button"
+        pButton
+        icon="pi pi-folder"
+        class="w-[2rem] h-full"
+        (click)="selectDirectory(input.eventName, input.dialogTitle)"
+      ></button>
+    </div>
+    }
+
+    <div class="flex justify-end gap-2">
+      <p-button
+        label="Cancel"
+        severity="secondary"
+        (onClick)="showConfigModal()"
+      />
+      <p-button label="Save" (onClick)="saveWorkingDirectories()" />
+    </div>
+  </form>
+</p-dialog>
