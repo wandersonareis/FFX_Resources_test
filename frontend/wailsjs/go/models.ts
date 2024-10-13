@@ -121,6 +121,9 @@ export namespace main {
 	    OriginalDirectory: string;
 	    ExtractDirectory: string;
 	    TranslateDirectory: string;
+	    // Go type: lib
+	    GameLocation: any;
+	    ExtractLocation: lib.ExtractLocation;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppConfig(source);
@@ -131,7 +134,27 @@ export namespace main {
 	        this.OriginalDirectory = source["OriginalDirectory"];
 	        this.ExtractDirectory = source["ExtractDirectory"];
 	        this.TranslateDirectory = source["TranslateDirectory"];
+	        this.GameLocation = this.convertValues(source["GameLocation"], null);
+	        this.ExtractLocation = this.convertValues(source["ExtractLocation"], lib.ExtractLocation);
 	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 
 }

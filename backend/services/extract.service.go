@@ -17,11 +17,13 @@ func NewExtractService() *ExtractService {
 	}
 }
 
-func (e *ExtractService) Extract(fileInfo lib.FileInfo) {
+func (e *ExtractService) Extract(fileInfo lib.FileInfo) {	
 	var fileProcessor lib.IExtractor = spira.NewFileProcessor(e.Ctx, fileInfo)
 	if fileProcessor == nil {
-		lib.EmitError(e.Ctx, fmt.Errorf("invalid file type: %s", fileInfo.Name))
+		lib.Notify(e.Ctx, lib.SeverityError, fmt.Sprintf("invalid file type: %s", fileInfo.Name))
 		return
 	}
+	
 	fileProcessor.Extract()
+	lib.Notify(e.Ctx, lib.SeveritySuccess, "Extraction completed")
 }

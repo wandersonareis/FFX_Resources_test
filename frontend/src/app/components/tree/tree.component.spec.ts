@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { TreeComponent } from './tree.component';
+import { FfxTreeComponent } from './tree.component';
 
 describe('TreeContextMenuDemoComponent', () => {
-  let component: TreeComponent;
-  let fixture: ComponentFixture<TreeComponent>;
+  let component: FfxTreeComponent;
+  let fixture: ComponentFixture<FfxTreeComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TreeComponent]
+      imports: [FfxTreeComponent]
     })
       .compileComponents();
 
-    fixture = TestBed.createComponent(TreeComponent);
+    fixture = TestBed.createComponent(FfxTreeComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

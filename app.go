@@ -107,6 +107,17 @@ func (a *App) beforeClose(ctx context.Context) (prevent bool) {
 	if err != nil {
 		fmt.Println(err)
 	}
+
+	dialog, err := runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
+        Type:          runtime.QuestionDialog,
+        Title:         "Quit?",
+        Message:       "Are you sure you want to quit?",
+    })
+
+    if err != nil {
+        return false
+    }
+	fmt.Println(dialog)
 	return false
 }
 

@@ -37,7 +37,6 @@ func NewSpiraFolder(ctx context.Context, fileInfo lib.FileInfo) SpiraFolder {
 
 	fileInfo.RelativePath = relativePath
 
-	fileInfo.ExtractLocation = *lib.NewInteraction().ExtractLocation
 	fileInfo.ExtractLocation.TargetPath = lib.PathJoin(extractedDirectory, relativePath)
 	fileInfo.TranslatedPath = lib.PathJoin(translatedDirectory, relativePath)
 
@@ -65,6 +64,7 @@ func (d SpiraFolder) Extract() {
 		Processed:  processedCount,
 		Percentage: 0,
 	})
+	runtime.EventsEmit(d.ctx, "ShowProgress", true)
 
 	for _, fileProcessor := range fileProcessors {
 		fileProcessor.Extract()
@@ -88,27 +88,25 @@ func (d SpiraFolder) processFiles() []lib.IFileProcessor {
 
 	results, err := lib.EnumerateFilesDev(d.FileInfo.AbsolutePath)
 	if err != nil {
-		fmt.Println("Error:", err)
-		lib.EmitError(d.ctx, err)
+		lib.Notify(d.ctx, lib.SeverityError, err.Error())
 	}
 
 	for _, result := range results {
 		source, err := lib.NewSource(result)
 		if err != nil {
-			fmt.Println("Error:", err)
-			lib.EmitError(d.ctx, err)
+			lib.Notify(d.ctx, lib.SeverityError, err.Error())
 			continue
 		}
 
 		fileInfo, err := lib.CreateFileInfo(source)
 		if err != nil {
-			lib.EmitError(d.ctx, err)
+			lib.Notify(d.ctx, lib.SeverityError, err.Error())
 			continue
 		}
 
 		fileProcessor := NewFileProcessor(d.ctx, fileInfo)
 		if fileProcessor == nil {
-			lib.EmitError(d.ctx, fmt.Errorf("invalid file type: %s", fileInfo.Name))
+			lib.Notify(d.ctx, lib.SeverityError, fmt.Sprintf("invalid file type: %s", fileInfo.Name))
 			continue
 		}
 

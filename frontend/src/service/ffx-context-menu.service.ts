@@ -5,6 +5,8 @@ import { extractedEditorText, selectedFile, showEditorModal } from '../app/compo
 import { extractFileInfo } from '../utils/utils';
 import { ExtractService } from './extract.service';
 import { CompressService } from './compress.service';
+import { showProgress } from '../app/components/progress-modal/progress-modal.signal';
+import { EventsEmit } from '../../wailsjs/runtime/runtime';
 
 @Injectable({
   providedIn: 'root'
@@ -20,7 +22,7 @@ export class FfxContextMenuService {
   constructor() {
     this.items.set([
       { label: 'View', icon: 'pi pi-file', command: (event: any) => this.view() },
-      { label: 'Extract', icon: 'pi pi-download', command: (event: any) => this.extract() },
+      { label: 'Extract', icon: 'pi pi-download', command: async (event: any) => await this.extract() },
       { label: 'Import', icon: 'pi pi-upload', command: (event: any) => this.compress() },
     ]);
   }
@@ -39,10 +41,15 @@ export class FfxContextMenuService {
 
 
   async extract() {
-    const data = extractFileInfo(this.file());
-    if (!data) return;
+    //TODO: Review try catch
+    try {
+      const data = extractFileInfo(this.file());
+      if (!data) return;
 
-    await this._extractService.extraction(data);
+      await this._extractService.extraction(data);
+    } catch (error) {
+      EventsEmit("ApplicationError", error);
+    }
   }
 
   async compress() {

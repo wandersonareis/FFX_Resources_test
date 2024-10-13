@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, input, signal } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { ProgressBarModule } from 'primeng/progressbar';
@@ -20,6 +20,6 @@ const imports = [
 })
 export class ProgressModalComponent {
   visible = showProgress;
-  currentProgress = progress().Percentage;
-
+  currentProgress = progress;
+  value = input<number>(0);
 }

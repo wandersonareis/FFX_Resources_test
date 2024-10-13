@@ -36,7 +36,6 @@ func NewDcpFile(ctx context.Context, fileInfo lib.FileInfo) *DcpFile {
 	fileInfo.TranslatedFile = translatedFile
 	fileInfo.TranslatedPath = translatedPath
 
-	fileInfo.ExtractLocation = *lib.NewInteraction().ExtractLocation
 	fileInfo.ExtractLocation.GenerateTargetOutput(TxtFormatter{}, fileInfo)
 
 	return &DcpFile{
@@ -88,7 +87,7 @@ func (d DcpFile) Extract() {
 			return
 		}
 
-		fileInfo.ExtractLocation = *lib.NewInteraction().ExtractLocation
+		//fileInfo.ExtractLocation = *lib.NewInteraction().ExtractLocation
 		fileInfo.ExtractLocation.TargetFile = lib.AddExtension(fileInfo.AbsolutePath, lib.DEFAULT_TEXT_EXTENSION)
 		fileInfo.ExtractLocation.TargetPath = filepath.Dir(fileInfo.ExtractLocation.TargetFile)
 
@@ -101,7 +100,7 @@ func (d DcpFile) Extract() {
 
 		textFile := NewDcpFileParts(d.ctx, fileInfo)
 		if textFile == nil {
-			lib.InvalidFileType(d.ctx, fileInfo.Name)
+			lib.Notify(d.ctx, lib.SeverityError, fmt.Sprintf("Invalid file type: %s", fileInfo.Name))
 			return
 		}
 
@@ -156,7 +155,7 @@ func (d DcpFile) Compress() {
 
 		fileHandle := NewDcpFileParts(d.ctx, partFileInfo)
 		if fileHandle == nil {
-			lib.InvalidFileType(d.ctx, partFileInfo.Name)
+			lib.Notify(d.ctx, lib.SeverityError, fmt.Sprintf("Invalid file type: %s", partFileInfo.Name))
 			return
 		}
 		fileHandle.Compress()
