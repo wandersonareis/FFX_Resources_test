@@ -29,15 +29,9 @@ func (c *CollectionService) PopulateTree() []lib.TreeNode {
 		return nil
 	}
 
-	/* t := make([]lib.TreeNode, 0, 304)
-	err = spira.BuildFileTree(source, &t)
-	if err != nil {
-		lib.NotifyError(err)
-		return nil
-	} */
+	tree := make([]lib.TreeNode, 0, 1)
 
-
-	tree, err := spira.ListFilesAndDirectories(source, "")
+	err = spira.BuildFileTree(&tree, source)
 	if err != nil {
 		lib.NotifyError(err)
 		return nil
