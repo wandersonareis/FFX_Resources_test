@@ -15,7 +15,6 @@ const (
 	translatedDirectoryName = "translated"
 )
 
-var rootDirectory string
 var workDirectory *WorkDirectory
 
 func NewWorkDirectory() *WorkDirectory {

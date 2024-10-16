@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"ffxresources/backend/lib"
 	"ffxresources/backend/services"
+	"ffxresources/backend/spira"
 	"fmt"
 	"os"
 
@@ -17,7 +18,6 @@ type AppConfig struct {
 	ExtractDirectory   string
 	TranslateDirectory string
 	GameLocation       lib.GameLocation
-	ExtractLocation    lib.ExtractLocation
 }
 
 // App struct
@@ -46,9 +46,8 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	// Perform your setup here
 	a.ctx = ctx
-	a.ExtractService.Ctx = ctx
-	a.CollectionService.Ctx = ctx
-	a.CompressService.Ctx = ctx
+
+	lib.NewInteractionWithCtx(ctx)
 
 	config, err := a.LoadConfig(a.appConfig.filePath)
 	if err != nil {
@@ -59,12 +58,15 @@ func (a *App) startup(ctx context.Context) {
 	a.appConfig.TranslateDirectory = config.TranslateDirectory
 
 	lib.NewInteraction().GameLocation.SetPath(config.OriginalDirectory)
-	lib.NewInteraction().WorkingLocation.ExtractedDirectory = config.ExtractDirectory
-	lib.NewInteraction().WorkingLocation.TranslatedDirectory = config.TranslateDirectory
+	//lib.NewInteraction().WorkingLocation.ExtractedDirectory = config.ExtractDirectory
+	//lib.NewInteraction().WorkingLocation.TranslatedDirectory = config.TranslateDirectory
+
+	lib.NewInteraction().ExtractLocation.SetTargetDirectory(config.ExtractDirectory)
+	lib.NewInteraction().TranslateLocation.SetTargetDirectory(config.TranslateDirectory)
 
 	runtime.LogInfo(ctx, "Original startup: "+lib.NewInteraction().GameLocation.GetPath())
-	runtime.LogInfo(ctx, "Extracted startup: "+lib.NewInteraction().WorkingLocation.ExtractedDirectory)
-	runtime.LogInfo(ctx, "Translated startup: "+lib.NewInteraction().WorkingLocation.TranslatedDirectory)
+	runtime.LogInfo(ctx, "Extracted startup: "+lib.NewInteraction().ExtractLocation.TargetDirectory)
+	runtime.LogInfo(ctx, "Translated startup: "+lib.NewInteraction().TranslateLocation.TargetDirectory)
 }
 
 // domReady is called after front-end resources have been loaded
@@ -91,6 +93,8 @@ func (a App) domReady(ctx context.Context) {
 		fmt.Println("GetGameLocationDirectory", data)
 		runtime.EventsEmit(ctx, "GameDirectory_value", lib.NewInteraction().GameLocation.GetPath())
 	})
+
+	spira.TestExtractFile("F:\\ffxWails\\FFX_Resources\\build\\bin\\data\\ffx_ps2\\ffx2\\master\\new_uspc\\menu")
 }
 
 // beforeClose is called when the application is about to quit,
@@ -99,8 +103,9 @@ func (a App) domReady(ctx context.Context) {
 func (a *App) beforeClose(ctx context.Context) (prevent bool) {
 	config := AppConfig{
 		OriginalDirectory:  lib.NewInteraction().GameLocation.GetPath(),
-		ExtractDirectory:   lib.NewInteraction().WorkingLocation.ExtractedDirectory,
-		TranslateDirectory: lib.NewInteraction().WorkingLocation.TranslatedDirectory,
+		ExtractDirectory:   lib.NewInteraction().ExtractLocation.TargetDirectory,
+		TranslateDirectory: lib.NewInteraction().TranslateLocation.TargetDirectory,
+		GameLocation:       *lib.NewInteraction().GameLocation,
 	}
 
 	err := a.SaveConfig(config)
@@ -109,14 +114,14 @@ func (a *App) beforeClose(ctx context.Context) (prevent bool) {
 	}
 
 	dialog, err := runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
-        Type:          runtime.QuestionDialog,
-        Title:         "Quit?",
-        Message:       "Are you sure you want to quit?",
-    })
+		Type:    runtime.QuestionDialog,
+		Title:   "Quit?",
+		Message: "Are you sure you want to quit?",
+	})
 
-    if err != nil {
-        return false
-    }
+	if err != nil {
+		return false
+	}
 	fmt.Println(dialog)
 	return false
 }

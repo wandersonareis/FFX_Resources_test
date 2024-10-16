@@ -1,4 +1,4 @@
-package fileFormat
+package formats
 
 import (
 	"context"
@@ -10,32 +10,21 @@ type kernelFile struct {
 	FileInfo lib.FileInfo
 }
 
-func NewKernel(ctx context.Context, fileInfo lib.FileInfo) lib.IFileProcessor {	
-	translatedDirectory, err := lib.NewInteraction().WorkingLocation.ProvideTranslatedDirectory()
-	if err != nil {
-		lib.EmitError(ctx, err)
-		return nil
-	}
-
+func NewKernel(fileInfo lib.FileInfo) lib.IFileProcessor {
 	relativePath, err := lib.GetRelativePathFromMarker(fileInfo)
 	if err != nil {
-		lib.EmitError(ctx, err)
+		lib.NotifyError(err)
 		return nil
 	}
 
 	fileInfo.RelativePath = relativePath
 
-	translatedFile, translatedPath := lib.GeneratedTranslatedOutput(fileInfo, translatedDirectory)
-
-	fileInfo.TranslatedFile = translatedFile
-	fileInfo.TranslatedPath = translatedPath
-
-	fileInfo.ExtractLocation = *lib.NewExtractLocation()
-
 	fileInfo.ExtractLocation.GenerateTargetOutput(TxtFormatter{}, fileInfo)
+	fileInfo.TranslateLocation.GenerateTargetOutput(TxtFormatter{}, fileInfo)
+	fileInfo.ImportLocation.GenerateTargetOutput(TxtFormatter{}, fileInfo)
 
 	return &kernelFile{
-		ctx:      ctx,
+		ctx:      lib.NewInteraction().Ctx,
 		FileInfo: fileInfo,
 	}
 }
@@ -47,7 +36,7 @@ func (k kernelFile) GetFileInfo() lib.FileInfo {
 func (k kernelFile) Extract() {
 	err := kernelUnpacker(k.GetFileInfo())
 	if err != nil {
-		lib.EmitError(k.ctx, err)
+		lib.NotifyError(err)
 		return
 	}
 }
@@ -55,7 +44,7 @@ func (k kernelFile) Extract() {
 func (k kernelFile) Compress() {
 	err := kernelTextPacker(k.FileInfo)
 	if err != nil {
-		lib.EmitError(k.ctx, err)
+		lib.NotifyError(err)
 		return
 	}
 }

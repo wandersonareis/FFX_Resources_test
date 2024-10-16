@@ -1,4 +1,4 @@
-package fileFormat
+package formats
 
 import "ffxresources/backend/lib"
 

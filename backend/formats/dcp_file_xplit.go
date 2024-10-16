@@ -1,9 +1,9 @@
-package fileFormat
+package formats
 
 import "ffxresources/backend/lib"
 
 func dcpFileXpliter(fileInfo lib.FileInfo) error {
-	xpliterHandler, err := getDcpFileXpliterDev()
+	xpliterHandler, err := GetDcpXplitHandler()
 	if err != nil {
 		return err
 	}

@@ -4,8 +4,6 @@ import (
 	"context"
 	"ffxresources/backend/lib"
 	"fmt"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type SpiraFolder struct {
@@ -13,14 +11,8 @@ type SpiraFolder struct {
 	FileInfo lib.FileInfo
 }
 
-type Progress struct {
-	Total      int `json:"total"`
-	Processed  int `json:"processed"`
-	Percentage int `json:"percentage"`
-}
-
-func NewSpiraFolder(ctx context.Context, fileInfo lib.FileInfo) SpiraFolder {
-	extractedDirectory, err := lib.NewInteraction().ExtractLocation.ProvideTargetDirectory()
+func NewSpiraFolder(fileInfo lib.FileInfo, extractPath, translatePath string) *SpiraFolder {
+	/* extractedDirectory, err := lib.NewInteraction().ExtractLocation.ProvideTargetDirectory()
 	if err != nil {
 		lib.EmitError(ctx, err)
 	}
@@ -28,20 +20,21 @@ func NewSpiraFolder(ctx context.Context, fileInfo lib.FileInfo) SpiraFolder {
 	translatedDirectory, err := lib.GetWorkdirectory().ProvideTranslatedDirectory()
 	if err != nil {
 		lib.EmitError(ctx, err)
-	}
+	} */
 
 	relativePath, err := lib.GetRelativePathFromMarker(fileInfo)
 	if err != nil {
-		lib.EmitError(ctx, err)
+		lib.NotifyError(err)
+		return nil
 	}
 
 	fileInfo.RelativePath = relativePath
 
-	fileInfo.ExtractLocation.TargetPath = lib.PathJoin(extractedDirectory, relativePath)
-	fileInfo.TranslatedPath = lib.PathJoin(translatedDirectory, relativePath)
+	fileInfo.ExtractLocation.TargetPath = lib.PathJoin(extractPath, relativePath)
+	fileInfo.TranslateLocation.TargetPath = lib.PathJoin(translatePath, relativePath)
 
-	return SpiraFolder{
-		ctx:      ctx,
+	return &SpiraFolder{
+		ctx:      lib.NewInteraction().Ctx,
 		FileInfo: fileInfo,
 	}
 }
@@ -50,28 +43,25 @@ func (d SpiraFolder) GetFileInfo() lib.FileInfo {
 	return d.FileInfo
 }
 
-func sendProgress(ctx context.Context, progress Progress) {
-	runtime.EventsEmit(ctx, "Progress", progress)
-}
-
 func (d SpiraFolder) Extract() {
 	fileProcessors := d.processFiles()
 	totalFiles := len(fileProcessors)
 	processedCount := 0
 
-	sendProgress(d.ctx, Progress{
+	lib.SendProgress(d.ctx, lib.Progress{
 		Total:      totalFiles,
 		Processed:  processedCount,
 		Percentage: 0,
 	})
-	runtime.EventsEmit(d.ctx, "ShowProgress", true)
+
+	lib.ShowProgressBar(d.ctx)
 
 	for _, fileProcessor := range fileProcessors {
 		fileProcessor.Extract()
 
 		processedCount++
 
-		sendProgress(d.ctx, Progress{Total: totalFiles, Processed: processedCount, Percentage: processedCount * 100 / totalFiles})
+		lib.SendProgress(d.ctx, lib.Progress{Total: totalFiles, Processed: processedCount, Percentage: processedCount * 100 / totalFiles})
 	}
 }
 
@@ -88,25 +78,25 @@ func (d SpiraFolder) processFiles() []lib.IFileProcessor {
 
 	results, err := lib.EnumerateFilesDev(d.FileInfo.AbsolutePath)
 	if err != nil {
-		lib.Notify(d.ctx, lib.SeverityError, err.Error())
+		lib.NotifyError(err)
 	}
 
 	for _, result := range results {
 		source, err := lib.NewSource(result)
 		if err != nil {
-			lib.Notify(d.ctx, lib.SeverityError, err.Error())
+			lib.NotifyError(err)
 			continue
 		}
 
 		fileInfo, err := lib.CreateFileInfo(source)
 		if err != nil {
-			lib.Notify(d.ctx, lib.SeverityError, err.Error())
+			lib.NotifyError(err)
 			continue
 		}
 
-		fileProcessor := NewFileProcessor(d.ctx, fileInfo)
+		fileProcessor := NewFileProcessor(fileInfo)
 		if fileProcessor == nil {
-			lib.Notify(d.ctx, lib.SeverityError, fmt.Sprintf("invalid file type: %s", fileInfo.Name))
+			lib.NotifyError(fmt.Errorf("invalid file type: %s", fileInfo.Name))
 			continue
 		}
 

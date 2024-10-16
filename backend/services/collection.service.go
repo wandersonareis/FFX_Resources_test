@@ -1,21 +1,14 @@
 package services
 
 import (
-	"context"
 	"ffxresources/backend/lib"
 	"ffxresources/backend/spira"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-type CollectionService struct {
-	Ctx context.Context
-}
+type CollectionService struct{}
 
 func NewCollectionService() *CollectionService {
-	return &CollectionService{
-		Ctx: nil,
-	}
+	return &CollectionService{}
 }
 
 func (c *CollectionService) PopulateTree() []lib.TreeNode {
@@ -26,19 +19,19 @@ func (c *CollectionService) PopulateTree() []lib.TreeNode {
 
 	err := lib.NewInteraction().GameLocation.IsSpira()
 	if err != nil {
-		runtime.EventsEmit(c.Ctx, "ApplicationError", err.Error())
+		lib.NotifyError(err)
 		return nil
 	}
-	
+
 	source, err := lib.NewSource(path)
 	if err != nil {
-		runtime.EventsEmit(c.Ctx, "ApplicationError", err.Error())
+		lib.NotifyError(err)
 		return nil
 	}
 
 	tree, err := spira.ListFilesAndDirectories(source, "")
 	if err != nil {
-		runtime.EventsEmit(c.Ctx, "ApplicationError", err.Error())
+		lib.NotifyError(err)
 		return nil
 	}
 	return tree

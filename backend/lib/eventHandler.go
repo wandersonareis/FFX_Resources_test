@@ -21,7 +21,6 @@ const (
 	SeverityError
 )
 
-
 func (nt Severity) String() string {
 	switch nt {
 	case SeveritySuccess:
@@ -42,13 +41,30 @@ func EmitError(ctx context.Context, err error) {
 	runtime.LogDebug(ctx, err.Error())
 }
 
-func Notify(ctx context.Context, notification Severity, message string) {
+func Notify(notification Severity, message string) {
+	context := NewInteraction().Ctx
 	notify := Notification{
 		Message:  message,
 		Severity: notification.String(),
 	}
 
-	runtime.EventsEmit(ctx, "Notify", notify)
-	runtime.LogPrint(ctx, message)
+	runtime.EventsEmit(context, "Notify", notify)
+	runtime.LogPrint(context, message)
 	fmt.Println(message)
+}
+
+func NotifyError(err error) {
+	Notify(SeverityError, err.Error())
+}
+
+func NotifyInfo(message string) {
+	Notify(SeverityInfo, message)
+}
+
+func NotifyWarn(message string) {
+	Notify(SeverityWarn, message)
+}
+
+func NotifySuccess(message string) {
+	Notify(SeveritySuccess, message)
 }

@@ -1,23 +1,45 @@
 package lib
 
+import "context"
+
 type Interaction struct {
-	ExtractLocation *ExtractLocation
-	GameLocation    *GameLocation
-	WorkingLocation *WorkDirectory
+	Ctx               context.Context
+	GameLocation      *GameLocation
+	ExtractLocation   *ExtractLocation
+	TranslateLocation *TranslateLocation
+	ImportLocation    *ImportLocation
+	TempProvider      *TempProvider
+	WorkingLocation   *WorkDirectory
 }
 
-var ffx2_marker = "ffx_ps2"
-var interaction *Interaction
+const ffx2_marker = "ffx_ps2"
+
+var rootDirectory = GetExecDir()
+var rootDirectoryName = ""
+var interactionInstance *Interaction
 
 func NewInteraction() *Interaction {
-	if interaction == nil {
-		interaction = &Interaction{
-			ExtractLocation: NewExtractLocation(),
-			GameLocation:    NewGameLocation(),
-			WorkingLocation: NewWorkDirectory(),
+	if interactionInstance == nil {
+		interactionInstance = &Interaction{
+			Ctx:               context.Background(),
+			GameLocation:      NewGameLocation(),
+			ExtractLocation:   NewExtractLocation(),
+			TranslateLocation: NewTranslateLocation(),
+			ImportLocation:    NewImportLocation(),
+			TempProvider:      NewTempProvider(),
+			WorkingLocation:   NewWorkDirectory(),
 		}
 	}
-	return interaction
+	return interactionInstance
+}
+
+func NewInteractionWithCtx(ctx context.Context) *Interaction {
+	if interactionInstance == nil {
+		interactionInstance = NewInteraction()
+	}
+
+	interactionInstance.Ctx = ctx
+	return interactionInstance
 }
 
 func GetPathMarker() string {

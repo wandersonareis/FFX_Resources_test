@@ -1,19 +1,20 @@
-package fileFormat
+package formats
 
 import "ffxresources/backend/lib"
 
-func dialogsTextPacker(dialogsFileInfo lib.FileInfo) error {
-	handler, err := getDialogsFileHandler()
+func kernelTextPacker(kernelFileInfo lib.FileInfo) error {
+	handler, err := getKernelFileHandler()
 	if err != nil {
 		return err
 	}
 
 	defer lib.RemoveFile(handler)
 
-	targetFile := dialogsFileInfo.AbsolutePath
-	extractedFile := dialogsFileInfo.ExtractLocation.TargetFile
-	translatedFile := dialogsFileInfo.TranslatedFile
-	translatedPath := dialogsFileInfo.TranslatedPath
+	targetFile := kernelFileInfo.AbsolutePath
+	extractedFile := kernelFileInfo.ExtractLocation.TargetFile
+	translatedFile := kernelFileInfo.TranslateLocation.TargetFile
+	translatedPath := kernelFileInfo.TranslateLocation.TargetPath
+
 	err = lib.EnsurePathExists(translatedPath)
 	if err != nil {
 		return err

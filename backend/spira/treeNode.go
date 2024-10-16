@@ -1,9 +1,6 @@
 package spira
 
-import (
-	"context"
-	"ffxresources/backend/lib"
-)
+import "ffxresources/backend/lib"
 
 func getTreeNodeIcon(source *lib.Source) string {
 	var icon string
@@ -34,10 +31,17 @@ func generateNode(key string, source *lib.Source) (lib.TreeNode, error) {
 		return lib.TreeNode{}, err
 	}
 
+	fileProcessor := NewFileProcessor(fileInfo)
+	if fileProcessor == nil {
+		return lib.TreeNode{}, nil
+	}
+
+	dataInfo := fileProcessor.GetFileInfo()
+
 	var node = lib.TreeNode{
 		Key:   key,
 		Label: source.Name,
-		Data:  NewFileProcessor(context.Background(), fileInfo).GetFileInfo(),
+		Data:  dataInfo,
 	}
 
 	return node, nil

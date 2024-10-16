@@ -45,23 +45,7 @@ func createHandlerFile(targetFile string, bytes []byte) error {
 	return nil
 }
 
-func GetCharacterTable() (string, error) {
-	targetHandler := []string{
-		interaction.WorkingLocation.WorkDirectoryName,
-		FFX_CODE_TABLE_NAME,
-	}
-
-	targetFile := filepath.Join(interaction.WorkingLocation.WorkDirectory, FFX_CODE_TABLE_NAME)
-
-	err := GetFileFromResources(targetHandler, targetFile)
-	if err != nil {
-		return "", err
-	}
-
-	return targetFile, nil
-}
-
-func GetDcpXplitHandler() (string, error) {
+/* func GetDcpXplitHandler() (string, error) {
 	targetHandler := []string{
 		interaction.WorkingLocation.WorkDirectoryName,
 		DCP_FILE_XPLITTER_APPLICATION,
@@ -74,37 +58,7 @@ func GetDcpXplitHandler() (string, error) {
 	}
 
 	return targetFile, nil
-}
-
-func GetDialogsHandler() (string, error) {
-	targetHandler := []string{
-		interaction.WorkingLocation.WorkDirectoryName,
-		DIALOG_HANDLER_APPLICATION,
-	}
-
-	targetFile := filepath.Join(interaction.WorkingLocation.WorkDirectory, DIALOG_HANDLER_APPLICATION)
-	err := GetFileFromResources(targetHandler, targetFile)
-	if err != nil {
-		return "", err
-	}
-
-	return targetFile, nil
-}
-
-func GetKernelHandler() (string, error) {
-	targetHandler := []string{
-		interaction.WorkingLocation.WorkDirectoryName,
-		KERNEL_HANDLER_APPLICATION,
-	}
-
-	targetFile := filepath.Join(interaction.WorkingLocation.WorkDirectory, KERNEL_HANDLER_APPLICATION)
-	err := GetFileFromResources(targetHandler, targetFile)
-	if err != nil {
-		return "", err
-	}
-
-	return targetFile, nil
-}
+} */
 
 func GetFileFromResources(targetLocation []string, targetFile string) error {
 	EnsurePathExists(targetFile)

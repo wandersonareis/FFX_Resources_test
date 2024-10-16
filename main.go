@@ -68,11 +68,11 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:             "FFX Resources",
-		Width:             800,
-		Height:            450,
-		MinWidth:          700,
-		MinHeight:         450,
+		Title:     "FFX Resources",
+		Width:     800,
+		Height:    450,
+		MinWidth:  700,
+		MinHeight: 450,
 		//MaxWidth:          1280,
 		//MaxHeight:         800,
 		DisableResize:     false,
@@ -87,7 +87,7 @@ func main() {
 		Menu:                     AppMenu,
 		EnableDefaultContextMenu: true,
 		Logger:                   nil,
-		LogLevel:                 logger.INFO,
+		LogLevel:                 logger.TRACE,
 		OnStartup:                app.startup,
 		OnDomReady:               app.domReady,
 		OnBeforeClose:            app.beforeClose,

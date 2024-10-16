@@ -30,7 +30,6 @@ func WriteFile(path, content string) error {
 	return os.WriteFile(path, []byte(content), 0644)
 }
 
-
 func WriteBytesToFile(file string, data []byte) error {
 	f, err := os.Create(file)
 	if err != nil {
@@ -57,6 +56,8 @@ func guessBySpiraFileType(path string) NodeType {
 		return Tutorial
 	case ".dcp":
 		return Dcp
+	case ".000", ".001", ".002", ".003", ".004", ".005", ".006":
+		return DcpParts
 	default:
 		return File
 	}
@@ -72,8 +73,13 @@ func AddExtension(path, newExt string) string {
 	if ext == newExt {
 		return path
 	}
-	
+
 	return path + newExt
+}
+
+func RemoveFileExtension(filePath string) string {
+	ext := filepath.Ext(filePath)
+	return filePath[:len(filePath)-len(ext)]
 }
 
 func CountSeparators(fileInfo FileInfo) int {
@@ -87,7 +93,11 @@ func CountSeparators(fileInfo FileInfo) int {
 }
 
 func EnsureWindowsFormat(fileInfo FileInfo) error {
-	file, err := os.Open(fileInfo.ExtractLocation.TargetFile)
+	if fileInfo.Type == Dcp {
+		return nil
+	}
+
+	file, err := os.Open(fileInfo.TranslateLocation.TargetFile)
 	if err != nil {
 		return fmt.Errorf("error when opening the file: %s", err)
 	}
@@ -97,11 +107,10 @@ func EnsureWindowsFormat(fileInfo FileInfo) error {
 	if err != nil {
 		return fmt.Errorf("error when reading the file: %s", err)
 	}
-	text = "teste"
 
 	ensureStartEndLineBreaks(&text)
 
-	err = WriteFile(fileInfo.ExtractLocation.TargetFile, text)
+	err = WriteFile(fileInfo.TranslateLocation.TargetFile, text)
 	if err != nil {
 		return fmt.Errorf("error saving the modified file: %s", err)
 	}

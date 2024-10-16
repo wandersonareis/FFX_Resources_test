@@ -1,9 +1,9 @@
-package fileFormat
+package formats
 
 import "ffxresources/backend/lib"
 
 func dialogsUnpacker(dialogsFileInfo lib.FileInfo) error {
-	handler, err := getDialogsFileHandler()
+	handler, err := getDialogsHandler()
 	if err != nil {
 		return err
 	}

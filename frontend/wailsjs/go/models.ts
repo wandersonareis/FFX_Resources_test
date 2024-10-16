@@ -20,8 +20,47 @@ export namespace lib {
 	        this.IsExist = source["IsExist"];
 	    }
 	}
+	export class ImportLocation {
+	    TargetDirectoryName: string;
+	    TargetDirectory: string;
+	    TargetFile: string;
+	    TargetPath: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ImportLocation(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.TargetDirectoryName = source["TargetDirectoryName"];
+	        this.TargetDirectory = source["TargetDirectory"];
+	        this.TargetFile = source["TargetFile"];
+	        this.TargetPath = source["TargetPath"];
+	    }
+	}
+	export class TranslateLocation {
+	    TargetDirectoryName: string;
+	    TargetDirectory: string;
+	    TargetFile: string;
+	    TargetPath: string;
+	    IsExist: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new TranslateLocation(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.TargetDirectoryName = source["TargetDirectoryName"];
+	        this.TargetDirectory = source["TargetDirectory"];
+	        this.TargetFile = source["TargetFile"];
+	        this.TargetPath = source["TargetPath"];
+	        this.IsExist = source["IsExist"];
+	    }
+	}
 	export class FileInfo {
 	    name: string;
+	    name_prefix: string;
 	    size: number;
 	    type: number;
 	    extension: string;
@@ -29,11 +68,9 @@ export namespace lib {
 	    is_dir: boolean;
 	    absolute_path: string;
 	    relative_path: string;
-	    extracted_file: string;
-	    extracted_path: string;
-	    translated_file: string;
-	    translated_path: string;
 	    extract_location: ExtractLocation;
+	    translate_location: TranslateLocation;
+	    import_location: ImportLocation;
 	
 	    static createFrom(source: any = {}) {
 	        return new FileInfo(source);
@@ -42,6 +79,7 @@ export namespace lib {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
+	        this.name_prefix = source["name_prefix"];
 	        this.size = source["size"];
 	        this.type = source["type"];
 	        this.extension = source["extension"];
@@ -49,11 +87,9 @@ export namespace lib {
 	        this.is_dir = source["is_dir"];
 	        this.absolute_path = source["absolute_path"];
 	        this.relative_path = source["relative_path"];
-	        this.extracted_file = source["extracted_file"];
-	        this.extracted_path = source["extracted_path"];
-	        this.translated_file = source["translated_file"];
-	        this.translated_path = source["translated_path"];
 	        this.extract_location = this.convertValues(source["extract_location"], ExtractLocation);
+	        this.translate_location = this.convertValues(source["translate_location"], TranslateLocation);
+	        this.import_location = this.convertValues(source["import_location"], ImportLocation);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -74,6 +110,8 @@ export namespace lib {
 		    return a;
 		}
 	}
+	
+	
 	export class TreeNode {
 	    key: string;
 	    label: string;
@@ -123,7 +161,6 @@ export namespace main {
 	    TranslateDirectory: string;
 	    // Go type: lib
 	    GameLocation: any;
-	    ExtractLocation: lib.ExtractLocation;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppConfig(source);
@@ -135,7 +172,6 @@ export namespace main {
 	        this.ExtractDirectory = source["ExtractDirectory"];
 	        this.TranslateDirectory = source["TranslateDirectory"];
 	        this.GameLocation = this.convertValues(source["GameLocation"], null);
-	        this.ExtractLocation = this.convertValues(source["ExtractLocation"], lib.ExtractLocation);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

@@ -21,11 +21,16 @@ func GetAbsolutePath(path string) (string, error) {
 	return filepath.Abs(path)
 }
 
+func GetDir(path string) string {
+	cPath := sanitizationPath(path)
+	return filepath.Dir(cPath)
+}
+
 func EnsurePathExists(path string) error {
 	cPath := sanitizationPath(path)
 
 	info, err := os.Stat(cPath)
-	
+
 	var dir string
 
 	if os.IsNotExist(err) {

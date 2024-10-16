@@ -13,8 +13,6 @@ type GameLocation struct {
 const defaultDirName = "data"
 
 func NewGameLocation() *GameLocation {
-	rootDirectory = GetExecDir()
-
 	return &GameLocation{
 		path: PathJoin(rootDirectory, defaultDirName),
 	}

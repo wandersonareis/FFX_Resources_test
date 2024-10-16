@@ -1,37 +1,34 @@
 package lib
 
-import "path/filepath"
-
 type ExtractLocation struct {
-	rootDirectory       string
-	rootDirectoryName   string
-	targetFileExtension string
-	TargetDirectoryName string
-	TargetDirectory     string
-	TargetFile          string
-	TargetPath          string
-	IsExist             bool
+	LocationBase
 }
 
 var extractLocationInstance *ExtractLocation
 
 func NewExtractLocation() *ExtractLocation {
-	const (
-		rootDirectoryName   = "extracted"
-		targetFileExtension = ".txt"
-	)
+	rootDirectoryName = "extracted"
 
-	targetDirectory := filepath.Join(GetExecDir(), rootDirectoryName)
+	targetDirectory := PathJoin(GetExecDir(), rootDirectoryName)
 
 	if extractLocationInstance == nil {
 		extractLocationInstance = &ExtractLocation{
-			rootDirectory:       targetDirectory,
-			targetFileExtension: targetFileExtension,
-			TargetDirectory:     targetDirectory,
+			LocationBase: LocationBase{
+				TargetDirectory:     targetDirectory,
+				TargetDirectoryName: rootDirectoryName,
+			},
 		}
 	}
 
 	return extractLocationInstance
+}
+
+func (e *ExtractLocation) SetTargetDirectory(path string) {
+	if path == "" {
+		return
+	}
+
+	e.TargetDirectory = path
 }
 
 func (e ExtractLocation) ProvideTargetDirectory() (string, error) {
@@ -39,7 +36,7 @@ func (e ExtractLocation) ProvideTargetDirectory() (string, error) {
 		return NewInteraction().ExtractLocation.TargetDirectory, nil
 	}
 
-	path := filepath.Join(e.rootDirectory, e.rootDirectoryName)
+	path := PathJoin(rootDirectory, rootDirectoryName)
 	err := EnsurePathExists(path)
 	if err != nil {
 		return "", err
@@ -48,10 +45,12 @@ func (e ExtractLocation) ProvideTargetDirectory() (string, error) {
 }
 
 func (e *ExtractLocation) GenerateTargetOutput(formatter ITextFormatter, fileInfo FileInfo) {
-	extractedFile, extractedPath := formatter.Write(fileInfo, e.TargetDirectory)
+	/* if fileInfo.Extension == ".dcp" {
+		e.TargetFile, e.TargetPath = formatter.Write(fileInfo, e.TargetDirectory)
+		return
+	} */
 
-	e.TargetFile = extractedFile
-	e.TargetPath = extractedPath
+	e.TargetFile, e.TargetPath = formatter.ReadFile(fileInfo, e.TargetDirectory)
 }
 
 func (e ExtractLocation) TargetFileExists() bool {

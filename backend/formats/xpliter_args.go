@@ -1,4 +1,4 @@
-package fileFormat
+package formats
 
 func dcpXpliterArgs() ([]string, error) {
 	args := []string{

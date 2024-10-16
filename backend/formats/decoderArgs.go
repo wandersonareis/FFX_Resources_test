@@ -1,4 +1,4 @@
-package fileFormat
+package formats
 
 func decoderArgs() ([]string, string, error) {
 	codeTable, err := getCharacterTable()

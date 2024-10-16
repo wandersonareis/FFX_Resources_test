@@ -7,16 +7,17 @@ import (
 )
 
 type Source struct {
-	Path         string
-	Info         os.FileInfo
-	Name         string
-	Type         NodeType
-	Size         int64
-	Extension    string
-	FullPath     string
-	EntryPath    string
-	Parent       string
-	IsDir        bool
+	Path       string
+	Info       os.FileInfo
+	Name       string
+	NamePrefix string
+	Type       NodeType
+	Size       int64
+	Extension  string
+	FullPath   string
+	EntryPath  string
+	Parent     string
+	IsDir      bool
 }
 
 func NewSource(path string) (*Source, error) {
@@ -32,17 +33,18 @@ func NewSource(path string) (*Source, error) {
 	}
 
 	source := &Source{
-		Path:      cPath,
-		Info:      info,
-		Size:      size,
-		FullPath:  cPath,
+		Path:     cPath,
+		Info:     info,
+		Size:     size,
+		FullPath: cPath,
 
-		Name:      info.Name(),
-		Type:      GuessTypeByPath(cPath),
-		Extension: filepath.Ext(cPath),
-		EntryPath: filepath.Join(cPath, info.Name()),
-		Parent:    filepath.Dir(cPath),
-		IsDir:     info.IsDir(),
+		Name:       info.Name(),
+		NamePrefix: RemoveFileExtension(info.Name()),
+		Type:       GuessTypeByPath(cPath),
+		Extension:  filepath.Ext(cPath),
+		EntryPath:  filepath.Join(cPath, info.Name()),
+		Parent:     filepath.Dir(cPath),
+		IsDir:      info.IsDir(),
 	}
 
 	return source, nil
