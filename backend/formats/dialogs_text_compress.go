@@ -2,7 +2,7 @@ package formats
 
 import "ffxresources/backend/lib"
 
-func dialogsTextPacker(dialogsFileInfo lib.FileInfo) error {
+func dialogsTextPacker(dialogsFileInfo *lib.FileInfo) error {
 	handler, err := getDialogsHandler()
 	if err != nil {
 		return err

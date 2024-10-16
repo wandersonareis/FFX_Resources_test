@@ -36,6 +36,6 @@ func (i *ImportLocation) ProvideTargetDirectory() (string, error) {
 	return path, nil
 }
 
-func (i *ImportLocation) GenerateTargetOutput(formatter ITextFormatter, fileInfo FileInfo) {
+func (i *ImportLocation) GenerateTargetOutput(formatter ITextFormatter, fileInfo *FileInfo) {
 	i.TargetFile, i.TargetPath = formatter.WriteFile(fileInfo, i.TargetDirectory)
 }

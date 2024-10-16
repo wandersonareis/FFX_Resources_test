@@ -26,10 +26,13 @@ func getTreeNodeIcon(source *lib.Source) string {
 }
 
 func generateNode(key string, source *lib.Source) (lib.TreeNode, error) {
-	fileInfo, err := lib.CreateFileInfo(source)
+	fileInfo := &lib.FileInfo{}
+	lib.UpdateFileInfoFromSource(fileInfo, source)
+
+	/* fileInfo, err := lib.CreateFileInfo(source)
 	if err != nil {
 		return lib.TreeNode{}, err
-	}
+	} */
 
 	fileProcessor := NewFileProcessor(fileInfo)
 	if fileProcessor == nil {
@@ -57,4 +60,16 @@ func CreateTreeNode(key string, source *lib.Source, childrens []lib.TreeNode) (l
 	node.Children = childrens
 
 	return node, nil
+}
+
+func CreateTreeNodeDev(key string, source *lib.Source) (lib.TreeNode, error) {
+    node, err := generateNode(key, source)
+    if err != nil {
+        return lib.TreeNode{}, err
+    }
+
+    node.Icon = getTreeNodeIcon(source)
+    node.Children = []lib.TreeNode{} // Inicializa como um slice vazio
+
+    return node, nil
 }

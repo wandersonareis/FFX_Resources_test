@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"ffxresources/backend/lib"
 	"ffxresources/backend/services"
-	"ffxresources/backend/spira"
 	"fmt"
 	"os"
 
@@ -17,7 +16,6 @@ type AppConfig struct {
 	OriginalDirectory  string
 	ExtractDirectory   string
 	TranslateDirectory string
-	GameLocation       lib.GameLocation
 }
 
 // App struct
@@ -94,7 +92,7 @@ func (a App) domReady(ctx context.Context) {
 		runtime.EventsEmit(ctx, "GameDirectory_value", lib.NewInteraction().GameLocation.GetPath())
 	})
 
-	spira.TestExtractFile("F:\\ffxWails\\FFX_Resources\\build\\bin\\data\\ffx_ps2\\ffx2\\master\\new_uspc\\menu")
+	services.TestExtractFile("F:\\ffxWails\\FFX_Resources\\build\\bin\\data\\ffx_ps2\\ffx2\\master\\new_uspc\\menu")
 }
 
 // beforeClose is called when the application is about to quit,
@@ -105,7 +103,6 @@ func (a *App) beforeClose(ctx context.Context) (prevent bool) {
 		OriginalDirectory:  lib.NewInteraction().GameLocation.GetPath(),
 		ExtractDirectory:   lib.NewInteraction().ExtractLocation.TargetDirectory,
 		TranslateDirectory: lib.NewInteraction().TranslateLocation.TargetDirectory,
-		GameLocation:       *lib.NewInteraction().GameLocation,
 	}
 
 	err := a.SaveConfig(config)

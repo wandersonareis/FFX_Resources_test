@@ -7,7 +7,7 @@ import (
 
 type TxtFormatter struct{}
 
-func (t TxtFormatter) ReadFile(fileInfo lib.FileInfo, targetDirectory string) (string, string) {
+func (t TxtFormatter) ReadFile(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
 	var outputFile, outputPath string
 
 	switch fileInfo.Type {
@@ -22,7 +22,7 @@ func (t TxtFormatter) ReadFile(fileInfo lib.FileInfo, targetDirectory string) (s
 	return outputFile, outputPath
 }
 
-func (t TxtFormatter) provideDefaulReadPath(fileInfo lib.FileInfo, targetDirectory string) (string, string) {
+func (t TxtFormatter) provideDefaulReadPath(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
 	//outputFile := PathJoin(workDirectory, targetDirName, ChangeExtension(fileInfo.RelativePath, targetExtension))
 
 	/* extractedFile, extractedPath := lib.GenerateExtractedOutput(fileInfo, targetDirectory, "", lib.DEFAULT_TEXT_EXTENSION)
@@ -32,7 +32,7 @@ func (t TxtFormatter) provideDefaulReadPath(fileInfo lib.FileInfo, targetDirecto
 	return provideBasePath(targetDirectory, lib.ChangeExtension(fileInfo.RelativePath, lib.DEFAULT_TEXT_EXTENSION))
 }
 
-func (t TxtFormatter) provideDcpReadPath(fileInfo lib.FileInfo, targetDirectory string) (string, string) {
+func (t TxtFormatter) provideDcpReadPath(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
 	outputFile := lib.PathJoin(targetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME, fileInfo.Name)
 
 	outputPath := lib.PathJoin(targetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME)
@@ -40,11 +40,11 @@ func (t TxtFormatter) provideDcpReadPath(fileInfo lib.FileInfo, targetDirectory 
 	return outputFile, outputPath
 }
 
-func (t TxtFormatter) provideDcpPartsReadPath(fileInfo lib.FileInfo, targetDirectory string) (string, string) {
+func (t TxtFormatter) provideDcpPartsReadPath(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
 	return provideBasePath(targetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME, lib.AddExtension(fileInfo.Name, lib.DEFAULT_TEXT_EXTENSION))
 }
 
-func (t TxtFormatter) WriteFile(fileInfo lib.FileInfo, targetDirectory string) (string, string) {
+func (t TxtFormatter) WriteFile(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
 
 	var outputFile, outputPath string
 
@@ -60,7 +60,7 @@ func (t TxtFormatter) WriteFile(fileInfo lib.FileInfo, targetDirectory string) (
 	return outputFile, outputPath
 }
 
-func (t TxtFormatter) provideDefaultWritePath(fileInfo lib.FileInfo, targetDirectory string) (string, string) {
+func (t TxtFormatter) provideDefaultWritePath(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
 	/* outputFile := lib.PathJoin(targetDirectory, lib.ChangeExtension(fileInfo.RelativePath, fileInfo.Extension))
 	outputPath := filepath.Dir(outputFile)
 
@@ -68,7 +68,7 @@ func (t TxtFormatter) provideDefaultWritePath(fileInfo lib.FileInfo, targetDirec
 	return provideBasePath(targetDirectory, lib.ChangeExtension(fileInfo.RelativePath, fileInfo.Extension))
 }
 
-func (t TxtFormatter) provideDcpWritePath(fileInfo lib.FileInfo, targetDirectory string) (string, string) {
+func (t TxtFormatter) provideDcpWritePath(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
 	/* outputFile := lib.PathJoin(targetDirectory, fileInfo.RelativePath)
 	outputPath := lib.GetDir(outputFile)
 
@@ -76,7 +76,7 @@ func (t TxtFormatter) provideDcpWritePath(fileInfo lib.FileInfo, targetDirectory
 	return provideBasePath(targetDirectory, fileInfo.RelativePath)
 }
 
-func (t TxtFormatter) provideDcpPartsWritePath(fileInfo lib.FileInfo, targetDirectory string) (string, string) {
+func (t TxtFormatter) provideDcpPartsWritePath(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
 	/* outputFile := lib.PathJoin(targetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME, fileInfo.Name)
 
 	outputPath := lib.GetDir(outputFile)

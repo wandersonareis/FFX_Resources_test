@@ -2,7 +2,7 @@ package formats
 
 import "ffxresources/backend/lib"
 
-func dcpFileJoiner(fileInfo lib.FileInfo, reimportedDcpPartsDirectory string) error {
+func dcpFileJoiner(fileInfo *lib.FileInfo, reimportedDcpPartsDirectory string) error {
 	xpliterHandler, err := GetDcpXplitHandler()
 	if err != nil {
 		return err

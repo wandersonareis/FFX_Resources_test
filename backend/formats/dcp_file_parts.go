@@ -3,10 +3,10 @@ package formats
 import "ffxresources/backend/lib"
 
 type DcpFileParts struct {
-	FileInfo lib.FileInfo
+	FileInfo *lib.FileInfo
 }
 
-func NewDcpFileParts(fileInfo lib.FileInfo) *DcpFileParts {
+func NewDcpFileParts(fileInfo *lib.FileInfo) *DcpFileParts {
 	fileInfo.ExtractLocation.GenerateTargetOutput(TxtFormatter{}, fileInfo)
 	fileInfo.TranslateLocation.GenerateTargetOutput(TxtFormatter{}, fileInfo)
 	fileInfo.ImportLocation.GenerateTargetOutput(TxtFormatter{}, fileInfo)
@@ -16,7 +16,7 @@ func NewDcpFileParts(fileInfo lib.FileInfo) *DcpFileParts {
 	}
 }
 
-func (d DcpFileParts) GetFileInfo() lib.FileInfo {
+func (d DcpFileParts) GetFileInfo() *lib.FileInfo {
 	return d.FileInfo
 }
 

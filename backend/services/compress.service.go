@@ -12,13 +12,13 @@ func NewCompressService() *CompressService {
 	return &CompressService{}
 }
 
-func (c *CompressService) Compress(fileInfo lib.FileInfo) {
+func (c *CompressService) Compress(fileInfo *lib.FileInfo) {
 	if !lib.FileExists(fileInfo.AbsolutePath) {
 		lib.NotifyError(fmt.Errorf("original text file %s not found", fileInfo.Name))
 		return
 	}
 
-	if !lib.FileExists(fileInfo.TranslateLocation.TargetFile) {
+	if !lib.FileExists(fileInfo.TranslateLocation.TargetFile) && fileInfo.Type != lib.Dcp {
 		lib.NotifyError(fmt.Errorf("translated text file %s not found", fileInfo.TranslateLocation.TargetFileName))
 		return
 	}

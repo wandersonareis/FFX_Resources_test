@@ -7,10 +7,10 @@ import (
 
 type kernelFile struct {
 	ctx      context.Context
-	FileInfo lib.FileInfo
+	FileInfo *lib.FileInfo
 }
 
-func NewKernel(fileInfo lib.FileInfo) lib.IFileProcessor {
+func NewKernel(fileInfo *lib.FileInfo) lib.IFileProcessor {
 	relativePath, err := lib.GetRelativePathFromMarker(fileInfo)
 	if err != nil {
 		lib.NotifyError(err)
@@ -29,7 +29,7 @@ func NewKernel(fileInfo lib.FileInfo) lib.IFileProcessor {
 	}
 }
 
-func (k kernelFile) GetFileInfo() lib.FileInfo {
+func (k kernelFile) GetFileInfo() *lib.FileInfo {
 	return k.FileInfo
 }
 

@@ -8,10 +8,10 @@ import (
 
 type SpiraFolder struct {
 	ctx      context.Context
-	FileInfo lib.FileInfo
+	FileInfo *lib.FileInfo
 }
 
-func NewSpiraFolder(fileInfo lib.FileInfo, extractPath, translatePath string) *SpiraFolder {
+func NewSpiraFolder(fileInfo *lib.FileInfo, extractPath, translatePath string) *SpiraFolder {
 	/* extractedDirectory, err := lib.NewInteraction().ExtractLocation.ProvideTargetDirectory()
 	if err != nil {
 		lib.EmitError(ctx, err)
@@ -39,7 +39,7 @@ func NewSpiraFolder(fileInfo lib.FileInfo, extractPath, translatePath string) *S
 	}
 }
 
-func (d SpiraFolder) GetFileInfo() lib.FileInfo {
+func (d SpiraFolder) GetFileInfo() *lib.FileInfo {
 	return d.FileInfo
 }
 
@@ -88,11 +88,8 @@ func (d SpiraFolder) processFiles() []lib.IFileProcessor {
 			continue
 		}
 
-		fileInfo, err := lib.CreateFileInfo(source)
-		if err != nil {
-			lib.NotifyError(err)
-			continue
-		}
+		fileInfo := &lib.FileInfo{}
+		lib.UpdateFileInfoFromSource(fileInfo, source)
 
 		fileProcessor := NewFileProcessor(fileInfo)
 		if fileProcessor == nil {

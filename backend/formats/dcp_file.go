@@ -10,10 +10,10 @@ import (
 const pattern = "macrodic\\..*?\\.00[0-6]"
 
 type DcpFile struct {
-	FileInfo lib.FileInfo
+	FileInfo *lib.FileInfo
 }
 
-func NewDcpFile(fileInfo lib.FileInfo) *DcpFile {
+func NewDcpFile(fileInfo *lib.FileInfo) *DcpFile {
 	relativePath, err := lib.GetRelativePathFromMarker(fileInfo)
 	if err != nil {
 		lib.NotifyError(err)
@@ -31,7 +31,7 @@ func NewDcpFile(fileInfo lib.FileInfo) *DcpFile {
 	}
 }
 
-func (d DcpFile) GetFileInfo() lib.FileInfo {
+func (d DcpFile) GetFileInfo() *lib.FileInfo {
 	return d.FileInfo
 }
 
@@ -134,11 +134,8 @@ func processFilesParallel(xplitedFiles []string, callback func(handler *DcpFileP
 				return
 			}
 
-			dcpPartInfo, err := lib.CreateFileInfo(sourcePart)
-			if err != nil {
-				errChan <- err
-				return
-			}
+			dcpPartInfo := &lib.FileInfo{}
+			lib.UpdateFileInfoFromSource(dcpPartInfo, sourcePart)
 
 			fileHandle := NewDcpFileParts(dcpPartInfo)
 			if fileHandle == nil {

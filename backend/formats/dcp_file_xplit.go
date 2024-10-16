@@ -2,7 +2,7 @@ package formats
 
 import "ffxresources/backend/lib"
 
-func dcpFileXpliter(fileInfo lib.FileInfo) error {
+func dcpFileXpliter(fileInfo *lib.FileInfo) error {
 	xpliterHandler, err := GetDcpXplitHandler()
 	if err != nil {
 		return err

@@ -7,10 +7,10 @@ import (
 
 type DialogsFile struct {
 	ctx      context.Context
-	FileInfo lib.FileInfo
+	FileInfo *lib.FileInfo
 }
 
-func NewDialogs(fileInfo lib.FileInfo) *DialogsFile {
+func NewDialogs(fileInfo *lib.FileInfo) *DialogsFile {
 	//if lib.IsEmptyOrWhitespace(&fileInfo.ExtractLocation.TargetFile) || lib.IsEmptyOrWhitespace(&fileInfo.TranslatedFile) {
 
 	relativePath, err := lib.GetRelativePathFromMarker(fileInfo)
@@ -32,7 +32,7 @@ func NewDialogs(fileInfo lib.FileInfo) *DialogsFile {
 	}
 }
 
-func (d DialogsFile) GetFileInfo() lib.FileInfo {
+func (d DialogsFile) GetFileInfo() *lib.FileInfo {
 	return d.FileInfo
 }
 

@@ -44,12 +44,7 @@ func (e ExtractLocation) ProvideTargetDirectory() (string, error) {
 	return path, nil
 }
 
-func (e *ExtractLocation) GenerateTargetOutput(formatter ITextFormatter, fileInfo FileInfo) {
-	/* if fileInfo.Extension == ".dcp" {
-		e.TargetFile, e.TargetPath = formatter.Write(fileInfo, e.TargetDirectory)
-		return
-	} */
-
+func (e *ExtractLocation) GenerateTargetOutput(formatter ITextFormatter, fileInfo *FileInfo) {
 	e.TargetFile, e.TargetPath = formatter.ReadFile(fileInfo, e.TargetDirectory)
 }
 

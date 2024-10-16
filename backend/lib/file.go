@@ -82,7 +82,7 @@ func RemoveFileExtension(filePath string) string {
 	return filePath[:len(filePath)-len(ext)]
 }
 
-func CountSeparators(fileInfo FileInfo) int {
+func CountSeparators(fileInfo *FileInfo) int {
 	separator := FFX_TEXT_FORMAT_SEPARATOR
 	input, err := ReadFile(fileInfo.ExtractLocation.TargetFile)
 	if err != nil {
@@ -92,7 +92,7 @@ func CountSeparators(fileInfo FileInfo) int {
 	return strings.Count(input, separator)
 }
 
-func EnsureWindowsFormat(fileInfo FileInfo) error {
+func EnsureWindowsFormat(fileInfo *FileInfo) error {
 	if fileInfo.Type == Dcp {
 		return nil
 	}

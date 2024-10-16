@@ -5,36 +5,29 @@ import (
 	"ffxresources/backend/lib"
 )
 
-func NewFileProcessor(fileInfo lib.FileInfo) lib.IFileProcessor {
+func NewFileProcessor(fileInfo *lib.FileInfo) lib.IFileProcessor {
 	fileType := fileInfo.Type
 
-	interaction := lib.NewInteraction()
-
-	extractLocation := interaction.ExtractLocation
-
-	extractPath, err := extractLocation.ProvideTargetDirectory()
+	provideLocationsToFileInfo(fileInfo)
+	
+	extractPath, err := lib.NewInteraction().ExtractLocation.ProvideTargetDirectory()
 	if err != nil {
 		lib.NotifyError(err)
 		return nil
 	}
 
-	translateLocation := lib.NewInteraction().TranslateLocation
-
-	translatePath, err := translateLocation.ProvideTargetDirectory()
+	translatePath, err := lib.NewInteraction().TranslateLocation.ProvideTargetDirectory()
 	if err != nil {
 		lib.NotifyError(err)
 		return nil
 	}
 
-	reimportLocation := lib.NewInteraction().ImportLocation
-
-	_, err = reimportLocation.ProvideTargetDirectory()
+	_, err = lib.NewInteraction().ImportLocation.ProvideTargetDirectory()
 	if err != nil {
 		lib.NotifyError(err)
 		return nil
 	}
 
-	provideLocationsToFileInfo(&fileInfo)
 
 	switch fileType {
 	case lib.Dialogs, lib.Tutorial, lib.DcpParts:
@@ -51,13 +44,7 @@ func NewFileProcessor(fileInfo lib.FileInfo) lib.IFileProcessor {
 }
 
 func provideLocationsToFileInfo(fileInfo *lib.FileInfo) {
-	extractLocation := lib.NewInteraction().ExtractLocation	
-
-	translateLocation := lib.NewInteraction().TranslateLocation	
-
-	reimportLocation := lib.NewInteraction().ImportLocation	
-
-	fileInfo.ExtractLocation = *extractLocation
-	fileInfo.TranslateLocation = *translateLocation
-	fileInfo.ImportLocation = *reimportLocation
+	fileInfo.ExtractLocation = *lib.NewInteraction().ExtractLocation
+	fileInfo.TranslateLocation = *lib.NewInteraction().TranslateLocation
+	fileInfo.ImportLocation = *lib.NewInteraction().ImportLocation
 }

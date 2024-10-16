@@ -12,7 +12,7 @@ func NewExtractService() *ExtractService {
 	return &ExtractService{}
 }
 
-func (e *ExtractService) Extract(fileInfo lib.FileInfo) {
+func (e *ExtractService) Extract(fileInfo *lib.FileInfo) {
 	fileProcessor := spira.NewFileProcessor(fileInfo)
 	if fileProcessor == nil {
 		lib.NotifyError(fmt.Errorf("invalid file type: %s", fileInfo.Name))

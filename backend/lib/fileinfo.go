@@ -1,6 +1,6 @@
 package lib
 
-func CreateFileInfo(source *Source) (FileInfo, error) {
+/* func CreateFileInfo(source *Source) (FileInfo, error) {
 	var nodeData = FileInfo{
 		Name:              source.Name,
 		NamePrefix:        source.NamePrefix,
@@ -16,4 +16,18 @@ func CreateFileInfo(source *Source) (FileInfo, error) {
 	}
 
 	return nodeData, nil
+} */
+
+func UpdateFileInfoFromSource(fileInfo *FileInfo, source *Source) {
+	fileInfo.Name = source.Name
+	fileInfo.NamePrefix = source.NamePrefix
+	fileInfo.Size = source.Size
+	fileInfo.Type = source.Type
+	fileInfo.IsDir = source.IsDir
+	fileInfo.Parent = source.Parent
+	fileInfo.Extension = source.Extension
+	fileInfo.AbsolutePath = source.FullPath
+	fileInfo.ExtractLocation = *NewInteraction().ExtractLocation
+	fileInfo.TranslateLocation = *NewInteraction().TranslateLocation
+	fileInfo.ImportLocation = *NewInteraction().ImportLocation
 }

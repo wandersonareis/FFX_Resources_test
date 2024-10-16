@@ -46,7 +46,7 @@ func (t *TranslateLocation) ProvideTargetDirectory() (string, error) {
 	return path, nil
 }
 
-func (t *TranslateLocation) GenerateTargetOutput(formatter ITextFormatter, fileInfo FileInfo) {
+func (t *TranslateLocation) GenerateTargetOutput(formatter ITextFormatter, fileInfo *FileInfo) {
 	t.TargetFile, t.TargetPath = formatter.ReadFile(fileInfo, t.TargetDirectory)
 
 	t.TargetFileName = filepath.Base(t.TargetFile)

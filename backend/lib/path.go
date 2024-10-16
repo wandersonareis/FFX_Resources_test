@@ -161,7 +161,7 @@ func GuessTypeByPath(path string) NodeType {
 	return guessBySpiraFileType(path)
 }
 
-func GetRelativePathFromMarker(fileInfo FileInfo) (string, error) {
+func GetRelativePathFromMarker(fileInfo *FileInfo) (string, error) {
 	var marker = FFX_DIR_MARKER
 
 	path := fileInfo.AbsolutePath

@@ -2,7 +2,7 @@ package formats
 
 import "ffxresources/backend/lib"
 
-func kernelTextPacker(kernelFileInfo lib.FileInfo) error {
+func kernelTextPacker(kernelFileInfo *lib.FileInfo) error {
 	handler, err := getKernelFileHandler()
 	if err != nil {
 		return err

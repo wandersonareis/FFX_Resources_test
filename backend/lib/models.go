@@ -39,14 +39,14 @@ type FileInfo struct {
 }
 
 type IFileProcessor interface {
-	GetFileInfo() FileInfo
+	GetFileInfo() *FileInfo
 	Extract()
 	Compress()
 }
 
 type ITextFormatter interface {
-	ReadFile(fileInfo FileInfo, targetDirectory string) (string, string)
-	WriteFile(fileInfo FileInfo, targetDirectory string) (string, string)
+	ReadFile(fileInfo *FileInfo, targetDirectory string) (string, string)
+	WriteFile(fileInfo *FileInfo, targetDirectory string) (string, string)
 }
 
 type IExtractor interface {
@@ -60,7 +60,7 @@ type ICompressor interface {
 type TreeNode struct {
 	Key      string     `json:"key"`
 	Label    string     `json:"label"`
-	Data     FileInfo   `json:"data"`
+	Data     *FileInfo   `json:"data"`
 	Icon     string     `json:"icon"`
 	Children []TreeNode `json:"children"`
 }
