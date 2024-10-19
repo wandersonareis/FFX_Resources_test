@@ -18,7 +18,7 @@ func (e *ExtractService) Extract(fileInfo *lib.FileInfo) {
 		lib.NotifyError(fmt.Errorf("invalid file type: %s", fileInfo.Name))
 		return
 	}
-
+	
 	fileProcessor.Extract()
 	lib.NotifySuccess("Extraction completed")
 }

@@ -11,6 +11,7 @@ const DIALOG_HANDLER_APPLICATION = "ffxdlg_new.exe"
 const KERNEL_HANDLER_APPLICATION = "ffx2mt.exe"
 const DCP_FILE_XPLITTER_APPLICATION = "SHSplit.exe"
 
-const DEFAULT_TEXT_EXTENSION = ".txt"
 const DEFAULT_APPLICATION_EXTENSION = ".exe"
 const DEFAULT_RESOURCES_ROOTDIR = "bin"
+
+const MACRODIC_PATTERN = "macrodic.*?\\.00[0-6]"

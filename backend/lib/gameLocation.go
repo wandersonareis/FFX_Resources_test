@@ -7,27 +7,30 @@ import (
 )
 
 type GameLocation struct {
-	path string
+	LocationBase
 }
 
 const defaultDirName = "data"
 
 func NewGameLocation() *GameLocation {
 	return &GameLocation{
-		path: PathJoin(rootDirectory, defaultDirName),
+		//TargetDirectory: PathJoin(rootDirectory, defaultDirName),
+		LocationBase: LocationBase{
+			TargetDirectoryName: PathJoin(rootDirectory, defaultDirName),
+		},
 	}
 }
 
-func (g *GameLocation) GetPath() string {
-	return g.path
-}
+/* func (g *GameLocation) GetPath() string {
+	return g.TargetDirectory
+} */
 
-func (g *GameLocation) SetPath(path string) {
-	g.path = filepath.Clean(path)
-}
+/* func (g *GameLocation) SetPath(path string) {
+	g.TargetDirectory = filepath.Clean(path)
+} */
 
 func (g GameLocation) IsSpira() error {
-	return containsNewUSPCPath(g.path)
+	return containsNewUSPCPath(g.TargetDirectory)
 }
 
 func (g GameLocation) IsSpiraPath(path string) bool {

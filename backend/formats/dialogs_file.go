@@ -11,8 +11,6 @@ type DialogsFile struct {
 }
 
 func NewDialogs(fileInfo *lib.FileInfo) *DialogsFile {
-	//if lib.IsEmptyOrWhitespace(&fileInfo.ExtractLocation.TargetFile) || lib.IsEmptyOrWhitespace(&fileInfo.TranslatedFile) {
-
 	relativePath, err := lib.GetRelativePathFromMarker(fileInfo)
 	if err != nil {
 		lib.NotifyError(err)
@@ -21,10 +19,9 @@ func NewDialogs(fileInfo *lib.FileInfo) *DialogsFile {
 
 	fileInfo.RelativePath = relativePath
 
-	fileInfo.ExtractLocation.GenerateTargetOutput(TxtFormatter{}, fileInfo)
-	fileInfo.TranslateLocation.GenerateTargetOutput(TxtFormatter{}, fileInfo)
-	fileInfo.ImportLocation.GenerateTargetOutput(TxtFormatter{}, fileInfo)
-	//}
+	fileInfo.ExtractLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
+	fileInfo.TranslateLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
+	fileInfo.ImportLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
 
 	return &DialogsFile{
 		ctx:      lib.NewInteraction().Ctx,
@@ -45,7 +42,7 @@ func (d DialogsFile) Extract() {
 }
 
 func (d DialogsFile) Compress() {
-	err := dialogsTextPacker(d.FileInfo)
+	err := dialogsTextCompress(d.FileInfo)
 	if err != nil {
 		lib.EmitError(d.ctx, err)
 		return

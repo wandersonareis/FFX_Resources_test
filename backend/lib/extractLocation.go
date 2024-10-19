@@ -23,7 +23,7 @@ func NewExtractLocation() *ExtractLocation {
 	return extractLocationInstance
 }
 
-func (e *ExtractLocation) SetTargetDirectory(path string) {
+func (e *ExtractLocation) SetPath(path string) {
 	if path == "" {
 		return
 	}

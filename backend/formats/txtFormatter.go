@@ -1,11 +1,16 @@
 package formats
 
-import (
-	"ffxresources/backend/lib"
-	"path/filepath"
-)
+import "ffxresources/backend/lib"
 
-type TxtFormatter struct{}
+type TxtFormatter struct {
+	targetExtension string
+}
+
+func NewTxtFormatter() *TxtFormatter {
+	return &TxtFormatter{
+		targetExtension: ".txt",
+	}
+}
 
 func (t TxtFormatter) ReadFile(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
 	var outputFile, outputPath string
@@ -29,7 +34,7 @@ func (t TxtFormatter) provideDefaulReadPath(fileInfo *lib.FileInfo, targetDirect
 
 	return extractedFile, extractedPath */
 
-	return provideBasePath(targetDirectory, lib.ChangeExtension(fileInfo.RelativePath, lib.DEFAULT_TEXT_EXTENSION))
+	return provideBasePath(targetDirectory, lib.ChangeExtension(fileInfo.RelativePath, t.targetExtension))
 }
 
 func (t TxtFormatter) provideDcpReadPath(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
@@ -41,7 +46,7 @@ func (t TxtFormatter) provideDcpReadPath(fileInfo *lib.FileInfo, targetDirectory
 }
 
 func (t TxtFormatter) provideDcpPartsReadPath(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
-	return provideBasePath(targetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME, lib.AddExtension(fileInfo.Name, lib.DEFAULT_TEXT_EXTENSION))
+	return provideBasePath(targetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME, lib.AddExtension(fileInfo.Name, t.targetExtension))
 }
 
 func (t TxtFormatter) WriteFile(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
@@ -86,8 +91,9 @@ func (t TxtFormatter) provideDcpPartsWritePath(fileInfo *lib.FileInfo, targetDir
 }
 
 func provideBasePath(targetDirectory string, dirParts ...string) (string, string) {
-	outputFile := lib.PathJoin(targetDirectory, filepath.Join(dirParts...))
-	outputPath := filepath.Dir(outputFile)
+	dirPartsJoined := lib.PathJoin(dirParts...)
+	outputFile := lib.PathJoin(targetDirectory, dirPartsJoined)
+	outputPath := lib.GetDir(outputFile)
 
 	return outputFile, outputPath
 }

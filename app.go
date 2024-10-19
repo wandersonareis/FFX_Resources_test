@@ -56,15 +56,8 @@ func (a *App) startup(ctx context.Context) {
 	a.appConfig.TranslateDirectory = config.TranslateDirectory
 
 	lib.NewInteraction().GameLocation.SetPath(config.OriginalDirectory)
-	//lib.NewInteraction().WorkingLocation.ExtractedDirectory = config.ExtractDirectory
-	//lib.NewInteraction().WorkingLocation.TranslatedDirectory = config.TranslateDirectory
-
-	lib.NewInteraction().ExtractLocation.SetTargetDirectory(config.ExtractDirectory)
-	lib.NewInteraction().TranslateLocation.SetTargetDirectory(config.TranslateDirectory)
-
-	runtime.LogInfo(ctx, "Original startup: "+lib.NewInteraction().GameLocation.GetPath())
-	runtime.LogInfo(ctx, "Extracted startup: "+lib.NewInteraction().ExtractLocation.TargetDirectory)
-	runtime.LogInfo(ctx, "Translated startup: "+lib.NewInteraction().TranslateLocation.TargetDirectory)
+	lib.NewInteraction().ExtractLocation.SetPath(config.ExtractDirectory)
+	lib.NewInteraction().TranslateLocation.SetPath(config.TranslateDirectory)
 }
 
 // domReady is called after front-end resources have been loaded
@@ -76,23 +69,24 @@ func (a App) domReady(ctx context.Context) {
 		lib.NewInteraction().GameLocation.SetPath(data[0].(string))
 	})
 	runtime.EventsOn(ctx, "ExtractedDirectoryChanged", func(data ...any) {
-		lib.NewInteraction().WorkingLocation.ExtractedDirectory = data[0].(string)
+		lib.NewInteraction().ExtractLocation.SetPath(data[0].(string))
 	})
 
 	runtime.EventsOn(ctx, "TranslatedDirectoryChanged", func(data ...any) {
-		lib.NewInteraction().WorkingLocation.TranslatedDirectory = data[0].(string)
+		lib.NewInteraction().TranslateLocation.SetPath(data[0].(string))
 	})
 
 	runtime.EventsEmit(ctx, "GameDirectory", lib.NewInteraction().GameLocation.GetPath())
-	runtime.EventsEmit(ctx, "ExtractedDirectory", lib.NewInteraction().WorkingLocation.ExtractedDirectory)
-	runtime.EventsEmit(ctx, "TranslatedDirectory", lib.NewInteraction().WorkingLocation.TranslatedDirectory)
+	runtime.EventsEmit(ctx, "ExtractedDirectory", lib.NewInteraction().ExtractLocation.GetPath())
+	runtime.EventsEmit(ctx, "TranslatedDirectory", lib.NewInteraction().TranslateLocation.GetPath())
 
 	runtime.EventsOn(ctx, "GetGameLocationDirectory", func(data ...any) {
 		fmt.Println("GetGameLocationDirectory", data)
 		runtime.EventsEmit(ctx, "GameDirectory_value", lib.NewInteraction().GameLocation.GetPath())
 	})
 
-	services.TestExtractFile("F:\\ffxWails\\FFX_Resources\\build\\bin\\data\\ffx_ps2\\ffx2\\master\\new_uspc\\menu")
+	testPath := "F:\\ffxWails\\FFX_Resources\\build\\bin\\data\\ffx_ps2\\ffx2\\master\\new_uspc\\menu"
+	services.TestExtractFile(testPath, false, true)
 }
 
 // beforeClose is called when the application is about to quit,

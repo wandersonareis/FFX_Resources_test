@@ -1,29 +1,35 @@
 package services
 
-/* import (
+import (
 	"ffxresources/backend/lib"
 	"ffxresources/backend/spira"
 	"fmt"
-) */
+)
 
-func TestExtractFile(path string) {
-	/* source, err := lib.NewSource(path)
+func TestExtractFile(path string, testExtract, testCompress bool) {
+	source, err := lib.NewSource(path)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	node, err := spira.ListFilesAndDirectories(source, "")
+	tree := make([]lib.TreeNode, 0, 1)
+
+	err = spira.BuildFileTree(&tree, source)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	fileInfo := node[0].Data
+	fileInfo := tree[0].Data
 
-	extractService := NewExtractService()
-	extractService.Extract(fileInfo)
+	if testExtract {
+		extractService := NewExtractService()
+		extractService.Extract(fileInfo)
+	}
 
-	compressService := NewCompressService()
-	compressService.Compress(fileInfo) */
+	if testCompress {
+		compressService := NewCompressService()
+		compressService.Compress(fileInfo)
+	}
 }

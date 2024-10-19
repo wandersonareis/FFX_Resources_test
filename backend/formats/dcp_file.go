@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-const pattern = "macrodic\\..*?\\.00[0-6]"
-
 type DcpFile struct {
 	FileInfo *lib.FileInfo
 }
@@ -22,9 +20,9 @@ func NewDcpFile(fileInfo *lib.FileInfo) *DcpFile {
 
 	fileInfo.RelativePath = relativePath
 
-	fileInfo.ExtractLocation.GenerateTargetOutput(TxtFormatter{}, fileInfo)
-	fileInfo.TranslateLocation.GenerateTargetOutput(TxtFormatter{}, fileInfo)
-	fileInfo.ImportLocation.GenerateTargetOutput(TxtFormatter{}, fileInfo)
+	fileInfo.ExtractLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
+	fileInfo.TranslateLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
+	fileInfo.ImportLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
 
 	return &DcpFile{
 		FileInfo: fileInfo,
@@ -46,7 +44,7 @@ func (d DcpFile) Extract() {
 	time.Sleep(400 * time.Millisecond)
 
 	macrodicPath := d.FileInfo.ExtractLocation.TargetPath
-	xplitedFiles, err := lib.EnumerateFilesByPattern(macrodicPath, pattern+"$")
+	xplitedFiles, err := lib.EnumerateFilesByPattern(macrodicPath, lib.MACRODIC_PATTERN+"$")
 	if err != nil {
 		lib.NotifyError(err)
 		return
@@ -72,13 +70,13 @@ func (d DcpFile) Extract() {
 }
 
 func (d DcpFile) Compress() {
-	macrodicPartsPath := d.FileInfo.ExtractLocation.TargetPath
-	macrodicPartsTextPath := d.FileInfo.TranslateLocation.TargetPath
+	macrodicImportPartsPath := lib.PathJoin(d.FileInfo.ImportLocation.TargetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME)
+	macrodicTranslatedPartsTextPath := d.FileInfo.TranslateLocation.TargetPath
 
-	macrodicFilesPattern := pattern + "$"
-	macrodicTextFilesPattern := pattern + "\\.txt"
+	macrodicFilesPattern := lib.MACRODIC_PATTERN + "$"
+	macrodicTextFilesPattern := lib.MACRODIC_PATTERN + "\\.txt"
 
-	xplitedFiles, err := lib.EnumerateFilesByPattern(macrodicPartsPath, macrodicFilesPattern)
+	xplitedFiles, err := lib.EnumerateFilesByPattern(macrodicImportPartsPath, macrodicFilesPattern)
 	if err != nil {
 		lib.NotifyError(err)
 		return
@@ -89,7 +87,7 @@ func (d DcpFile) Compress() {
 		return
 	}
 
-	xplitedTextFiles, err := lib.EnumerateFilesByPattern(macrodicPartsTextPath, macrodicTextFilesPattern)
+	xplitedTextFiles, err := lib.EnumerateFilesByPattern(macrodicTranslatedPartsTextPath, macrodicTextFilesPattern)
 	if err != nil {
 		lib.NotifyError(err)
 		return
@@ -108,9 +106,11 @@ func (d DcpFile) Compress() {
 		return
 	}
 
-	reimportedDcpPartsDirectory := lib.PathJoin(d.FileInfo.ImportLocation.TargetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME, d.FileInfo.Name)
+	//reimportedDcpPartsDirectory := lib.PathJoin(d.FileInfo.ImportLocation.TargetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME, d.FileInfo.Name)
 
-	err = dcpFileJoiner(d.FileInfo, reimportedDcpPartsDirectory)
+	targetReimportFile := d.FileInfo.ImportLocation.TargetFile
+
+	err = dcpFileJoiner(d.FileInfo, &xplitedFiles, targetReimportFile)
 	if err != nil {
 		lib.NotifyError(err)
 		return

@@ -19,9 +19,9 @@ func NewKernel(fileInfo *lib.FileInfo) lib.IFileProcessor {
 
 	fileInfo.RelativePath = relativePath
 
-	fileInfo.ExtractLocation.GenerateTargetOutput(TxtFormatter{}, fileInfo)
-	fileInfo.TranslateLocation.GenerateTargetOutput(TxtFormatter{}, fileInfo)
-	fileInfo.ImportLocation.GenerateTargetOutput(TxtFormatter{}, fileInfo)
+	fileInfo.ExtractLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
+	fileInfo.TranslateLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
+	fileInfo.ImportLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
 
 	return &kernelFile{
 		ctx:      lib.NewInteraction().Ctx,

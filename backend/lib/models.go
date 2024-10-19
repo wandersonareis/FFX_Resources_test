@@ -14,15 +14,6 @@ const (
 	DcpParts
 )
 
-type LocationBase struct {
-	IsExist             bool
-	TargetFile          string
-	TargetPath          string
-	TargetFileName      string
-	TargetDirectory     string
-	TargetDirectoryName string
-}
-
 type FileInfo struct {
 	Name              string            `json:"name"`
 	NamePrefix        string            `json:"name_prefix"`
@@ -60,7 +51,33 @@ type ICompressor interface {
 type TreeNode struct {
 	Key      string     `json:"key"`
 	Label    string     `json:"label"`
-	Data     *FileInfo   `json:"data"`
+	Data     *FileInfo  `json:"data"`
 	Icon     string     `json:"icon"`
 	Children []TreeNode `json:"children"`
+}
+
+type LocationBase struct {
+	IsExist             bool
+	TargetFile          string
+	TargetPath          string
+	TargetFileName      string
+	TargetDirectory     string
+	TargetDirectoryName string
+}
+
+func (lb *LocationBase) SetPath(path string) {
+	if path == "" {
+		return
+	}
+
+	lb.TargetDirectory = path
+}
+
+func (lb *LocationBase) GetPath() string {
+	return lb.TargetDirectory
+}
+
+type Pointer struct {
+	Offset int64
+	Value  uint32
 }

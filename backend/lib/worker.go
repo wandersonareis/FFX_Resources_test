@@ -19,12 +19,14 @@ func RunCommand(tool string, args []string) error {
 	}
 
 	if err := cmd.Wait(); err != nil {
-		return fmt.Errorf("erro na execução do comando: %w", err)
+		fmt.Println(err)
+		fmt.Println("Args: ", args)
+		return fmt.Errorf("erro cmd.Wait na execução do comando: %w", err)
 	}
 
 	if stderr.Len() > 0 {
 		fmt.Println("Stderr:", stderr.String())
-		return fmt.Errorf("erro na execução do comando: %s", stderr.String())
+		return fmt.Errorf("erro stderr na execução do comando: %s", stderr.String())
 	}
 
 	return nil

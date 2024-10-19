@@ -7,9 +7,9 @@ type DcpFileParts struct {
 }
 
 func NewDcpFileParts(fileInfo *lib.FileInfo) *DcpFileParts {
-	fileInfo.ExtractLocation.GenerateTargetOutput(TxtFormatter{}, fileInfo)
-	fileInfo.TranslateLocation.GenerateTargetOutput(TxtFormatter{}, fileInfo)
-	fileInfo.ImportLocation.GenerateTargetOutput(TxtFormatter{}, fileInfo)
+	fileInfo.ExtractLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
+	fileInfo.TranslateLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
+	fileInfo.ImportLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
 
 	return &DcpFileParts{
 		FileInfo: fileInfo,
@@ -29,7 +29,7 @@ func (d DcpFileParts) Extract() {
 }
 
 func (d DcpFileParts) Compress() {
-	err := dialogsTextPacker(d.FileInfo)
+	err := dialogsTextCompress(d.FileInfo)
 	if err != nil {
 		lib.NotifyError(err)
 		return

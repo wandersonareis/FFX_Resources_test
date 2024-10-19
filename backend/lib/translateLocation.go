@@ -25,13 +25,13 @@ func NewTranslateLocation() *TranslateLocation {
 	return translateLocationInstance
 }
 
-func (t *TranslateLocation) SetTargetDirectory(path string) {
+/* func (t *TranslateLocation) SetPath(path string) {
 	if path == "" {
 		return
 	}
 
 	t.TargetDirectory = path
-}
+} */
 
 func (t *TranslateLocation) ProvideTargetDirectory() (string, error) {
 	if NewInteraction().TranslateLocation.TargetDirectory != "" {
