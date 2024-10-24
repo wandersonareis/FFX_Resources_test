@@ -82,9 +82,10 @@ func RemoveFileExtension(filePath string) string {
 	return filePath[:len(filePath)-len(ext)]
 }
 
-func CountSeparators(fileInfo *FileInfo) int {
+func CountSeparators(targetFile string) int {
 	separator := FFX_TEXT_FORMAT_SEPARATOR
-	input, err := ReadFile(fileInfo.ExtractLocation.TargetFile)
+	//input, err := ReadFile(fileInfo.ExtractLocation.TargetFile)
+	input, err := ReadFile(targetFile)
 	if err != nil {
 		return 0
 	}
@@ -92,12 +93,13 @@ func CountSeparators(fileInfo *FileInfo) int {
 	return strings.Count(input, separator)
 }
 
-func EnsureWindowsFormat(fileInfo *FileInfo) error {
-	if fileInfo.Type == Dcp {
+func EnsureWindowsFormat(targetFile string, nodeType NodeType) error {
+	if nodeType == Dcp {
 		return nil
 	}
 
-	file, err := os.Open(fileInfo.TranslateLocation.TargetFile)
+	//file, err := os.Open(fileInfo.TranslateLocation.TargetFile)
+	file, err := os.Open(targetFile)
 	if err != nil {
 		return fmt.Errorf("error when opening the file: %s", err)
 	}
@@ -110,7 +112,8 @@ func EnsureWindowsFormat(fileInfo *FileInfo) error {
 
 	ensureStartEndLineBreaks(&text)
 
-	err = WriteFile(fileInfo.TranslateLocation.TargetFile, text)
+	//err = WriteFile(fileInfo.TranslateLocation.TargetFile, text)
+	err = WriteFile(targetFile, text)
 	if err != nil {
 		return fmt.Errorf("error saving the modified file: %s", err)
 	}

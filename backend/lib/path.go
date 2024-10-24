@@ -159,10 +159,10 @@ func GuessTypeByPath(path string) NodeType {
 	return guessBySpiraFileType(path)
 }
 
-func GetRelativePathFromMarker(fileInfo *FileInfo) (string, error) {
+func GetRelativePathFromMarker(path string) (string, error) {
 	var marker = FFX_DIR_MARKER
 
-	path := fileInfo.AbsolutePath
+	//path := fileInfo.AbsolutePath
 	index := strings.Index(path, marker)
 	if index == -1 {
 		return "", fmt.Errorf("the path does not contain the marker '%s' -> '%s'", marker, path)
@@ -171,14 +171,14 @@ func GetRelativePathFromMarker(fileInfo *FileInfo) (string, error) {
 	return path[index:], nil
 }
 
-func GenerateExtractedOutput(fileInfo FileInfo, workDirectory, targetDirName, targetExtension string) (string, string) {
-	outputFile := PathJoin(workDirectory, targetDirName, ChangeExtension(fileInfo.RelativePath, targetExtension))
+/* func GenerateExtractedOutput(relativePath string, workDirectory, targetDirName, targetExtension string) (string, string) {
+	outputFile := PathJoin(workDirectory, targetDirName, ChangeExtension(relativePath, targetExtension))
 	outputPath := filepath.Dir(outputFile)
 	return outputFile, outputPath
-}
+} */
 
-func GeneratedTranslatedOutput(fileInfo FileInfo, workDirectory string) (string, string) {
-	outputFile := PathJoin(workDirectory, ChangeExtension(fileInfo.RelativePath, fileInfo.Extension))
+/* func GeneratedTranslatedOutput(relativePath, targetExtension string, workDirectory string) (string, string) {
+	outputFile := PathJoin(workDirectory, ChangeExtension(relativePath, targetExtension))
 	outputPath := filepath.Dir(outputFile)
 	return outputFile, outputPath
-}
+} */

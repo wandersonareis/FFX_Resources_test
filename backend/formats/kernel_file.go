@@ -11,7 +11,7 @@ type kernelFile struct {
 }
 
 func NewKernel(fileInfo *lib.FileInfo) lib.IFileProcessor {
-	relativePath, err := lib.GetRelativePathFromMarker(fileInfo)
+	relativePath, err := lib.GetRelativePathFromMarker(fileInfo.AbsolutePath)
 	if err != nil {
 		lib.NotifyError(err)
 		return nil

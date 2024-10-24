@@ -23,13 +23,13 @@ func (c *CompressService) Compress(fileInfo *lib.FileInfo) {
 		return
 	}
 
-	err := lib.EnsureWindowsFormat(fileInfo)
+	err := lib.EnsureWindowsFormat(fileInfo.TranslateLocation.TargetFile, fileInfo.Type)
 	if err != nil {
 		lib.NotifyError(err)
 		return
 	}
 
-	if lib.CountSeparators(fileInfo) < 0 {
+	if lib.CountSeparators(fileInfo.TranslateLocation.TargetFile) < 0 {
 		lib.NotifyError(fmt.Errorf("text file contains no separators: %s", fileInfo.Name))
 		return
 	}

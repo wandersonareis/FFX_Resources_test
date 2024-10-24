@@ -22,7 +22,7 @@ func NewSpiraFolder(fileInfo *lib.FileInfo, extractPath, translatePath string) *
 		lib.EmitError(ctx, err)
 	} */
 
-	relativePath, err := lib.GetRelativePathFromMarker(fileInfo)
+	relativePath, err := lib.GetRelativePathFromMarker(fileInfo.AbsolutePath)
 	if err != nil {
 		lib.NotifyError(err)
 		return nil

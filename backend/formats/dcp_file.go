@@ -12,7 +12,7 @@ type DcpFile struct {
 }
 
 func NewDcpFile(fileInfo *lib.FileInfo) *DcpFile {
-	relativePath, err := lib.GetRelativePathFromMarker(fileInfo)
+	relativePath, err := lib.GetRelativePathFromMarker(fileInfo.AbsolutePath)
 	if err != nil {
 		lib.NotifyError(err)
 		return nil
