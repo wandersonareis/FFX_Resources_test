@@ -18,7 +18,7 @@ func (c *CompressService) Compress(fileInfo *lib.FileInfo) {
 		return
 	}
 
-	if !lib.FileExists(fileInfo.TranslateLocation.TargetFile) && fileInfo.Type != lib.Dcp {
+	if !fileInfo.TranslateLocation.TargetFileExists() && fileInfo.Type != lib.Dcp {
 		lib.NotifyError(fmt.Errorf("translated text file %s not found", fileInfo.TranslateLocation.TargetFileName))
 		return
 	}
@@ -39,5 +39,6 @@ func (c *CompressService) Compress(fileInfo *lib.FileInfo) {
 		lib.NotifyError(fmt.Errorf("invalid file type: %s", fileInfo.Name))
 		return
 	}
+	
 	fileProcessor.Compress()
 }

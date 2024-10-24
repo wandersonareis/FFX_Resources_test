@@ -110,13 +110,11 @@ func EnumerateFilesDev(s string) ([]string, error) {
 	return results, nil
 }
 
-func EnumerateFilesByPattern(s, pattern string) ([]string, error) {
-	fullpath, err := GetAbsolutePath(s)
+func EnumerateFilesByPattern(files *[]string, path, pattern string) error {
+	fullpath, err := GetAbsolutePath(path)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	var files []string
 
 	var regex = regexp.MustCompile(pattern)
 
@@ -131,16 +129,16 @@ func EnumerateFilesByPattern(s, pattern string) ([]string, error) {
 		}
 
 		if !info.IsDir() && regex.MatchString(info.Name()) {
-			files = append(files, fullpath)
+			*files = append(*files, fullpath)
 		}
 		return nil
 	})
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return files, nil
+	return nil
 }
 
 func GuessTypeByPath(path string) NodeType {

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	goRT "runtime"
+
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -41,6 +43,40 @@ func EmitError(ctx context.Context, err error) {
 	runtime.LogDebug(ctx, err.Error())
 }
 
+func captureTrace() (string, string, int) {
+	// Pega o frame da stack do local de onde essa função foi chamada
+	pc, file, line, ok := goRT.Caller(2) // 2 níveis acima (porque estamos chamando de dentro do logger)
+	if !ok {
+		return "unknown", "unknown", 0
+	}
+
+	// Obtém o nome da função a partir do ponteiro para o programa counter (pc)
+	fn := goRT.FuncForPC(pc)
+	if fn == nil {
+		return file, "unknown", line
+	}
+
+	return file, fn.Name(), line
+}
+
+func logSeverity(ctx context.Context, severity Severity, message string) {
+	file, funcName, line := captureTrace()
+
+	trace := "file: " + file + ", func: " + funcName + ", line: " + string(line)
+	debugLine := fmt.Sprintf("Severity: %s, Message: %s, Trace: %s", severity.String(), message, trace)
+
+	switch severity {
+	case SeveritySuccess:
+		runtime.LogPrint(ctx, message)
+	case SeverityInfo:
+		runtime.LogInfo(ctx, message)
+	case SeverityWarn:
+		runtime.LogWarning(ctx, debugLine)
+	case SeverityError:
+		runtime.LogError(ctx, debugLine)
+	}
+}
+
 func Notify(notification Severity, message string) {
 	context := NewInteraction().Ctx
 	notify := Notification{
@@ -49,8 +85,7 @@ func Notify(notification Severity, message string) {
 	}
 
 	runtime.EventsEmit(context, "Notify", notify)
-	runtime.LogPrint(context, message)
-	fmt.Println(message)
+	logSeverity(context, notification, message)
 }
 
 func NotifyError(err error) {

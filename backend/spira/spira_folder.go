@@ -17,7 +17,7 @@ func NewSpiraFolder(fileInfo *lib.FileInfo, extractPath, translatePath string) *
 		lib.EmitError(ctx, err)
 	}
 
-	translatedDirectory, err := lib.GetWorkdirectory().ProvideTranslatedDirectory()
+	translatedDirectory, err := lib.GetWorkdirectory().ProvideTranslateLocation()
 	if err != nil {
 		lib.EmitError(ctx, err)
 	} */

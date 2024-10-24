@@ -7,16 +7,11 @@ type ImportLocation struct {
 var importLocationInstance *ImportLocation
 
 func NewImportLocation() *ImportLocation {
-	rootDirectoryName = "reimported"
-
-	targetDirectory := PathJoin(GetExecDir(), rootDirectoryName)
+	rootDirectoryName := "reimported"
 
 	if importLocationInstance == nil {
 		importLocationInstance = &ImportLocation{
-			LocationBase: LocationBase{
-				TargetDirectory:     targetDirectory,
-				TargetDirectoryName: rootDirectoryName,
-			},
+			LocationBase: NewLocationBase(rootDirectoryName),
 		}
 	}
 
@@ -28,12 +23,7 @@ func (i *ImportLocation) ProvideTargetDirectory() (string, error) {
 		return NewInteraction().ImportLocation.TargetDirectory, nil
 	}
 
-	path := PathJoin(rootDirectory, rootDirectoryName)
-	err := EnsurePathExists(path)
-	if err != nil {
-		return "", err
-	}
-	return path, nil
+	return i.LocationBase.ProvideTargetDirectory()
 }
 
 func (i *ImportLocation) GenerateTargetOutput(formatter ITextFormatter, fileInfo *FileInfo) {

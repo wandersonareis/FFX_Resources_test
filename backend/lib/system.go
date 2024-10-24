@@ -26,6 +26,6 @@ func GetExecDir() string {
 	return currentDirectory
 }
 
-func getTempDir() string {
+func GetTempDir() string {
 	return os.TempDir()
 }

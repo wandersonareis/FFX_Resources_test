@@ -12,10 +12,11 @@ import (
 )
 
 type AppConfig struct {
-	filePath           string
-	OriginalDirectory  string
-	ExtractDirectory   string
-	TranslateDirectory string
+	filePath          string
+	GameFilesLocation string
+	ExtractLocation   string
+	TranslateLocation string
+	ReimportLocation  string
 }
 
 // App struct
@@ -47,45 +48,54 @@ func (a *App) startup(ctx context.Context) {
 
 	lib.NewInteractionWithCtx(ctx)
 
-	config, err := a.LoadConfig(a.appConfig.filePath)
+	config, err := a.loadConfig(a.appConfig.filePath)
 	if err != nil {
 		fmt.Println(err)
 	}
-	a.appConfig.OriginalDirectory = config.OriginalDirectory
-	a.appConfig.ExtractDirectory = config.ExtractDirectory
-	a.appConfig.TranslateDirectory = config.TranslateDirectory
+	a.appConfig.GameFilesLocation = config.GameFilesLocation
+	a.appConfig.ExtractLocation = config.ExtractLocation
+	a.appConfig.TranslateLocation = config.TranslateLocation
+	a.appConfig.ReimportLocation = config.ReimportLocation
 
-	lib.NewInteraction().GameLocation.SetPath(config.OriginalDirectory)
-	lib.NewInteraction().ExtractLocation.SetPath(config.ExtractDirectory)
-	lib.NewInteraction().TranslateLocation.SetPath(config.TranslateDirectory)
+	lib.NewInteraction().GameLocation.SetPath(config.GameFilesLocation)
+	lib.NewInteraction().ExtractLocation.SetPath(config.ExtractLocation)
+	lib.NewInteraction().TranslateLocation.SetPath(config.TranslateLocation)
+	lib.NewInteraction().ImportLocation.SetPath(config.ReimportLocation)
 }
 
 // domReady is called after front-end resources have been loaded
 func (a App) domReady(ctx context.Context) {
 	// Add your action here
-	runtime.LogInfo(ctx, "domReady")
-
 	runtime.EventsOn(ctx, "GameLocationChanged", func(data ...any) {
+		fmt.Println("GameLocationChanged", data)
 		lib.NewInteraction().GameLocation.SetPath(data[0].(string))
 	})
-	runtime.EventsOn(ctx, "ExtractedDirectoryChanged", func(data ...any) {
+	runtime.EventsOn(ctx, "ExtractLocationChanged", func(data ...any) {
+		fmt.Println("ExtractLocationChanged", data)
 		lib.NewInteraction().ExtractLocation.SetPath(data[0].(string))
 	})
 
-	runtime.EventsOn(ctx, "TranslatedDirectoryChanged", func(data ...any) {
+	runtime.EventsOn(ctx, "TranslateLocationChanged", func(data ...any) {
+		fmt.Println("TranslateLocationChanged", data)
 		lib.NewInteraction().TranslateLocation.SetPath(data[0].(string))
 	})
 
-	runtime.EventsEmit(ctx, "GameDirectory", lib.NewInteraction().GameLocation.GetPath())
-	runtime.EventsEmit(ctx, "ExtractedDirectory", lib.NewInteraction().ExtractLocation.GetPath())
-	runtime.EventsEmit(ctx, "TranslatedDirectory", lib.NewInteraction().TranslateLocation.GetPath())
+	runtime.EventsOn(ctx, "ReimportLocationChanged", func(data ...any) {
+		fmt.Println("ReimportLocationChanged", data)
+		lib.NewInteraction().ImportLocation.SetPath(data[0].(string))
+	})
+
+	runtime.EventsEmit(ctx, "GameFilesLocation", lib.NewInteraction().GameLocation.GetPath())
+	runtime.EventsEmit(ctx, "ExtractLocation", lib.NewInteraction().ExtractLocation.GetPath())
+	runtime.EventsEmit(ctx, "TranslateLocation", lib.NewInteraction().TranslateLocation.GetPath())
+	runtime.EventsEmit(ctx, "ReimportLocation", lib.NewInteraction().ImportLocation.GetPath())
 
 	runtime.EventsOn(ctx, "GetGameLocationDirectory", func(data ...any) {
 		fmt.Println("GetGameLocationDirectory", data)
-		runtime.EventsEmit(ctx, "GameDirectory_value", lib.NewInteraction().GameLocation.GetPath())
+		runtime.EventsEmit(ctx, "GameFilesLocation_value", lib.NewInteraction().GameLocation.GetPath())
 	})
 
-	testPath := "F:\\ffxWails\\FFX_Resources\\build\\bin\\data\\ffx_ps2\\ffx2\\master\\new_uspc\\menu"
+	testPath := "F:\\ffxWails\\FFX_Resources\\build\\bin\\data\\ffx_ps2\\ffx2\\master\\new_uspc\\menu\\macrodic.dcp"
 	services.TestExtractFile(testPath, false, true)
 }
 
@@ -94,12 +104,13 @@ func (a App) domReady(ctx context.Context) {
 // Returning true will cause the application to continue, false will continue shutdown as normal.
 func (a *App) beforeClose(ctx context.Context) (prevent bool) {
 	config := AppConfig{
-		OriginalDirectory:  lib.NewInteraction().GameLocation.GetPath(),
-		ExtractDirectory:   lib.NewInteraction().ExtractLocation.TargetDirectory,
-		TranslateDirectory: lib.NewInteraction().TranslateLocation.TargetDirectory,
+		GameFilesLocation: lib.NewInteraction().GameLocation.GetPath(),
+		ExtractLocation:   lib.NewInteraction().ExtractLocation.GetPath(),
+		TranslateLocation: lib.NewInteraction().TranslateLocation.GetPath(),
+		ReimportLocation:  lib.NewInteraction().ImportLocation.GetPath(),
 	}
 
-	err := a.SaveConfig(config)
+	err := a.saveConfig(config)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -152,18 +163,18 @@ func (a *App) SelectDirectory(title string) string {
 }
 
 func (a *App) GetExtractDirectory() string {
-	return lib.GetExtractDirectory()
+	return lib.NewInteraction().ExtractLocation.GetPath()
 }
 
 func (a *App) GetTranslateDirectory() string {
-	return lib.GetTranslateDirectory()
+	return lib.NewInteraction().TranslateLocation.GetPath()
 }
 
 func (a *App) SetExtractDirectory(path string) {
-	lib.NewInteraction().WorkingLocation.ExtractedDirectory = path
+	lib.NewInteraction().ExtractLocation.SetPath(path)
 }
 
-func (a *App) SaveConfig(config AppConfig) error {
+func (a *App) saveConfig(config AppConfig) error {
 	filePath := a.appConfig.filePath
 	data, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
@@ -173,16 +184,14 @@ func (a *App) SaveConfig(config AppConfig) error {
 	return os.WriteFile(filePath, data, 0644)
 }
 
-func (a *App) LoadConfig(filePath string) (AppConfig, error) {
+func (a *App) loadConfig(filePath string) (AppConfig, error) {
 	var config AppConfig
 
-	// Lê o conteúdo do arquivo
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return config, err
 	}
 
-	// Decodifica o conteúdo JSON para a struct
 	err = json.Unmarshal(data, &config)
 	return config, err
 }

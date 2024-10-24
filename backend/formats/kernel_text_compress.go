@@ -10,6 +10,12 @@ func kernelTextPacker(kernelFileInfo *lib.FileInfo) error {
 
 	defer lib.RemoveFile(handler)
 
+	if !kernelFileInfo.TranslateLocation.TargetFileExists() {
+		msg := "translated file does not exist"
+		lib.NotifyWarn(msg)
+		return nil
+	}
+
 	targetFile := kernelFileInfo.AbsolutePath
 	extractedFile := kernelFileInfo.ExtractLocation.TargetFile
 	translatedFile := kernelFileInfo.TranslateLocation.TargetFile

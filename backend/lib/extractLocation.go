@@ -7,28 +7,15 @@ type ExtractLocation struct {
 var extractLocationInstance *ExtractLocation
 
 func NewExtractLocation() *ExtractLocation {
-	rootDirectoryName = "extracted"
-
-	targetDirectory := PathJoin(GetExecDir(), rootDirectoryName)
+	rootDirectoryName := "extracted"
 
 	if extractLocationInstance == nil {
 		extractLocationInstance = &ExtractLocation{
-			LocationBase: LocationBase{
-				TargetDirectory:     targetDirectory,
-				TargetDirectoryName: rootDirectoryName,
-			},
+			LocationBase: NewLocationBase(rootDirectoryName),
 		}
 	}
 
 	return extractLocationInstance
-}
-
-func (e *ExtractLocation) SetPath(path string) {
-	if path == "" {
-		return
-	}
-
-	e.TargetDirectory = path
 }
 
 func (e ExtractLocation) ProvideTargetDirectory() (string, error) {
@@ -36,19 +23,5 @@ func (e ExtractLocation) ProvideTargetDirectory() (string, error) {
 		return NewInteraction().ExtractLocation.TargetDirectory, nil
 	}
 
-	path := PathJoin(rootDirectory, rootDirectoryName)
-	err := EnsurePathExists(path)
-	if err != nil {
-		return "", err
-	}
-	return path, nil
-}
-
-func (e *ExtractLocation) GenerateTargetOutput(formatter ITextFormatter, fileInfo *FileInfo) {
-	e.TargetFile, e.TargetPath = formatter.ReadFile(fileInfo, e.TargetDirectory)
-}
-
-func (e ExtractLocation) TargetFileExists() bool {
-	e.IsExist = FileExists(e.TargetFile)
-	return e.IsExist
+	return e.LocationBase.ProvideTargetDirectory()
 }

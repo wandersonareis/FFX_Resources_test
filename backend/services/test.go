@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-func TestExtractFile(path string, testExtract, testCompress bool) {
+func TestExtractDir(path string, testExtract, testCompress bool) {
 	source, err := lib.NewSource(path)
 	if err != nil {
 		fmt.Println(err)
@@ -31,5 +31,27 @@ func TestExtractFile(path string, testExtract, testCompress bool) {
 	if testCompress {
 		compressService := NewCompressService()
 		compressService.Compress(fileInfo)
+	}
+}
+
+func TestExtractFile(path string, testExtract, testCompress bool) {
+	fileInfo, err := lib.CreateFileInfoFromPath(path)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fileProcessor := spira.NewFileProcessor(fileInfo)
+	if fileProcessor == nil {
+		fmt.Println("invalid file type")
+		return
+	}
+
+	if testExtract {
+		fileProcessor.Extract()
+	}
+
+	if testCompress {
+		fileProcessor.Compress()
 	}
 }

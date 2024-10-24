@@ -14,20 +14,9 @@ const defaultDirName = "data"
 
 func NewGameLocation() *GameLocation {
 	return &GameLocation{
-		//TargetDirectory: PathJoin(rootDirectory, defaultDirName),
-		LocationBase: LocationBase{
-			TargetDirectoryName: PathJoin(rootDirectory, defaultDirName),
-		},
+		LocationBase: NewLocationBase(defaultDirName),
 	}
 }
-
-/* func (g *GameLocation) GetPath() string {
-	return g.TargetDirectory
-} */
-
-/* func (g *GameLocation) SetPath(path string) {
-	g.TargetDirectory = filepath.Clean(path)
-} */
 
 func (g GameLocation) IsSpira() error {
 	return containsNewUSPCPath(g.TargetDirectory)

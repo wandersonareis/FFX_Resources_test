@@ -56,7 +56,7 @@ type TreeNode struct {
 	Children []TreeNode `json:"children"`
 }
 
-type LocationBase struct {
+/* type LocationBase struct {
 	IsExist             bool
 	TargetFile          string
 	TargetPath          string
@@ -75,7 +75,7 @@ func (lb *LocationBase) SetPath(path string) {
 
 func (lb *LocationBase) GetPath() string {
 	return lb.TargetDirectory
-}
+} */
 
 type Pointer struct {
 	Offset int64

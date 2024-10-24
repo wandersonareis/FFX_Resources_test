@@ -9,13 +9,8 @@ type Interaction struct {
 	TranslateLocation *TranslateLocation
 	ImportLocation    *ImportLocation
 	TempProvider      *TempProvider
-	WorkingLocation   *WorkDirectory
 }
 
-const ffx2_marker = "ffx_ps2"
-
-var rootDirectory = GetExecDir()
-var rootDirectoryName = ""
 var interactionInstance *Interaction
 
 func NewInteraction() *Interaction {
@@ -27,7 +22,6 @@ func NewInteraction() *Interaction {
 			TranslateLocation: NewTranslateLocation(),
 			ImportLocation:    NewImportLocation(),
 			TempProvider:      NewTempProvider(),
-			WorkingLocation:   NewWorkDirectory(),
 		}
 	}
 	return interactionInstance
@@ -40,12 +34,4 @@ func NewInteractionWithCtx(ctx context.Context) *Interaction {
 
 	interactionInstance.Ctx = ctx
 	return interactionInstance
-}
-
-func GetPathMarker() string {
-	return ffx2_marker
-}
-
-func GetWorkdirectory() *WorkDirectory {
-	return NewWorkDirectory()
 }

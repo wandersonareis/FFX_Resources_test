@@ -37,15 +37,15 @@ export class ConfigModalComponent implements OnInit {
   }
 
   async ngOnInit() {
-    EventsOnce("GameDirectory", (data: string) => {
+    EventsOnce("GameFilesLocation", (data: string) => {
       gameDirectory.set(data)
     })
 
-    EventsOnce("ExtractedDirectory", (data: string) => {
+    EventsOnce("ExtractLocation", (data: string) => {
       this.extractedDirectory.set(data)
     })
 
-    EventsOnce("TranslatedDirectory", (data: string) => {
+    EventsOnce("TranslateLocation", (data: string) => {
       this.translatedDirectory.set(data)
     })
 
@@ -57,13 +57,13 @@ export class ConfigModalComponent implements OnInit {
         value: gameDirectory
       },
       {
-        eventName: 'ExtractedDirectoryChanged',
+        eventName: 'ExtractLocationChanged',
         label: 'Extracted files:',
         dialogTitle: 'Select extracted output folder',
         value: this.extractedDirectory,
       },
       {
-        eventName: 'TranslatedDirectoryChanged',
+        eventName: 'TranslateLocationChanged',
         label: 'Translated files:',
         dialogTitle: 'Select translated output folder',
         value: this.translatedDirectory,

@@ -1,6 +1,9 @@
 package formats
 
-import "ffxresources/backend/lib"
+import (
+	"ffxresources/backend/lib"
+	"fmt"
+)
 
 func dialogsTextCompress(dialogsFileInfo *lib.FileInfo) error {
 	handler, err := getDialogsHandler()
@@ -10,6 +13,14 @@ func dialogsTextCompress(dialogsFileInfo *lib.FileInfo) error {
 
 	defer lib.RemoveFile(handler)
 
+	if !dialogsFileInfo.TranslateLocation.TargetFileExists() {
+		msg := "Dialogs translated file does not exist"
+		lib.NotifyWarn(msg)
+		return nil
+	}
+
+
+	fmt.Println("dialogsTextCompress")
 	targetFile := dialogsFileInfo.AbsolutePath
 	targetTranslatedFile := dialogsFileInfo.TranslateLocation.TargetFile
 	targetReimportFile := dialogsFileInfo.ImportLocation.TargetFile

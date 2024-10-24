@@ -44,18 +44,19 @@ func (d DcpFile) Extract() {
 	time.Sleep(400 * time.Millisecond)
 
 	macrodicPath := d.FileInfo.ExtractLocation.TargetPath
-	xplitedFiles, err := lib.EnumerateFilesByPattern(macrodicPath, lib.MACRODIC_PATTERN+"$")
+	macrodicXplitedFiles := make([]string, 0, 7)
+	err = lib.EnumerateFilesByPattern(&macrodicXplitedFiles, macrodicPath, lib.MACRODIC_PATTERN+"$")
 	if err != nil {
 		lib.NotifyError(err)
 		return
 	}
 
-	if len(xplitedFiles) != 7 {
-		lib.NotifyError(fmt.Errorf("invalid number of xplited files: %d", len(xplitedFiles)))
+	if len(macrodicXplitedFiles) != 7 {
+		lib.NotifyError(fmt.Errorf("invalid number of xplited files: %d", len(macrodicXplitedFiles)))
 		return
 	}
 
-	err = processFilesParallel(xplitedFiles, func(extractor *DcpFileParts) {
+	err = processFilesParallel(&macrodicXplitedFiles, func(extractor *DcpFileParts) {
 		if extractor.GetFileInfo().ExtractLocation.TargetFileExists() {
 			return
 		}
@@ -76,32 +77,31 @@ func (d DcpFile) Compress() {
 	macrodicFilesPattern := lib.MACRODIC_PATTERN + "$"
 	macrodicTextFilesPattern := lib.MACRODIC_PATTERN + "\\.txt"
 
-	xplitedFiles, err := lib.EnumerateFilesByPattern(macrodicImportPartsPath, macrodicFilesPattern)
-	if err != nil {
+	macrodicXplitedFiles := make([]string, 0, 7)
+	if err := lib.EnumerateFilesByPattern(&macrodicXplitedFiles, macrodicImportPartsPath, macrodicFilesPattern); err != nil {
 		lib.NotifyError(err)
 		return
 	}
 
-	if len(xplitedFiles) != 7 {
-		lib.NotifyError(fmt.Errorf("invalid number of xplited files: %d", len(xplitedFiles)))
+	if len(macrodicXplitedFiles) != 7 {
+		lib.NotifyError(fmt.Errorf("invalid number of xplited files: %d", len(macrodicXplitedFiles)))
 		return
 	}
 
-	xplitedTextFiles, err := lib.EnumerateFilesByPattern(macrodicTranslatedPartsTextPath, macrodicTextFilesPattern)
-	if err != nil {
+	macrodicXplitedTextFiles := make([]string, 0, 7)
+	if err := lib.EnumerateFilesByPattern(&macrodicXplitedTextFiles, macrodicTranslatedPartsTextPath, macrodicTextFilesPattern); err != nil {
 		lib.NotifyError(err)
 		return
 	}
 
-	if len(xplitedTextFiles) != 7 {
-		lib.NotifyError(fmt.Errorf("invalid number of xplited text files: %d", len(xplitedTextFiles)))
+	if len(macrodicXplitedTextFiles) != 7 {
+		lib.NotifyError(fmt.Errorf("invalid number of xplited text files: %d", len(macrodicXplitedTextFiles)))
 		return
 	}
 
-	err = processFilesParallel(xplitedFiles, func(compressor *DcpFileParts) {
+	if err := processFilesParallel(&macrodicXplitedFiles, func(compressor *DcpFileParts) {
 		compressor.Compress()
-	})
-	if err != nil {
+	}); err != nil {
 		lib.NotifyError(err)
 		return
 	}
@@ -110,32 +110,37 @@ func (d DcpFile) Compress() {
 
 	targetReimportFile := d.FileInfo.ImportLocation.TargetFile
 
-	err = dcpFileJoiner(d.FileInfo, &xplitedFiles, targetReimportFile)
-	if err != nil {
+	if err := dcpFileJoiner(d.FileInfo, &macrodicXplitedFiles, targetReimportFile); err != nil {
 		lib.NotifyError(err)
 		return
 	}
 }
 
-func processFilesParallel(xplitedFiles []string, callback func(handler *DcpFileParts)) error {
+func processFilesParallel(xplitedFiles *[]string, callback func(handler *DcpFileParts)) error {
 	var wg sync.WaitGroup
 
-	errChan := make(chan error, len(xplitedFiles))
+	errChan := make(chan error, len(*xplitedFiles))
 
-	for _, xplitedFile := range xplitedFiles {
+	for _, xplitedFile := range *xplitedFiles {
 		wg.Add(1)
 
 		go func(file string) {
 			defer wg.Done()
 
-			sourcePart, err := lib.NewSource(file)
+			/* sourcePart, err := lib.NewSource(file)
 			if err != nil {
 				errChan <- err
 				return
 			}
 
 			dcpPartInfo := &lib.FileInfo{}
-			lib.UpdateFileInfoFromSource(dcpPartInfo, sourcePart)
+			lib.UpdateFileInfoFromSource(dcpPartInfo, sourcePart) */
+
+			dcpPartInfo, err := lib.CreateFileInfoFromPath(file)
+			if err != nil {
+				errChan <- err
+				return
+			}
 
 			fileHandle := NewDcpFileParts(dcpPartInfo)
 			if fileHandle == nil {

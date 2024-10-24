@@ -1,6 +1,6 @@
 package formats
 
-func dcpXpliterArgs() ([]string, error) {
+/* func dcpXpliterArgs() ([]string, error) {
 	args := []string{
 		"4", "-s", "-f", "-min", "0x40",
 	}
@@ -14,4 +14,4 @@ func dcpJoinerArgs() ([]string, error) {
 	}
 
 	return args, nil
-}
+} */

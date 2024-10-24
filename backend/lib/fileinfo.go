@@ -1,22 +1,16 @@
 package lib
 
-/* func CreateFileInfo(source *Source) (FileInfo, error) {
-	var nodeData = FileInfo{
-		Name:              source.Name,
-		NamePrefix:        source.NamePrefix,
-		Size:              source.Size,
-		Type:              source.Type,
-		IsDir:             source.IsDir,
-		Parent:            source.Parent,
-		Extension:         source.Extension,
-		AbsolutePath:      source.FullPath,
-		ExtractLocation:   *NewInteraction().ExtractLocation,
-		TranslateLocation: *NewInteraction().TranslateLocation,
-		ImportLocation:    *NewInteraction().ImportLocation,
+func CreateFileInfoFromPath(path string) (*FileInfo, error) {
+	fileInfo := &FileInfo{}
+	source, err := NewSource(path)
+	if err != nil {
+		return fileInfo, err
 	}
 
-	return nodeData, nil
-} */
+	UpdateFileInfoFromSource(fileInfo, source)
+
+	return fileInfo, nil
+}
 
 func UpdateFileInfoFromSource(fileInfo *FileInfo, source *Source) {
 	fileInfo.Name = source.Name
@@ -27,7 +21,7 @@ func UpdateFileInfoFromSource(fileInfo *FileInfo, source *Source) {
 	fileInfo.Parent = source.Parent
 	fileInfo.Extension = source.Extension
 	fileInfo.AbsolutePath = source.FullPath
-	fileInfo.ExtractLocation = *NewInteraction().ExtractLocation
-	fileInfo.TranslateLocation = *NewInteraction().TranslateLocation
-	fileInfo.ImportLocation = *NewInteraction().ImportLocation
+	fileInfo.ExtractLocation = *NewExtractLocation()
+	fileInfo.TranslateLocation = *NewTranslateLocation()
+	fileInfo.ImportLocation = *NewImportLocation()
 }
