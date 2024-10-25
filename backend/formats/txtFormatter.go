@@ -19,9 +19,9 @@ func (t TxtFormatter) ReadFile(fileInfo *lib.FileInfo, targetDirectory string) (
 	var outputFile, outputPath string
 
 	switch fileInfo.Type {
-	case lib.Dcp:
+	case common.Dcp:
 		outputFile, outputPath = t.provideDcpReadPath(fileInfo, targetDirectory)
-	case lib.DcpParts:
+	case common.DcpParts:
 		outputFile, outputPath = t.provideDcpPartsReadPath(fileInfo, targetDirectory)
 	default:
 		outputFile, outputPath = t.provideDefaulReadPath(fileInfo, targetDirectory)
@@ -37,19 +37,19 @@ func (t TxtFormatter) provideDefaulReadPath(fileInfo *lib.FileInfo, targetDirect
 
 	return extractedFile, extractedPath */
 
-	return provideBasePath(targetDirectory, lib.ChangeExtension(fileInfo.RelativePath, t.targetExtension))
+	return provideBasePath(targetDirectory, common.ChangeExtension(fileInfo.RelativePath, t.targetExtension))
 }
 
 func (t TxtFormatter) provideDcpReadPath(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
-	outputFile := lib.PathJoin(targetDirectory, common.DCP_PARTS_TARGET_DIR_NAME, fileInfo.Name)
+	outputFile := common.PathJoin(targetDirectory, common.DCP_PARTS_TARGET_DIR_NAME, fileInfo.Name)
 
-	outputPath := lib.PathJoin(targetDirectory, common.DCP_PARTS_TARGET_DIR_NAME)
+	outputPath := common.PathJoin(targetDirectory, common.DCP_PARTS_TARGET_DIR_NAME)
 
 	return outputFile, outputPath
 }
 
 func (t TxtFormatter) provideDcpPartsReadPath(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
-	return provideBasePath(targetDirectory, common.DCP_PARTS_TARGET_DIR_NAME, lib.AddExtension(fileInfo.Name, t.targetExtension))
+	return provideBasePath(targetDirectory, common.DCP_PARTS_TARGET_DIR_NAME, common.AddExtension(fileInfo.Name, t.targetExtension))
 }
 
 func (t TxtFormatter) WriteFile(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
@@ -57,9 +57,9 @@ func (t TxtFormatter) WriteFile(fileInfo *lib.FileInfo, targetDirectory string) 
 	var outputFile, outputPath string
 
 	switch fileInfo.Type {
-	case lib.Dcp:
+	case common.Dcp:
 		outputFile, outputPath = t.provideDcpWritePath(fileInfo, targetDirectory)
-	case lib.DcpParts:
+	case common.DcpParts:
 		outputFile, outputPath = t.provideDcpPartsWritePath(fileInfo, targetDirectory)
 	default:
 		outputFile, outputPath = t.provideDefaultWritePath(fileInfo, targetDirectory)
@@ -73,7 +73,7 @@ func (t TxtFormatter) provideDefaultWritePath(fileInfo *lib.FileInfo, targetDire
 	outputPath := filepath.Dir(outputFile)
 
 	return outputFile, outputPath */
-	return provideBasePath(targetDirectory, lib.ChangeExtension(fileInfo.RelativePath, fileInfo.Extension))
+	return provideBasePath(targetDirectory, common.ChangeExtension(fileInfo.RelativePath, fileInfo.Extension))
 }
 
 func (t TxtFormatter) provideDcpWritePath(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
@@ -94,9 +94,9 @@ func (t TxtFormatter) provideDcpPartsWritePath(fileInfo *lib.FileInfo, targetDir
 }
 
 func provideBasePath(targetDirectory string, dirParts ...string) (string, string) {
-	dirPartsJoined := lib.PathJoin(dirParts...)
-	outputFile := lib.PathJoin(targetDirectory, dirPartsJoined)
-	outputPath := lib.GetDir(outputFile)
+	dirPartsJoined := common.PathJoin(dirParts...)
+	outputFile := common.PathJoin(targetDirectory, dirPartsJoined)
+	outputPath := common.GetDir(outputFile)
 
 	return outputFile, outputPath
 }

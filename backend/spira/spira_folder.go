@@ -2,6 +2,7 @@ package spira
 
 import (
 	"context"
+	"ffxresources/backend/common"
 	"ffxresources/backend/lib"
 	"fmt"
 )
@@ -22,7 +23,7 @@ func NewSpiraFolder(fileInfo *lib.FileInfo, extractPath, translatePath string) *
 		lib.EmitError(ctx, err)
 	} */
 
-	relativePath, err := lib.GetRelativePathFromMarker(fileInfo.AbsolutePath)
+	relativePath, err := common.GetRelativePathFromMarker(fileInfo.AbsolutePath)
 	if err != nil {
 		lib.NotifyError(err)
 		return nil
@@ -30,8 +31,8 @@ func NewSpiraFolder(fileInfo *lib.FileInfo, extractPath, translatePath string) *
 
 	fileInfo.RelativePath = relativePath
 
-	fileInfo.ExtractLocation.TargetPath = lib.PathJoin(extractPath, relativePath)
-	fileInfo.TranslateLocation.TargetPath = lib.PathJoin(translatePath, relativePath)
+	fileInfo.ExtractLocation.TargetPath = common.PathJoin(extractPath, relativePath)
+	fileInfo.TranslateLocation.TargetPath = common.PathJoin(translatePath, relativePath)
 
 	return &SpiraFolder{
 		ctx:      lib.NewInteraction().Ctx,
@@ -76,7 +77,7 @@ func (d SpiraFolder) Compress() {
 func (d SpiraFolder) processFiles() []lib.IFileProcessor {
 	var fileProcessors []lib.IFileProcessor
 
-	results, err := lib.EnumerateFilesDev(d.FileInfo.AbsolutePath)
+	results, err := common.EnumerateFilesDev(d.FileInfo.AbsolutePath)
 	if err != nil {
 		lib.NotifyError(err)
 	}

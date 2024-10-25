@@ -1,6 +1,9 @@
 package formats
 
-import "ffxresources/backend/lib"
+import (
+	"ffxresources/backend/common"
+	"ffxresources/backend/lib"
+)
 
 func kernelTextPacker(kernelFileInfo *lib.FileInfo) error {
 	handler, err := getKernelFileHandler()
@@ -8,7 +11,7 @@ func kernelTextPacker(kernelFileInfo *lib.FileInfo) error {
 		return err
 	}
 
-	defer lib.RemoveFile(handler)
+	defer common.RemoveFile(handler)
 
 	if !kernelFileInfo.TranslateLocation.TargetFileExists() {
 		msg := "translated file does not exist"
@@ -21,7 +24,7 @@ func kernelTextPacker(kernelFileInfo *lib.FileInfo) error {
 	translatedFile := kernelFileInfo.TranslateLocation.TargetFile
 	translatedPath := kernelFileInfo.TranslateLocation.TargetPath
 
-	err = lib.EnsurePathExists(translatedPath)
+	err = common.EnsurePathExists(translatedPath)
 	if err != nil {
 		return err
 	}
@@ -31,7 +34,7 @@ func kernelTextPacker(kernelFileInfo *lib.FileInfo) error {
 		return err
 	}
 
-	defer lib.RemoveFile(codeTable)
+	defer common.RemoveFile(codeTable)
 
 	args = append(args, targetFile, extractedFile, translatedFile)
 

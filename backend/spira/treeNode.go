@@ -1,22 +1,25 @@
 package spira
 
-import "ffxresources/backend/lib"
+import (
+	"ffxresources/backend/common"
+	"ffxresources/backend/lib"
+)
 
 func getTreeNodeIcon(source *lib.Source) string {
 	var icon string
 
 	switch source.Type {
-	case lib.Folder:
+	case common.Folder:
 		icon = "pi pi-folder"
-	case lib.File:
+	case common.File:
 		icon = "pi pi-file"
-	case lib.Dialogs:
+	case common.Dialogs:
 		icon = "pi pi-file-word"
-	case lib.Kernel:
+	case common.Kernel:
 		icon = "pi pi-file-word"
-	case lib.Dcp:
+	case common.Dcp:
 		icon = "pi pi-file-plus"
-	case lib.Tutorial:
+	case common.Tutorial:
 		icon = "pi pi-file-pdf"
 	default:
 		icon = ""

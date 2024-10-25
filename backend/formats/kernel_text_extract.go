@@ -1,6 +1,9 @@
 package formats
 
-import "ffxresources/backend/lib"
+import (
+	"ffxresources/backend/common"
+	"ffxresources/backend/lib"
+)
 
 func kernelUnpacker(kernelFileInfo *lib.FileInfo) error {
 	handler, err := getKernelFileHandler()
@@ -8,13 +11,13 @@ func kernelUnpacker(kernelFileInfo *lib.FileInfo) error {
 		return err
 	}
 
-	defer lib.RemoveFile(handler)
+	defer common.RemoveFile(handler)
 
 	targetFile := kernelFileInfo.AbsolutePath
 	outputFile := kernelFileInfo.ExtractLocation.TargetFile
 	outputPath := kernelFileInfo.ExtractLocation.TargetPath
 
-	err = lib.EnsurePathExists(outputPath)
+	err = common.EnsurePathExists(outputPath)
 	if err != nil {
 		return err
 	}
@@ -24,7 +27,7 @@ func kernelUnpacker(kernelFileInfo *lib.FileInfo) error {
 		return err
 	}
 
-	defer lib.RemoveFile(codeTable)
+	defer common.RemoveFile(codeTable)
 
 	args = append(args, targetFile, outputFile)
 

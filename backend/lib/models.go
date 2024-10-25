@@ -1,6 +1,8 @@
 package lib
 
-type NodeType int
+import "ffxresources/backend/common"
+
+/* type NodeType int
 
 const (
 	None NodeType = iota
@@ -12,13 +14,13 @@ const (
 	Kernel
 	Dcp
 	DcpParts
-)
+) */
 
 type FileInfo struct {
 	Name              string            `json:"name"`
 	NamePrefix        string            `json:"name_prefix"`
 	Size              int64             `json:"size"`
-	Type              NodeType          `json:"type"`
+	Type              common.NodeType   `json:"type"`
 	Extension         string            `json:"extension"`
 	Parent            string            `json:"parent"`
 	IsDir             bool              `json:"is_dir"`

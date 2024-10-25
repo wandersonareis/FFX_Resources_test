@@ -34,7 +34,7 @@ func GetDcpXplitHandler(targetExtension ...string) (string, error) {
 
 	targetFile := tempProvider.FilePath
 
-	err := lib.GetFileFromResources(targetHandler, targetFile)
+	err := common.GetFileFromResources(targetHandler, targetFile)
 	if err != nil {
 		return "", err
 	}

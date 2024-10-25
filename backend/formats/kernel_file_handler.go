@@ -20,7 +20,7 @@ func getKernelFileHandler(targetExtension ...string) (string, error) {
 	tempProvider := lib.NewInteraction().TempProvider.ProvideTempFileWithExtension(common.KERNEL_HANDLER_APPLICATION, extension)
 
 	targetFile := tempProvider.FilePath
-	err := lib.GetFileFromResources(targetHandler, targetFile)
+	err := common.GetFileFromResources(targetHandler, targetFile)
 	if err != nil {
 		return "", err
 	}

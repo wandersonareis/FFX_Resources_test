@@ -1,6 +1,9 @@
 package formats
 
-import "ffxresources/backend/lib"
+import (
+	"ffxresources/backend/common"
+	"ffxresources/backend/lib"
+)
 
 func dialogsUnpacker(dialogsFileInfo *lib.FileInfo) error {
 	handler, err := getDialogsHandler()
@@ -8,13 +11,13 @@ func dialogsUnpacker(dialogsFileInfo *lib.FileInfo) error {
 		return err
 	}
 
-	defer lib.RemoveFile(handler)
+	defer common.RemoveFile(handler)
 
 	targetFile := dialogsFileInfo.AbsolutePath
 	outputFile := dialogsFileInfo.ExtractLocation.TargetFile
 	outputPath := dialogsFileInfo.ExtractLocation.TargetPath
 
-	err = lib.EnsurePathExists(outputPath)
+	err = common.EnsurePathExists(outputPath)
 	if err != nil {
 		return err
 	}
@@ -24,7 +27,7 @@ func dialogsUnpacker(dialogsFileInfo *lib.FileInfo) error {
 		return err
 	}
 
-	defer lib.RemoveFile(codeTable)
+	defer common.RemoveFile(codeTable)
 
 	args = append(args, targetFile, outputFile)
 

@@ -1,6 +1,9 @@
 package lib
 
-import "path/filepath"
+import (
+	"ffxresources/backend/common"
+	"path/filepath"
+)
 
 type LocationBase struct {
 	IsExist             bool
@@ -12,7 +15,7 @@ type LocationBase struct {
 }
 
 func NewLocationBase(targetDirectoryName string) LocationBase {
-	targetDirectory := filepath.Join(GetExecDir(), targetDirectoryName)
+	targetDirectory := filepath.Join(common.GetExecDir(), targetDirectoryName)
 
 	return LocationBase{
 		TargetDirectoryName: targetDirectoryName,
@@ -37,8 +40,8 @@ func (lb *LocationBase) ProvideTargetDirectory() (string, error) {
 		return lb.TargetDirectory, nil
 	}
 
-	path := filepath.Join(GetExecDir(), lb.TargetDirectoryName)
-	err := EnsurePathExists(path)
+	path := filepath.Join(common.GetExecDir(), lb.TargetDirectoryName)
+	err := common.EnsurePathExists(path)
 	if err != nil {
 		return "", err
 	}
@@ -52,6 +55,6 @@ func (t *LocationBase) GenerateTargetOutput(formatter ITextFormatter, fileInfo *
 }
 
 func (t *LocationBase) TargetFileExists() bool {
-	t.IsExist = FileExists(t.TargetFile)
+	t.IsExist = common.FileExists(t.TargetFile)
 	return t.IsExist
 }

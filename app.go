@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"ffxresources/backend/common"
 	"ffxresources/backend/lib"
 	"ffxresources/backend/services"
 	"fmt"
@@ -36,7 +37,7 @@ func NewApp() *App {
 		CompressService:   services.NewCompressService(),
 
 		appConfig: &AppConfig{
-			filePath: lib.PathJoin(lib.GetExecDir(), "config.json"),
+			filePath: common.PathJoin(common.GetExecDir(), "config.json"),
 		},
 	}
 }
@@ -153,7 +154,7 @@ func (a *App) WriteTextFile(fileInfo lib.FileInfo, text string) {
 func (a *App) SelectDirectory(title string) string {
 	selection, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
 		Title:            title,
-		DefaultDirectory: lib.GetExecDir(),
+		DefaultDirectory: common.GetExecDir(),
 	})
 
 	if err != nil {

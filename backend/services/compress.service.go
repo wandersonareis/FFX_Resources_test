@@ -1,6 +1,7 @@
 package services
 
 import (
+	"ffxresources/backend/common"
 	"ffxresources/backend/lib"
 	"ffxresources/backend/spira"
 	"fmt"
@@ -13,23 +14,23 @@ func NewCompressService() *CompressService {
 }
 
 func (c *CompressService) Compress(fileInfo *lib.FileInfo) {
-	if !lib.FileExists(fileInfo.AbsolutePath) {
+	if !common.FileExists(fileInfo.AbsolutePath) {
 		lib.NotifyError(fmt.Errorf("original text file %s not found", fileInfo.Name))
 		return
 	}
 
-	if !fileInfo.TranslateLocation.TargetFileExists() && fileInfo.Type != lib.Dcp {
+	if !fileInfo.TranslateLocation.TargetFileExists() && fileInfo.Type != common.Dcp {
 		lib.NotifyError(fmt.Errorf("translated text file %s not found", fileInfo.TranslateLocation.TargetFileName))
 		return
 	}
 
-	err := lib.EnsureWindowsFormat(fileInfo.TranslateLocation.TargetFile, fileInfo.Type)
+	err := common.EnsureWindowsFormat(fileInfo.TranslateLocation.TargetFile, fileInfo.Type)
 	if err != nil {
 		lib.NotifyError(err)
 		return
 	}
 
-	if lib.CountSeparators(fileInfo.TranslateLocation.TargetFile) < 0 {
+	if common.CountSeparators(fileInfo.TranslateLocation.TargetFile) < 0 {
 		lib.NotifyError(fmt.Errorf("text file contains no separators: %s", fileInfo.Name))
 		return
 	}

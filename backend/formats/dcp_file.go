@@ -13,7 +13,7 @@ type DcpFile struct {
 }
 
 func NewDcpFile(fileInfo *lib.FileInfo) *DcpFile {
-	relativePath, err := lib.GetRelativePathFromMarker(fileInfo.AbsolutePath)
+	relativePath, err := common.GetRelativePathFromMarker(fileInfo.AbsolutePath)
 	if err != nil {
 		lib.NotifyError(err)
 		return nil
@@ -46,7 +46,7 @@ func (d DcpFile) Extract() {
 
 	macrodicPath := d.FileInfo.ExtractLocation.TargetPath
 	macrodicXplitedFiles := make([]string, 0, 7)
-	err = lib.EnumerateFilesByPattern(&macrodicXplitedFiles, macrodicPath, common.MACRODIC_PATTERN+"$")
+	err = common.EnumerateFilesByPattern(&macrodicXplitedFiles, macrodicPath, common.MACRODIC_PATTERN+"$")
 	if err != nil {
 		lib.NotifyError(err)
 		return
@@ -72,14 +72,14 @@ func (d DcpFile) Extract() {
 }
 
 func (d DcpFile) Compress() {
-	macrodicImportPartsPath := lib.PathJoin(d.FileInfo.ImportLocation.TargetDirectory, common.DCP_PARTS_TARGET_DIR_NAME)
+	macrodicImportPartsPath := common.PathJoin(d.FileInfo.ImportLocation.TargetDirectory, common.DCP_PARTS_TARGET_DIR_NAME)
 	macrodicTranslatedPartsTextPath := d.FileInfo.TranslateLocation.TargetPath
 
 	macrodicFilesPattern := common.MACRODIC_PATTERN + "$"
 	macrodicTextFilesPattern := common.MACRODIC_PATTERN + "\\.txt"
 
 	macrodicXplitedFiles := make([]string, 0, 7)
-	if err := lib.EnumerateFilesByPattern(&macrodicXplitedFiles, macrodicImportPartsPath, macrodicFilesPattern); err != nil {
+	if err := common.EnumerateFilesByPattern(&macrodicXplitedFiles, macrodicImportPartsPath, macrodicFilesPattern); err != nil {
 		lib.NotifyError(err)
 		return
 	}
@@ -90,7 +90,7 @@ func (d DcpFile) Compress() {
 	}
 
 	macrodicXplitedTextFiles := make([]string, 0, 7)
-	if err := lib.EnumerateFilesByPattern(&macrodicXplitedTextFiles, macrodicTranslatedPartsTextPath, macrodicTextFilesPattern); err != nil {
+	if err := common.EnumerateFilesByPattern(&macrodicXplitedTextFiles, macrodicTranslatedPartsTextPath, macrodicTextFilesPattern); err != nil {
 		lib.NotifyError(err)
 		return
 	}

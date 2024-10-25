@@ -2,6 +2,7 @@ package formats
 
 import (
 	"encoding/binary"
+	"ffxresources/backend/common"
 	"ffxresources/backend/lib"
 	"fmt"
 	"io"
@@ -20,7 +21,7 @@ func dcpFileXpliter(fileInfo *lib.FileInfo) error {
 	targetNamePrefix := fileInfo.NamePrefix
 	//targetPath := fileInfo.ExtractLocation.TargetFile
 	outputPath := fileInfo.ExtractLocation.TargetPath
-	lib.EnsurePathExists(outputPath)
+	common.EnsurePathExists(outputPath)
 
 	err := DcpReader(targetFile, targetNamePrefix, outputPath)
 	if err != nil {
@@ -78,9 +79,9 @@ func DcpReader(dcpFilePath, namePrefix, outputDir string) error {
 		}
 
 		outputFileName := fmt.Sprintf("%s.%03d", namePrefix, i)
-		outputFilePartsPath := lib.PathJoin(outputDir, outputFileName)
+		outputFilePartsPath := common.PathJoin(outputDir, outputFileName)
 
-		err = lib.WriteBytesToFile(outputFilePartsPath, data)
+		err = common.WriteBytesToFile(outputFilePartsPath, data)
 		if err != nil {
 			return fmt.Errorf("erro ao salvar o arquivo %03d: %w", i, err)
 		}

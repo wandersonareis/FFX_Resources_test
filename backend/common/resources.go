@@ -1,4 +1,4 @@
-package lib
+package common
 
 import (
 	"fmt"
@@ -44,21 +44,6 @@ func createHandlerFile(targetFile string, bytes []byte) error {
 
 	return nil
 }
-
-/* func GetDcpXplitHandler() (string, error) {
-	targetHandler := []string{
-		interaction.WorkingLocation.WorkDirectoryName,
-		DCP_FILE_XPLITTER_APPLICATION,
-	}
-
-	targetFile := filepath.Join(interaction.WorkingLocation.WorkDirectory, DCP_FILE_XPLITTER_APPLICATION)
-	err := GetFileFromResources(targetHandler, targetFile)
-	if err != nil {
-		return "", err
-	}
-
-	return targetFile, nil
-} */
 
 func GetFileFromResources(targetLocation []string, targetFile string) error {
 	EnsurePathExists(targetFile)

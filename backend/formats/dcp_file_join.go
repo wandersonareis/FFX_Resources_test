@@ -2,6 +2,7 @@ package formats
 
 import (
 	"encoding/binary"
+	"ffxresources/backend/common"
 	"ffxresources/backend/lib"
 	"fmt"
 	"io"
@@ -19,7 +20,7 @@ func dcpFileJoiner(fileInfo *lib.FileInfo, xplitedFiles *[]string, targetReimpor
 
 	//reimportFile := fileInfo.ImportLocation.TargetFile
 	reimportFilePath := fileInfo.ImportLocation.TargetPath
-	lib.EnsurePathExists(reimportFilePath)
+	common.EnsurePathExists(reimportFilePath)
 
 	err := DcpWriter(originalDcpFile, xplitedFiles, targetReimportFile)
 	if err != nil {

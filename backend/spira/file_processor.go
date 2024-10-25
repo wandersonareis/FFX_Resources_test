@@ -1,6 +1,7 @@
 package spira
 
 import (
+	"ffxresources/backend/common"
 	"ffxresources/backend/formats"
 	"ffxresources/backend/lib"
 )
@@ -30,13 +31,13 @@ func NewFileProcessor(fileInfo *lib.FileInfo) lib.IFileProcessor {
 
 
 	switch fileType {
-	case lib.Dialogs, lib.Tutorial, lib.DcpParts:
+	case common.Dialogs, common.Tutorial, common.DcpParts:
 		return formats.NewDialogs(fileInfo)
-	case lib.Kernel:
+	case common.Kernel:
 		return formats.NewKernel(fileInfo)
-	case lib.Dcp:
+	case common.Dcp:
 		return formats.NewDcpFile(fileInfo)
-	case lib.Folder:
+	case common.Folder:
 		return NewSpiraFolder(fileInfo, extractPath, translatePath)
 	default:
 		return nil
