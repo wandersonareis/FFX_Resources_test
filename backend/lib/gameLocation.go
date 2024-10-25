@@ -22,9 +22,9 @@ func (g GameLocation) IsSpira() error {
 	return containsNewUSPCPath(g.TargetDirectory)
 }
 
-func (g GameLocation) IsSpiraPath(path string) bool {
+/* func (g GameLocation) IsSpiraPath(path string) bool {
 	return hasSpira(path)
-}
+} */
 
 func containsNewUSPCPath(userPath string) error {
 	cleanedPath := filepath.Clean(userPath)
@@ -38,6 +38,6 @@ func containsNewUSPCPath(userPath string) error {
 	return nil
 }
 
-func hasSpira(path string) bool {
+/* func hasSpira(path string) bool {
 	return IsValidPath.MatchString(path)
-}
+} */
