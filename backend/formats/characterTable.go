@@ -1,14 +1,17 @@
 package formats
 
-import "ffxresources/backend/lib"
+import (
+	"ffxresources/backend/common"
+	"ffxresources/backend/lib"
+)
 
 func getCharacterTable() (string, error) {
 	targetHandler := []string{
-		lib.DEFAULT_RESOURCES_ROOTDIR,
-		lib.FFX_CODE_TABLE_NAME,
+		common.DEFAULT_RESOURCES_ROOTDIR,
+		common.FFX_CODE_TABLE_NAME,
 	}
 
-	tempProvider := lib.NewInteraction().TempProvider.ProvideTempFile(lib.FFX_CODE_TABLE_NAME)
+	tempProvider := lib.NewInteraction().TempProvider.ProvideTempFile(common.FFX_CODE_TABLE_NAME)
 
 	targetFile := tempProvider.FilePath
 

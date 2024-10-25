@@ -2,6 +2,7 @@ package lib
 
 import (
 	"bufio"
+	"ffxresources/backend/common"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -83,7 +84,7 @@ func RemoveFileExtension(filePath string) string {
 }
 
 func CountSeparators(targetFile string) int {
-	separator := FFX_TEXT_FORMAT_SEPARATOR
+	separator := common.FFX_TEXT_FORMAT_SEPARATOR
 	//input, err := ReadFile(fileInfo.ExtractLocation.TargetFile)
 	input, err := ReadFile(targetFile)
 	if err != nil {

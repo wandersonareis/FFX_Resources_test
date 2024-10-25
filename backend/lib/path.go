@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"ffxresources/backend/common"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -160,7 +161,7 @@ func GuessTypeByPath(path string) NodeType {
 }
 
 func GetRelativePathFromMarker(path string) (string, error) {
-	var marker = FFX_DIR_MARKER
+	var marker = common.FFX_DIR_MARKER
 
 	//path := fileInfo.AbsolutePath
 	index := strings.Index(path, marker)
