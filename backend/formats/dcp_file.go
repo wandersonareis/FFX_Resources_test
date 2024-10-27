@@ -13,13 +13,13 @@ type DcpFile struct {
 }
 
 func NewDcpFile(fileInfo *lib.FileInfo) *DcpFile {
-	relativePath, err := common.GetRelativePathFromMarker(fileInfo.AbsolutePath)
-	if err != nil {
+	//relativePath, err := common.GetRelativePathFromMarker(fileInfo.AbsolutePath)
+	/* if err != nil {
 		lib.NotifyError(err)
 		return nil
-	}
+	} */
 
-	fileInfo.RelativePath = relativePath
+	//fileInfo.RelativePath = relativePath
 
 	fileInfo.ExtractLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
 	fileInfo.TranslateLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)

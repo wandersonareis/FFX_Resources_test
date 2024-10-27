@@ -26,6 +26,7 @@ type FileInfo struct {
 	IsDir             bool              `json:"is_dir"`
 	AbsolutePath      string            `json:"absolute_path"`
 	RelativePath      string            `json:"relative_path"`
+	Clones            []string          `json:"clones"`
 	ExtractLocation   ExtractLocation   `json:"extract_location"`
 	TranslateLocation TranslateLocation `json:"translate_location"`
 	ImportLocation    ImportLocation    `json:"import_location"`

@@ -1,12 +1,14 @@
 package common
 
 import (
-	"fmt"
+	"context"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 func PathJoin(parts ...string) string {
@@ -159,16 +161,17 @@ func GuessTypeByPath(path string) NodeType {
 	return guessBySpiraFileType(path)
 }
 
-func GetRelativePathFromMarker(path string) (string, error) {
+func GetRelativePathFromMarker(path string) string {
 	var marker = FFX_DIR_MARKER
 
 	//path := fileInfo.AbsolutePath
 	index := strings.Index(path, marker)
 	if index == -1 {
-		return "", fmt.Errorf("the path does not contain the marker '%s' -> '%s'", marker, path)
+		runtime.LogWarning(context.Background(), "Unable to find marker in path: "+path)
+		return ""
 	}
 
-	return path[index:], nil
+	return path[index:]
 }
 
 /* func GenerateExtractedOutput(relativePath string, workDirectory, targetDirName, targetExtension string) (string, string) {

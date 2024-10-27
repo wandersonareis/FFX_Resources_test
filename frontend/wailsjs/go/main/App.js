@@ -10,16 +10,8 @@ export function GetTranslateDirectory() {
   return window['go']['main']['App']['GetTranslateDirectory']();
 }
 
-export function LoadConfig(arg1) {
-  return window['go']['main']['App']['LoadConfig'](arg1);
-}
-
 export function ReadFileAsString(arg1) {
   return window['go']['main']['App']['ReadFileAsString'](arg1);
-}
-
-export function SaveConfig(arg1) {
-  return window['go']['main']['App']['SaveConfig'](arg1);
 }
 
 export function SelectDirectory(arg1) {

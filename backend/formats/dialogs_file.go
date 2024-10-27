@@ -2,7 +2,6 @@ package formats
 
 import (
 	"context"
-	"ffxresources/backend/common"
 	"ffxresources/backend/lib"
 )
 
@@ -12,14 +11,6 @@ type DialogsFile struct {
 }
 
 func NewDialogs(fileInfo *lib.FileInfo) *DialogsFile {
-	relativePath, err := common.GetRelativePathFromMarker(fileInfo.AbsolutePath)
-	if err != nil {
-		lib.NotifyError(err)
-		return nil
-	}
-
-	fileInfo.RelativePath = relativePath
-
 	fileInfo.ExtractLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
 	fileInfo.TranslateLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
 	fileInfo.ImportLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)

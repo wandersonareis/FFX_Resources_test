@@ -23,16 +23,16 @@ func NewSpiraFolder(fileInfo *lib.FileInfo, extractPath, translatePath string) *
 		lib.EmitError(ctx, err)
 	} */
 
-	relativePath, err := common.GetRelativePathFromMarker(fileInfo.AbsolutePath)
+	/* relativePath, err := common.GetRelativePathFromMarker(fileInfo.AbsolutePath)
 	if err != nil {
 		lib.NotifyError(err)
 		return nil
 	}
 
-	fileInfo.RelativePath = relativePath
+	fileInfo.RelativePath = relativePath */
 
-	fileInfo.ExtractLocation.TargetPath = common.PathJoin(extractPath, relativePath)
-	fileInfo.TranslateLocation.TargetPath = common.PathJoin(translatePath, relativePath)
+	fileInfo.ExtractLocation.TargetPath = common.PathJoin(extractPath, fileInfo.RelativePath)
+	fileInfo.TranslateLocation.TargetPath = common.PathJoin(translatePath, fileInfo.RelativePath)
 
 	return &SpiraFolder{
 		ctx:      lib.NewInteraction().Ctx,

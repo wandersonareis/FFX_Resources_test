@@ -2,7 +2,6 @@ package formats
 
 import (
 	"context"
-	"ffxresources/backend/common"
 	"ffxresources/backend/lib"
 )
 
@@ -12,13 +11,13 @@ type kernelFile struct {
 }
 
 func NewKernel(fileInfo *lib.FileInfo) lib.IFileProcessor {
-	relativePath, err := common.GetRelativePathFromMarker(fileInfo.AbsolutePath)
+	/* relativePath, err := common.GetRelativePathFromMarker(fileInfo.AbsolutePath)
 	if err != nil {
 		lib.NotifyError(err)
 		return nil
 	}
 
-	fileInfo.RelativePath = relativePath
+	fileInfo.RelativePath = relativePath */
 
 	fileInfo.ExtractLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
 	fileInfo.TranslateLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)

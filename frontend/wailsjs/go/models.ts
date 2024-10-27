@@ -1,11 +1,12 @@
 export namespace lib {
 	
 	export class ExtractLocation {
-	    TargetDirectoryName: string;
-	    TargetDirectory: string;
+	    IsExist: boolean;
 	    TargetFile: string;
 	    TargetPath: string;
-	    IsExist: boolean;
+	    TargetFileName: string;
+	    TargetDirectory: string;
+	    TargetDirectoryName: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ExtractLocation(source);
@@ -13,18 +14,21 @@ export namespace lib {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.TargetDirectoryName = source["TargetDirectoryName"];
-	        this.TargetDirectory = source["TargetDirectory"];
+	        this.IsExist = source["IsExist"];
 	        this.TargetFile = source["TargetFile"];
 	        this.TargetPath = source["TargetPath"];
-	        this.IsExist = source["IsExist"];
+	        this.TargetFileName = source["TargetFileName"];
+	        this.TargetDirectory = source["TargetDirectory"];
+	        this.TargetDirectoryName = source["TargetDirectoryName"];
 	    }
 	}
 	export class ImportLocation {
-	    TargetDirectoryName: string;
-	    TargetDirectory: string;
+	    IsExist: boolean;
 	    TargetFile: string;
 	    TargetPath: string;
+	    TargetFileName: string;
+	    TargetDirectory: string;
+	    TargetDirectoryName: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ImportLocation(source);
@@ -32,18 +36,21 @@ export namespace lib {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.TargetDirectoryName = source["TargetDirectoryName"];
-	        this.TargetDirectory = source["TargetDirectory"];
+	        this.IsExist = source["IsExist"];
 	        this.TargetFile = source["TargetFile"];
 	        this.TargetPath = source["TargetPath"];
+	        this.TargetFileName = source["TargetFileName"];
+	        this.TargetDirectory = source["TargetDirectory"];
+	        this.TargetDirectoryName = source["TargetDirectoryName"];
 	    }
 	}
 	export class TranslateLocation {
-	    TargetDirectoryName: string;
-	    TargetDirectory: string;
+	    IsExist: boolean;
 	    TargetFile: string;
 	    TargetPath: string;
-	    IsExist: boolean;
+	    TargetFileName: string;
+	    TargetDirectory: string;
+	    TargetDirectoryName: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new TranslateLocation(source);
@@ -51,11 +58,12 @@ export namespace lib {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.TargetDirectoryName = source["TargetDirectoryName"];
-	        this.TargetDirectory = source["TargetDirectory"];
+	        this.IsExist = source["IsExist"];
 	        this.TargetFile = source["TargetFile"];
 	        this.TargetPath = source["TargetPath"];
-	        this.IsExist = source["IsExist"];
+	        this.TargetFileName = source["TargetFileName"];
+	        this.TargetDirectory = source["TargetDirectory"];
+	        this.TargetDirectoryName = source["TargetDirectoryName"];
 	    }
 	}
 	export class FileInfo {
@@ -115,7 +123,7 @@ export namespace lib {
 	export class TreeNode {
 	    key: string;
 	    label: string;
-	    data: FileInfo;
+	    data?: FileInfo;
 	    icon: string;
 	    children: TreeNode[];
 	
@@ -130,48 +138,6 @@ export namespace lib {
 	        this.data = this.convertValues(source["data"], FileInfo);
 	        this.icon = source["icon"];
 	        this.children = this.convertValues(source["children"], TreeNode);
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
-	}
-
-}
-
-export namespace main {
-	
-	export class AppConfig {
-	    OriginalDirectory: string;
-	    ExtractDirectory: string;
-	    TranslateDirectory: string;
-	    // Go type: lib
-	    GameLocation: any;
-	
-	    static createFrom(source: any = {}) {
-	        return new AppConfig(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.OriginalDirectory = source["OriginalDirectory"];
-	        this.ExtractDirectory = source["ExtractDirectory"];
-	        this.TranslateDirectory = source["TranslateDirectory"];
-	        this.GameLocation = this.convertValues(source["GameLocation"], null);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
