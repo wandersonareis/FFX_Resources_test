@@ -2,7 +2,8 @@ package formats
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/lib"
+	"ffxresources/backend/interactions"
+	"ffxresources/backend/models"
 )
 
 type TxtFormatter struct {
@@ -15,82 +16,81 @@ func NewTxtFormatter() *TxtFormatter {
 	}
 }
 
-func (t TxtFormatter) ReadFile(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
+func (t TxtFormatter) ReadFile(dataInfo *interactions.GameDataInfo, targetDirectory string) (string, string) {
 	var outputFile, outputPath string
 
-	switch fileInfo.Type {
-	case common.Dcp:
-		outputFile, outputPath = t.provideDcpReadPath(fileInfo, targetDirectory)
-	case common.DcpParts:
-		outputFile, outputPath = t.provideDcpPartsReadPath(fileInfo, targetDirectory)
+	switch dataInfo.GameData.Type {
+	case models.Dcp:
+		outputFile, outputPath = t.provideDcpReadPath(targetDirectory, dataInfo.GameData.Name)
+	case models.DcpParts:
+		outputFile, outputPath = t.providePartsReadPath(targetDirectory, common.DCP_PARTS_TARGET_DIR_NAME, dataInfo.GameData.Name)
+	case models.Lockit:
+		outputFile, outputPath = t.provideLockitReadPath(targetDirectory, dataInfo.GameData.NamePrefix)
+	case models.LockitParts:
+		outputFile, outputPath = t.providePartsReadPath(targetDirectory, common.LOCKIT_TARGET_DIR_NAME, dataInfo.GameData.Name)
 	default:
-		outputFile, outputPath = t.provideDefaulReadPath(fileInfo, targetDirectory)
+		outputFile, outputPath = t.provideDefaulReadPath(targetDirectory, dataInfo.GameData.RelativePath)
 	}
 
 	return outputFile, outputPath
 }
 
-func (t TxtFormatter) provideDefaulReadPath(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
-	//outputFile := PathJoin(workDirectory, targetDirName, ChangeExtension(fileInfo.RelativePath, targetExtension))
-
-	/* extractedFile, extractedPath := lib.GenerateExtractedOutput(fileInfo, targetDirectory, "", lib.DEFAULT_TEXT_EXTENSION)
-
-	return extractedFile, extractedPath */
-
-	return provideBasePath(targetDirectory, common.ChangeExtension(fileInfo.RelativePath, t.targetExtension))
+func (t TxtFormatter) provideDefaulReadPath(targetDirectory, relativePath string) (string, string) {
+	return provideBasePath(targetDirectory, common.ChangeExtension(relativePath, t.targetExtension))
 }
 
-func (t TxtFormatter) provideDcpReadPath(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
-	outputFile := common.PathJoin(targetDirectory, common.DCP_PARTS_TARGET_DIR_NAME, fileInfo.Name)
+func (t TxtFormatter) provideDcpReadPath(targetDirectory, fileName string) (string, string) {
+	outputFile := common.PathJoin(targetDirectory, common.DCP_PARTS_TARGET_DIR_NAME, fileName)
 
 	outputPath := common.PathJoin(targetDirectory, common.DCP_PARTS_TARGET_DIR_NAME)
 
 	return outputFile, outputPath
 }
 
-func (t TxtFormatter) provideDcpPartsReadPath(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
-	return provideBasePath(targetDirectory, common.DCP_PARTS_TARGET_DIR_NAME, common.AddExtension(fileInfo.Name, t.targetExtension))
+func (t TxtFormatter) providePartsReadPath(targetDirectory, dirName, fileName string) (string, string) {
+	return provideBasePath(targetDirectory, dirName, common.AddExtension(fileName, t.targetExtension))
 }
 
-func (t TxtFormatter) WriteFile(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
+func (t TxtFormatter) provideLockitReadPath(targetDirectory, fileName string) (string, string) {
+	return provideBasePath(targetDirectory, common.LOCKIT_TARGET_DIR_NAME, common.AddExtension(fileName, t.targetExtension))
+}
+
+func (t TxtFormatter) WriteFile(fileInfo *interactions.GameDataInfo, targetDirectory string) (string, string) {
 
 	var outputFile, outputPath string
 
-	switch fileInfo.Type {
-	case common.Dcp:
-		outputFile, outputPath = t.provideDcpWritePath(fileInfo, targetDirectory)
-	case common.DcpParts:
-		outputFile, outputPath = t.provideDcpPartsWritePath(fileInfo, targetDirectory)
+	switch fileInfo.GameData.Type {
+	case models.Dcp:
+		outputFile, outputPath = t.provideDcpWritePath(targetDirectory, fileInfo.GameData.RelativePath)
+	case models.DcpParts:
+		outputFile, outputPath = t.providePartsWritePath(targetDirectory, common.DCP_PARTS_TARGET_DIR_NAME, fileInfo.GameData.Name)
+	case models.LockitParts:
+		outputFile, outputPath = t.providePartsWritePath(targetDirectory, common.LOCKIT_FILE_PARTS_PATTERN, fileInfo.GameData.Name)
 	default:
-		outputFile, outputPath = t.provideDefaultWritePath(fileInfo, targetDirectory)
+		outputFile, outputPath = t.provideDefaultWritePath(targetDirectory, fileInfo.GameData.RelativePath, fileInfo.GameData.Extension)
 	}
 
 	return outputFile, outputPath
 }
 
-func (t TxtFormatter) provideDefaultWritePath(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
+func (t TxtFormatter) provideDefaultWritePath(targetDirectory, relativePath, fileExt string) (string, string) {
 	/* outputFile := lib.PathJoin(targetDirectory, lib.ChangeExtension(fileInfo.RelativePath, fileInfo.Extension))
 	outputPath := filepath.Dir(outputFile)
 
 	return outputFile, outputPath */
-	return provideBasePath(targetDirectory, common.ChangeExtension(fileInfo.RelativePath, fileInfo.Extension))
+	return provideBasePath(targetDirectory, common.ChangeExtension(relativePath, fileExt))
 }
 
-func (t TxtFormatter) provideDcpWritePath(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
+func (t TxtFormatter) provideDcpWritePath(targetDirectory, relativePath string) (string, string) {
 	/* outputFile := lib.PathJoin(targetDirectory, fileInfo.RelativePath)
 	outputPath := lib.GetDir(outputFile)
 
 	return outputFile, outputPath */
-	return provideBasePath(targetDirectory, fileInfo.RelativePath)
+	return provideBasePath(targetDirectory, relativePath)
 }
 
-func (t TxtFormatter) provideDcpPartsWritePath(fileInfo *lib.FileInfo, targetDirectory string) (string, string) {
-	/* outputFile := lib.PathJoin(targetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME, fileInfo.Name)
-
-	outputPath := lib.GetDir(outputFile)
-
-	return outputFile, outputPath */
-	return provideBasePath(targetDirectory, common.DCP_PARTS_TARGET_DIR_NAME, fileInfo.Name)
+func (t TxtFormatter) providePartsWritePath(targetDirectory, dirName, fileName string) (string, string) {
+	return provideBasePath(targetDirectory, dirName, fileName)
 }
 
 func provideBasePath(targetDirectory string, dirParts ...string) (string, string) {

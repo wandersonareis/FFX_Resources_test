@@ -1,12 +1,8 @@
-import { lib } from "../../wailsjs/go/models"
+import { interactions } from "../../wailsjs/go/models"
 
-export function extractFileInfo(node: any): lib.FileInfo | null {
-    if (!node) {
-        return null
-    }
-
+export function extractFileInfo(node: any): interactions.GameDataInfo | null {
     if (node?.data) {
-        return node.data as lib.FileInfo
+        return node.data as interactions.GameDataInfo
     }
     return null
 }

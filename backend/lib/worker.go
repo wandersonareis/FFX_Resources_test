@@ -11,6 +11,8 @@ func RunCommand(tool string, args []string) error {
 	cmd := exec.Command(tool, args...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 
+	fmt.Println("Args: ", cmd.Args)
+
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 

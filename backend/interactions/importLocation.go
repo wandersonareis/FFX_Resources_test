@@ -1,4 +1,4 @@
-package lib
+package interactions
 
 type ImportLocation struct {
 	LocationBase
@@ -26,6 +26,6 @@ func (i *ImportLocation) ProvideTargetDirectory() (string, error) {
 	return i.LocationBase.ProvideTargetDirectory()
 }
 
-func (i *ImportLocation) GenerateTargetOutput(formatter ITextFormatter, fileInfo *FileInfo) {
+func (i *ImportLocation) GenerateTargetOutput(formatter ITextFormatter, fileInfo *GameDataInfo) {
 	i.TargetFile, i.TargetPath = formatter.WriteFile(fileInfo, i.TargetDirectory)
 }

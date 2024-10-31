@@ -1,4 +1,4 @@
-package duplicates
+package core
 
 import (
 	"fmt"

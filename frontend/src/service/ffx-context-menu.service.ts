@@ -1,11 +1,10 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { MenuItem, TreeNode } from 'primeng/api';
+import { MenuItem } from 'primeng/api';
 import { ReadFileAsString } from '../../wailsjs/go/main/App';
 import { extractedEditorText, selectedFile, showEditorModal } from '../app/components/signals/signals.signal';
 import { extractFileInfo } from '../utils/utils';
 import { ExtractService } from './extract.service';
 import { CompressService } from './compress.service';
-import { showProgress } from '../app/components/progress-modal/progress-modal.signal';
 import { EventsEmit } from '../../wailsjs/runtime/runtime';
 
 @Injectable({
@@ -48,7 +47,7 @@ export class FfxContextMenuService {
 
       await this._extractService.extraction(data);
     } catch (error) {
-      EventsEmit("ApplicationError", error);
+      EventsEmit("Notify", error);
     }
   }
 

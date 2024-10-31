@@ -2,10 +2,11 @@ package formats
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 )
 
-func dialogsUnpacker(dialogsFileInfo *lib.FileInfo) error {
+func dialogsUnpacker(dialogsFileInfo *interactions.GameDataInfo) error {
 	handler, err := getDialogsHandler()
 	if err != nil {
 		return err
@@ -13,7 +14,7 @@ func dialogsUnpacker(dialogsFileInfo *lib.FileInfo) error {
 
 	defer common.RemoveFile(handler)
 
-	targetFile := dialogsFileInfo.AbsolutePath
+	targetFile := dialogsFileInfo.GameData.AbsolutePath
 	outputFile := dialogsFileInfo.ExtractLocation.TargetFile
 	outputPath := dialogsFileInfo.ExtractLocation.TargetPath
 

@@ -1,42 +1,40 @@
 package formats
 
 import (
-	"context"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 )
 
 type DialogsFile struct {
-	ctx      context.Context
-	FileInfo *lib.FileInfo
+	dataInfo *interactions.GameDataInfo
 }
 
-func NewDialogs(fileInfo *lib.FileInfo) *DialogsFile {
-	fileInfo.ExtractLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
-	fileInfo.TranslateLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
-	fileInfo.ImportLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
+func NewDialogs(dataInfo *interactions.GameDataInfo) *DialogsFile {
+	dataInfo.ExtractLocation.GenerateTargetOutput(NewTxtFormatter(), dataInfo)
+	dataInfo.TranslateLocation.GenerateTargetOutput(NewTxtFormatter(), dataInfo)
+	dataInfo.ImportLocation.GenerateTargetOutput(NewTxtFormatter(), dataInfo)
 
 	return &DialogsFile{
-		ctx:      lib.NewInteraction().Ctx,
-		FileInfo: fileInfo,
+		dataInfo: dataInfo,
 	}
 }
 
-func (d DialogsFile) GetFileInfo() *lib.FileInfo {
-	return d.FileInfo
+func (d DialogsFile) GetFileInfo() *interactions.GameDataInfo {
+	return d.dataInfo
 }
 
 func (d DialogsFile) Extract() {
-	err := dialogsUnpacker(d.FileInfo)
+	err := dialogsUnpacker(d.dataInfo)
 	if err != nil {
-		lib.EmitError(d.ctx, err)
+		lib.NotifyError(err)
 		return
 	}
 }
 
 func (d DialogsFile) Compress() {
-	err := dialogsTextCompress(d.FileInfo)
+	err := dialogsTextCompress(d.dataInfo)
 	if err != nil {
-		lib.EmitError(d.ctx, err)
+		lib.NotifyError(err)
 		return
 	}
 }

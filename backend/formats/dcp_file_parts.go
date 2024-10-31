@@ -1,27 +1,30 @@
 package formats
 
-import "ffxresources/backend/lib"
+import (
+	"ffxresources/backend/interactions"
+	"ffxresources/backend/lib"
+)
 
 type DcpFileParts struct {
-	FileInfo *lib.FileInfo
+	DataInfo *interactions.GameDataInfo
 }
 
-func NewDcpFileParts(fileInfo *lib.FileInfo) *DcpFileParts {
-	fileInfo.ExtractLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
-	fileInfo.TranslateLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
-	fileInfo.ImportLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
+func NewDcpFileParts(dataInfo *interactions.GameDataInfo) *DcpFileParts {
+	dataInfo.ExtractLocation.GenerateTargetOutput(NewTxtFormatter(), dataInfo)
+	dataInfo.TranslateLocation.GenerateTargetOutput(NewTxtFormatter(), dataInfo)
+	dataInfo.ImportLocation.GenerateTargetOutput(NewTxtFormatter(), dataInfo)
 
 	return &DcpFileParts{
-		FileInfo: fileInfo,
+		DataInfo: dataInfo,
 	}
 }
 
-func (d DcpFileParts) GetFileInfo() *lib.FileInfo {
-	return d.FileInfo
+func (d DcpFileParts) GetFileInfo() *interactions.GameDataInfo {
+	return d.DataInfo
 }
 
 func (d DcpFileParts) Extract() {
-	err := dialogsUnpacker(d.FileInfo)
+	err := dialogsUnpacker(d.DataInfo)
 	if err != nil {
 		lib.NotifyError(err)
 		return
@@ -29,7 +32,7 @@ func (d DcpFileParts) Extract() {
 }
 
 func (d DcpFileParts) Compress() {
-	err := dialogsTextCompress(d.FileInfo)
+	err := dialogsTextCompress(d.DataInfo)
 	if err != nil {
 		lib.NotifyError(err)
 		return

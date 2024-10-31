@@ -2,15 +2,16 @@ package formats
 
 import (
 	"context"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 )
 
 type kernelFile struct {
 	ctx      context.Context
-	FileInfo *lib.FileInfo
+	DataInfo *interactions.GameDataInfo
 }
 
-func NewKernel(fileInfo *lib.FileInfo) lib.IFileProcessor {
+func NewKernel(dataInfo *interactions.GameDataInfo) interactions.IFileProcessor {
 	/* relativePath, err := common.GetRelativePathFromMarker(fileInfo.AbsolutePath)
 	if err != nil {
 		lib.NotifyError(err)
@@ -19,18 +20,18 @@ func NewKernel(fileInfo *lib.FileInfo) lib.IFileProcessor {
 
 	fileInfo.RelativePath = relativePath */
 
-	fileInfo.ExtractLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
-	fileInfo.TranslateLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
-	fileInfo.ImportLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
+	dataInfo.ExtractLocation.GenerateTargetOutput(NewTxtFormatter(), dataInfo)
+	dataInfo.TranslateLocation.GenerateTargetOutput(NewTxtFormatter(), dataInfo)
+	dataInfo.ImportLocation.GenerateTargetOutput(NewTxtFormatter(), dataInfo)
 
 	return &kernelFile{
-		ctx:      lib.NewInteraction().Ctx,
-		FileInfo: fileInfo,
+		ctx:      interactions.NewInteraction().Ctx,
+		DataInfo: dataInfo,
 	}
 }
 
-func (k kernelFile) GetFileInfo() *lib.FileInfo {
-	return k.FileInfo
+func (k kernelFile) GetFileInfo() *interactions.GameDataInfo {
+	return k.DataInfo
 }
 
 func (k kernelFile) Extract() {
@@ -42,7 +43,7 @@ func (k kernelFile) Extract() {
 }
 
 func (k kernelFile) Compress() {
-	err := kernelTextPacker(k.FileInfo)
+	err := kernelTextPacker(k.DataInfo)
 	if err != nil {
 		lib.NotifyError(err)
 		return

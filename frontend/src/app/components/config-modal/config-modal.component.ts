@@ -32,7 +32,7 @@ export class ConfigModalComponent implements OnInit {
         EventsEmit(eventName, path);
       }
     } catch (error) {
-      EventsEmit("ApplicationError", error);
+      EventsEmit("Notify", error);
     }
   }
 

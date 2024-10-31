@@ -2,6 +2,7 @@ package formats
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 	"fmt"
 	"sync"
@@ -9,29 +10,22 @@ import (
 )
 
 type DcpFile struct {
-	FileInfo *lib.FileInfo
+	DataInfo *interactions.GameDataInfo
 }
 
-func NewDcpFile(fileInfo *lib.FileInfo) *DcpFile {
-	//relativePath, err := common.GetRelativePathFromMarker(fileInfo.AbsolutePath)
-	/* if err != nil {
-		lib.NotifyError(err)
-		return nil
-	} */
-
-	//fileInfo.RelativePath = relativePath
-
-	fileInfo.ExtractLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
-	fileInfo.TranslateLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
-	fileInfo.ImportLocation.GenerateTargetOutput(NewTxtFormatter(), fileInfo)
+var errorCount = 0
+func NewDcpFile(dataInfo *interactions.GameDataInfo) *DcpFile {
+	dataInfo.ExtractLocation.GenerateTargetOutput(NewTxtFormatter(), dataInfo)
+	dataInfo.TranslateLocation.GenerateTargetOutput(NewTxtFormatter(), dataInfo)
+	dataInfo.ImportLocation.GenerateTargetOutput(NewTxtFormatter(), dataInfo)
 
 	return &DcpFile{
-		FileInfo: fileInfo,
+		DataInfo: dataInfo,
 	}
 }
 
-func (d DcpFile) GetFileInfo() *lib.FileInfo {
-	return d.FileInfo
+func (d DcpFile) GetFileInfo() *interactions.GameDataInfo {
+	return d.DataInfo
 }
 
 func (d DcpFile) Extract() {
@@ -44,7 +38,7 @@ func (d DcpFile) Extract() {
 	//Wait for the xpliter to finish
 	time.Sleep(400 * time.Millisecond)
 
-	macrodicPath := d.FileInfo.ExtractLocation.TargetPath
+	macrodicPath := d.DataInfo.ExtractLocation.TargetPath
 	macrodicXplitedFiles := make([]string, 0, 7)
 	err = common.EnumerateFilesByPattern(&macrodicXplitedFiles, macrodicPath, common.MACRODIC_PATTERN+"$")
 	if err != nil {
@@ -72,16 +66,23 @@ func (d DcpFile) Extract() {
 }
 
 func (d DcpFile) Compress() {
-	macrodicImportPartsPath := common.PathJoin(d.FileInfo.ImportLocation.TargetDirectory, common.DCP_PARTS_TARGET_DIR_NAME)
-	macrodicTranslatedPartsTextPath := d.FileInfo.TranslateLocation.TargetPath
+	macrodicImportPartsPath := common.PathJoin(d.DataInfo.ImportLocation.TargetDirectory, common.DCP_PARTS_TARGET_DIR_NAME)
+	macrodicTranslatedPartsTextPath := d.DataInfo.TranslateLocation.TargetPath
 
 	macrodicFilesPattern := common.MACRODIC_PATTERN + "$"
 	macrodicTextFilesPattern := common.MACRODIC_PATTERN + "\\.txt"
 
 	macrodicXplitedFiles := make([]string, 0, 7)
 	if err := common.EnumerateFilesByPattern(&macrodicXplitedFiles, macrodicImportPartsPath, macrodicFilesPattern); err != nil {
-		lib.NotifyError(err)
-		return
+		errorCount++
+
+		if errorCount > 3 {
+			lib.NotifyError(err)
+			return
+		}
+
+		lib.LogSeverity(lib.SeverityInfo, fmt.Sprintf("wrong dcp xplited files count: %d", len(macrodicXplitedFiles)))
+		dcpFileXpliter(d.GetFileInfo())
 	}
 
 	if len(macrodicXplitedFiles) != 7 {
@@ -107,11 +108,9 @@ func (d DcpFile) Compress() {
 		return
 	}
 
-	//reimportedDcpPartsDirectory := lib.PathJoin(d.FileInfo.ImportLocation.TargetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME, d.FileInfo.Name)
+	targetReimportFile := d.DataInfo.ImportLocation.TargetFile
 
-	targetReimportFile := d.FileInfo.ImportLocation.TargetFile
-
-	if err := dcpFileJoiner(d.FileInfo, &macrodicXplitedFiles, targetReimportFile); err != nil {
+	if err := dcpFileJoiner(d.DataInfo, &macrodicXplitedFiles, targetReimportFile); err != nil {
 		lib.NotifyError(err)
 		return
 	}
@@ -128,24 +127,11 @@ func processFilesParallel(xplitedFiles *[]string, callback func(handler *DcpFile
 		go func(file string) {
 			defer wg.Done()
 
-			/* sourcePart, err := lib.NewSource(file)
-			if err != nil {
-				errChan <- err
-				return
-			}
-
-			dcpPartInfo := &lib.FileInfo{}
-			lib.UpdateFileInfoFromSource(dcpPartInfo, sourcePart) */
-
-			dcpPartInfo, err := lib.CreateFileInfoFromPath(file)
-			if err != nil {
-				errChan <- err
-				return
-			}
+			 dcpPartInfo := interactions.NewGameDataInfo(file)
 
 			fileHandle := NewDcpFileParts(dcpPartInfo)
 			if fileHandle == nil {
-				errChan <- fmt.Errorf("invalid file type: %s", dcpPartInfo.Name)
+				errChan <- fmt.Errorf("invalid file type: %s", dcpPartInfo.GameData.Name)
 				return
 			}
 

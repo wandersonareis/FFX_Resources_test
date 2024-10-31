@@ -5,17 +5,12 @@ import (
 	"log"
 	"os"
 
-	"runtime"
-
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/logger"
-	"github.com/wailsapp/wails/v2/pkg/menu"
-	"github.com/wailsapp/wails/v2/pkg/menu/keys"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
-	rt "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 //go:embed all:frontend/dist
@@ -24,12 +19,6 @@ var assets embed.FS
 //go:embed build/appicon.png
 var icon []byte
 var logFile *os.File
-
-func openFile(_ *menu.CallbackData) {
-	// Open a file dialog and handle the selected file
-	// Replace this with your own file handling logic
-	log.Println("Open File")
-}
 
 func logToFile() {
 	file, err := os.OpenFile(`cfn-tracker.log`, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
@@ -54,18 +43,6 @@ func main() {
 	logToFile()
 	app := NewApp()
 
-	AppMenu := menu.NewMenu()
-	FileMenu := AppMenu.AddSubmenu("File")
-	FileMenu.AddText("&Open", keys.CmdOrCtrl("o"), openFile)
-	FileMenu.AddSeparator()
-	FileMenu.AddText("Quit", keys.CmdOrCtrl("q"), func(_ *menu.CallbackData) {
-		rt.Quit(app.ctx)
-	})
-
-	if runtime.GOOS == "darwin" {
-		AppMenu.Append(menu.EditMenu()) // on macos platform, we should append EditMenu to enable Cmd+C,Cmd+V,Cmd+Z... shortcut
-	}
-
 	// Create application with options
 	err := wails.Run(&options.App{
 		Title:     "FFX Resources",
@@ -84,7 +61,7 @@ func main() {
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		Menu:                     AppMenu,
+		Menu:                     nil,
 		EnableDefaultContextMenu: true,
 		Logger:                   nil,
 		LogLevel:                 logger.TRACE,

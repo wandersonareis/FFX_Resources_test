@@ -1,29 +1,28 @@
 package spira
 
 import (
-	"ffxresources/backend/common"
 	"ffxresources/backend/formats"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
+	"ffxresources/backend/models"
 )
 
-func NewFileProcessor(fileInfo *lib.FileInfo) lib.IFileProcessor {
-	fileType := fileInfo.Type
+func NewFileProcessor(dataInfo *interactions.GameDataInfo) interactions.IFileProcessor {
+	fileType := dataInfo.GameData.Type
 
-	provideLocationsToFileInfo(fileInfo)
-	
-	extractPath, err := lib.NewInteraction().ExtractLocation.ProvideTargetDirectory()
+	extractPath, err := interactions.NewInteraction().ExtractLocation.ProvideTargetDirectory()
 	if err != nil {
 		lib.NotifyError(err)
 		return nil
 	}
 
-	translatePath, err := lib.NewInteraction().TranslateLocation.ProvideTargetDirectory()
+	translatePath, err := interactions.NewInteraction().TranslateLocation.ProvideTargetDirectory()
 	if err != nil {
 		lib.NotifyError(err)
 		return nil
 	}
 
-	_, err = lib.NewInteraction().ImportLocation.ProvideTargetDirectory()
+	_, err = interactions.NewInteraction().ImportLocation.ProvideTargetDirectory()
 	if err != nil {
 		lib.NotifyError(err)
 		return nil
@@ -31,21 +30,17 @@ func NewFileProcessor(fileInfo *lib.FileInfo) lib.IFileProcessor {
 
 
 	switch fileType {
-	case common.Dialogs, common.Tutorial, common.DcpParts:
-		return formats.NewDialogs(fileInfo)
-	case common.Kernel:
-		return formats.NewKernel(fileInfo)
-	case common.Dcp:
-		return formats.NewDcpFile(fileInfo)
-	case common.Folder:
-		return NewSpiraFolder(fileInfo, extractPath, translatePath)
+	case models.Dialogs, models.Tutorial, models.DcpParts:
+		return formats.NewDialogs(dataInfo)
+	case models.Kernel:
+		return formats.NewKernel(dataInfo)
+	case models.Dcp:
+		return formats.NewDcpFile(dataInfo)
+	case models.Lockit:
+		return formats.NewLockitFile(dataInfo)
+	case models.Folder:
+		return NewSpiraFolder(dataInfo, extractPath, translatePath)
 	default:
 		return nil
 	}
-}
-
-func provideLocationsToFileInfo(fileInfo *lib.FileInfo) {
-	fileInfo.ExtractLocation = *lib.NewInteraction().ExtractLocation
-	fileInfo.TranslateLocation = *lib.NewInteraction().TranslateLocation
-	fileInfo.ImportLocation = *lib.NewInteraction().ImportLocation
 }

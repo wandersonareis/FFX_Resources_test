@@ -1,14 +1,14 @@
-package lib
+package interactions
 
 import "context"
 
 type Interaction struct {
 	Ctx               context.Context
 	GameLocation      *GameLocation
+	GamePart          *FfxGamePart
 	ExtractLocation   *ExtractLocation
 	TranslateLocation *TranslateLocation
 	ImportLocation    *ImportLocation
-	TempProvider      *TempProvider
 }
 
 var interactionInstance *Interaction
@@ -18,10 +18,10 @@ func NewInteraction() *Interaction {
 		interactionInstance = &Interaction{
 			Ctx:               context.Background(),
 			GameLocation:      NewGameLocation(),
+			GamePart:          NewFfxGamePart(),
 			ExtractLocation:   NewExtractLocation(),
 			TranslateLocation: NewTranslateLocation(),
 			ImportLocation:    NewImportLocation(),
-			TempProvider:      NewTempProvider(),
 		}
 	}
 	return interactionInstance

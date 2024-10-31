@@ -1,7 +1,7 @@
 package formats
 
 func decoderArgs() ([]string, string, error) {
-	codeTable, err := getCharacterTable()
+	codeTable, err := getFfx2CharacterTable()
 	if err != nil {
 		return nil, "", err
 	}

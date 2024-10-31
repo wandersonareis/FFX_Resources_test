@@ -1,9 +1,6 @@
 package formats
 
-import (
-	"ffxresources/backend/common"
-	"ffxresources/backend/lib"
-)
+import "ffxresources/backend/common"
 
 func getKernelFileHandler(targetExtension ...string) (string, error) {
 	extension := common.DEFAULT_APPLICATION_EXTENSION
@@ -17,9 +14,8 @@ func getKernelFileHandler(targetExtension ...string) (string, error) {
 		common.KERNEL_HANDLER_APPLICATION,
 	}
 
-	tempProvider := lib.NewInteraction().TempProvider.ProvideTempFileWithExtension(common.KERNEL_HANDLER_APPLICATION, extension)
+	targetFile := common.NewTempProvider().ProvideTempFileWithExtension(common.KERNEL_HANDLER_APPLICATION, extension).FilePath
 
-	targetFile := tempProvider.FilePath
 	err := common.GetFileFromResources(targetHandler, targetFile)
 	if err != nil {
 		return "", err

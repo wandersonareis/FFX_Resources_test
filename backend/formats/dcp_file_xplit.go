@@ -3,42 +3,24 @@ package formats
 import (
 	"encoding/binary"
 	"ffxresources/backend/common"
-	"ffxresources/backend/lib"
+	"ffxresources/backend/interactions"
+	"ffxresources/backend/models"
 	"fmt"
 	"io"
 	"os"
 )
 
-func dcpFileXpliter(fileInfo *lib.FileInfo) error {
-	/* xpliterHandler, err := GetDcpXplitHandler()
-	if err != nil {
-		return err
-	}
-
-	defer lib.RemoveFile(xpliterHandler) */
-
-	targetFile := fileInfo.AbsolutePath
-	targetNamePrefix := fileInfo.NamePrefix
-	//targetPath := fileInfo.ExtractLocation.TargetFile
-	outputPath := fileInfo.ExtractLocation.TargetPath
+func dcpFileXpliter(dataInfo *interactions.GameDataInfo) error {
+	targetFile := dataInfo.GameData.AbsolutePath
+	targetNamePrefix := dataInfo.GameData.NamePrefix
+	outputPath := dataInfo.ExtractLocation.TargetPath
+	
 	common.EnsurePathExists(outputPath)
 
 	err := DcpReader(targetFile, targetNamePrefix, outputPath)
 	if err != nil {
 		return err
 	}
-
-	/* args, err := dcpXpliterArgs()
-	if err != nil {
-		return err
-	}
-
-	args = append(args, fileInfo.AbsolutePath, targetPath)
-
-	err = lib.RunCommand(xpliterHandler, args)
-	if err != nil {
-		return err
-	} */
 
 	return nil
 }
@@ -58,7 +40,7 @@ func DcpReader(dcpFilePath, namePrefix, outputDir string) error {
 		return fmt.Errorf("erro ao ler o header: %w", err)
 	}
 
-	var pointers = make([]lib.Pointer, 0, 7)
+	var pointers = make([]models.Pointer, 0, 7)
 
 	err = ExtractPointers(header, &pointers)
 	if err != nil {
@@ -92,7 +74,7 @@ func DcpReader(dcpFilePath, namePrefix, outputDir string) error {
 	return nil
 }
 
-func ExtractPointers(header []byte, pointers *[]lib.Pointer) error {
+func ExtractPointers(header []byte, pointers *[]models.Pointer) error {
 	// Iterar sobre o header em blocos de 4 bytes
 	for i := 0; i < len(header); i += 4 {
 		// Ler o valor como uint32 (formato Little Endian)
@@ -100,7 +82,7 @@ func ExtractPointers(header []byte, pointers *[]lib.Pointer) error {
 
 		// Adicionar à lista apenas se o valor for diferente de zero
 		if value != 0 {
-			*pointers = append(*pointers, lib.Pointer{
+			*pointers = append(*pointers, models.Pointer{
 				Offset: int64(i),
 				Value:  value,
 			})
@@ -110,7 +92,7 @@ func ExtractPointers(header []byte, pointers *[]lib.Pointer) error {
 	return nil
 }
 
-func calculateFileDataRange(start, end *int64, pointers []lib.Pointer, file *os.File, index int) error {
+func calculateFileDataRange(start, end *int64, pointers []models.Pointer, file *os.File, index int) error {
 	*start = int64(pointers[index].Value)
 
 	if index+1 < len(pointers) {

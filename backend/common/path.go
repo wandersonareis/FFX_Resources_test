@@ -1,14 +1,12 @@
 package common
 
 import (
-	"context"
+	"ffxresources/backend/models"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 func PathJoin(parts ...string) string {
@@ -30,25 +28,10 @@ func GetDir(path string) string {
 
 func EnsurePathExists(path string) error {
 	cPath := sanitizationPath(path)
+	dir := cPath
 
-	info, err := os.Stat(cPath)
-
-	var dir string
-
-	if os.IsNotExist(err) {
-		if filepath.Ext(cPath) != "" {
-			dir = filepath.Dir(cPath)
-		} else {
-			dir = cPath
-		}
-	}
-
-	if info != nil {
-		if info.IsDir() {
-			dir = cPath
-		} else {
-			dir = filepath.Dir(cPath)
-		}
+	if filepath.Ext(cPath) != "" {
+		dir = filepath.Dir(cPath)
 	}
 
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
@@ -56,33 +39,6 @@ func EnsurePathExists(path string) error {
 	}
 
 	return nil
-}
-
-func EnumerateFiles(s string, wg *sync.WaitGroup, results chan<- string, errors chan<- error) {
-	fullpath, err := GetAbsolutePath(s)
-	if err != nil {
-		errors <- err
-		return
-	}
-
-	defer wg.Done()
-
-	err = filepath.Walk(fullpath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			errors <- err
-			return nil
-		}
-
-		if !info.IsDir() {
-			results <- sanitizationPath(path)
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		errors <- err
-	}
 }
 
 func EnumerateFilesDev(s string) ([]string, error) {
@@ -118,47 +74,41 @@ func EnumerateFilesByPattern(files *[]string, path, pattern string) error {
 		return err
 	}
 
-	var regex = regexp.MustCompile(pattern)
-
-	err = filepath.Walk(fullpath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		fullpath, err := GetAbsolutePath(path)
-		if err != nil {
-			return err
-		}
-
-		if !info.IsDir() && regex.MatchString(info.Name()) {
-			*files = append(*files, fullpath)
-		}
-		return nil
-	})
-
+	regex, err := regexp.Compile(pattern)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	err = filepath.WalkDir(fullpath, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !d.IsDir() && regex.MatchString(d.Name()) {
+			absPath, err := filepath.Abs(path)
+			if err != nil {
+				return err
+			}
+			*files = append(*files, absPath)
+		}
+		return nil
+	})
+
+	return err
 }
 
-func GuessTypeByPath(path string) NodeType {
+func TryGuessFileType(path string) models.NodeType {
 	sPath := sanitizationPath(path)
 	info, err := os.Stat(sPath)
 	if err != nil {
-		return None
+		return models.None
 	}
-
-	/* if !hasSpira(path) {
-		return backend.None
-	} */
 
 	if info.IsDir() {
-		return Folder
+		return models.Folder
 	}
 
-	return guessBySpiraFileType(path)
+	return guessBySpiraFileType(sPath)
 }
 
 func GetRelativePathFromMarker(path string) string {
@@ -167,21 +117,9 @@ func GetRelativePathFromMarker(path string) string {
 	//path := fileInfo.AbsolutePath
 	index := strings.Index(path, marker)
 	if index == -1 {
-		runtime.LogWarning(context.Background(), "Unable to find marker in path: "+path)
+		log.Println("unable to find marker in path:", path)
 		return ""
 	}
 
 	return path[index:]
 }
-
-/* func GenerateExtractedOutput(relativePath string, workDirectory, targetDirName, targetExtension string) (string, string) {
-	outputFile := PathJoin(workDirectory, targetDirName, ChangeExtension(relativePath, targetExtension))
-	outputPath := filepath.Dir(outputFile)
-	return outputFile, outputPath
-} */
-
-/* func GeneratedTranslatedOutput(relativePath, targetExtension string, workDirectory string) (string, string) {
-	outputFile := PathJoin(workDirectory, ChangeExtension(relativePath, targetExtension))
-	outputPath := filepath.Dir(outputFile)
-	return outputFile, outputPath
-} */

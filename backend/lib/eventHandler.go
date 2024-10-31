@@ -1,8 +1,9 @@
 package lib
 
 import (
-	"context"
+	"ffxresources/backend/interactions"
 	"fmt"
+	"log"
 
 	goRT "runtime"
 
@@ -38,11 +39,10 @@ func (nt Severity) String() string {
 	}
 }
 
-func EmitError(ctx context.Context, err error) {
-	runtime.EventsEmit(ctx, "ApplicationError", err.Error())
-	runtime.LogDebug(ctx, err.Error())
-}
+func logInFile(msg string) {
+	log.Println(msg)
 
+}
 func captureTrace() (string, string, int) {
 	// Pega o frame da stack do local de onde essa função foi chamada
 	pc, file, line, ok := goRT.Caller(2) // 2 níveis acima (porque estamos chamando de dentro do logger)
@@ -59,7 +59,7 @@ func captureTrace() (string, string, int) {
 	return file, fn.Name(), line
 }
 
-func logSeverity(ctx context.Context, severity Severity, message string) {
+func LogSeverity(severity Severity, message string) {
 	file, funcName, line := captureTrace()
 
 	trace := "file: " + file + ", func: " + funcName + ", line: " + string(line)
@@ -67,25 +67,27 @@ func logSeverity(ctx context.Context, severity Severity, message string) {
 
 	switch severity {
 	case SeveritySuccess:
-		runtime.LogPrint(ctx, message)
+		fallthrough
 	case SeverityInfo:
-		runtime.LogInfo(ctx, message)
+		logInFile("Info: " + message)
 	case SeverityWarn:
-		runtime.LogWarning(ctx, debugLine)
+		logInFile("Warn: " + message)
 	case SeverityError:
-		runtime.LogError(ctx, debugLine)
+		logInFile("Error: " + debugLine)
+	default:
+		logInFile(debugLine)
 	}
 }
 
 func Notify(notification Severity, message string) {
-	context := NewInteraction().Ctx
+	context := interactions.NewInteraction().Ctx
 	notify := Notification{
 		Message:  message,
 		Severity: notification.String(),
 	}
 
 	runtime.EventsEmit(context, "Notify", notify)
-	logSeverity(context, notification, message)
+	LogSeverity(notification, message)
 }
 
 func NotifyError(err error) {

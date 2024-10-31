@@ -50,7 +50,7 @@ export class FfxTreeComponent implements OnInit {
     }
 
     async ngOnInit() {
-        EventsOn("ApplicationError", data => this._messageService.add({ severity: 'error', summary: 'Error', detail: data }))
+        //EventsOn("ApplicationError", data => this._messageService.add({ severity: 'error', summary: 'Error', detail: data }))
         EventsOn("Refresh_Tree", async () => await this.treePolulation())
         EventsOn("Progress", data => {
             //console.log(data);

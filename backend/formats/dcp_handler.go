@@ -1,9 +1,6 @@
 package formats
 
-import (
-	"ffxresources/backend/common"
-	"ffxresources/backend/lib"
-)
+import "ffxresources/backend/common"
 
 /* func getDcpFileXpliter() (string, error) {
 	exeName := "bin/SHSplit.exe"
@@ -30,9 +27,7 @@ func GetDcpXplitHandler(targetExtension ...string) (string, error) {
 		common.DCP_FILE_XPLITTER_APPLICATION,
 	}
 
-	tempProvider := lib.NewInteraction().TempProvider.ProvideTempFileWithExtension(common.DCP_FILE_XPLITTER_APPLICATION, extension)
-
-	targetFile := tempProvider.FilePath
+	targetFile := common.NewTempProvider().ProvideTempFileWithExtension(common.DCP_FILE_XPLITTER_APPLICATION, extension).FilePath
 
 	err := common.GetFileFromResources(targetHandler, targetFile)
 	if err != nil {

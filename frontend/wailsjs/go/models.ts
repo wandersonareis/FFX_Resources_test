@@ -1,4 +1,39 @@
-export namespace lib {
+export namespace core {
+	
+	export class GameData {
+	    name: string;
+	    name_prefix: string;
+	    size: number;
+	    type: number;
+	    extension: string;
+	    parent: string;
+	    is_dir: boolean;
+	    absolute_path: string;
+	    relative_path: string;
+	    clones: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new GameData(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.name_prefix = source["name_prefix"];
+	        this.size = source["size"];
+	        this.type = source["type"];
+	        this.extension = source["extension"];
+	        this.parent = source["parent"];
+	        this.is_dir = source["is_dir"];
+	        this.absolute_path = source["absolute_path"];
+	        this.relative_path = source["relative_path"];
+	        this.clones = source["clones"];
+	    }
+	}
+
+}
+
+export namespace interactions {
 	
 	export class ExtractLocation {
 	    IsExist: boolean;
@@ -66,35 +101,19 @@ export namespace lib {
 	        this.TargetDirectoryName = source["TargetDirectoryName"];
 	    }
 	}
-	export class FileInfo {
-	    name: string;
-	    name_prefix: string;
-	    size: number;
-	    type: number;
-	    extension: string;
-	    parent: string;
-	    is_dir: boolean;
-	    absolute_path: string;
-	    relative_path: string;
+	export class GameDataInfo {
+	    game_data: core.GameData;
 	    extract_location: ExtractLocation;
 	    translate_location: TranslateLocation;
 	    import_location: ImportLocation;
 	
 	    static createFrom(source: any = {}) {
-	        return new FileInfo(source);
+	        return new GameDataInfo(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.name_prefix = source["name_prefix"];
-	        this.size = source["size"];
-	        this.type = source["type"];
-	        this.extension = source["extension"];
-	        this.parent = source["parent"];
-	        this.is_dir = source["is_dir"];
-	        this.absolute_path = source["absolute_path"];
-	        this.relative_path = source["relative_path"];
+	        this.game_data = this.convertValues(source["game_data"], core.GameData);
 	        this.extract_location = this.convertValues(source["extract_location"], ExtractLocation);
 	        this.translate_location = this.convertValues(source["translate_location"], TranslateLocation);
 	        this.import_location = this.convertValues(source["import_location"], ImportLocation);
@@ -123,7 +142,7 @@ export namespace lib {
 	export class TreeNode {
 	    key: string;
 	    label: string;
-	    data?: FileInfo;
+	    data: GameDataInfo;
 	    icon: string;
 	    children: TreeNode[];
 	
@@ -135,7 +154,7 @@ export namespace lib {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.key = source["key"];
 	        this.label = source["label"];
-	        this.data = this.convertValues(source["data"], FileInfo);
+	        this.data = this.convertValues(source["data"], GameDataInfo);
 	        this.icon = source["icon"];
 	        this.children = this.convertValues(source["children"], TreeNode);
 	    }

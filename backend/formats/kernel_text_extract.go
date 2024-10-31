@@ -2,10 +2,11 @@ package formats
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 )
 
-func kernelUnpacker(kernelFileInfo *lib.FileInfo) error {
+func kernelUnpacker(kernelFileInfo *interactions.GameDataInfo) error {
 	handler, err := getKernelFileHandler()
 	if err != nil {
 		return err
@@ -13,7 +14,7 @@ func kernelUnpacker(kernelFileInfo *lib.FileInfo) error {
 
 	defer common.RemoveFile(handler)
 
-	targetFile := kernelFileInfo.AbsolutePath
+	targetFile := kernelFileInfo.GameData.AbsolutePath
 	outputFile := kernelFileInfo.ExtractLocation.TargetFile
 	outputPath := kernelFileInfo.ExtractLocation.TargetPath
 

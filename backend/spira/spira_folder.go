@@ -3,16 +3,17 @@ package spira
 import (
 	"context"
 	"ffxresources/backend/common"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 	"fmt"
 )
 
 type SpiraFolder struct {
 	ctx      context.Context
-	FileInfo *lib.FileInfo
+	DataInfo *interactions.GameDataInfo
 }
 
-func NewSpiraFolder(fileInfo *lib.FileInfo, extractPath, translatePath string) *SpiraFolder {
+func NewSpiraFolder(dataInfo *interactions.GameDataInfo, extractPath, translatePath string) *SpiraFolder {
 	/* extractedDirectory, err := lib.NewInteraction().ExtractLocation.ProvideTargetDirectory()
 	if err != nil {
 		lib.EmitError(ctx, err)
@@ -31,17 +32,17 @@ func NewSpiraFolder(fileInfo *lib.FileInfo, extractPath, translatePath string) *
 
 	fileInfo.RelativePath = relativePath */
 
-	fileInfo.ExtractLocation.TargetPath = common.PathJoin(extractPath, fileInfo.RelativePath)
-	fileInfo.TranslateLocation.TargetPath = common.PathJoin(translatePath, fileInfo.RelativePath)
+	dataInfo.ExtractLocation.TargetPath = common.PathJoin(extractPath, dataInfo.GameData.RelativePath)
+	dataInfo.TranslateLocation.TargetPath = common.PathJoin(translatePath, dataInfo.GameData.RelativePath)
 
 	return &SpiraFolder{
-		ctx:      lib.NewInteraction().Ctx,
-		FileInfo: fileInfo,
+		ctx:      interactions.NewInteraction().Ctx,
+		DataInfo: dataInfo,
 	}
 }
 
-func (d SpiraFolder) GetFileInfo() *lib.FileInfo {
-	return d.FileInfo
+func (d SpiraFolder) GetFileInfo() *interactions.GameDataInfo {
+	return d.DataInfo
 }
 
 func (d SpiraFolder) Extract() {
@@ -74,27 +75,29 @@ func (d SpiraFolder) Compress() {
 	}
 }
 
-func (d SpiraFolder) processFiles() []lib.IFileProcessor {
-	var fileProcessors []lib.IFileProcessor
-
-	results, err := common.EnumerateFilesDev(d.FileInfo.AbsolutePath)
+func (d SpiraFolder) processFiles() []interactions.IFileProcessor {
+	results, err := common.EnumerateFilesDev(d.DataInfo.GameData.AbsolutePath)
 	if err != nil {
 		lib.NotifyError(err)
 	}
 
+	var fileProcessors = make([]interactions.IFileProcessor, 0, len(results))
+
 	for _, result := range results {
-		source, err := lib.NewSource(result)
+		/* source, err := lib.NewSource(result)
 		if err != nil {
 			lib.NotifyError(err)
 			continue
-		}
+		} */
 
-		fileInfo := &lib.FileInfo{}
+		/* fileInfo := &lib.FileInfo{}
 		lib.UpdateFileInfoFromSource(fileInfo, source)
+		*/
+		dataInfo := interactions.NewGameDataInfo(result)
 
-		fileProcessor := NewFileProcessor(fileInfo)
+		fileProcessor := NewFileProcessor(dataInfo)
 		if fileProcessor == nil {
-			lib.NotifyError(fmt.Errorf("invalid file type: %s", fileInfo.Name))
+			lib.NotifyError(fmt.Errorf("invalid file type: %s", dataInfo.GameData.Name))
 			continue
 		}
 

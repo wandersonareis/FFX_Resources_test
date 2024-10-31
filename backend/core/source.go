@@ -1,7 +1,8 @@
-package lib
+package core
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/models"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -12,7 +13,7 @@ type Source struct {
 	Info       os.FileInfo
 	Name       string
 	NamePrefix string
-	Type       common.NodeType
+	Type       models.NodeType
 	Size       int64
 	Extension  string
 	FullPath   string
@@ -41,7 +42,7 @@ func NewSource(path string) (*Source, error) {
 
 		Name:       info.Name(),
 		NamePrefix: common.RemoveFileExtension(info.Name()),
-		Type:       common.GuessTypeByPath(cPath),
+		Type:       common.TryGuessFileType(cPath),
 		Extension:  filepath.Ext(cPath),
 		EntryPath:  filepath.Join(cPath, info.Name()),
 		Parent:     filepath.Dir(cPath),

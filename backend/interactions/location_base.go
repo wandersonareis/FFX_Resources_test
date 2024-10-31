@@ -1,9 +1,14 @@
-package lib
+package interactions
 
 import (
 	"ffxresources/backend/common"
 	"path/filepath"
 )
+
+type ITextFormatter interface {
+	ReadFile(fileInfo *GameDataInfo, targetDirectory string) (string, string)
+	WriteFile(fileInfo *GameDataInfo, targetDirectory string) (string, string)
+}
 
 type LocationBase struct {
 	IsExist             bool
@@ -48,7 +53,7 @@ func (lb *LocationBase) ProvideTargetDirectory() (string, error) {
 	return path, nil
 }
 
-func (t *LocationBase) GenerateTargetOutput(formatter ITextFormatter, fileInfo *FileInfo) {
+func (t *LocationBase) GenerateTargetOutput(formatter ITextFormatter, fileInfo *GameDataInfo) {
 	t.TargetFile, t.TargetPath = formatter.ReadFile(fileInfo, t.TargetDirectory)
 
 	t.TargetFileName = filepath.Base(t.TargetFile)

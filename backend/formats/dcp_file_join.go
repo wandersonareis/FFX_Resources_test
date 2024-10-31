@@ -3,41 +3,24 @@ package formats
 import (
 	"encoding/binary"
 	"ffxresources/backend/common"
-	"ffxresources/backend/lib"
+	"ffxresources/backend/interactions"
+	"ffxresources/backend/models"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 )
 
-func dcpFileJoiner(fileInfo *lib.FileInfo, xplitedFiles *[]string, targetReimportFile string) error {
-	/* xpliterHandler, err := GetDcpXplitHandler()
-	if err != nil {
-		return err
-	} */
+func dcpFileJoiner(dataInfo *interactions.GameDataInfo, xplitedFiles *[]string, targetReimportFile string) error {
+	originalDcpFile := dataInfo.GameData.AbsolutePath
 
-	originalDcpFile := fileInfo.AbsolutePath
-
-	//reimportFile := fileInfo.ImportLocation.TargetFile
-	reimportFilePath := fileInfo.ImportLocation.TargetPath
+	reimportFilePath := dataInfo.ImportLocation.TargetPath
 	common.EnsurePathExists(reimportFilePath)
 
 	err := DcpWriter(originalDcpFile, xplitedFiles, targetReimportFile)
 	if err != nil {
 		return err
 	}
-
-	/* args, err := dcpJoinerArgs()
-	if err != nil {
-		return err
-	}
-
-	args = append(args, originalDcpFile, reimportedDcpPartsDirectory, reimportFile)
-
-	err = lib.RunCommand(xpliterHandler, args)
-	if err != nil {
-		return err
-	} */
 
 	return nil
 }
@@ -59,7 +42,7 @@ func DcpWriter(originalFilePath string, xplitedFiles *[]string, newContainerPath
 		return fmt.Errorf("erro ao ler o header: %w", err)
 	}
 
-	var pointers = make([]lib.Pointer, 0, 7)
+	var pointers = make([]models.Pointer, 0, 7)
 
 	err = ExtractPointers(header, &pointers)
 	if err != nil {
@@ -93,7 +76,7 @@ func DcpWriter(originalFilePath string, xplitedFiles *[]string, newContainerPath
 	return nil
 }
 
-func recalculatePointers(pointers []lib.Pointer, header []byte, xplitedFiles []string) error {
+func recalculatePointers(pointers []models.Pointer, header []byte, xplitedFiles []string) error {
 	var currentOffset uint32 = uint32(pointers[0].Value) // O primeiro ponteiro permanece o mesmo
 
 	for i, pointer := range pointers {
@@ -122,7 +105,7 @@ func recalculatePointers(pointers []lib.Pointer, header []byte, xplitedFiles []s
 	return nil
 }
 
-func writeFilesToContainer(pointers []lib.Pointer, xplitedFiles []string, newContainer *os.File) error {
+func writeFilesToContainer(pointers []models.Pointer, xplitedFiles []string, newContainer *os.File) error {
 	for i := 0; i < len(pointers); i++ {
 		filePath := xplitedFiles[i]
 		fileName := filepath.Base(filePath)

@@ -1,6 +1,8 @@
 package services
 
 import (
+	"ffxresources/backend/core"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 	"ffxresources/backend/spira"
 )
@@ -11,25 +13,25 @@ func NewCollectionService() *CollectionService {
 	return &CollectionService{}
 }
 
-func (c *CollectionService) PopulateTree() []lib.TreeNode {
-	path := lib.NewInteraction().GameLocation.GetPath()
+func (c *CollectionService) PopulateTree() []interactions.TreeNode {
+	path := interactions.NewInteraction().GameLocation.GetPath()
 	if path == "" {
 		return nil
 	}
 
-	err := lib.NewInteraction().GameLocation.IsSpira()
+	err := interactions.NewInteraction().GameLocation.IsSpira()
 	if err != nil {
 		lib.NotifyError(err)
 		return nil
 	}
 
-	source, err := lib.NewSource(path)
+	source, err := core.NewSource(path)
 	if err != nil {
 		lib.NotifyError(err)
 		return nil
 	}
 
-	tree := make([]lib.TreeNode, 0, 1)
+	tree := make([]interactions.TreeNode, 0, 1)
 
 	err = spira.BuildFileTree(&tree, source)
 	if err != nil {

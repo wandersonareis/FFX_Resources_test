@@ -2,11 +2,12 @@ package formats
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 	"fmt"
 )
 
-func dialogsTextCompress(dialogsFileInfo *lib.FileInfo) error {
+func dialogsTextCompress(dialogsFileInfo *interactions.GameDataInfo) error {
 	handler, err := getDialogsHandler()
 	if err != nil {
 		return err
@@ -22,7 +23,7 @@ func dialogsTextCompress(dialogsFileInfo *lib.FileInfo) error {
 
 
 	fmt.Println("dialogsTextCompress")
-	targetFile := dialogsFileInfo.AbsolutePath
+	targetFile := dialogsFileInfo.GameData.AbsolutePath
 	targetTranslatedFile := dialogsFileInfo.TranslateLocation.TargetFile
 	targetReimportFile := dialogsFileInfo.ImportLocation.TargetFile
 	targetReimportPath := dialogsFileInfo.ImportLocation.TargetPath

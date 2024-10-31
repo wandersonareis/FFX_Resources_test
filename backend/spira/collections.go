@@ -1,10 +1,11 @@
 package spira
 
 import (
-	"ffxresources/backend/lib"
+	"ffxresources/backend/core"
+	"ffxresources/backend/interactions"
 )
 
-func BuildFileTree(result *[]lib.TreeNode, source *lib.Source) error {
+func BuildFileTree(result *[]interactions.TreeNode, source *core.Source) error {
 	if !source.IsDir {
 		return nil
 	}
@@ -18,15 +19,15 @@ func BuildFileTree(result *[]lib.TreeNode, source *lib.Source) error {
 		entryPath := source.JoinEntryPath(entry)
 		key := entry.Name()
 
-		entrySource, err := lib.NewSource(entryPath)
+		entrySource, err := core.NewSource(entryPath)
 		if err != nil {
 			return err
 		}
 
         childrenCapacity := len(entries)
-		var children []lib.TreeNode
+		var children []interactions.TreeNode
         if childrenCapacity > 0 {
-            children = make([]lib.TreeNode, 0, childrenCapacity)
+            children = make([]interactions.TreeNode, 0, childrenCapacity)
         }
 
 		if entrySource.IsDir {

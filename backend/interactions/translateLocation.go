@@ -1,4 +1,4 @@
-package lib
+package interactions
 
 type TranslateLocation struct {
 	LocationBase

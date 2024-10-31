@@ -2,7 +2,7 @@ package formats
 
 import "ffxresources/backend/common"
 
-func getDialogsHandler(targetExtension ...string) (string, error) {
+func getLockitFileHandler(targetExtension ...string) (string, error) {
 	extension := common.DEFAULT_APPLICATION_EXTENSION
 
 	if len(targetExtension) > 0 {
@@ -11,10 +11,10 @@ func getDialogsHandler(targetExtension ...string) (string, error) {
 
 	targetHandler := []string{
 		common.DEFAULT_RESOURCES_ROOTDIR,
-		common.DIALOG_HANDLER_APPLICATION,
+		common.LOCKIT_HANDLER_APPLICATION,
 	}
 
-	targetFile := common.NewTempProvider().ProvideTempFileWithExtension(common.DIALOG_HANDLER_APPLICATION, extension).FilePath
+	targetFile := common.NewTempProvider().ProvideTempFileWithExtension(common.LOCKIT_HANDLER_APPLICATION, extension).FilePath
 
 	err := common.GetFileFromResources(targetHandler, targetFile)
 	if err != nil {

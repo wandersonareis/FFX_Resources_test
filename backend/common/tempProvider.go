@@ -1,4 +1,4 @@
-package lib
+package common
 
 import (
 	"os"
@@ -22,15 +22,15 @@ func NewTempProvider() *TempProvider {
 
 // NewTempProviderWithPrefix returns a new TempProvider with the given file prefix.
 // The file extension will be empty.
-func NewTempProviderWithPrefix(prefix string) *TempProvider {
+/* func NewTempProviderWithPrefix(prefix string) *TempProvider {
 	return baseTempProvider(prefix, "")
-}
+} */
 
-// NewTempProviderWithPrefixAndExtension returns a new TempProvider with the given file prefix and extension.
+/* // NewTempProviderWithPrefixAndExtension returns a new TempProvider with the given file prefix and extension.
 // The returned TempProvider will have the FilePath set to the full path of the temp file.
 func NewTempProviderWithPrefixAndExtension(prefix string, extension string) *TempProvider {
 	return baseTempProvider(prefix, extension)
-}
+} */
 
 // baseTempProvider creates a new TempProvider with the given file prefix and extension.
 // The file will be written to the OS temp directory with a UUID appended to the prefix.
@@ -49,13 +49,13 @@ func baseTempProvider(filePrefix string, extension string) *TempProvider {
 // ProvideTempFile returns a new TempProvider with the given file prefix.
 // The extension will be empty.
 func (tp *TempProvider) ProvideTempFile(filePrefix string) *TempProvider {
-	return NewTempProviderWithPrefix(filePrefix)
+	return baseTempProvider(filePrefix, "")
 }
 
 // ProvideTempFileWithExtension returns a new TempProvider with the given file prefix and extension.
 // The returned TempProvider will have the FilePath set to the full path of the temp file.
 func (tp *TempProvider) ProvideTempFileWithExtension(filePrefix string, extension string) *TempProvider {
-	return NewTempProviderWithPrefixAndExtension(filePrefix, extension)
+	return baseTempProvider(filePrefix, extension)
 }
 
 // validExtension takes a file extension and returns a valid file extension.

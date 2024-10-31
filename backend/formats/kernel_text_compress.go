@@ -2,10 +2,11 @@ package formats
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 )
 
-func kernelTextPacker(kernelFileInfo *lib.FileInfo) error {
+func kernelTextPacker(kernelFileInfo *interactions.GameDataInfo) error {
 	handler, err := getKernelFileHandler()
 	if err != nil {
 		return err
@@ -19,7 +20,7 @@ func kernelTextPacker(kernelFileInfo *lib.FileInfo) error {
 		return nil
 	}
 
-	targetFile := kernelFileInfo.AbsolutePath
+	targetFile := kernelFileInfo.GameData.AbsolutePath
 	extractedFile := kernelFileInfo.ExtractLocation.TargetFile
 	translatedFile := kernelFileInfo.TranslateLocation.TargetFile
 	translatedPath := kernelFileInfo.TranslateLocation.TargetPath

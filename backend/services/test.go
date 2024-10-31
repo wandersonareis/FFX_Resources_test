@@ -1,19 +1,20 @@
 package services
 
 import (
-	"ffxresources/backend/lib"
+	"ffxresources/backend/core"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/spira"
 	"fmt"
 )
 
 func TestExtractDir(path string, testExtract, testCompress bool) {
-	source, err := lib.NewSource(path)
+	source, err := core.NewSource(path)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	tree := make([]lib.TreeNode, 0, 1)
+	tree := make([]interactions.TreeNode, 0, 1)
 
 	err = spira.BuildFileTree(&tree, source)
 	if err != nil {
@@ -21,27 +22,23 @@ func TestExtractDir(path string, testExtract, testCompress bool) {
 		return
 	}
 
-	fileInfo := tree[0].Data
+	dataInfo := &tree[0].Data
 
 	if testExtract {
 		extractService := NewExtractService()
-		extractService.Extract(fileInfo)
+		extractService.Extract(dataInfo)
 	}
 
 	if testCompress {
 		compressService := NewCompressService()
-		compressService.Compress(fileInfo)
+		compressService.Compress(dataInfo)
 	}
 }
 
 func TestExtractFile(path string, testExtract, testCompress bool) {
-	fileInfo, err := lib.CreateFileInfoFromPath(path)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	dataInfo := interactions.NewGameDataInfo(path)
 
-	fileProcessor := spira.NewFileProcessor(fileInfo)
+	fileProcessor := spira.NewFileProcessor(dataInfo)
 	if fileProcessor == nil {
 		fmt.Println("invalid file type")
 		return

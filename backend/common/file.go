@@ -2,11 +2,22 @@ package common
 
 import (
 	"bufio"
+	"ffxresources/backend/models"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+)
+
+var (
+	dlgRegex = regexp.MustCompile(`^.*\.bin$`)
+	tutorialRegex = regexp.MustCompile(`^.*\.msb$`)
+	dcpRegex = regexp.MustCompile(`.*macrodic.*\.dcp$`)
+	dcpPartsRegex = regexp.MustCompile(`.*macrodic.*\.00[0-6]$`)
+	kernelRegex = regexp.MustCompile(`.*kernel.*\.bin$`)
+	lockitRegex = regexp.MustCompile(`.*loc_kit_ps3.*\.bin$`)
+	lockitPartsRegex = regexp.MustCompile(`.*loc_kit_ps3.*\.loc_kit_([0-9]{2})$`)
 )
 
 func FileExists(path string) bool {
@@ -26,40 +37,26 @@ func ReadFile(path string) (string, error) {
 	return string(data), nil
 }
 
-func WriteFile(path, content string) error {
-	return os.WriteFile(path, []byte(content), 0644)
-}
+func guessBySpiraFileType(path string) models.NodeType {
+	lowerPath := strings.ToLower(path)
 
-func WriteBytesToFile(file string, data []byte) error {
-	f, err := os.Create(file)
-	if err != nil {
-		return err
-	}
-
-	defer f.Close()
-
-	_, err = f.Write(data)
-
-	return err
-}
-
-func guessBySpiraFileType(path string) NodeType {
-	extension := strings.ToLower(filepath.Ext(path))
-
-	switch extension {
-	case ".bin":
-		if strings.Contains(path, "kernel") {
-			return Kernel
-		}
-		return Dialogs
-	case ".msb":
-		return Tutorial
-	case ".dcp":
-		return Dcp
-	case ".000", ".001", ".002", ".003", ".004", ".005", ".006":
-		return DcpParts
+	switch {
+	case kernelRegex.MatchString(lowerPath):
+		return models.Kernel
+	case dcpRegex.MatchString(lowerPath):
+		return models.Dcp
+	case dcpPartsRegex.MatchString(lowerPath):
+		return models.DcpParts
+	case lockitRegex.MatchString(lowerPath):
+		return models.Lockit
+	case lockitPartsRegex.MatchString(lowerPath):
+		return models.LockitParts
+	case dlgRegex.MatchString(lowerPath):
+		return models.Dialogs
+	case tutorialRegex.MatchString(lowerPath):
+		return models.Tutorial
 	default:
-		return File
+		return models.File
 	}
 }
 
@@ -84,7 +81,7 @@ func RemoveFileExtension(filePath string) string {
 
 func CountSeparators(targetFile string) int {
 	separator := FFX_TEXT_FORMAT_SEPARATOR
-	//input, err := ReadFile(fileInfo.ExtractLocation.TargetFile)
+
 	input, err := ReadFile(targetFile)
 	if err != nil {
 		return 0
@@ -93,12 +90,11 @@ func CountSeparators(targetFile string) int {
 	return strings.Count(input, separator)
 }
 
-func EnsureWindowsFormat(targetFile string, nodeType NodeType) error {
-	if nodeType == Dcp {
+func EnsureWindowsFormat(targetFile string, nodeType models.NodeType) error {
+	if nodeType == models.Dcp {
 		return nil
 	}
 
-	//file, err := os.Open(fileInfo.TranslateLocation.TargetFile)
 	file, err := os.Open(targetFile)
 	if err != nil {
 		return fmt.Errorf("error when opening the file: %s", err)
@@ -113,7 +109,7 @@ func EnsureWindowsFormat(targetFile string, nodeType NodeType) error {
 	ensureStartEndLineBreaks(&text)
 
 	//err = WriteFile(fileInfo.TranslateLocation.TargetFile, text)
-	err = WriteFile(targetFile, text)
+	err = WriteStringToFile(targetFile, text)
 	if err != nil {
 		return fmt.Errorf("error saving the modified file: %s", err)
 	}

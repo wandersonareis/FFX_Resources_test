@@ -1,4 +1,4 @@
-package duplicates
+package core
 
 import "fmt"
 
@@ -34,8 +34,6 @@ func NewFfx2Duplicate() *Ffx2Duplicate {
 			duplicates: duplicates,
 		}
 	}
-
-	fmt.Println("ffx2DuplicateInstance")
 
 	return ffx2DuplicateInstance
 }
