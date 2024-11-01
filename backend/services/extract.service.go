@@ -1,10 +1,9 @@
 package services
 
 import (
+	"ffxresources/backend/formats"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
-	"ffxresources/backend/models"
-	"ffxresources/backend/spira"
 	"fmt"
 )
 
@@ -15,7 +14,7 @@ func NewExtractService() *ExtractService {
 }
 
 func (e *ExtractService) Extract(dataInfo *interactions.GameDataInfo) {
-	var fileProcessor models.IExtractor = spira.NewFileProcessor(dataInfo)
+	fileProcessor := formats.NewFileProcessor(dataInfo)
 	if fileProcessor == nil {
 		lib.NotifyError(fmt.Errorf("invalid file type: %s", dataInfo.GameData.Name))
 		return

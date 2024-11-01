@@ -1,4 +1,4 @@
-package spira
+package formats
 
 import (
 	"context"
@@ -14,24 +14,6 @@ type SpiraFolder struct {
 }
 
 func NewSpiraFolder(dataInfo *interactions.GameDataInfo, extractPath, translatePath string) *SpiraFolder {
-	/* extractedDirectory, err := lib.NewInteraction().ExtractLocation.ProvideTargetDirectory()
-	if err != nil {
-		lib.EmitError(ctx, err)
-	}
-
-	translatedDirectory, err := lib.GetWorkdirectory().ProvideTranslateLocation()
-	if err != nil {
-		lib.EmitError(ctx, err)
-	} */
-
-	/* relativePath, err := common.GetRelativePathFromMarker(fileInfo.AbsolutePath)
-	if err != nil {
-		lib.NotifyError(err)
-		return nil
-	}
-
-	fileInfo.RelativePath = relativePath */
-
 	dataInfo.ExtractLocation.TargetPath = common.PathJoin(extractPath, dataInfo.GameData.RelativePath)
 	dataInfo.TranslateLocation.TargetPath = common.PathJoin(translatePath, dataInfo.GameData.RelativePath)
 

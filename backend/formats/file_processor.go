@@ -1,11 +1,18 @@
-package spira
+package formats
 
 import (
-	"ffxresources/backend/formats"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 	"ffxresources/backend/models"
 )
+
+func NewFileExtractor(dataInfo *interactions.GameDataInfo) models.IExtractor {
+	return NewFileProcessor(dataInfo)
+}
+
+func NewFileCompressor(dataInfo *interactions.GameDataInfo) models.ICompressor {
+	return NewFileProcessor(dataInfo)
+}
 
 func NewFileProcessor(dataInfo *interactions.GameDataInfo) interactions.IFileProcessor {
 	fileType := dataInfo.GameData.Type
@@ -28,16 +35,15 @@ func NewFileProcessor(dataInfo *interactions.GameDataInfo) interactions.IFilePro
 		return nil
 	}
 
-
 	switch fileType {
 	case models.Dialogs, models.Tutorial, models.DcpParts:
-		return formats.NewDialogs(dataInfo)
+		return NewDialogs(dataInfo)
 	case models.Kernel:
-		return formats.NewKernel(dataInfo)
+		return NewKernel(dataInfo)
 	case models.Dcp:
-		return formats.NewDcpFile(dataInfo)
+		return NewDcpFile(dataInfo)
 	case models.Lockit:
-		return formats.NewLockitFile(dataInfo)
+		return NewLockitFile(dataInfo)
 	case models.Folder:
 		return NewSpiraFolder(dataInfo, extractPath, translatePath)
 	default:

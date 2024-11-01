@@ -3,10 +3,10 @@ package services
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core"
+	"ffxresources/backend/formats"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 	"ffxresources/backend/models"
-	"ffxresources/backend/spira"
 	"fmt"
 )
 
@@ -38,7 +38,7 @@ func (c *CompressService) Compress(dataInfo *interactions.GameDataInfo) {
 		return
 	}
 
-	var fileProcessor models.ICompressor = spira.NewFileProcessor(dataInfo)
+	fileProcessor := formats.NewFileCompressor(dataInfo)
 	if fileProcessor == nil {
 		lib.NotifyError(fmt.Errorf("invalid file type: %s", dataInfo.GameData.Name))
 		return
