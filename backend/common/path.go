@@ -1,7 +1,6 @@
 package common
 
 import (
-	"ffxresources/backend/models"
 	"log"
 	"os"
 	"path/filepath"
@@ -95,20 +94,6 @@ func EnumerateFilesByPattern(files *[]string, path, pattern string) error {
 	})
 
 	return err
-}
-
-func TryGuessFileType(path string) models.NodeType {
-	sPath := sanitizationPath(path)
-	info, err := os.Stat(sPath)
-	if err != nil {
-		return models.None
-	}
-
-	if info.IsDir() {
-		return models.Folder
-	}
-
-	return guessBySpiraFileType(sPath)
 }
 
 func GetRelativePathFromMarker(path string) string {

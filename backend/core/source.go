@@ -42,7 +42,7 @@ func NewSource(path string) (*Source, error) {
 
 		Name:       info.Name(),
 		NamePrefix: common.RemoveFileExtension(info.Name()),
-		Type:       common.TryGuessFileType(cPath),
+		Type:       guessFileType(cPath),
 		Extension:  filepath.Ext(cPath),
 		EntryPath:  filepath.Join(cPath, info.Name()),
 		Parent:     filepath.Dir(cPath),

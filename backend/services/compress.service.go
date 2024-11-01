@@ -2,6 +2,7 @@ package services
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/core"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 	"ffxresources/backend/models"
@@ -26,13 +27,13 @@ func (c *CompressService) Compress(dataInfo *interactions.GameDataInfo) {
 		return
 	}
 
-	err := common.EnsureWindowsFormat(dataInfo.TranslateLocation.TargetFile, dataInfo.GameData.Type)
+	err := core.EnsureWindowsLineBreaks(dataInfo.TranslateLocation.TargetFile, dataInfo.GameData.Type)
 	if err != nil {
 		lib.NotifyError(err)
 		return
 	}
 
-	if common.CountSeparators(dataInfo.TranslateLocation.TargetFile) < 0 {
+	if core.CountSegments(dataInfo.TranslateLocation.TargetFile) < 0 {
 		lib.NotifyError(fmt.Errorf("text file contains no separators: %s", dataInfo.GameData.Name))
 		return
 	}
