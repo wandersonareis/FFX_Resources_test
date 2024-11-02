@@ -35,7 +35,7 @@ func getTableFromResources(codeTableName string) (string, error) {
 		codeTableName,
 	}
 
-	targetFile := common.NewTempProvider().ProvideTempFile(codeTableName).FilePath
+	targetFile := common.NewTempProvider().ProvideTempFileWithExtension(codeTableName, "tbs").FilePath
 
 	err := common.GetFileFromResources(targetHandler, targetFile)
 	if err != nil {

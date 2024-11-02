@@ -4,6 +4,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
+	"fmt"
 	"sync"
 )
 
@@ -12,22 +13,30 @@ type LockitFile struct {
 	Parts    *[]LockitFileParts
 }
 
-func NewLockitFile(dataInfo *interactions.GameDataInfo) *LockitFile {
-	parts := &[]LockitFileParts{}
+var ffxLockitSizes = []int{}
+var ffx2LockitSizes = []int{80, 88, 90, 93, 94, 95, 102, 1223, 1224, 1230, 1232, 1233, 1240, 1241, 1502, 1534}
 
-	err := findParts(dataInfo, parts)
-	if err != nil {
-		lib.NotifyError(err)
-		return nil
-	}
+func NewLockitFile(dataInfo *interactions.GameDataInfo) *LockitFile {
+	parts := make([]LockitFileParts, 0, 17)
+
+	gameFilesPath := interactions.NewInteraction().GameLocation.TargetDirectory
+
+	relative := common.GetDifferencePath(dataInfo.GameData.AbsolutePath, gameFilesPath)
+	dataInfo.GameData.RelativePath = relative
 
 	dataInfo.ExtractLocation.GenerateTargetOutput(NewTxtFormatter(), dataInfo)
 	dataInfo.TranslateLocation.GenerateTargetOutput(NewTxtFormatter(), dataInfo)
 	dataInfo.ImportLocation.GenerateTargetOutput(NewTxtFormatter(), dataInfo)
 
+	err := findLockitParts(&parts, dataInfo.ExtractLocation.TargetPath, common.LOCKIT_FILE_PARTS_PATTERN)
+	if err != nil {
+		lib.NotifyError(err)
+		return nil
+	}
+
 	return &LockitFile{
 		dataInfo: dataInfo,
-		Parts:    parts,
+		Parts:    &parts,
 	}
 }
 
@@ -36,8 +45,8 @@ func (l *LockitFile) GetFileInfo() *interactions.GameDataInfo {
 }
 
 func (l *LockitFile) Extract() {
-	if len(*l.Parts) == 0 {
-		err := ffx2Splitter(l.dataInfo)
+	if len(*l.Parts) != len(getLockitFileSizes()) {
+		err := ffx2Xplitter(l.dataInfo)
 		if err != nil {
 			lib.NotifyError(err)
 			return
@@ -69,12 +78,68 @@ func (l *LockitFile) Extract() {
 	wg.Wait()
 }
 
-func (l *LockitFile) Compress() {}
+func (l *LockitFile) Compress() {
+	sizes := getLockitFileSizes()
+	translatedParts := make([]LockitFileParts, 0, len(sizes))
 
-func findParts(dataInfo *interactions.GameDataInfo, parts *[]LockitFileParts) error {
+	err := findLockitParts(&translatedParts, l.dataInfo.TranslateLocation.TargetPath, common.LOCKIT_TXT_PARTS_PATTERN)
+	if err != nil {
+		lib.NotifyError(err)
+		return
+	}
+
+	if len(translatedParts) != len(sizes)+1 {
+		lib.NotifyError(fmt.Errorf("invalid number of translated parts: %d expected: %d", len(translatedParts), len(sizes)))
+		return
+	}
+	/* var wg sync.WaitGroup
+
+	for index, part := range *l.Parts {
+		wg.Add(1)
+
+		go func(index int, compressor *LockitFileParts) {
+			defer wg.Done()
+
+			if index == 0 || index%2 != 0 {
+				compressor.Compress(FfxEnc)
+			}
+
+			if index%2 == 0 {
+				compressor.Compress(LocEnc)
+			}
+		}(index, &part)
+	}
+
+	wg.Wait() */
+	for index, part := range *l.Parts {
+		if !part.dataInfo.TranslateLocation.TargetFileExists() {
+			continue
+		}
+
+		compressor := &part
+
+		if index == 0 || index % 2 != 0 {
+			compressor.Compress(FfxEnc)
+		}
+
+		if index != 0 && index % 2 == 0 {
+			compressor.Compress(LocEnc)
+		}
+	}
+
+	err = ffx2LockitJoiner(l.dataInfo)
+	if err != nil {
+		lib.NotifyError(err)
+		return
+	}
+}
+
+func findLockitParts(parts *[]LockitFileParts, targetPath, pattern string) error {
 	fileParts := make([]string, 0, 16)
 
-	err := common.EnumerateFilesByPattern(&fileParts, dataInfo.ExtractLocation.TargetPath, common.LOCKIT_FILE_PARTS_PATTERN)
+	common.EnsurePathExists(targetPath)
+
+	err := common.EnumerateFilesByPattern(&fileParts, targetPath, pattern)
 	if err != nil {
 		return err
 	}
@@ -96,13 +161,11 @@ func findParts(dataInfo *interactions.GameDataInfo, parts *[]LockitFileParts) er
 	return nil
 }
 
-func ffx2Splitter(dataInfo *interactions.GameDataInfo) error {
-	sizes := []int{80, 88, 90, 93, 94, 95, 102, 1223, 1224, 1230, 1232, 1233, 1240, 1241, 1502, 1534} // Exemplo de contagens de segmentos
-
-	handler := newLockitFileHandler(dataInfo)
+func ffx2Xplitter(dataInfo *interactions.GameDataInfo) error {
+	handler := newLockitFileXplit(dataInfo)
 	common.EnsurePathExists(dataInfo.ExtractLocation.TargetPath)
 
-	err := handler.SplitFile(sizes, common.LOCKIT_NAME_BASE, dataInfo.ExtractLocation.TargetPath)
+	err := handler.XplitFile(ffx2LockitSizes, common.LOCKIT_NAME_BASE, dataInfo.ExtractLocation.TargetPath)
 	if err != nil {
 		return err
 	}
@@ -110,31 +173,30 @@ func ffx2Splitter(dataInfo *interactions.GameDataInfo) error {
 	return nil
 }
 
-/* func processLockitPartsParallel(fileParts *[]LockitFileParts, callback func(index int, handler *LockitFileParts)) error {
-	var wg sync.WaitGroup
+func ffx2LockitJoiner(dataInfo *interactions.GameDataInfo) error {
+	joiner := newLockitFileJoin(dataInfo)
 
-	errChan := make(chan error, len(*fileParts))
+	common.EnsurePathExists(dataInfo.TranslateLocation.TargetPath)
 
-	for index, fileParts := range *fileParts {
-		wg.Add(1)
-
-		go func(file LockitFileParts) {
-			defer wg.Done()
-
-			callback(index, &file)
-
-		}(fileParts)
-	}
-
-	wg.Wait()
-
-	close(errChan)
-
-	for err := range errChan {
-		if err != nil {
-			return err
-		}
+	sizes := getLockitFileSizes()
+	err := joiner.JoinFile(&sizes)
+	if err != nil {
+		return err
 	}
 
 	return nil
-} */
+}
+
+func getLockitFileSizes() []int {
+	gamePart := interactions.NewInteraction().GamePart.GetGamePart()
+
+	if gamePart == interactions.Ffx {
+		return ffxLockitSizes
+	}
+
+	if gamePart == interactions.Ffx2 {
+		return ffx2LockitSizes
+	}
+
+	return nil
+}

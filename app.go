@@ -101,7 +101,7 @@ func (a App) domReady(ctx context.Context) {
 	})
 
 	testPath := "F:\\ffxWails\\FFX_Resources\\build\\bin\\data\\ffx-2_data\\gamedata\\ps3data\\lockit\\ffx2_loc_kit_ps3_us.bin"
-	services.TestExtractFile(testPath, true, true)
+	services.TestExtractFile(testPath, false, true)
 }
 
 // beforeClose is called when the application is about to quit,

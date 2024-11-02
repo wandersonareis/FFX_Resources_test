@@ -1,33 +1,33 @@
 package interactions
 
-type FfxGamePartNumber int
+type GamePart int
 
 const (
-	Ffx FfxGamePartNumber = iota + 1
+	Ffx GamePart = iota + 1
 	Ffx2
 )
 
 type FfxGamePart struct {
-	partNumber FfxGamePartNumber
+	gamePart GamePart
 }
 
 func NewFfxGamePart() *FfxGamePart {
 
 	return &FfxGamePart{
-		partNumber: Ffx,
+		gamePart: Ffx,
 	}
 }
 
-func (f *FfxGamePart) GetGamePart() FfxGamePartNumber {
-	return f.partNumber
+func (f *FfxGamePart) GetGamePart() GamePart {
+	return f.gamePart
 }
 
 func (f *FfxGamePart) GetGamePartNumber() int {
-	return int(f.partNumber)
+	return int(f.gamePart)
 }
 
-func (f *FfxGamePart) SetGamePart(partName FfxGamePartNumber) {
-	f.partNumber = partName
+func (f *FfxGamePart) SetGamePart(partName GamePart) {
+	f.gamePart = partName
 }
 
 func (f *FfxGamePart) SetGamePartNumber(partNumber int) {
@@ -38,6 +38,6 @@ func (f *FfxGamePart) SetGamePartNumber(partNumber int) {
 	if partNumber > 2 {
 		partNumber = 2
 	}
-	
-	f.partNumber = FfxGamePartNumber(partNumber)
+
+	f.gamePart = GamePart(partNumber)
 }

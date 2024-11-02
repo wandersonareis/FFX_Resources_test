@@ -23,3 +23,4 @@ const MACRODIC_PATTERN = "macrodic.*?\\.00[0-6]"
 
 const LOCKIT_NAME_BASE = "loc_kit_ps3"
 const LOCKIT_FILE_PARTS_PATTERN = `.*loc_kit_ps3.*\.loc_kit_([0-9]{2})$`
+const LOCKIT_TXT_PARTS_PATTERN = `.*loc_kit_ps3.*\.loc_kit_([0-9]{2}).*\.txt$`

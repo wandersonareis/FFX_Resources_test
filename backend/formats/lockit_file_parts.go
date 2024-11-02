@@ -33,7 +33,7 @@ func (l LockitFileParts) GetFileInfo() *interactions.GameDataInfo {
 
 func (l *LockitFileParts) Extract(enc LockitPartEncodeType) {
 	var err error
-	
+
 	switch enc {
 	case FfxEnc:
 		err = lockitDecoderFfx(l.dataInfo)
@@ -49,4 +49,21 @@ func (l *LockitFileParts) Extract(enc LockitPartEncodeType) {
 	}
 }
 
-func (l *LockitFileParts) Compress() {}
+func (l *LockitFileParts) Compress(enc LockitPartEncodeType) {
+	var err error
+
+	switch enc {
+	case FfxEnc:
+		err = lockitEncoderFfx(l.dataInfo)
+	case LocEnc:
+		err = lockitEncoderLoc(l.dataInfo)
+	default:
+		err = fmt.Errorf("invalid encode type: %d", enc)
+	}
+
+
+	if err != nil {
+		lib.NotifyError(err)
+		return
+	}
+}

@@ -65,7 +65,7 @@ func (t TxtFormatter) WriteFile(fileInfo *interactions.GameDataInfo, targetDirec
 	case models.DcpParts:
 		outputFile, outputPath = t.providePartsWritePath(targetDirectory, common.DCP_PARTS_TARGET_DIR_NAME, fileInfo.GameData.Name)
 	case models.LockitParts:
-		outputFile, outputPath = t.providePartsWritePath(targetDirectory, common.LOCKIT_FILE_PARTS_PATTERN, fileInfo.GameData.Name)
+		outputFile, outputPath = t.providePartsWritePath(targetDirectory, common.LOCKIT_TARGET_DIR_NAME, fileInfo.GameData.Name)
 	default:
 		outputFile, outputPath = t.provideDefaultWritePath(targetDirectory, fileInfo.GameData.RelativePath, fileInfo.GameData.Extension)
 	}

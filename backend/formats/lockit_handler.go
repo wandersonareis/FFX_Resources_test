@@ -23,3 +23,23 @@ func getLockitFileHandler(targetExtension ...string) (string, error) {
 
 	return targetFile, nil
 }
+
+func getLockitFileUtf8BomHandler() (string, error) {
+	extension := common.DEFAULT_APPLICATION_EXTENSION
+
+	targetHandler := []string{
+		common.DEFAULT_RESOURCES_ROOTDIR,
+		common.LOCKIT_HANDLER_APPLICATION,
+	}
+
+	tempProvider := common.NewTempProvider().ProvideTempFileWithExtension(common.LOCKIT_HANDLER_APPLICATION, extension)
+
+	targetFile := tempProvider.FilePath
+
+	err := common.GetFileFromResources(targetHandler, targetFile)
+	if err != nil {
+		return "", err
+	}
+
+	return targetFile, nil
+}

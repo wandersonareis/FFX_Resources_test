@@ -8,21 +8,21 @@ import (
 	"os"
 )
 
-type LockitFileHandler struct {
+type LockitFileXplit struct {
 	path string
 }
 
 // Função para criar uma instância da struct
-func newLockitFileHandler(dataInfo *interactions.GameDataInfo) *LockitFileHandler {
-	return &LockitFileHandler{path: dataInfo.GameData.AbsolutePath}
+func newLockitFileXplit(dataInfo *interactions.GameDataInfo) *LockitFileXplit {
+	return &LockitFileXplit{path: dataInfo.GameData.AbsolutePath}
 }
 
 // Função para contar ocorrências de 0d0a
-func (fh *LockitFileHandler) CountOccurrences(data []byte) int {
+func (fh *LockitFileXplit) CountOccurrences(data []byte) int {
 	return bytes.Count(data, []byte{0x0d, 0x0a})
 }
 
-func (fh *LockitFileHandler) ensureCrescentOrder(sizes []int) error {
+func (fh *LockitFileXplit) ensureCrescentOrder(sizes []int) error {
 	for i := 1; i < len(sizes); i++ {
 		if sizes[i] <= sizes[i-1] {
 			return fmt.Errorf("os tamanhos devem estar em ordem crescente")
@@ -32,7 +32,7 @@ func (fh *LockitFileHandler) ensureCrescentOrder(sizes []int) error {
 }
 
 // Função para separar as partes e salvar em arquivos
-func (fh *LockitFileHandler) SplitFile(sizes []int, outputFileNameBase, outputDir string) error {
+func (fh *LockitFileXplit) XplitFile(sizes []int, outputFileNameBase, outputDir string) error {
 	// Lê o arquivo como bytes
 	data, err := os.ReadFile(fh.path)
 	if err != nil {
@@ -69,7 +69,6 @@ func (fh *LockitFileHandler) SplitFile(sizes []int, outputFileNameBase, outputDi
 		}
 	}
 
-	// Se houver dados restantes, salva em um último arquivo
 	if offset < len(data) {
 		remainingPart := data[offset:]
 		outputFileName := fmt.Sprintf(outputFileNameBase + ".loc_kit_%02d", len(sizes))
@@ -82,7 +81,7 @@ func (fh *LockitFileHandler) SplitFile(sizes []int, outputFileNameBase, outputDi
 	return nil
 }
 
-func (fh *LockitFileHandler) ValidateParts(sizes []int) (bool, error) {
+/* func (fh *LockitFileXplit) ValidateParts(sizes []int) (bool, error) {
 	originalData, err := os.ReadFile(fh.path)
 	if err != nil {
 		return false, fmt.Errorf("erro ao ler o arquivo original: %v", err)
@@ -106,3 +105,4 @@ func (fh *LockitFileHandler) ValidateParts(sizes []int) (bool, error) {
 
 	return bytes.Equal(originalData, combinedBuffer.Bytes()), nil
 }
+ */
