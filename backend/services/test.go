@@ -40,7 +40,7 @@ func TestExtractFile(path string, testExtract, testCompress bool) {
 	dataInfo := interactions.NewGameDataInfo(path)
 
 	if testExtract {
-		fileProcessor := formats.NewFileExtractor(dataInfo)
+		fileProcessor := formatsDev.NewFileExtractor(dataInfo)
 		if fileProcessor == nil {
 			fmt.Println("invalid file type")
 			return
@@ -49,7 +49,7 @@ func TestExtractFile(path string, testExtract, testCompress bool) {
 	}
 
 	if testCompress {
-		fileProcessor := formats.NewFileCompressor(dataInfo)
+		fileProcessor := formatsDev.NewFileCompressor(dataInfo)
 		if fileProcessor == nil {
 			fmt.Println("invalid file type")
 			return

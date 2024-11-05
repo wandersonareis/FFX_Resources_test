@@ -18,31 +18,39 @@ func NewCompressService() *CompressService {
 
 func (c *CompressService) Compress(dataInfo *interactions.GameDataInfo) {
 	if !common.FileExists(dataInfo.GameData.AbsolutePath) {
-		lib.NotifyError(fmt.Errorf("original text file %s not found", dataInfo.GameData.Name))
+		lib.NotifyError(fmt.Errorf("game file %s not found", dataInfo.GameData.Name))
 		return
 	}
 
-	if !dataInfo.TranslateLocation.TargetFileExists() && dataInfo.GameData.Type != models.Dcp {
+	/* if !dataInfo.TranslateLocation.TargetFileExists() && dataInfo.GameData.Type != models.Dcp {
 		lib.NotifyError(fmt.Errorf("translated text file %s not found", dataInfo.TranslateLocation.TargetFileName))
 		return
-	}
+	} */
 
-	err := core.EnsureWindowsLineBreaks(dataInfo.TranslateLocation.TargetFile, dataInfo.GameData.Type)
-	if err != nil {
+	gameData := dataInfo.GameData
+	translateLocation := dataInfo.TranslateLocation
+
+	if err := translateLocation.Validate(); err != nil &&
+		gameData.Type != models.Dcp {
 		lib.NotifyError(err)
 		return
 	}
 
-	if core.CountSegments(dataInfo.TranslateLocation.TargetFile) < 0 {
-		lib.NotifyError(fmt.Errorf("text file contains no separators: %s", dataInfo.GameData.Name))
+	if err := core.EnsureWindowsLineBreaks(translateLocation.TargetFile, gameData.Type); err != nil {
+		lib.NotifyError(err)
 		return
 	}
 
-	fileProcessor := formats.NewFileCompressor(dataInfo)
-	if fileProcessor == nil {
-		lib.NotifyError(fmt.Errorf("invalid file type: %s", dataInfo.GameData.Name))
+	if core.CountSegments(translateLocation.TargetFile) < 0 {
+		lib.NotifyError(fmt.Errorf("text file %s is empty", gameData.Name))
 		return
 	}
-	
+
+	fileProcessor := formatsDev.NewFileCompressor(dataInfo)
+	if fileProcessor == nil {
+		lib.NotifyError(fmt.Errorf("invalid file type: %s", gameData.Name))
+		return
+	}
+
 	fileProcessor.Compress()
 }

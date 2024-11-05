@@ -11,7 +11,11 @@ func FileExists(path string) bool {
 }
 
 func RemoveFile(path string) error {
-	return os.Remove(path)
+	return os.RemoveAll(path)
+}
+
+func OpenFile(path string) (*os.File, error) {
+	return os.Open(path)
 }
 
 func ReadFile(path string) (string, error) {

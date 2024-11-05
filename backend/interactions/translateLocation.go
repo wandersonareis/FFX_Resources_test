@@ -1,5 +1,7 @@
 package interactions
 
+import "fmt"
+
 type TranslateLocation struct {
 	LocationBase
 }
@@ -18,10 +20,10 @@ func NewTranslateLocation() *TranslateLocation {
 	return translateLocationInstance
 }
 
-func (t *TranslateLocation) ProvideTargetDirectory() (string, error) {
-	if NewInteraction().TranslateLocation.TargetDirectory != "" {
-		return NewInteraction().TranslateLocation.TargetDirectory, nil
+func (t *TranslateLocation) Validate() error {
+	if !t.targetFileExists() {
+		return fmt.Errorf("translated file does not exist")
 	}
 
-	return t.LocationBase.ProvideTargetDirectory()
+	return nil
 }

@@ -14,7 +14,7 @@ func NewExtractService() *ExtractService {
 }
 
 func (e *ExtractService) Extract(dataInfo *interactions.GameDataInfo) {
-	fileProcessor := formats.NewFileProcessor(dataInfo)
+	fileProcessor := formatsDev.NewFileProcessor(dataInfo)
 	if fileProcessor == nil {
 		lib.NotifyError(fmt.Errorf("invalid file type: %s", dataInfo.GameData.Name))
 		return

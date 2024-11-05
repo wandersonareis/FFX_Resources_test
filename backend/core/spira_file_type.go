@@ -35,7 +35,7 @@ var spiraFiles = []spiraFilesTypes{
 		spiratype: models.Lockit,
 	},
 	{
-		regex:     regexp.MustCompile(`.*loc_kit_ps3.*\.loc_kit_([0-9]{2})$`),
+		regex:     regexp.MustCompile(`.*loc_kit_ps3.*\.part([0-9]{2})$`),
 		spiratype: models.LockitParts,
 	},
 }

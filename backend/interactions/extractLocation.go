@@ -1,5 +1,7 @@
 package interactions
 
+import "fmt"
+
 type ExtractLocation struct {
 	LocationBase
 }
@@ -18,10 +20,10 @@ func NewExtractLocation() *ExtractLocation {
 	return extractLocationInstance
 }
 
-func (e ExtractLocation) ProvideTargetDirectory() (string, error) {
-	if NewInteraction().ExtractLocation.TargetDirectory != "" {
-		return NewInteraction().ExtractLocation.TargetDirectory, nil
+func (e *ExtractLocation) Validate() error {
+	if !e.targetFileExists() {
+		return fmt.Errorf("extracted file does not exist")
 	}
 
-	return e.LocationBase.ProvideTargetDirectory()
+	return nil
 }

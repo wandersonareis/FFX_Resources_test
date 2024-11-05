@@ -19,8 +19,7 @@ func (c *CollectionService) PopulateTree() []interactions.TreeNode {
 		return nil
 	}
 
-	err := interactions.NewInteraction().GameLocation.IsSpira()
-	if err != nil {
+	if err := interactions.NewInteraction().GameLocation.IsSpira(); err != nil {
 		lib.NotifyError(err)
 		return nil
 	}
@@ -33,10 +32,10 @@ func (c *CollectionService) PopulateTree() []interactions.TreeNode {
 
 	tree := make([]interactions.TreeNode, 0, 1)
 
-	err = spira.BuildFileTree(&tree, source)
-	if err != nil {
+	if err := spira.BuildFileTree(&tree, source); err != nil {
 		lib.NotifyError(err)
 		return nil
 	}
+	
 	return tree
 }

@@ -16,9 +16,9 @@ func NewGameDataInfo(path string) *GameDataInfo {
 	}
 
 	return &GameDataInfo{
-		GameData:*gameData,
-		ExtractLocation: *NewExtractLocation(),
+		GameData:          *gameData,
+		ExtractLocation:   *NewExtractLocation(),
 		TranslateLocation: *NewTranslateLocation(),
-		ImportLocation: *NewImportLocation(),
+		ImportLocation:    *NewImportLocation(),
 	}
 }

@@ -1,0 +1,77 @@
+package dcp_internal
+
+import (
+	"bytes"
+	"ffxresources/backend/interactions"
+	"fmt"
+	"os"
+)
+
+func DcpFileJoiner(dataInfo *interactions.GameDataInfo, xplitedFiles *[]DcpFileParts, targetReimportFile string) error {
+	originalDcpFile := dataInfo.GameData.AbsolutePath
+
+	importLocation := dataInfo.ImportLocation
+
+	if err := importLocation.ProvideTargetPath(); err != nil {
+		return err
+	}
+
+	err := dcpWriter(originalDcpFile, xplitedFiles, targetReimportFile)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func dcpWriter(inputFilePath string, parts *[]DcpFileParts, newContainerPath string) error {
+	inputFile, err := os.Open(inputFilePath)
+	if err != nil {
+		return fmt.Errorf("error when opening the original file: %w", err)
+	}
+
+	defer inputFile.Close()
+
+	header := NewHeader()
+	header.FromFile(inputFilePath)
+	header.Update(*parts)
+
+	var buffer bytes.Buffer
+
+	if err := header.Write(&buffer); err != nil {
+		return fmt.Errorf("error when writing the header: %w", err)
+	}
+
+	content := NewContentWithBuffer(&buffer)
+	if err := content.Write(header, parts); err != nil {
+		return fmt.Errorf("error when writing the content: %w", err)
+	}
+
+	newFile, err := os.Create(newContainerPath)
+	if err != nil {
+		fmt.Println(err)
+		return fmt.Errorf("error when creating the new container file: %w", err)
+	}
+
+	defer newFile.Close()
+
+	if _, err := buffer.WriteTo(newFile); err != nil {
+        return fmt.Errorf("error when writing buffer to file: %w", err)
+	}
+	
+	originalData, err := os.ReadFile(inputFilePath)
+	if err != nil {
+		return fmt.Errorf("error reading the original file: %v", err)
+	}
+
+	newData, _ := os.ReadFile(newContainerPath)
+
+	isExactMatch := bytes.Equal(originalData, newData)
+	if !isExactMatch {
+		return fmt.Errorf("arquivos não correspondem")
+	} else {
+		fmt.Println("Arquivos correspondem")
+	}
+	
+	return nil
+}

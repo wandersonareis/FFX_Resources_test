@@ -1,6 +1,10 @@
-package formats
+package formatsDev
 
 import (
+	"ffxresources/backend/formats/internal/dcp"
+	"ffxresources/backend/formats/internal/dlg"
+	"ffxresources/backend/formats/internal/lockit"
+	"ffxresources/backend/formats/internal/mt2"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 	"ffxresources/backend/models"
@@ -17,34 +21,28 @@ func NewFileCompressor(dataInfo *interactions.GameDataInfo) models.ICompressor {
 func NewFileProcessor(dataInfo *interactions.GameDataInfo) interactions.IFileProcessor {
 	fileType := dataInfo.GameData.Type
 
-	extractPath, err := interactions.NewInteraction().ExtractLocation.ProvideTargetDirectory()
-	if err != nil {
-		lib.NotifyError(err)
-		return nil
-	}
-
-	translatePath, err := interactions.NewInteraction().TranslateLocation.ProvideTargetDirectory()
-	if err != nil {
-		lib.NotifyError(err)
-		return nil
-	}
-
-	_, err = interactions.NewInteraction().ImportLocation.ProvideTargetDirectory()
-	if err != nil {
-		lib.NotifyError(err)
-		return nil
-	}
-
 	switch fileType {
 	case models.Dialogs, models.Tutorial, models.DcpParts:
-		return NewDialogs(dataInfo)
+		return dlg.NewDialogs(dataInfo)
 	case models.Kernel:
-		return NewKernel(dataInfo)
+		return mt2.NewKernel(dataInfo)
 	case models.Dcp:
-		return NewDcpFile(dataInfo)
+		return dcp.NewDcpFile(dataInfo)
 	case models.Lockit:
-		return NewLockitFile(dataInfo)
+		return lockit.NewLockitFile(dataInfo)
 	case models.Folder:
+		extractPath, err := interactions.NewInteraction().ExtractLocation.ProvideTargetDirectory()
+		if err != nil {
+			lib.NotifyError(err)
+			return nil
+		}
+
+		translatePath, err := interactions.NewInteraction().TranslateLocation.ProvideTargetDirectory()
+		if err != nil {
+			lib.NotifyError(err)
+			return nil
+		}
+
 		return NewSpiraFolder(dataInfo, extractPath, translatePath)
 	default:
 		return nil

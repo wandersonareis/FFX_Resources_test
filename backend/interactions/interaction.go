@@ -6,6 +6,7 @@ type Interaction struct {
 	Ctx               context.Context
 	GameLocation      *GameLocation
 	GamePart          *FfxGamePart
+	GamePartOptions   *GamePartOptions
 	ExtractLocation   *ExtractLocation
 	TranslateLocation *TranslateLocation
 	ImportLocation    *ImportLocation
@@ -15,10 +16,12 @@ var interactionInstance *Interaction
 
 func NewInteraction() *Interaction {
 	if interactionInstance == nil {
+		gamePart := NewFfxGamePart()
 		interactionInstance = &Interaction{
 			Ctx:               context.Background(),
 			GameLocation:      NewGameLocation(),
-			GamePart:          NewFfxGamePart(),
+			GamePart:          gamePart,
+			GamePartOptions:   NewGamePartOptions(gamePart),
 			ExtractLocation:   NewExtractLocation(),
 			TranslateLocation: NewTranslateLocation(),
 			ImportLocation:    NewImportLocation(),

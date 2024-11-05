@@ -21,7 +21,7 @@ func CreateTreeNode(key string, source *core.Source, childrens []interactions.Tr
 func generateNode(key string, source *core.Source) (interactions.TreeNode, error) {
 	fileInfo := interactions.NewGameDataInfo(source.Path)
 
-	fileProcessor := formats.NewFileProcessor(fileInfo)
+	fileProcessor := formatsDev.NewFileProcessor(fileInfo)
 	if fileProcessor == nil {
 		return interactions.TreeNode{}, nil
 	}

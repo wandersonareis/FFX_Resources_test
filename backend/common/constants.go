@@ -16,11 +16,13 @@ const KERNEL_HANDLER_APPLICATION = "ffx2mt.exe"
 const DCP_FILE_XPLITTER_APPLICATION = "SHSplit.exe"
 const LOCKIT_HANDLER_APPLICATION = "fcopy.exe"
 
+const UTF8BOM_NORMALIZER_APPLICATION = "utf8bom.exe"
+
 const DEFAULT_APPLICATION_EXTENSION = ".exe"
 const DEFAULT_RESOURCES_ROOTDIR = "bin"
 
 const MACRODIC_PATTERN = "macrodic.*?\\.00[0-6]"
 
 const LOCKIT_NAME_BASE = "loc_kit_ps3"
-const LOCKIT_FILE_PARTS_PATTERN = `.*loc_kit_ps3.*\.loc_kit_([0-9]{2})$`
-const LOCKIT_TXT_PARTS_PATTERN = `.*loc_kit_ps3.*\.loc_kit_([0-9]{2}).*\.txt$`
+const LOCKIT_FILE_PARTS_PATTERN = `.*loc_kit_ps3.*\.part([0-9]{2})$`
+const LOCKIT_TXT_PARTS_PATTERN = `.*loc_kit_ps3.*\.part([0-9]{2}).*\.txt$`

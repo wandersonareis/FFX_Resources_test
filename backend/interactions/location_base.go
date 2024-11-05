@@ -2,6 +2,7 @@ package interactions
 
 import (
 	"ffxresources/backend/common"
+	"fmt"
 	"path/filepath"
 )
 
@@ -41,16 +42,28 @@ func (lb *LocationBase) GetPath() string {
 }
 
 func (lb *LocationBase) ProvideTargetDirectory() (string, error) {
-	if lb.TargetDirectory != "" {
-		return lb.TargetDirectory, nil
+	if lb.TargetDirectory != "" {		
+		return lb.TargetDirectory, providerTargetDirectory(lb.TargetDirectory)
 	}
 
 	path := filepath.Join(common.GetExecDir(), lb.TargetDirectoryName)
-	err := common.EnsurePathExists(path)
+
+	err := providerTargetDirectory(path)
 	if err != nil {
 		return "", err
 	}
+
+	lb.TargetDirectory = path
+
 	return path, nil
+}
+
+func (lb *LocationBase) ProvideTargetPath() error {
+	if lb.TargetPath != "" {
+		return providerTargetDirectory(lb.TargetPath)
+	}
+
+	return fmt.Errorf("target path is empty")
 }
 
 func (t *LocationBase) GenerateTargetOutput(formatter ITextFormatter, fileInfo *GameDataInfo) {
@@ -59,7 +72,19 @@ func (t *LocationBase) GenerateTargetOutput(formatter ITextFormatter, fileInfo *
 	t.TargetFileName = filepath.Base(t.TargetFile)
 }
 
-func (t *LocationBase) TargetFileExists() bool {
+func (t *LocationBase) targetFileExists() bool {
 	t.IsExist = common.FileExists(t.TargetFile)
 	return t.IsExist
+}
+
+func providerTargetDirectory(targetDirectory string) error {
+	if targetDirectory != "" && common.IsPathExists(targetDirectory) {
+		return nil
+	}
+
+	err := common.EnsurePathExists(targetDirectory)
+	if err != nil {
+		return err
+	}
+	return nil
 }
