@@ -1,26 +1,10 @@
-package dlg_internal
+package internal
 
-import "ffxresources/backend/common"
+import "ffxresources/backend/formats/lib"
 
-func getDialogsHandler(targetExtension ...string) (string, error) {
-	extension := common.DEFAULT_APPLICATION_EXTENSION
-	handlerApp := common.DIALOG_HANDLER_APPLICATION
-
-	if len(targetExtension) > 0 {
-		extension = targetExtension[0]
-	}
-
-	targetHandler := []string{
-		common.DEFAULT_RESOURCES_ROOTDIR,
-		handlerApp,
-	}
-
-	tempProvider := common.NewTempProvider()
-	tempProvide := tempProvider.ProvideTempFileWithExtension(handlerApp, extension)
-
-	targetFile := tempProvide.FilePath
-
-	if err := common.GetFileFromResources(targetHandler, targetFile); err != nil {
+func getDialogsHandler() (string, error) {
+	targetFile, err := lib.GetFromResources(lib.DIALOG_HANDLER_APPLICATION, lib.DEFAULT_TABLE_EXTENSION)
+	if err != nil {
 		return "", err
 	}
 

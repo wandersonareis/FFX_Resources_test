@@ -1,4 +1,4 @@
-package lockit_internal
+package internal
 
 import (
 	"ffxresources/backend/common"

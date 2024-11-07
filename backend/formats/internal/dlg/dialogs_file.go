@@ -26,7 +26,7 @@ func (d DialogsFile) GetFileInfo() *interactions.GameDataInfo {
 }
 
 func (d DialogsFile) Extract() {
-	err := dlg_internal.DialogsUnpacker(d.dataInfo)
+	err := internal.DialogsUnpacker(d.dataInfo)
 	if err != nil {
 		lib.NotifyError(err)
 		return
@@ -34,7 +34,7 @@ func (d DialogsFile) Extract() {
 }
 
 func (d DialogsFile) Compress() {
-	err := dlg_internal.DialogsTextCompress(d.dataInfo)
+	err := internal.DialogsTextCompress(d.dataInfo)
 	if err != nil {
 		lib.NotifyError(err)
 		return

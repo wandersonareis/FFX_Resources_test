@@ -1,15 +1,15 @@
 package tbstables
 
-import "ffxresources/backend/common"
+import "ffxresources/backend/formats/lib"
 
-type CharacterTable struct {}
+type CharacterTable struct{}
 
 func NewCharacterTable() *CharacterTable {
 	return &CharacterTable{}
 }
 
 func (t *CharacterTable) GetFfx2CharacterTable() (string, error) {
-	targetFile, err := getTableFromResources(common.FFX2_CODE_TABLE_NAME)
+	targetFile, err := lib.GetFromResources(lib.FFX2_CODE_TABLE_NAME, lib.DEFAULT_TABLE_EXTENSION)
 	if err != nil {
 		return "", err
 	}
@@ -18,7 +18,7 @@ func (t *CharacterTable) GetFfx2CharacterTable() (string, error) {
 }
 
 func (t *CharacterTable) GetCharacterOnlyTable() (string, error) {
-	targetFile, err := getTableFromResources(common.CHARACTER_CODE_TABLE)
+	targetFile, err := lib.GetFromResources(lib.CHARACTER_CODE_TABLE, lib.DEFAULT_TABLE_EXTENSION)
 	if err != nil {
 		return "", err
 	}
@@ -27,7 +27,7 @@ func (t *CharacterTable) GetCharacterOnlyTable() (string, error) {
 }
 
 func (t *CharacterTable) GetCharacterLocTable() (string, error) {
-	targetFile, err := getTableFromResources(common.CHARACTER_LOC_CODE_TABLE)
+	targetFile, err := lib.GetFromResources(lib.CHARACTER_LOC_CODE_TABLE, lib.DEFAULT_TABLE_EXTENSION)
 	if err != nil {
 		return "", err
 	}
@@ -35,13 +35,16 @@ func (t *CharacterTable) GetCharacterLocTable() (string, error) {
 	return targetFile, nil
 }
 
-func getTableFromResources(codeTableName string) (string, error) {
+/* func getTableFromResources(codeTableName string) (string, error) {
 	targetHandler := []string{
 		common.DEFAULT_RESOURCES_ROOTDIR,
 		codeTableName,
 	}
 
-	targetFile := common.NewTempProvider().ProvideTempFileWithExtension(codeTableName, "tbs").FilePath
+	tempProvider := common.NewTempProvider()
+	tempProvide := tempProvider.ProvideTempFileWithExtension(codeTableName, "tbs")
+
+	targetFile := tempProvide.FilePath
 
 	err := common.GetFileFromResources(targetHandler, targetFile)
 	if err != nil {
@@ -49,4 +52,4 @@ func getTableFromResources(codeTableName string) (string, error) {
 	}
 
 	return targetFile, nil
-}
+} */

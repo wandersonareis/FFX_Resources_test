@@ -1,4 +1,4 @@
-package lockit_internal
+package internal
 
 import (
 	"bufio"
@@ -34,7 +34,6 @@ func (fh *LockitFileXplit) ensureCrescentOrder(sizes []int) error {
 	return nil
 }
 
-// Função para separar as partes e salvar em arquivos
 func (fh *LockitFileXplit) XplitFile(sizes []int, outputFileNameBase, outputDir string) error {
 	file, err := os.Open(fh.path)
 	if err != nil {

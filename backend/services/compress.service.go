@@ -22,28 +22,25 @@ func (c *CompressService) Compress(dataInfo *interactions.GameDataInfo) {
 		return
 	}
 
-	/* if !dataInfo.TranslateLocation.TargetFileExists() && dataInfo.GameData.Type != models.Dcp {
-		lib.NotifyError(fmt.Errorf("translated text file %s not found", dataInfo.TranslateLocation.TargetFileName))
-		return
-	} */
-
 	gameData := dataInfo.GameData
 	translateLocation := dataInfo.TranslateLocation
 
-	if err := translateLocation.Validate(); err != nil &&
-		gameData.Type != models.Dcp {
-		lib.NotifyError(err)
-		return
-	}
+	if !gameData.IsDir {
+		if err := translateLocation.Validate(); err != nil &&
+			gameData.Type != models.Dcp {
+			lib.NotifyError(err)
+			return
+		}
 
-	if err := core.EnsureWindowsLineBreaks(translateLocation.TargetFile, gameData.Type); err != nil {
-		lib.NotifyError(err)
-		return
-	}
+		if err := core.EnsureWindowsLineBreaks(translateLocation.TargetFile, gameData.Type); err != nil {
+			lib.NotifyError(err)
+			return
+		}
 
-	if core.CountSegments(translateLocation.TargetFile) < 0 {
-		lib.NotifyError(fmt.Errorf("text file %s is empty", gameData.Name))
-		return
+		if core.CountSegments(translateLocation.TargetFile) < 0 {
+			lib.NotifyError(fmt.Errorf("text file %s is empty", gameData.Name))
+			return
+		}
 	}
 
 	fileProcessor := formatsDev.NewFileCompressor(dataInfo)

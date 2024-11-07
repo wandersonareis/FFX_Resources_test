@@ -1,33 +1,44 @@
 package lib
 
 import (
-	"bytes"
-	"fmt"
-	"os/exec"
-	"syscall"
+	"runtime"
+	"sync"
 )
 
-func RunCommand(tool string, args []string) error {
-	cmd := exec.Command(tool, args...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+type Worker[T any] struct {
+    in   chan func()
+    wg   sync.WaitGroup
+}
 
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
+func NewWorker[T any]() *Worker[T] {
+    numCPU := runtime.NumCPU()
+    w := Worker[T]{
+        in: make(chan func()),
+    }
 
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("erro ao iniciar comando: %w", err)
-	}
+    w.wg.Add(numCPU - 1)
+    for i := 0; i < numCPU-1; i++ {
+        go func() {
+            defer w.wg.Done()
+            for task := range w.in {
+                task()
+            }
+        }()
+    }
 
-	if err := cmd.Wait(); err != nil {
-		fmt.Println(err)
-		fmt.Println("Args: ", args)
-		return fmt.Errorf("erro cmd.Wait na execução do comando: %w", err)
-	}
+    return &w
+}
 
-	if stderr.Len() > 0 {
-		fmt.Println("Stderr:", stderr.String())
-		return fmt.Errorf("erro stderr na execução do comando: %s", stderr.String())
-	}
+func (w *Worker[T]) Process(data []T, workerFunc func(int, T)) {
+    // Enviar as tarefas
+    for i, item := range data {
+        i, item := i, item // Captura o índice e o valor localmente
+        w.in <- func() {
+            workerFunc(i, item)
+        }
+    }
 
-	return nil
+    // Finalizar o worker pool após todas as tarefas serem enviadas
+    close(w.in)
+    w.wg.Wait()
 }

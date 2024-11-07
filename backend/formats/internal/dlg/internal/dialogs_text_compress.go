@@ -1,4 +1,4 @@
-package dlg_internal
+package internal
 
 import (
 	"ffxresources/backend/common"
@@ -13,12 +13,6 @@ func DialogsTextCompress(dialogsFileInfo *interactions.GameDataInfo) error {
 	}
 
 	defer common.RemoveFile(handler)
-
-	/* if !dialogsFileInfo.TranslateLocation.TargetFileExists() {
-		msg := "Dialogs translated file does not exist"
-		lib.NotifyWarn(msg)
-		return nil
-	} */
 
 	translateLocation := dialogsFileInfo.TranslateLocation
 	importLocation := dialogsFileInfo.ImportLocation

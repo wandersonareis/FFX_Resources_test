@@ -1,4 +1,4 @@
-package mt2_internal
+package internal
 
 import (
 	"ffxresources/backend/common"

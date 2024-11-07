@@ -29,14 +29,14 @@ func (k kernelFile) GetFileInfo() *interactions.GameDataInfo {
 }
 
 func (k kernelFile) Extract() {
-	if err := mt2_internal.KernelUnpacker(k.GetFileInfo()); err != nil {
+	if err := internal.KernelUnpacker(k.GetFileInfo()); err != nil {
 		lib.NotifyError(err)
 		return
 	}
 }
 
 func (k kernelFile) Compress() {
-	if err := mt2_internal.KernelTextPacker(k.DataInfo); err != nil {
+	if err := internal.KernelTextPacker(k.DataInfo); err != nil {
 		lib.NotifyError(err)
 		return
 	}

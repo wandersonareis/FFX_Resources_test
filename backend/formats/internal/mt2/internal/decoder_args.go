@@ -1,4 +1,4 @@
-package dlg_internal
+package internal
 
 import tbstables "ffxresources/backend/formats/internal/tbs"
 

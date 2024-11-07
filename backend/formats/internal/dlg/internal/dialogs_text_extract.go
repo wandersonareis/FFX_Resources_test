@@ -1,4 +1,4 @@
-package dlg_internal
+package internal
 
 import (
 	"ffxresources/backend/common"
@@ -15,10 +15,10 @@ func DialogsUnpacker(dialogsFileInfo *interactions.GameDataInfo) error {
 	defer common.RemoveFile(handler)
 
 	targetFile := dialogsFileInfo.GameData.AbsolutePath
-	outputFile := dialogsFileInfo.ExtractLocation.TargetFile
-	outputPath := dialogsFileInfo.ExtractLocation.TargetPath
 
-	err = common.EnsurePathExists(outputPath)
+	extractLocation := dialogsFileInfo.ExtractLocation
+
+	err = extractLocation.ProvideTargetPath()
 	if err != nil {
 		return err
 	}
@@ -30,7 +30,7 @@ func DialogsUnpacker(dialogsFileInfo *interactions.GameDataInfo) error {
 
 	defer common.RemoveFile(codeTable)
 
-	args = append(args, targetFile, outputFile)
+	args = append(args, targetFile, extractLocation.TargetFile)
 
 	err = lib.RunCommand(handler, args)
 	if err != nil {

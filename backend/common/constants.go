@@ -7,7 +7,7 @@ const KERNEL_TARGET_DIR_NAME = "kernel_text"
 const DCP_PARTS_TARGET_DIR_NAME = "system_text"
 const LOCKIT_TARGET_DIR_NAME = "lockit_text"
 
-const FFX_CODE_TABLE_NAME = "ffx.tbs"
+/* const FFX_CODE_TABLE_NAME = "ffx.tbs"
 const FFX2_CODE_TABLE_NAME = "ffx2.tbs"
 const CHARACTER_CODE_TABLE = "ffx_chars.tbs"
 const CHARACTER_LOC_CODE_TABLE = "ffxloc.tbs"
@@ -19,7 +19,7 @@ const LOCKIT_HANDLER_APPLICATION = "fcopy.exe"
 const UTF8BOM_NORMALIZER_APPLICATION = "utf8bom.exe"
 
 const DEFAULT_APPLICATION_EXTENSION = ".exe"
-const DEFAULT_RESOURCES_ROOTDIR = "bin"
+const DEFAULT_RESOURCES_ROOTDIR = "bin" */
 
 const MACRODIC_PATTERN = "macrodic.*?\\.00[0-6]"
 

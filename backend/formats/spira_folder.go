@@ -40,51 +40,45 @@ func (d SpiraFolder) Extract() {
 
 	lib.ShowProgressBar(d.ctx)
 
-	for _, fileProcessor := range fileProcessors {
+	worker := lib.NewWorker[interactions.IFileProcessor]()
+
+	worker.Process(fileProcessors, func(_ int, fileProcessor interactions.IFileProcessor) {
 		fileProcessor.Extract()
-
-		processedCount++
-
-		lib.SendProgress(d.ctx, lib.Progress{Total: totalFiles, Processed: processedCount, Percentage: processedCount * 100 / totalFiles})
-	}
+	})
 }
 
 func (d SpiraFolder) Compress() {
 	fileProcessors := d.processFiles()
 
-	for _, fileProcessor := range fileProcessors {
+	worker := lib.NewWorker[interactions.IFileProcessor]()
+
+	worker.Process(fileProcessors, func(_ int, fileProcessor interactions.IFileProcessor) {
 		fileProcessor.Compress()
-	}
+	})
 }
 
 func (d SpiraFolder) processFiles() []interactions.IFileProcessor {
 	results, err := common.EnumerateFilesDev(d.DataInfo.GameData.AbsolutePath)
 	if err != nil {
 		lib.NotifyError(err)
+		return nil
 	}
 
 	var fileProcessors = make([]interactions.IFileProcessor, 0, len(results))
 
-	for _, result := range results {
-		/* source, err := lib.NewSource(result)
-		if err != nil {
-			lib.NotifyError(err)
-			continue
-		} */
+	worker := lib.NewWorker[string]()
 
-		/* fileInfo := &lib.FileInfo{}
-		lib.UpdateFileInfoFromSource(fileInfo, source)
-		*/
+	worker.Process(results, func(_ int, result string) {
 		dataInfo := interactions.NewGameDataInfo(result)
 
 		fileProcessor := NewFileProcessor(dataInfo)
 		if fileProcessor == nil {
 			lib.NotifyError(fmt.Errorf("invalid file type: %s", dataInfo.GameData.Name))
-			continue
+			return
 		}
 
 		fileProcessors = append(fileProcessors, fileProcessor)
-	}
+	})
 
 	return fileProcessors
 }

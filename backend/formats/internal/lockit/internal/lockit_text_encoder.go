@@ -1,8 +1,8 @@
-package lockit_internal
+package internal
 
 import (
 	"ffxresources/backend/common"
-	tbstables "ffxresources/backend/formats/internal/tbs"
+	"ffxresources/backend/formats/internal/tbs"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 )

@@ -1,4 +1,4 @@
-package dcp_internal
+package internal
 
 import (
 	"bytes"

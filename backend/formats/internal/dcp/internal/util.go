@@ -1,4 +1,4 @@
-package dcp_internal
+package internal
 
 import (
 	"ffxresources/backend/common"
@@ -6,7 +6,7 @@ import (
 )
 
 func FindDcpParts(parts *[]DcpFileParts, targetPath, pattern string) error {
-	fileParts := make([]string, 0, 16)
+	fileParts := make([]string, 0, 7)
 
 	common.EnsurePathExists(targetPath)
 

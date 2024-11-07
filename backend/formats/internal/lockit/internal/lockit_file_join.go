@@ -1,4 +1,4 @@
-package lockit_internal
+package internal
 
 import (
 	"bytes"
@@ -59,6 +59,8 @@ func (l *LockitFileJoin) JoinFile(sizes *[]int) error {
 	isExactMatch := bytes.Equal(originalData, combinedBuffer.Bytes())
 	if !isExactMatch {
 		return fmt.Errorf("arquivos não correspondem")
+	} else {
+		fmt.Println("Arquivos lockkt correspondem")
 	}
 
 	return nil

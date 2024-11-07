@@ -4,6 +4,7 @@ import (
 	"ffxresources/backend/core"
 	"ffxresources/backend/formats"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/lib"
 	"ffxresources/backend/spira"
 	"fmt"
 )
@@ -23,17 +24,20 @@ func TestExtractDir(path string, testExtract, testCompress bool) {
 		return
 	}
 
-	dataInfo := &tree[0].Data
+	worker := lib.NewWorker[interactions.TreeNode]()
+	worker.Process(tree, func(_ int, n interactions.TreeNode) {
+		dataInfo := &n.Data
 
-	if testExtract {
-		extractService := NewExtractService()
-		extractService.Extract(dataInfo)
-	}
+		if testExtract {
+			extractService := NewExtractService()
+			extractService.Extract(dataInfo)
+		}
 
-	if testCompress {
-		compressService := NewCompressService()
-		compressService.Compress(dataInfo)
-	}
+		if testCompress {
+			compressService := NewCompressService()
+			compressService.Compress(dataInfo)
+		}
+	})
 }
 
 func TestExtractFile(path string, testExtract, testCompress bool) {

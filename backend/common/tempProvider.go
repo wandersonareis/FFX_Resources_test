@@ -62,6 +62,10 @@ func (tp *TempProvider) ProvideTempFileWithExtension(filePrefix string, extensio
 // If the given extension already starts with a '.', it is returned as is.
 // Otherwise, a '.' is prepended to the extension and it is returned.
 func validExtension(extension string) string {
+	if extension == "" {
+		return ""
+	}
+	
 	if strings.HasPrefix(extension, ".") {
 		return extension
 	}

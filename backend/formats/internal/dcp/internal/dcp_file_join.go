@@ -1,4 +1,4 @@
-package dcp_internal
+package internal
 
 import (
 	"bytes"
@@ -70,7 +70,7 @@ func dcpWriter(inputFilePath string, parts *[]DcpFileParts, newContainerPath str
 	if !isExactMatch {
 		return fmt.Errorf("arquivos não correspondem")
 	} else {
-		fmt.Println("Arquivos correspondem")
+		fmt.Println("Arquivos dcp correspondem")
 	}
 	
 	return nil

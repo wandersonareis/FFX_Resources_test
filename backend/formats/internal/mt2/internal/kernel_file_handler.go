@@ -1,9 +1,14 @@
-package mt2_internal
+package internal
 
-import "ffxresources/backend/common"
+import "ffxresources/backend/formats/lib"
 
 func GetKernelFileHandler(targetExtension ...string) (string, error) {
-	extension := common.DEFAULT_APPLICATION_EXTENSION
+	targetFile, err := lib.GetFromResources(lib.KERNEL_HANDLER_APPLICATION, lib.DEFAULT_APPLICATION_EXTENSION)
+	if err != nil {
+		return "", err
+	}
+
+	/* extension := common.DEFAULT_APPLICATION_EXTENSION
 	handlerApp := common.KERNEL_HANDLER_APPLICATION
 
 	if len(targetExtension) > 0 {
@@ -21,7 +26,7 @@ func GetKernelFileHandler(targetExtension ...string) (string, error) {
 
 	if err := common.GetFileFromResources(targetHandler, targetFile); err != nil {
 		return "", err
-	}
+	} */
 
 	return targetFile, nil
 }

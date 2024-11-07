@@ -1,4 +1,4 @@
-package dcp_internal
+package internal
 
 import (
 	"bytes"
@@ -33,7 +33,6 @@ func NewContentWithBuffer(container *bytes.Buffer) *Content {
 }
 
 func (c *Content) CalculateRanges(header *Header, file *os.File) error {
-	//func calculateFileDataRange(start, end *int64, pointers []Pointer, file *os.File, index int) error {
 	for i := 0; i < len(header.Pointers); i++ {
 		ranges := DataRanges{}
 		ranges.Start = int64(header.Pointers[i].Value)
@@ -52,27 +51,9 @@ func (c *Content) CalculateRanges(header *Header, file *os.File) error {
 	}
 
 	return nil
-	//}
 }
 
 func (c Content) Read(file *os.File) error {
-	//func readDataBlock(file *os.File, start, end *int64) ([]byte, error) {
-	//length := *end - *start
-	// 	for _, range := range c.ranges {
-
-	// 	if _, err := file.Seek(*start, io.SeekStart); err != nil {
-	// 		return nil, fmt.Errorf("error when positioning in the file: %w", err)
-	// 	}
-
-	// 	data := make([]byte, length)
-
-	// 	if _, err := io.ReadFull(file, data); err != nil {
-	// 		return nil, fmt.Errorf("Error reading data: %w", err)
-	// 	}
-
-	// 	//return data, nil
-	// }
-
 	for i, dataRange := range c.ranges {
 		dataLentgh := dataRange.End - dataRange.Start
 
@@ -93,7 +74,6 @@ func (c Content) Read(file *os.File) error {
 		if err := common.WriteBytesToFile(outputFilePartsPath, data); err != nil {
 			return fmt.Errorf("erro ao salvar o arquivo %03d: %w", i, err)
 		}
-
 	}
 
 	return nil
