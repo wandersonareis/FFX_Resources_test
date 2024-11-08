@@ -47,7 +47,7 @@ func EnsurePathExists(path string) error {
 	return nil
 }
 
-func EnumerateFilesDev(s string) ([]string, error) {
+func ListFilesInDirectory(s string) ([]string, error) {
 	fullpath, err := GetAbsolutePath(s)
 	if err != nil {
 		return nil, err
@@ -74,7 +74,7 @@ func EnumerateFilesDev(s string) ([]string, error) {
 	return results, nil
 }
 
-func EnumerateFilesByPattern(files *[]string, path, pattern string) error {
+func ListFilesMatchingPattern(files *[]string, path, pattern string) error {
 	fullpath, err := GetAbsolutePath(path)
 	if err != nil {
 		return err

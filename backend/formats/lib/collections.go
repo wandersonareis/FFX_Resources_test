@@ -1,11 +1,11 @@
-package internal
+package lib
 
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/interactions"
 )
 
-func FindDcpParts(parts *[]DcpFileParts, targetPath, pattern string) error {
+func FindFileParts[T any](parts *[]T, targetPath, pattern string, partsInstance func(info *interactions.GameDataInfo) *T) error {
 	fileParts := make([]string, 0, 7)
 
 	common.EnsurePathExists(targetPath)
@@ -22,7 +22,7 @@ func FindDcpParts(parts *[]DcpFileParts, targetPath, pattern string) error {
 			return nil
 		}
 
-		dcpPart := NewDcpFileParts(info)
+		dcpPart := partsInstance(info)
 		if dcpPart == nil {
 			return nil
 		}

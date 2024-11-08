@@ -3,6 +3,7 @@ package formatsDev
 import (
 	"context"
 	"ffxresources/backend/common"
+	"ffxresources/backend/events"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 	"fmt"
@@ -40,9 +41,9 @@ func (d SpiraFolder) Extract() {
 
 	lib.ShowProgressBar(d.ctx)
 
-	worker := lib.NewWorker[interactions.IFileProcessor]()
+	worker := common.NewWorker[interactions.IFileProcessor]()
 
-	worker.Process(fileProcessors, func(_ int, fileProcessor interactions.IFileProcessor) {
+	worker.ParallelForEach(fileProcessors, func(_ int, fileProcessor interactions.IFileProcessor) {
 		fileProcessor.Extract()
 	})
 }
@@ -50,30 +51,30 @@ func (d SpiraFolder) Extract() {
 func (d SpiraFolder) Compress() {
 	fileProcessors := d.processFiles()
 
-	worker := lib.NewWorker[interactions.IFileProcessor]()
+	worker := common.NewWorker[interactions.IFileProcessor]()
 
-	worker.Process(fileProcessors, func(_ int, fileProcessor interactions.IFileProcessor) {
+	worker.ParallelForEach(fileProcessors, func(_ int, fileProcessor interactions.IFileProcessor) {
 		fileProcessor.Compress()
 	})
 }
 
 func (d SpiraFolder) processFiles() []interactions.IFileProcessor {
-	results, err := common.EnumerateFilesDev(d.DataInfo.GameData.AbsolutePath)
+	results, err := common.ListFilesInDirectory(d.DataInfo.GameData.AbsolutePath)
 	if err != nil {
-		lib.NotifyError(err)
+		events.NotifyError(err)
 		return nil
 	}
 
 	var fileProcessors = make([]interactions.IFileProcessor, 0, len(results))
 
-	worker := lib.NewWorker[string]()
+	worker := common.NewWorker[string]()
 
-	worker.Process(results, func(_ int, result string) {
+	worker.ParallelForEach(results, func(_ int, result string) {
 		dataInfo := interactions.NewGameDataInfo(result)
 
 		fileProcessor := NewFileProcessor(dataInfo)
 		if fileProcessor == nil {
-			lib.NotifyError(fmt.Errorf("invalid file type: %s", dataInfo.GameData.Name))
+			events.NotifyError(fmt.Errorf("invalid file type: %s", dataInfo.GameData.Name))
 			return
 		}
 

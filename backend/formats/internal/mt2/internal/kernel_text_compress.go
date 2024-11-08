@@ -2,6 +2,7 @@ package internal
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/events"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 )
@@ -15,7 +16,7 @@ func KernelTextPacker(kernelFileInfo *interactions.GameDataInfo) error {
 	defer common.RemoveFile(handler)
 
 	if err := kernelFileInfo.TranslateLocation.Validate(); err != nil {
-		lib.NotifyWarn(err.Error())
+		events.NotifyWarn(err.Error())
 		return nil
 	}
 

@@ -1,12 +1,12 @@
 package formatsDev
 
 import (
+	"ffxresources/backend/events"
 	"ffxresources/backend/formats/internal/dcp"
 	"ffxresources/backend/formats/internal/dlg"
 	"ffxresources/backend/formats/internal/lockit"
 	"ffxresources/backend/formats/internal/mt2"
 	"ffxresources/backend/interactions"
-	"ffxresources/backend/lib"
 	"ffxresources/backend/models"
 )
 
@@ -33,13 +33,13 @@ func NewFileProcessor(dataInfo *interactions.GameDataInfo) interactions.IFilePro
 	case models.Folder:
 		extractPath, err := interactions.NewInteraction().ExtractLocation.ProvideTargetDirectory()
 		if err != nil {
-			lib.NotifyError(err)
+			events.NotifyError(err)
 			return nil
 		}
 
 		translatePath, err := interactions.NewInteraction().TranslateLocation.ProvideTargetDirectory()
 		if err != nil {
-			lib.NotifyError(err)
+			events.NotifyError(err)
 			return nil
 		}
 

@@ -2,9 +2,9 @@ package internal
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/events"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
-	"ffxresources/backend/lib"
 	"fmt"
 )
 
@@ -24,9 +24,7 @@ func NewLockitFileParts(dataInfo *interactions.GameDataInfo) *LockitFileParts {
 
 	dataInfo.GameData.RelativePath = relative
 
-	dataInfo.ExtractLocation.GenerateTargetOutput(formatters.NewTxtFormatter(), dataInfo)
-	dataInfo.TranslateLocation.GenerateTargetOutput(formatters.NewTxtFormatter(), dataInfo)
-	dataInfo.ImportLocation.GenerateTargetOutput(formatters.NewTxtFormatter(), dataInfo)
+	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
 
 	return &LockitFileParts{
 		dataInfo: dataInfo,
@@ -50,7 +48,7 @@ func (l *LockitFileParts) Extract(enc LockitPartEncodeType) {
 	}
 
 	if err != nil {
-		lib.NotifyError(err)
+		events.NotifyError(err)
 		return
 	}
 }
@@ -68,7 +66,7 @@ func (l *LockitFileParts) Compress(enc LockitPartEncodeType) {
 	}
 
 	if err != nil {
-		lib.NotifyError(err)
+		events.NotifyError(err)
 		return
 	}
 }

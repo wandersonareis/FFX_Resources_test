@@ -10,7 +10,7 @@ func FindLockitParts(parts *[]LockitFileParts, targetPath, pattern string) error
 
 	common.EnsurePathExists(targetPath)
 
-	if err := common.EnumerateFilesByPattern(&fileParts, targetPath, pattern); err != nil {
+	if err := common.ListFilesMatchingPattern(&fileParts, targetPath, pattern); err != nil {
 		return err
 	}
 

@@ -3,10 +3,17 @@ package internal
 import (
 	"bytes"
 	"encoding/binary"
+	"ffxresources/backend/common"
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 )
+
+type DataLength struct {
+	Start int64
+	End   int64
+}
 
 type Pointer struct {
 	Offset int64
@@ -14,8 +21,9 @@ type Pointer struct {
 }
 
 type Header struct {
-	Header   [0x40]byte
-	Pointers []Pointer
+	Header     [0x40]byte
+	Pointers   []Pointer
+	DataRanges []DataLength
 }
 
 func NewHeader() *Header {
@@ -40,6 +48,58 @@ func (h *Header) FromFile(file string) error {
 
 	if err := h.getPointers(); err != nil {
 		return fmt.Errorf("error when getting the pointers: %w", err)
+	}
+
+	return nil
+}
+
+func (h *Header) DataLengths(header *Header, file *os.File) error {
+	worker := common.NewWorker[Pointer]()
+
+	worker.ForIndex(header.Pointers,
+	func(index int, count int, data []Pointer) error {
+		ranges := DataLength{}
+		ranges.Start = int64(data[index].Value)
+
+		if next := index+1; next < count {
+			ranges.End = int64(header.Pointers[next].Value)
+		} else {
+			fileInfo, err := file.Stat()
+			if err != nil {
+				return err
+			}
+			ranges.End = fileInfo.Size()
+		}
+
+		h.DataRanges = append(h.DataRanges, ranges)
+
+		return nil
+	})
+
+	results := h.DataRanges
+	h.DataRanges = []DataLength{}
+	
+	for i := 0; i < len(header.Pointers); i++ {
+		ranges := DataLength{}
+		ranges.Start = int64(header.Pointers[i].Value)
+
+		if i+1 < len(header.Pointers) {
+			ranges.End = int64(header.Pointers[i+1].Value)
+		} else {
+			fileInfo, err := file.Stat()
+			if err != nil {
+				return fmt.Errorf("erro ao obter informações do arquivo: %w", err)
+			}
+			ranges.End = fileInfo.Size()
+		}
+
+		h.DataRanges = append(h.DataRanges, ranges)
+	}
+
+	if reflect.DeepEqual(h.DataRanges, results) {
+		fmt.Println("ranges calculated successfully")
+	} else {
+		fmt.Println("error calculating the ranges")
 	}
 
 	return nil

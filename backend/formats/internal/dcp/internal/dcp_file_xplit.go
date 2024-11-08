@@ -33,11 +33,12 @@ func dcpReader(dcpFilePath, outputDir string) error {
 	header := NewHeader()
 	header.FromFile(dcpFilePath)
 
-	content := NewContent(outputDir)
-
-	if err := content.CalculateRanges(header, file); err != nil {
+	if err := header.DataLengths(header, file); err != nil {
 		return fmt.Errorf("erro ao calcular os intervalos de dados: %w", err)
 	}
+	
+	content := NewContent(header, outputDir)
+
 
 	if err := content.Read(file); err != nil {
 		return fmt.Errorf("erro ao ler os dados: %w", err)

@@ -4,8 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"ffxresources/backend/common"
+	"ffxresources/backend/events"
 	"ffxresources/backend/interactions"
-	"ffxresources/backend/lib"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,13 +15,11 @@ type LockitFileXplit struct {
 	path string
 }
 
-// Função para criar uma instância da struct
 func NewLockitFileXplit(dataInfo *interactions.GameDataInfo) *LockitFileXplit {
 	return &LockitFileXplit{path: dataInfo.GameData.AbsolutePath}
 }
 
-// Função para contar ocorrências de 0d0a
-func (fh *LockitFileXplit) CountOccurrences(data []byte) int {
+func (fh *LockitFileXplit) countOccurrences(data []byte) int {
 	return bytes.Count(data, []byte{0x0d, 0x0a})
 }
 
@@ -46,7 +44,7 @@ func (fh *LockitFileXplit) XplitFile(sizes []int, outputFileNameBase, outputDir 
 		return err
 	}
 
-	lib.LogSeverity(lib.SeverityInfo, "Creating parts of the file ...")
+	events.LogSeverity(events.SeverityInfo, "Creating parts of the file ...")
 
 	reader := bufio.NewReader(file)
 	occurrences := 0
@@ -64,7 +62,7 @@ func (fh *LockitFileXplit) XplitFile(sizes []int, outputFileNameBase, outputDir 
 		}
 
 		buffer = append(buffer, line...)
-		occurrences += fh.CountOccurrences(line)
+		occurrences += fh.countOccurrences(line)
 
 		if partIndex < len(sizes) && occurrences >= sizes[partIndex] {
 			outputFileName := filepath.Join(outputDir, fmt.Sprintf("%s.part%02d", outputFileNameBase, partIndex))
@@ -73,7 +71,7 @@ func (fh *LockitFileXplit) XplitFile(sizes []int, outputFileNameBase, outputDir 
 				return fmt.Errorf("error when writing the file: %v", err)
 			}
 
-			lib.LogSeverity(lib.SeverityInfo, fmt.Sprintf("Part %d created", partIndex))
+			events.LogSeverity(events.SeverityInfo, fmt.Sprintf("Part %d created", partIndex))
 			buffer = nil
 			partIndex++
 		}
@@ -86,7 +84,7 @@ func (fh *LockitFileXplit) XplitFile(sizes []int, outputFileNameBase, outputDir 
 			return fmt.Errorf("error when writing the file: %v", err)
 		}
 
-		lib.LogSeverity(lib.SeverityInfo, fmt.Sprintf("Part %d created", partIndex))
+		events.LogSeverity(events.SeverityInfo, fmt.Sprintf("Part %d created", partIndex))
 	}
 
 	return nil

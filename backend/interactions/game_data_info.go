@@ -22,3 +22,9 @@ func NewGameDataInfo(path string) *GameDataInfo {
 		ImportLocation:    *NewImportLocation(),
 	}
 }
+
+func (g *GameDataInfo) InitializeLocations(formatter ITextFormatter) {
+	g.ExtractLocation.GenerateTargetOutput(formatter, g)
+	g.TranslateLocation.GenerateTargetOutput(formatter, g)
+	g.ImportLocation.GenerateTargetOutput(formatter, g)
+}

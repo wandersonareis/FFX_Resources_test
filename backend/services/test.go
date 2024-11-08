@@ -1,10 +1,10 @@
 package services
 
 import (
+	"ffxresources/backend/common"
 	"ffxresources/backend/core"
 	"ffxresources/backend/formats"
 	"ffxresources/backend/interactions"
-	"ffxresources/backend/lib"
 	"ffxresources/backend/spira"
 	"fmt"
 )
@@ -24,8 +24,8 @@ func TestExtractDir(path string, testExtract, testCompress bool) {
 		return
 	}
 
-	worker := lib.NewWorker[interactions.TreeNode]()
-	worker.Process(tree, func(_ int, n interactions.TreeNode) {
+	worker := common.NewWorker[interactions.TreeNode]()
+	worker.ParallelForEach(tree, func(_ int, n interactions.TreeNode) {
 		dataInfo := &n.Data
 
 		if testExtract {

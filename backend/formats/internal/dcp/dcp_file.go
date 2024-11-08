@@ -2,10 +2,11 @@ package dcp
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/events"
 	"ffxresources/backend/formats/internal/dcp/internal"
+	"ffxresources/backend/formats/lib"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
-	"ffxresources/backend/lib"
 	"fmt"
 )
 
@@ -14,24 +15,26 @@ type DcpFile struct {
 	Parts    *[]internal.DcpFileParts
 }
 
-//var errorCount = 0
-
 func NewDcpFile(dataInfo *interactions.GameDataInfo) *DcpFile {
-	partsLength := interactions.NewInteraction().GamePartOptions.DcpPartsLength
-	parts := make([]internal.DcpFileParts, 0, partsLength)
+	interactions := interactions.NewInteraction()
 
-	gameFilesPath := interactions.NewInteraction().GameLocation.TargetDirectory
+	gameVersionDcpPartsLength := interactions.GamePartOptions.GetGamePartOptions().DcpPartsLength
+
+	parts := make([]internal.DcpFileParts, 0, gameVersionDcpPartsLength)
+
+	gameFilesPath := interactions.GameLocation.TargetDirectory
 
 	relative := common.GetDifferencePath(dataInfo.GameData.AbsolutePath, gameFilesPath)
 
 	dataInfo.GameData.RelativePath = relative
 
-	dataInfo.ExtractLocation.GenerateTargetOutput(formatters.NewTxtFormatter(), dataInfo)
-	dataInfo.TranslateLocation.GenerateTargetOutput(formatters.NewTxtFormatter(), dataInfo)
-	dataInfo.ImportLocation.GenerateTargetOutput(formatters.NewTxtFormatter(), dataInfo)
+	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
 
-	if err := internal.FindDcpParts(&parts, dataInfo.ExtractLocation.TargetPath, common.MACRODIC_PATTERN+"$"); err != nil {
-		lib.NotifyError(err)
+	if err := lib.FindFileParts(&parts,
+		dataInfo.ExtractLocation.TargetPath,
+		common.MACRODIC_PATTERN+"$",
+		internal.NewDcpFileParts); err != nil {
+		events.NotifyError(err)
 		return nil
 	}
 
@@ -46,29 +49,23 @@ func (d DcpFile) GetFileInfo() *interactions.GameDataInfo {
 }
 
 func (d *DcpFile) Extract() {
-	partsLength := interactions.NewInteraction().GamePartOptions.GetGamePartOptions().DcpPartsLength
+	currentDcpPartsLength := len(*d.Parts)
+	expectedDcpPartsLength := interactions.NewInteraction().GamePartOptions.GetGamePartOptions().DcpPartsLength
 
-	if len(*d.Parts) != partsLength {
-		err := internal.DcpFileXpliter(d.GetFileInfo())
-		if err != nil {
-			lib.NotifyError(err)
-			return
-		}
-
-		newDcpFile := NewDcpFile(d.GetFileInfo())
-		d.dataInfo = newDcpFile.GetFileInfo()
-		d.Parts = newDcpFile.Parts
-	}
-	
-	if len(*d.Parts) != partsLength {
-		lib.NotifyError(fmt.Errorf("invalid number of xplited files: %d", partsLength))
+	if err := d.ensureDcpPartsLength(&currentDcpPartsLength, expectedDcpPartsLength); err != nil {
+		events.NotifyError(err)
 		return
 	}
 
-	worker := lib.NewWorker[internal.DcpFileParts]()
-	worker.Process(*d.Parts, func(i int, extractor internal.DcpFileParts) {
+	if currentDcpPartsLength != expectedDcpPartsLength {
+		events.NotifyError(fmt.Errorf("invalid number of xplited files: %d", expectedDcpPartsLength))
+		return
+	}
+
+	worker := common.NewWorker[internal.DcpFileParts]()
+	worker.ParallelForEach(*d.Parts, func(i int, extractor internal.DcpFileParts) {
 		if err := extractor.Validate(); err != nil {
-			lib.NotifyError(err)
+			events.NotifyError(err)
 			return
 		}
 
@@ -77,48 +74,59 @@ func (d *DcpFile) Extract() {
 }
 
 func (d DcpFile) Compress() {
-	partsLength := interactions.NewInteraction().GamePartOptions.GetGamePartOptions().DcpPartsLength
+	currentDcpPartsLength := len(*d.Parts)
+	expectedDcpPartsLength := interactions.NewInteraction().GamePartOptions.GetGamePartOptions().DcpPartsLength
 
-	if len(*d.Parts) != partsLength {
-		if err := internal.DcpFileXpliter(d.GetFileInfo()); err != nil {
-			lib.NotifyError(err)
-			return
-		}
-
-		newDcpFile := NewDcpFile(d.GetFileInfo())
-		d.dataInfo = newDcpFile.GetFileInfo()
-		d.Parts = newDcpFile.Parts
+	if err := d.ensureDcpPartsLength(&currentDcpPartsLength, expectedDcpPartsLength); err != nil {
+		events.NotifyError(err)
+		return
 	}
 
 	dcpTranslatedPartsTextPath := d.dataInfo.TranslateLocation.TargetPath
 
 	dcpTextFilesPattern := common.MACRODIC_PATTERN + "\\.txt"
 
-	if len(*d.Parts) != partsLength {
-		lib.NotifyError(fmt.Errorf("invalid number of xplited files"))
+	if currentDcpPartsLength != expectedDcpPartsLength {
+		events.NotifyError(fmt.Errorf("invalid number of xplited files"))
 		return
 	}
 
-	dcpXplitedTextFiles := make([]string, 0, partsLength)
-	if err := common.EnumerateFilesByPattern(&dcpXplitedTextFiles, dcpTranslatedPartsTextPath, dcpTextFilesPattern); err != nil {
-		lib.NotifyError(err)
+	dcpXplitedTextFiles := make([]string, 0, expectedDcpPartsLength)
+	if err := common.ListFilesMatchingPattern(&dcpXplitedTextFiles, dcpTranslatedPartsTextPath, dcpTextFilesPattern); err != nil {
+		events.NotifyError(err)
 		return
 	}
 
-	if len(dcpXplitedTextFiles) != partsLength {
-		lib.NotifyError(fmt.Errorf("invalid number of xplited text files: %d", len(dcpXplitedTextFiles)))
+	if len(dcpXplitedTextFiles) != expectedDcpPartsLength {
+		events.NotifyError(fmt.Errorf("invalid number of xplited text files: %d", len(dcpXplitedTextFiles)))
 		return
 	}
 
-	worker := lib.NewWorker[internal.DcpFileParts]()
-	worker.Process(*d.Parts, func(i int, compressor internal.DcpFileParts) {
+	worker := common.NewWorker[internal.DcpFileParts]()
+	worker.ParallelForEach(*d.Parts, func(i int, compressor internal.DcpFileParts) {
 		compressor.Compress()
 	})
 
 	targetReimportFile := d.dataInfo.ImportLocation.TargetFile
 
 	if err := internal.DcpFileJoiner(d.dataInfo, d.Parts, targetReimportFile); err != nil {
-		lib.NotifyError(err)
+		events.NotifyError(err)
 		return
 	}
+}
+
+func (d *DcpFile) ensureDcpPartsLength(current *int, expected int) error {
+	if *current != expected {
+		if err := internal.DcpFileXpliter(d.GetFileInfo()); err != nil {
+			return err
+		}
+
+		newDcpFile := NewDcpFile(d.GetFileInfo())
+		d.dataInfo = newDcpFile.GetFileInfo()
+		d.Parts = newDcpFile.Parts
+
+		*current = len(*d.Parts)
+	}
+
+	return nil
 }

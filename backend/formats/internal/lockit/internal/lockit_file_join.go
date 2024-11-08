@@ -3,6 +3,7 @@ package internal
 import (
 	"bytes"
 	"ffxresources/backend/common"
+	"ffxresources/backend/formats/lib"
 	"ffxresources/backend/interactions"
 	"fmt"
 	"os"
@@ -20,9 +21,16 @@ func NewLockitFileJoin(dataInfo *interactions.GameDataInfo) *LockitFileJoin {
 
 func (l *LockitFileJoin) JoinFile(sizes *[]int) error {
 	parts := make([]LockitFileParts, 0, len(*sizes)+1)
-	partsPath := common.PathJoin(l.dataInfo.ImportLocation.TargetDirectory, common.LOCKIT_TARGET_DIR_NAME)
 
-	if err := FindLockitParts(&parts, partsPath, common.LOCKIT_FILE_PARTS_PATTERN); err != nil {
+	importLocation := l.dataInfo.ImportLocation
+	
+	partsPath := common.PathJoin(importLocation.TargetDirectory, common.LOCKIT_TARGET_DIR_NAME)
+
+	/* if err := FindLockitParts(&parts, partsPath, common.LOCKIT_FILE_PARTS_PATTERN); err != nil {
+		return err
+	} */
+
+	if err := lib.FindFileParts(&parts, partsPath, common.LOCKIT_FILE_PARTS_PATTERN, NewLockitFileParts); err != nil {
 		return err
 	}
 
@@ -32,16 +40,32 @@ func (l *LockitFileJoin) JoinFile(sizes *[]int) error {
 
 	var combinedBuffer bytes.Buffer
 
-	for i := 0; i < len(*sizes)+1; i++ {
+	worker := common.NewWorker[LockitFileParts]()
+
+	err := worker.ForEach(parts, func(index int, _ LockitFileParts) error {
+		fileName := parts[index].dataInfo.ImportLocation.TargetFile
+
+		partData, err := os.ReadFile(fileName)
+		if err != nil {
+			return fmt.Errorf("erro ao ler a parte %s: %v", fileName, err)
+		}
+		combinedBuffer.Write(partData)
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	/* for i := 0; i < len(*sizes)+1; i++ {
 		fileName := parts[i].dataInfo.ImportLocation.TargetFile
 		partData, err := os.ReadFile(fileName)
 		if err != nil {
 			return fmt.Errorf("erro ao ler a parte %s: %v", fileName, err)
 		}
 		combinedBuffer.Write(partData)
-	}
-
-	importLocation := l.dataInfo.ImportLocation
+	} */
 
 	if err := importLocation.ProvideTargetPath(); err != nil {
 		return err

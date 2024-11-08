@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"ffxresources/backend/common"
+	"ffxresources/backend/events"
 	"ffxresources/backend/interactions"
-	"ffxresources/backend/lib"
 	"ffxresources/backend/services"
 	"fmt"
 	"log"
@@ -53,11 +53,11 @@ func (a *App) startup(ctx context.Context) {
 			log.Println("panic occurred:", err)
 		}
 	}()
+
 	interactions.NewInteractionWithCtx(ctx)
 
-	err := a.loadConfig(a.appConfig)
-	if err != nil {
-		lib.LogSeverity(lib.SeverityError, err.Error())
+	if err := a.loadConfig(a.appConfig); err != nil {
+		events.LogSeverity(events.SeverityError, err.Error())
 	}
 
 	interactions.NewInteraction().GamePart.SetGamePartNumber(a.appConfig.GamePart)
@@ -101,7 +101,7 @@ func (a App) domReady(ctx context.Context) {
 	})
 
 	testPath := "F:\\ffxWails\\FFX_Resources\\build\\bin\\data\\ffx-2_data\\gamedata\\ps3data\\lockit\\ffx2_loc_kit_ps3_us.bin"
-	services.TestExtractFile(testPath, false, false)
+	services.TestExtractFile(testPath, true, true)
 
 	testPath = `F:\ffxWails\FFX_Resources\build\bin\data\ffx_ps2\ffx2\master\new_uspc\menu\macrodic.dcp`
 	services.TestExtractFile(testPath, false, false)
@@ -158,7 +158,7 @@ func (a *App) ReadFileAsString(dataInfo interactions.GameDataInfo) string {
 func (a *App) WriteTextFile(dataInfo interactions.GameDataInfo, text string) {
 	err := os.WriteFile(dataInfo.ExtractLocation.TargetFile, []byte(text), 0644)
 	if err != nil {
-		lib.LogSeverity(lib.SeverityError, err.Error())
+		events.LogSeverity(events.SeverityError, err.Error())
 
 		runtime.EventsEmit(interactions.NewInteraction().Ctx, "Notify", err.Error())
 	}
