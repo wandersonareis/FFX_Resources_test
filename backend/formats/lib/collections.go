@@ -6,7 +6,7 @@ import (
 )
 
 func FindFileParts[T any](parts *[]T, targetPath, pattern string, partsInstance func(info *interactions.GameDataInfo) *T) error {
-	fileParts := make([]string, 0, 7)
+	fileParts := make([]string, 0, len(*parts))
 
 	common.EnsurePathExists(targetPath)
 

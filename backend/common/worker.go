@@ -29,10 +29,10 @@ func NewWorker[T any]() *Worker[T] {
 	return &w
 }
 
-func (w *Worker[T]) ForIndex(data []T, workerFunc func(index int, count int, data []T) error) error {
-    len := len(data)
-	for i := range data {
-        err := workerFunc(i, len, data)
+func (w *Worker[T]) ForIndex(data *[]T, workerFunc func(index int, count int, data []T) error) error {
+    len := len(*data)
+	for i := range *data {
+        err := workerFunc(i, len, *data)
         if err != nil {
             return err
         }

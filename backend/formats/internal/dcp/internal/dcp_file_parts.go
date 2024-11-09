@@ -14,10 +14,6 @@ type DcpFileParts struct {
 func NewDcpFileParts(dataInfo *interactions.GameDataInfo) *DcpFileParts {
 	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
 
-	/* dataInfo.ExtractLocation.GenerateTargetOutput(formatters.NewTxtFormatter(), dataInfo)
-	dataInfo.TranslateLocation.GenerateTargetOutput(formatters.NewTxtFormatter(), dataInfo)
-	dataInfo.ImportLocation.GenerateTargetOutput(formatters.NewTxtFormatter(), dataInfo) */
-
 	return &DcpFileParts{
 		gameDataInfo: dataInfo,
 	}

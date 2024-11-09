@@ -2,6 +2,7 @@ package formatters
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/formats/lib"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
 )
@@ -23,11 +24,11 @@ func (t TxtFormatter) ReadFile(dataInfo *interactions.GameDataInfo, targetDirect
 	case models.Dcp:
 		outputFile, outputPath = t.provideDcpReadPath(targetDirectory, dataInfo.GameData.Name)
 	case models.DcpParts:
-		outputFile, outputPath = t.providePartsReadPath(targetDirectory, common.DCP_PARTS_TARGET_DIR_NAME, dataInfo.GameData.Name)
+		outputFile, outputPath = t.providePartsReadPath(targetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME, dataInfo.GameData.Name)
 	case models.Lockit:
 		outputFile, outputPath = t.provideLockitReadPath(targetDirectory, dataInfo.GameData.NamePrefix)
 	case models.LockitParts:
-		outputFile, outputPath = t.providePartsReadPath(targetDirectory, common.LOCKIT_TARGET_DIR_NAME, dataInfo.GameData.Name)
+		outputFile, outputPath = t.providePartsReadPath(targetDirectory, lib.LOCKIT_TARGET_DIR_NAME, dataInfo.GameData.Name)
 	default:
 		outputFile, outputPath = t.provideDefaulReadPath(targetDirectory, dataInfo.GameData.RelativePath)
 	}
@@ -40,9 +41,9 @@ func (t TxtFormatter) provideDefaulReadPath(targetDirectory, relativePath string
 }
 
 func (t TxtFormatter) provideDcpReadPath(targetDirectory, fileName string) (string, string) {
-	outputFile := common.PathJoin(targetDirectory, common.DCP_PARTS_TARGET_DIR_NAME, fileName)
+	outputFile := common.PathJoin(targetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME, fileName)
 
-	outputPath := common.PathJoin(targetDirectory, common.DCP_PARTS_TARGET_DIR_NAME)
+	outputPath := common.PathJoin(targetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME)
 
 	return outputFile, outputPath
 }
@@ -52,7 +53,7 @@ func (t TxtFormatter) providePartsReadPath(targetDirectory, dirName, fileName st
 }
 
 func (t TxtFormatter) provideLockitReadPath(targetDirectory, fileName string) (string, string) {
-	return provideBasePath(targetDirectory, common.LOCKIT_TARGET_DIR_NAME, common.AddExtension(fileName, t.targetExtension))
+	return provideBasePath(targetDirectory, lib.LOCKIT_TARGET_DIR_NAME, common.AddExtension(fileName, t.targetExtension))
 }
 
 func (t TxtFormatter) WriteFile(fileInfo *interactions.GameDataInfo, targetDirectory string) (string, string) {
@@ -63,9 +64,9 @@ func (t TxtFormatter) WriteFile(fileInfo *interactions.GameDataInfo, targetDirec
 	case models.Dcp:
 		outputFile, outputPath = t.provideDcpWritePath(targetDirectory, fileInfo.GameData.RelativePath)
 	case models.DcpParts:
-		outputFile, outputPath = t.providePartsWritePath(targetDirectory, common.DCP_PARTS_TARGET_DIR_NAME, fileInfo.GameData.Name)
+		outputFile, outputPath = t.providePartsWritePath(targetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME, fileInfo.GameData.Name)
 	case models.LockitParts:
-		outputFile, outputPath = t.providePartsWritePath(targetDirectory, common.LOCKIT_TARGET_DIR_NAME, fileInfo.GameData.Name)
+		outputFile, outputPath = t.providePartsWritePath(targetDirectory, lib.LOCKIT_TARGET_DIR_NAME, fileInfo.GameData.Name)
 	default:
 		outputFile, outputPath = t.provideDefaultWritePath(targetDirectory, fileInfo.GameData.RelativePath, fileInfo.GameData.Extension)
 	}
@@ -74,18 +75,10 @@ func (t TxtFormatter) WriteFile(fileInfo *interactions.GameDataInfo, targetDirec
 }
 
 func (t TxtFormatter) provideDefaultWritePath(targetDirectory, relativePath, fileExt string) (string, string) {
-	/* outputFile := lib.PathJoin(targetDirectory, lib.ChangeExtension(fileInfo.RelativePath, fileInfo.Extension))
-	outputPath := filepath.Dir(outputFile)
-
-	return outputFile, outputPath */
 	return provideBasePath(targetDirectory, common.ChangeExtension(relativePath, fileExt))
 }
 
 func (t TxtFormatter) provideDcpWritePath(targetDirectory, relativePath string) (string, string) {
-	/* outputFile := lib.PathJoin(targetDirectory, fileInfo.RelativePath)
-	outputPath := lib.GetDir(outputFile)
-
-	return outputFile, outputPath */
 	return provideBasePath(targetDirectory, relativePath)
 }
 

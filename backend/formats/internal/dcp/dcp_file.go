@@ -32,7 +32,7 @@ func NewDcpFile(dataInfo *interactions.GameDataInfo) *DcpFile {
 
 	if err := lib.FindFileParts(&parts,
 		dataInfo.ExtractLocation.TargetPath,
-		common.MACRODIC_PATTERN+"$",
+		lib.DCP_FILE_PARTS_PATTERN,
 		internal.NewDcpFileParts); err != nil {
 		events.NotifyError(err)
 		return nil
@@ -84,15 +84,13 @@ func (d DcpFile) Compress() {
 
 	dcpTranslatedPartsTextPath := d.dataInfo.TranslateLocation.TargetPath
 
-	dcpTextFilesPattern := common.MACRODIC_PATTERN + "\\.txt"
-
 	if currentDcpPartsLength != expectedDcpPartsLength {
 		events.NotifyError(fmt.Errorf("invalid number of xplited files"))
 		return
 	}
 
 	dcpXplitedTextFiles := make([]string, 0, expectedDcpPartsLength)
-	if err := common.ListFilesMatchingPattern(&dcpXplitedTextFiles, dcpTranslatedPartsTextPath, dcpTextFilesPattern); err != nil {
+	if err := common.ListFilesMatchingPattern(&dcpXplitedTextFiles, dcpTranslatedPartsTextPath, lib.DCP_TXT_PARTS_PATTERN); err != nil {
 		events.NotifyError(err)
 		return
 	}

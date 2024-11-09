@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 )
 
 type DataLength struct {
@@ -56,7 +55,7 @@ func (h *Header) FromFile(file string) error {
 func (h *Header) DataLengths(header *Header, file *os.File) error {
 	worker := common.NewWorker[Pointer]()
 
-	worker.ForIndex(header.Pointers,
+	worker.ForIndex(&header.Pointers,
 	func(index int, count int, data []Pointer) error {
 		ranges := DataLength{}
 		ranges.Start = int64(data[index].Value)
@@ -76,7 +75,7 @@ func (h *Header) DataLengths(header *Header, file *os.File) error {
 		return nil
 	})
 
-	results := h.DataRanges
+	/* results := h.DataRanges
 	h.DataRanges = []DataLength{}
 	
 	for i := 0; i < len(header.Pointers); i++ {
@@ -100,7 +99,7 @@ func (h *Header) DataLengths(header *Header, file *os.File) error {
 		fmt.Println("ranges calculated successfully")
 	} else {
 		fmt.Println("error calculating the ranges")
-	}
+	} */
 
 	return nil
 }

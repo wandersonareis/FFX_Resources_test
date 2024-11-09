@@ -3,47 +3,64 @@ package internal
 import (
 	"bytes"
 	"ffxresources/backend/common"
-	"ffxresources/backend/formats/lib"
 	"ffxresources/backend/interactions"
 	"fmt"
 	"os"
 )
 
 type LockitFileJoin struct {
-	dataInfo *interactions.GameDataInfo
+	dataInfo            *interactions.GameDataInfo
+	parts               *[]LockitFileParts
+	partsSizes          *[]int
+	expectedPartsLength int
 }
 
-func NewLockitFileJoin(dataInfo *interactions.GameDataInfo) *LockitFileJoin {
+func NewLockitFileJoiner(dataInfo *interactions.GameDataInfo, parts *[]LockitFileParts) *LockitFileJoin {
+	lockitSizes := interactions.NewInteraction().GamePartOptions.GetGamePartOptions().LockitPartsSizes
 	return &LockitFileJoin{
-		dataInfo: dataInfo,
+		dataInfo:            dataInfo,
+		parts:               parts,
+		partsSizes:          &lockitSizes,
+		expectedPartsLength: len(lockitSizes) + 1,
 	}
 }
 
-func (l *LockitFileJoin) JoinFile(sizes *[]int) error {
-	parts := make([]LockitFileParts, 0, len(*sizes)+1)
+func (lj *LockitFileJoin) UnSegmenterFile() error {
+	worker := common.NewWorker[LockitFileParts]()
 
-	importLocation := l.dataInfo.ImportLocation
-	
-	partsPath := common.PathJoin(importLocation.TargetDirectory, common.LOCKIT_TARGET_DIR_NAME)
+	worker.ParallelForEach(*lj.parts,
+		func(index int, part LockitFileParts) {
+			if index > 0 && index%2 == 0 {
+				part.Compress(LocEnc)
+			} else {
+				part.Compress(FfxEnc)
+			}
+		})
 
-	/* if err := FindLockitParts(&parts, partsPath, common.LOCKIT_FILE_PARTS_PATTERN); err != nil {
-		return err
-	} */
-
-	if err := lib.FindFileParts(&parts, partsPath, common.LOCKIT_FILE_PARTS_PATTERN, NewLockitFileParts); err != nil {
+	if err := lj.dataInfo.TranslateLocation.ProvideTargetPath(); err != nil {
 		return err
 	}
 
-	if len(parts) != len(*sizes)+1 {
-		return fmt.Errorf("invalid number of parts: %d expected: %d", len(parts), len(*sizes)+1)
+	if err := lj.joinFile(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (lj *LockitFileJoin) joinFile() error {
+	importLocation := lj.dataInfo.ImportLocation
+
+	if len(*lj.parts) != lj.expectedPartsLength {
+		return fmt.Errorf("invalid number of parts: %d expected: %d", len(*lj.parts), lj.expectedPartsLength)
 	}
 
 	var combinedBuffer bytes.Buffer
 
 	worker := common.NewWorker[LockitFileParts]()
 
-	err := worker.ForEach(parts, func(index int, _ LockitFileParts) error {
-		fileName := parts[index].dataInfo.ImportLocation.TargetFile
+	err := worker.ForEach(*lj.parts, func(_ int, part LockitFileParts) error {
+		fileName := part.dataInfo.ImportLocation.TargetFile
 
 		partData, err := os.ReadFile(fileName)
 		if err != nil {
@@ -58,15 +75,6 @@ func (l *LockitFileJoin) JoinFile(sizes *[]int) error {
 		return err
 	}
 
-	/* for i := 0; i < len(*sizes)+1; i++ {
-		fileName := parts[i].dataInfo.ImportLocation.TargetFile
-		partData, err := os.ReadFile(fileName)
-		if err != nil {
-			return fmt.Errorf("erro ao ler a parte %s: %v", fileName, err)
-		}
-		combinedBuffer.Write(partData)
-	} */
-
 	if err := importLocation.ProvideTargetPath(); err != nil {
 		return err
 	}
@@ -75,7 +83,7 @@ func (l *LockitFileJoin) JoinFile(sizes *[]int) error {
 		return fmt.Errorf("erro ao criar arquivo de saída: %v", err)
 	}
 
-	originalData, err := os.ReadFile(l.dataInfo.GameData.AbsolutePath)
+	/* originalData, err := os.ReadFile(lj.dataInfo.GameData.AbsolutePath)
 	if err != nil {
 		return fmt.Errorf("erro ao ler o arquivo original: %v", err)
 	}
@@ -85,7 +93,7 @@ func (l *LockitFileJoin) JoinFile(sizes *[]int) error {
 		return fmt.Errorf("arquivos não correspondem")
 	} else {
 		fmt.Println("Arquivos lockkt correspondem")
-	}
+	} */
 
 	return nil
 }

@@ -9,15 +9,9 @@ import (
 	"path/filepath"
 )
 
-/* type DataRanges struct {
-	Start int64
-	End   int64
-} */
-
 type Content struct {
 	header    *Header
 	container *bytes.Buffer
-	//ranges    []DataRanges
 	outputDir string
 }
 
@@ -33,58 +27,6 @@ func NewContentWithBuffer(container *bytes.Buffer) *Content {
 		container: container,
 	}
 }
-
-/* func (c *Content) CalculateRanges(header *Header, file *os.File) error {
-	worker := lib.NewWorker[Pointer]()
-
-	worker.ForIndex(len(header.Pointers), header.Pointers,
-	func(index int, count int, data []Pointer) error {
-		ranges := DataRanges{}
-		ranges.Start = int64(data[index].Value)
-
-		if next := index+1; next < count {
-			ranges.End = int64(header.Pointers[next].Value)
-		} else {
-			fileInfo, err := file.Stat()
-			if err != nil {
-				return err
-			}
-			ranges.End = fileInfo.Size()
-		}
-
-		c.ranges = append(c.ranges, ranges)
-
-		return nil
-	})
-
-	results := c.ranges
-	c.ranges = []DataRanges{}
-
-	for i := 0; i < len(header.Pointers); i++ {
-		ranges := DataRanges{}
-		ranges.Start = int64(header.Pointers[i].Value)
-
-		if i+1 < len(header.Pointers) {
-			ranges.End = int64(header.Pointers[i+1].Value)
-		} else {
-			fileInfo, err := file.Stat()
-			if err != nil {
-				return fmt.Errorf("erro ao obter informações do arquivo: %w", err)
-			}
-			ranges.End = fileInfo.Size()
-		}
-
-		c.ranges = append(c.ranges, ranges)
-	}
-
-	if reflect.DeepEqual(c.ranges, results) {
-		fmt.Println("ranges calculated successfully")
-	} else {
-		fmt.Println("error calculating the ranges")
-	}
-
-	return nil
-} */
 
 func (c Content) Read(file *os.File) error {
 	for i, dataRange := range c.header.DataRanges {
