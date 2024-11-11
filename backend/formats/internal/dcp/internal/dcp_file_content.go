@@ -40,7 +40,7 @@ func (c Content) Read(file *os.File) error {
 
 		outputFileName := fmt.Sprintf("%s.%03d", "macrodic", i)
 
-		outputFilePartsPath := common.PathJoin(c.outputDir, outputFileName)
+		outputFilePartsPath := filepath.Join(c.outputDir, outputFileName)
 
 		if _, err := io.ReadFull(file, data); err != nil {
 			return fmt.Errorf("error reading data: %w", err)

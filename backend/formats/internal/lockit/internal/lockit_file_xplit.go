@@ -3,7 +3,6 @@ package internal
 import (
 	"bufio"
 	"bytes"
-	"ffxresources/backend/common"
 	"ffxresources/backend/events"
 	"ffxresources/backend/interactions"
 	"fmt"
@@ -78,7 +77,7 @@ func (fh *LockitFileXplit) XplitFile(sizes []int, outputFileNameBase, outputDir 
 	}
 
 	if len(buffer) > 0 {
-		outputFileName := common.PathJoin(outputDir, fmt.Sprintf("%s.part%02d", outputFileNameBase, partIndex))
+		outputFileName := filepath.Join(outputDir, fmt.Sprintf("%s.part%02d", outputFileNameBase, partIndex))
 		
 		if err := os.WriteFile(outputFileName, buffer, 0644); err != nil {
 			return fmt.Errorf("error when writing the file: %v", err)

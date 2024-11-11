@@ -1,12 +1,12 @@
 package internal
 
 import (
-	"ffxresources/backend/common"
 	"ffxresources/backend/events"
 	"ffxresources/backend/formats/lib"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"fmt"
+	"path/filepath"
 )
 
 type LockitFileParts struct {
@@ -21,9 +21,7 @@ const (
 )
 
 func NewLockitFileParts(dataInfo *interactions.GameDataInfo) *LockitFileParts {
-	//relative := common.GetDifferencePath(dataInfo.GameData.AbsolutePath, targetPath)
-
-	dataInfo.GameData.RelativePath = common.PathJoin(lib.LOCKIT_TARGET_DIR_NAME, dataInfo.GameData.NamePrefix)
+	dataInfo.GameData.RelativePath = filepath.Join(lib.LOCKIT_TARGET_DIR_NAME, dataInfo.GameData.NamePrefix)
 
 	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
 

@@ -7,6 +7,7 @@ import (
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 	"fmt"
+	"path/filepath"
 )
 
 type SpiraFolder struct {
@@ -15,8 +16,8 @@ type SpiraFolder struct {
 }
 
 func NewSpiraFolder(dataInfo *interactions.GameDataInfo, extractPath, translatePath string) *SpiraFolder {
-	dataInfo.ExtractLocation.TargetPath = common.PathJoin(extractPath, dataInfo.GameData.RelativePath)
-	dataInfo.TranslateLocation.TargetPath = common.PathJoin(translatePath, dataInfo.GameData.RelativePath)
+	dataInfo.ExtractLocation.TargetPath = filepath.Join(extractPath, dataInfo.GameData.RelativePath)
+	dataInfo.TranslateLocation.TargetPath = filepath.Join(translatePath, dataInfo.GameData.RelativePath)
 
 	return &SpiraFolder{
 		ctx:      interactions.NewInteraction().Ctx,

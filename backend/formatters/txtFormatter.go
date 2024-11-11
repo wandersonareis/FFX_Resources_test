@@ -5,6 +5,7 @@ import (
 	"ffxresources/backend/formats/lib"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
+	"path/filepath"
 )
 
 type TxtFormatter struct {
@@ -41,9 +42,9 @@ func (t TxtFormatter) provideDefaulReadPath(targetDirectory, relativePath string
 }
 
 func (t TxtFormatter) provideDcpReadPath(targetDirectory, fileName string) (string, string) {
-	outputFile := common.PathJoin(targetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME, fileName)
+	outputFile := filepath.Join(targetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME, fileName)
 
-	outputPath := common.PathJoin(targetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME)
+	outputPath := filepath.Join(targetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME)
 
 	return outputFile, outputPath
 }
@@ -87,8 +88,8 @@ func (t TxtFormatter) providePartsWritePath(targetDirectory, dirName, fileName s
 }
 
 func provideBasePath(targetDirectory string, dirParts ...string) (string, string) {
-	dirPartsJoined := common.PathJoin(dirParts...)
-	outputFile := common.PathJoin(targetDirectory, dirPartsJoined)
+	dirPartsJoined := filepath.Join(dirParts...)
+	outputFile := filepath.Join(targetDirectory, dirPartsJoined)
 	outputPath := common.GetDir(outputFile)
 
 	return outputFile, outputPath

@@ -9,10 +9,6 @@ import (
 	"strings"
 )
 
-func PathJoin(parts ...string) string {
-	return filepath.Join(parts...)
-}
-
 func sanitizationPath(path string) string {
 	return filepath.Clean(path)
 }
