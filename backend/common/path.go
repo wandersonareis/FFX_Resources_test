@@ -26,13 +26,12 @@ func IsPathExists(path string) bool {
 
 func EnsurePathExists(path string) error {
 	cPath := sanitizationPath(path)
-	dir := cPath
 
 	if filepath.Ext(cPath) != "" {
-		dir = filepath.Dir(cPath)
+		cPath = filepath.Dir(cPath)
 	}
 
-	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(cPath, os.ModePerm); err != nil {
 		return err
 	}
 
