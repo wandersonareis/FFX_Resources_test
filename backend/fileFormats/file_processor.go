@@ -1,11 +1,11 @@
-package formatsDev
+package fileFormats
 
 import (
 	"ffxresources/backend/events"
-	"ffxresources/backend/formats/internal/dcp"
-	"ffxresources/backend/formats/internal/dlg"
-	"ffxresources/backend/formats/internal/lockit"
-	"ffxresources/backend/formats/internal/mt2"
+	"ffxresources/backend/fileFormats/internal/dcp"
+	"ffxresources/backend/fileFormats/internal/dlg"
+	"ffxresources/backend/fileFormats/internal/lockit"
+	"ffxresources/backend/fileFormats/internal/mt2"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
 )

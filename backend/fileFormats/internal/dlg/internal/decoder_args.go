@@ -1,6 +1,6 @@
 package internal
 
-import "ffxresources/backend/formats/internal/tbs"
+import "ffxresources/backend/fileFormats/internal/tbs"
 
 func decoderArgs() ([]string, string, error) {
 	codeTable, err := tbstables.NewCharacterTable().GetFfx2CharacterTable()

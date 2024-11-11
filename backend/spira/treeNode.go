@@ -2,7 +2,7 @@ package spira
 
 import (
 	"ffxresources/backend/core"
-	"ffxresources/backend/formats"
+	"ffxresources/backend/fileFormats"
 	"ffxresources/backend/interactions"
 )
 
@@ -21,7 +21,7 @@ func CreateTreeNode(key string, source *core.Source, childrens []interactions.Tr
 func generateNode(key string, source *core.Source) (interactions.TreeNode, error) {
 	fileInfo := interactions.NewGameDataInfo(source.Path)
 
-	fileProcessor := formatsDev.NewFileProcessor(fileInfo)
+	fileProcessor := fileFormats.NewFileProcessor(fileInfo)
 	if fileProcessor == nil {
 		return interactions.TreeNode{}, nil
 	}

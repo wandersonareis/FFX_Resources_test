@@ -3,7 +3,7 @@ package mt2
 import (
 	"context"
 	"ffxresources/backend/events"
-	"ffxresources/backend/formats/internal/mt2/internal"
+	"ffxresources/backend/fileFormats/internal/mt2/internal"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 )

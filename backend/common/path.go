@@ -106,24 +106,11 @@ func GetRelativePathFromMarker(path string) string {
 	return path[index:]
 }
 
-func GetRelativePath(from, to string) string {
-	from = filepath.Clean(from)
-	to = filepath.Clean(to)
-
-	index := strings.Index(from, to)
-	if index == -1 {
-		log.Println("unable to find marker in path:", to)
-		return ""
+func MakeRelativePath(from, to string) string {
+	if strings.HasPrefix(from, to) {
+		return strings.TrimPrefix(from, to + "\\")
 	}
-
-	return to[index:]
-}
-
-func GetDifferencePath(fullPath, basePath string) string {
-	if strings.HasPrefix(fullPath, basePath) {
-		return strings.TrimPrefix(fullPath, basePath + "\\")
-	}
-	return fullPath
+	return from
 }
 
 func ContainsNewUSPCPath(path string) error {

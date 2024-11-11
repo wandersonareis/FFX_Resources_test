@@ -1,15 +1,15 @@
 package internal
 
-import tbstables "ffxresources/backend/formats/internal/tbs"
+import tbstables "ffxresources/backend/fileFormats/internal/tbs"
 
-func encoderArgs() ([]string, string, error) {
+func decoderArgs() ([]string, string, error) {
 	codeTable, err := tbstables.NewCharacterTable().GetFfx2CharacterTable()
 	if err != nil {
 		return nil, "", err
 	}
 
 	args := []string{
-		"-i", "-t", codeTable,
+		"-e", "-t", codeTable,
 	}
 
 	return args, codeTable, nil

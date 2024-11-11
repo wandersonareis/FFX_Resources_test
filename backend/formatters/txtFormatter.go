@@ -2,7 +2,7 @@ package formatters
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/formats/lib"
+	"ffxresources/backend/fileFormats/lib"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
 	"path/filepath"

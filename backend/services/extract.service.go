@@ -2,7 +2,7 @@ package services
 
 import (
 	"ffxresources/backend/events"
-	"ffxresources/backend/formats"
+	"ffxresources/backend/fileFormats"
 	"ffxresources/backend/interactions"
 	"fmt"
 )
@@ -14,7 +14,7 @@ func NewExtractService() *ExtractService {
 }
 
 func (e *ExtractService) Extract(dataInfo *interactions.GameDataInfo) {
-	fileProcessor := formatsDev.NewFileProcessor(dataInfo)
+	fileProcessor := fileFormats.NewFileProcessor(dataInfo)
 	if fileProcessor == nil {
 		events.NotifyError(fmt.Errorf("invalid file type: %s", dataInfo.GameData.Name))
 		return

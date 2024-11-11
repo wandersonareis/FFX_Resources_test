@@ -3,7 +3,7 @@ package services
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core"
-	"ffxresources/backend/formats"
+	"ffxresources/backend/fileFormats"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/spira"
 	"fmt"
@@ -44,7 +44,7 @@ func TestExtractFile(path string, testExtract, testCompress bool) {
 	dataInfo := interactions.NewGameDataInfo(path)
 
 	if testExtract {
-		fileProcessor := formatsDev.NewFileExtractor(dataInfo)
+		fileProcessor := fileFormats.NewFileExtractor(dataInfo)
 		if fileProcessor == nil {
 			fmt.Println("invalid file type")
 			return
@@ -53,7 +53,7 @@ func TestExtractFile(path string, testExtract, testCompress bool) {
 	}
 
 	if testCompress {
-		fileProcessor := formatsDev.NewFileCompressor(dataInfo)
+		fileProcessor := fileFormats.NewFileCompressor(dataInfo)
 		if fileProcessor == nil {
 			fmt.Println("invalid file type")
 			return

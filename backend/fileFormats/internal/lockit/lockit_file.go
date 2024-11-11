@@ -1,10 +1,9 @@
 package lockit
 
 import (
-	"ffxresources/backend/common"
 	"ffxresources/backend/events"
-	"ffxresources/backend/formats/internal/lockit/internal"
-	"ffxresources/backend/formats/lib"
+	"ffxresources/backend/fileFormats/internal/lockit/internal"
+	"ffxresources/backend/fileFormats/lib"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"fmt"
@@ -20,11 +19,7 @@ func NewLockitFile(dataInfo *interactions.GameDataInfo) *LockitFile {
 
 	parts := make([]internal.LockitFileParts, 0, partsLength)
 
-	gameFilesPath := interactions.NewInteraction().GameLocation.TargetDirectory
-
-	relative := common.GetDifferencePath(dataInfo.GameData.FullFilePath, gameFilesPath)
-
-	dataInfo.GameData.RelativeGameDataPath = relative
+	dataInfo.CreateRelativePath()
 
 	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
 

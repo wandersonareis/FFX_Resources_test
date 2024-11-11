@@ -38,7 +38,7 @@ func (g *GameFiles) updateGameDataFromSource(source *Source) {
 	g.IsDir = source.IsDir
 	g.Parent = source.Parent
 	g.Extension = source.Extension
-	g.FullFilePath = source.FullPath
+	g.FullFilePath = source.Path
 	g.RelativeGameDataPath = common.GetRelativePathFromMarker(g.FullFilePath)
 	g.ClonedItems = NewFfx2Duplicate().TryFind(source.NamePrefix)
 }

@@ -2,7 +2,7 @@ package dlg
 
 import (
 	"ffxresources/backend/events"
-	"ffxresources/backend/formats/internal/dlg/internal"
+	"ffxresources/backend/fileFormats/internal/dlg/internal"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 )

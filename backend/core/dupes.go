@@ -1,27 +1,20 @@
 package core
 
-import (
-	"fmt"
-	"strings"
-)
+import "strings"
 
 type Duplicate struct {
 	Data map[string][]string
 }
 
-// NewDuplicate cria uma nova instância de Duplicate
 func NewDuplicate() *Duplicate {
-	fmt.Println("NewDuplicate")
 	return &Duplicate{
 		Data: make(map[string][]string),
 	}
 }
 
 func (d *Duplicate) AddFromSpaceSeparatedString(key, spaceSeparatedValues string) {
-	// Divide a string em slices usando o espaço como delimitador
 	values := strings.Fields(spaceSeparatedValues)
-	
-	// Adiciona apenas se a chave ainda não existir, garantindo imutabilidade
+
 	if _, exists := d.Data[key]; !exists {
 		d.Data[key] = values
 	}

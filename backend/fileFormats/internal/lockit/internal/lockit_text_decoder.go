@@ -2,7 +2,7 @@ package internal
 
 import (
 	"ffxresources/backend/common"
-	tbstables "ffxresources/backend/formats/internal/tbs"
+	tbstables "ffxresources/backend/fileFormats/internal/tbs"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 )

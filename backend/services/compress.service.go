@@ -4,7 +4,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core"
 	"ffxresources/backend/events"
-	formatsDev "ffxresources/backend/formats"
+	formatsDev "ffxresources/backend/fileFormats"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
 	"fmt"

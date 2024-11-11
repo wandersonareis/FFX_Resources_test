@@ -1,6 +1,6 @@
 package tbstables
 
-import "ffxresources/backend/formats/lib"
+import "ffxresources/backend/fileFormats/lib"
 
 type CharacterTable struct{}
 

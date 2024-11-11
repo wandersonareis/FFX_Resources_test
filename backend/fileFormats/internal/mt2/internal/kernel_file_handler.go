@@ -1,6 +1,6 @@
 package internal
 
-import "ffxresources/backend/formats/lib"
+import "ffxresources/backend/fileFormats/lib"
 
 func GetKernelFileHandler(targetExtension ...string) (string, error) {
 	targetFile, err := lib.GetFromResources(lib.KERNEL_HANDLER_APPLICATION, lib.DEFAULT_APPLICATION_EXTENSION)

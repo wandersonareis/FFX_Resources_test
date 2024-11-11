@@ -1,4 +1,4 @@
-package formatsDev
+package fileFormats
 
 import (
 	"context"

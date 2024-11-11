@@ -3,8 +3,8 @@ package dcp
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/events"
-	"ffxresources/backend/formats/internal/dcp/internal"
-	"ffxresources/backend/formats/lib"
+	"ffxresources/backend/fileFormats/internal/dcp/internal"
+	"ffxresources/backend/fileFormats/lib"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"fmt"
@@ -22,11 +22,7 @@ func NewDcpFile(dataInfo *interactions.GameDataInfo) *DcpFile {
 
 	parts := make([]internal.DcpFileParts, 0, gameVersionDcpPartsLength)
 
-	gameFilesPath := interactions.GameLocation.TargetDirectory
-
-	relative := common.GetDifferencePath(dataInfo.GameData.FullFilePath, gameFilesPath)
-
-	dataInfo.GameData.RelativeGameDataPath = relative
+	dataInfo.CreateRelativePath()
 
 	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
 

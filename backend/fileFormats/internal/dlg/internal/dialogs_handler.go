@@ -1,6 +1,6 @@
 package internal
 
-import "ffxresources/backend/formats/lib"
+import "ffxresources/backend/fileFormats/lib"
 
 func getDialogsHandler() (string, error) {
 	targetFile, err := lib.GetFromResources(lib.DIALOG_HANDLER_APPLICATION, lib.DEFAULT_TABLE_EXTENSION)

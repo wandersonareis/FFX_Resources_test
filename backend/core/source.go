@@ -16,7 +16,6 @@ type Source struct {
 	Type       models.NodeType
 	Size       int64
 	Extension  string
-	FullPath   string
 	EntryPath  string
 	Parent     string
 	IsDir      bool
@@ -35,11 +34,9 @@ func NewSource(path string) (*Source, error) {
 	}
 
 	source := &Source{
-		Path:     cPath,
-		Info:     info,
-		Size:     size,
-		FullPath: cPath,
-
+		Path:       cPath,
+		Info:       info,
+		Size:       size,
 		Name:       info.Name(),
 		NamePrefix: common.RemoveFileExtension(info.Name()),
 		Type:       guessFileType(cPath),
@@ -59,8 +56,4 @@ func (s *Source) ReadDir() ([]fs.DirEntry, error) {
 	}
 
 	return os.ReadDir(s.Parent)
-}
-
-func (s *Source) JoinEntryPath(entry fs.DirEntry) string {
-	return filepath.Join(s.Path, entry.Name())
 }

@@ -2,7 +2,7 @@ package internal
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/formats/lib"
+	"ffxresources/backend/fileFormats/lib"
 	"ffxresources/backend/interactions"
 )
 

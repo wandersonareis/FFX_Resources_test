@@ -2,7 +2,7 @@ package internal
 
 import (
 	"ffxresources/backend/events"
-	"ffxresources/backend/formats/lib"
+	"ffxresources/backend/fileFormats/lib"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"fmt"

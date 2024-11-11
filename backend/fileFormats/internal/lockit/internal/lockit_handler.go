@@ -1,6 +1,6 @@
 package internal
 
-import "ffxresources/backend/formats/lib"
+import "ffxresources/backend/fileFormats/lib"
 
 func getLockitFileHandler() (string, error) {
 	targetFile, err := lib.GetFromResources(lib.LOCKIT_HANDLER_APPLICATION, lib.DEFAULT_APPLICATION_EXTENSION)

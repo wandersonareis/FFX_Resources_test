@@ -3,6 +3,7 @@ package spira
 import (
 	"ffxresources/backend/core"
 	"ffxresources/backend/interactions"
+	"path/filepath"
 )
 
 func BuildFileTree(result *[]interactions.TreeNode, source *core.Source) error {
@@ -16,7 +17,7 @@ func BuildFileTree(result *[]interactions.TreeNode, source *core.Source) error {
 	}
 
 	for _, entry := range entries {
-		entryPath := source.JoinEntryPath(entry)
+		entryPath := filepath.Join(source.Path, entry.Name())
 		key := entry.Name()
 
 		entrySource, err := core.NewSource(entryPath)
@@ -25,6 +26,7 @@ func BuildFileTree(result *[]interactions.TreeNode, source *core.Source) error {
 		}
 
         childrenCapacity := len(entries)
+		
 		var children []interactions.TreeNode
         if childrenCapacity > 0 {
             children = make([]interactions.TreeNode, 0, childrenCapacity)

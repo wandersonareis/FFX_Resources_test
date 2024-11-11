@@ -1,7 +1,7 @@
 package internal
 
 import (
-	"ffxresources/backend/formats/internal/dlg"
+	"ffxresources/backend/fileFormats/internal/dlg"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"fmt"
