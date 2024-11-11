@@ -8,7 +8,7 @@ import (
 )
 
 func DcpFileJoiner(dataInfo *interactions.GameDataInfo, xplitedFiles *[]DcpFileParts, targetReimportFile string) error {
-	originalDcpFile := dataInfo.GameData.AbsolutePath
+	originalDcpFile := dataInfo.GameData.FullFilePath
 
 	importLocation := dataInfo.ImportLocation
 
@@ -56,9 +56,9 @@ func dcpWriter(inputFilePath string, parts *[]DcpFileParts, newContainerPath str
 	defer newFile.Close()
 
 	if _, err := buffer.WriteTo(newFile); err != nil {
-        return fmt.Errorf("error when writing buffer to file: %w", err)
+		return fmt.Errorf("error when writing buffer to file: %w", err)
 	}
-	
+
 	originalData, err := os.ReadFile(inputFilePath)
 	if err != nil {
 		return fmt.Errorf("error reading the original file: %v", err)
@@ -72,6 +72,6 @@ func dcpWriter(inputFilePath string, parts *[]DcpFileParts, newContainerPath str
 	} else {
 		fmt.Println("Arquivos dcp correspondem")
 	}
-	
+
 	return nil
 }

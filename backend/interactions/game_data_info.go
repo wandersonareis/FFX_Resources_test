@@ -3,7 +3,7 @@ package interactions
 import "ffxresources/backend/core"
 
 type GameDataInfo struct {
-	GameData          core.GameData     `json:"game_data"`
+	GameData          core.GameFiles    `json:"game_data"`
 	ExtractLocation   ExtractLocation   `json:"extract_location"`
 	TranslateLocation TranslateLocation `json:"translate_location"`
 	ImportLocation    ImportLocation    `json:"import_location"`

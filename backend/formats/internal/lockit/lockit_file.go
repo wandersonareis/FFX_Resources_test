@@ -22,9 +22,9 @@ func NewLockitFile(dataInfo *interactions.GameDataInfo) *LockitFile {
 
 	gameFilesPath := interactions.NewInteraction().GameLocation.TargetDirectory
 
-	relative := common.GetDifferencePath(dataInfo.GameData.AbsolutePath, gameFilesPath)
+	relative := common.GetDifferencePath(dataInfo.GameData.FullFilePath, gameFilesPath)
 
-	dataInfo.GameData.RelativePath = relative
+	dataInfo.GameData.RelativeGameDataPath = relative
 
 	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
 

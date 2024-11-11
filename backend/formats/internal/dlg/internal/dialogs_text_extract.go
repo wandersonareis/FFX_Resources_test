@@ -14,7 +14,7 @@ func DialogsUnpacker(dialogsFileInfo *interactions.GameDataInfo) error {
 
 	defer common.RemoveFile(handler)
 
-	targetFile := dialogsFileInfo.GameData.AbsolutePath
+	targetFile := dialogsFileInfo.GameData.FullFilePath
 
 	extractLocation := dialogsFileInfo.ExtractLocation
 

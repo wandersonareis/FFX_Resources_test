@@ -24,15 +24,15 @@ func DialogsTextCompress(dialogsFileInfo *interactions.GameDataInfo) error {
 	if err := importLocation.ProvideTargetPath(); err != nil {
 		return err
 	}
-	
+
 	args, codeTable, err := encoderArgs()
 	if err != nil {
 		return err
 	}
-	
+
 	defer common.RemoveFile(codeTable)
-	
-	targetFile := dialogsFileInfo.GameData.AbsolutePath
+
+	targetFile := dialogsFileInfo.GameData.FullFilePath
 
 	args = append(args, targetFile, translateLocation.TargetFile, importLocation.TargetFile)
 

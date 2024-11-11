@@ -15,7 +15,7 @@ type LockitFileXplit struct {
 }
 
 func NewLockitFileXplit(dataInfo *interactions.GameDataInfo) *LockitFileXplit {
-	return &LockitFileXplit{path: dataInfo.GameData.AbsolutePath}
+	return &LockitFileXplit{path: dataInfo.GameData.FullFilePath}
 }
 
 func (fh *LockitFileXplit) countOccurrences(data []byte) int {
@@ -78,7 +78,7 @@ func (fh *LockitFileXplit) XplitFile(sizes []int, outputFileNameBase, outputDir 
 
 	if len(buffer) > 0 {
 		outputFileName := filepath.Join(outputDir, fmt.Sprintf("%s.part%02d", outputFileNameBase, partIndex))
-		
+
 		if err := os.WriteFile(outputFileName, buffer, 0644); err != nil {
 			return fmt.Errorf("error when writing the file: %v", err)
 		}

@@ -5,21 +5,21 @@ import (
 	"ffxresources/backend/models"
 )
 
-type GameData struct {
-	Name         string          `json:"name"`
-	NamePrefix   string          `json:"name_prefix"`
-	Size         int64           `json:"size"`
-	Type         models.NodeType `json:"type"`
-	Extension    string          `json:"extension"`
-	Parent       string          `json:"parent"`
-	IsDir        bool            `json:"is_dir"`
-	AbsolutePath string          `json:"absolute_path"`
-	RelativePath string          `json:"relative_path"`
-	Clones       []string        `json:"clones"`
+type GameFiles struct {
+	Name                 string          `json:"name"`
+	NamePrefix           string          `json:"name_prefix"`
+	Size                 int64           `json:"size"`
+	Type                 models.NodeType `json:"type"`
+	Extension            string          `json:"extension"`
+	Parent               string          `json:"parent"`
+	IsDir                bool            `json:"is_dir"`
+	FullFilePath         string          `json:"full_path"`
+	RelativeGameDataPath string          `json:"relative_path"`
+	ClonedItems          []string        `json:"cloned_items"`
 }
 
-func NewGameData(path string) (*GameData, error) {
-	data := &GameData{}
+func NewGameData(path string) (*GameFiles, error) {
+	data := &GameFiles{}
 	source, err := NewSource(path)
 	if err != nil {
 		return data, err
@@ -30,7 +30,7 @@ func NewGameData(path string) (*GameData, error) {
 	return data, nil
 }
 
-func (g *GameData) updateGameDataFromSource(source *Source) {
+func (g *GameFiles) updateGameDataFromSource(source *Source) {
 	g.Name = source.Name
 	g.NamePrefix = source.NamePrefix
 	g.Size = source.Size
@@ -38,7 +38,7 @@ func (g *GameData) updateGameDataFromSource(source *Source) {
 	g.IsDir = source.IsDir
 	g.Parent = source.Parent
 	g.Extension = source.Extension
-	g.AbsolutePath = source.FullPath
-	g.RelativePath = common.GetRelativePathFromMarker(g.AbsolutePath)
-	g.Clones = NewFfx2Duplicate().TryFind(source.NamePrefix)
+	g.FullFilePath = source.FullPath
+	g.RelativeGameDataPath = common.GetRelativePathFromMarker(g.FullFilePath)
+	g.ClonedItems = NewFfx2Duplicate().TryFind(source.NamePrefix)
 }

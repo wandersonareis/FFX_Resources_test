@@ -24,9 +24,9 @@ func NewDcpFile(dataInfo *interactions.GameDataInfo) *DcpFile {
 
 	gameFilesPath := interactions.GameLocation.TargetDirectory
 
-	relative := common.GetDifferencePath(dataInfo.GameData.AbsolutePath, gameFilesPath)
+	relative := common.GetDifferencePath(dataInfo.GameData.FullFilePath, gameFilesPath)
 
-	dataInfo.GameData.RelativePath = relative
+	dataInfo.GameData.RelativeGameDataPath = relative
 
 	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
 

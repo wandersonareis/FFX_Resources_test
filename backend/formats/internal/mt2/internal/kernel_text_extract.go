@@ -14,7 +14,7 @@ func KernelUnpacker(kernelFileInfo *interactions.GameDataInfo) error {
 
 	defer common.RemoveFile(handler)
 
-	targetFile := kernelFileInfo.GameData.AbsolutePath
+	targetFile := kernelFileInfo.GameData.FullFilePath
 	extractLocation := kernelFileInfo.ExtractLocation
 
 	if err := extractLocation.ProvideTargetPath(); err != nil {

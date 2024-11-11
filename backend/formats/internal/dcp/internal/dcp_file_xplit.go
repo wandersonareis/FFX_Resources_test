@@ -7,14 +7,14 @@ import (
 )
 
 func DcpFileXpliter(dataInfo *interactions.GameDataInfo) error {
-	targetFile := dataInfo.GameData.AbsolutePath
+	targetFile := dataInfo.GameData.FullFilePath
 
 	extractLocation := dataInfo.ExtractLocation
 
 	if err := extractLocation.ProvideTargetPath(); err != nil {
 		return err
 	}
-	
+
 	if err := dcpReader(targetFile, extractLocation.TargetPath); err != nil {
 		return err
 	}
@@ -36,9 +36,8 @@ func dcpReader(dcpFilePath, outputDir string) error {
 	if err := header.DataLengths(header, file); err != nil {
 		return fmt.Errorf("erro ao calcular os intervalos de dados: %w", err)
 	}
-	
-	content := NewContent(header, outputDir)
 
+	content := NewContent(header, outputDir)
 
 	if err := content.Read(file); err != nil {
 		return fmt.Errorf("erro ao ler os dados: %w", err)

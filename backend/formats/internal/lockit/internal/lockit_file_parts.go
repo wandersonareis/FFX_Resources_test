@@ -21,7 +21,7 @@ const (
 )
 
 func NewLockitFileParts(dataInfo *interactions.GameDataInfo) *LockitFileParts {
-	dataInfo.GameData.RelativePath = filepath.Join(lib.LOCKIT_TARGET_DIR_NAME, dataInfo.GameData.NamePrefix)
+	dataInfo.GameData.RelativeGameDataPath = filepath.Join(lib.LOCKIT_TARGET_DIR_NAME, dataInfo.GameData.NamePrefix)
 
 	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
 

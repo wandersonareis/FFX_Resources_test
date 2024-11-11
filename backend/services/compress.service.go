@@ -4,7 +4,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core"
 	"ffxresources/backend/events"
-	"ffxresources/backend/formats"
+	formatsDev "ffxresources/backend/formats"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
 	"fmt"
@@ -17,7 +17,7 @@ func NewCompressService() *CompressService {
 }
 
 func (c *CompressService) Compress(dataInfo *interactions.GameDataInfo) {
-	if !common.FileExists(dataInfo.GameData.AbsolutePath) {
+	if !common.IsFileExists(dataInfo.GameData.FullFilePath) {
 		events.NotifyError(fmt.Errorf("game file %s not found", dataInfo.GameData.Name))
 		return
 	}

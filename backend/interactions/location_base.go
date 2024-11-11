@@ -42,7 +42,7 @@ func (lb *LocationBase) GetPath() string {
 }
 
 func (lb *LocationBase) ProvideTargetDirectory() (string, error) {
-	if lb.TargetDirectory != "" {		
+	if lb.TargetDirectory != "" {
 		return lb.TargetDirectory, providerTargetDirectory(lb.TargetDirectory)
 	}
 
@@ -73,7 +73,7 @@ func (t *LocationBase) GenerateTargetOutput(formatter ITextFormatter, fileInfo *
 }
 
 func (t *LocationBase) targetFileExists() bool {
-	t.IsExist = common.FileExists(t.TargetFile)
+	t.IsExist = common.IsFileExists(t.TargetFile)
 	return t.IsExist
 }
 

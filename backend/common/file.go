@@ -5,17 +5,13 @@ import (
 	"path/filepath"
 )
 
-func FileExists(path string) bool {
+func IsFileExists(path string) bool {
 	_, err := os.Stat(path)
 	return !os.IsNotExist(err)
 }
 
 func RemoveFile(path string) error {
 	return os.RemoveAll(path)
-}
-
-func OpenFile(path string) (*os.File, error) {
-	return os.Open(path)
 }
 
 func ReadFile(path string) (string, error) {

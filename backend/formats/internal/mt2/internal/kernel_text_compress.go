@@ -20,7 +20,7 @@ func KernelTextPacker(kernelFileInfo *interactions.GameDataInfo) error {
 		return nil
 	}
 
-	targetFile := kernelFileInfo.GameData.AbsolutePath
+	targetFile := kernelFileInfo.GameData.FullFilePath
 	extractedFile := kernelFileInfo.ExtractLocation.TargetFile
 	translateLocation := kernelFileInfo.TranslateLocation
 

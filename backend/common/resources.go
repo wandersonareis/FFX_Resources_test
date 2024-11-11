@@ -33,12 +33,11 @@ func readFileFromAsar(asarPackage string, asarIndexString []string) ([]byte, err
 }
 
 func createHandlerFile(targetFile string, bytes []byte) error {
-	err := WriteBytesToFile(targetFile, bytes)
-	if err != nil {
+	if err := WriteBytesToFile(targetFile, bytes); err != nil {
 		return err
 	}
 
-	if !FileExists(targetFile) {
+	if !IsFileExists(targetFile) {
 		return fmt.Errorf("error creating handler file: %s", filepath.Base(targetFile))
 	}
 
@@ -49,7 +48,7 @@ func GetFileFromResources(targetLocation []string, targetFile string) error {
 	EnsurePathExists(targetFile)
 
 	resourcesFile := getResourcesAsarFile()
-	if !FileExists(resourcesFile) {
+	if !IsFileExists(resourcesFile) {
 		return fmt.Errorf("resources.asar not found")
 	}
 
@@ -58,8 +57,7 @@ func GetFileFromResources(targetLocation []string, targetFile string) error {
 		return err
 	}
 
-	err = createHandlerFile(targetFile, bytes)
-	if err != nil {
+	if err = createHandlerFile(targetFile, bytes); err != nil {
 		return err
 	}
 

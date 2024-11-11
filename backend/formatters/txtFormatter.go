@@ -31,7 +31,7 @@ func (t TxtFormatter) ReadFile(dataInfo *interactions.GameDataInfo, targetDirect
 	case models.LockitParts:
 		outputFile, outputPath = t.providePartsReadPath(targetDirectory, lib.LOCKIT_TARGET_DIR_NAME, dataInfo.GameData.Name)
 	default:
-		outputFile, outputPath = t.provideDefaulReadPath(targetDirectory, dataInfo.GameData.RelativePath)
+		outputFile, outputPath = t.provideDefaulReadPath(targetDirectory, dataInfo.GameData.RelativeGameDataPath)
 	}
 
 	return outputFile, outputPath
@@ -63,13 +63,13 @@ func (t TxtFormatter) WriteFile(fileInfo *interactions.GameDataInfo, targetDirec
 
 	switch fileInfo.GameData.Type {
 	case models.Dcp:
-		outputFile, outputPath = t.provideDcpWritePath(targetDirectory, fileInfo.GameData.RelativePath)
+		outputFile, outputPath = t.provideDcpWritePath(targetDirectory, fileInfo.GameData.RelativeGameDataPath)
 	case models.DcpParts:
 		outputFile, outputPath = t.providePartsWritePath(targetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME, fileInfo.GameData.Name)
 	case models.LockitParts:
 		outputFile, outputPath = t.providePartsWritePath(targetDirectory, lib.LOCKIT_TARGET_DIR_NAME, fileInfo.GameData.Name)
 	default:
-		outputFile, outputPath = t.provideDefaultWritePath(targetDirectory, fileInfo.GameData.RelativePath, fileInfo.GameData.Extension)
+		outputFile, outputPath = t.provideDefaultWritePath(targetDirectory, fileInfo.GameData.RelativeGameDataPath, fileInfo.GameData.Extension)
 	}
 
 	return outputFile, outputPath

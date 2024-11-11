@@ -2,7 +2,7 @@ package internal
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/formats/internal/tbs"
+	tbstables "ffxresources/backend/formats/internal/tbs"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 )
@@ -35,7 +35,7 @@ func decoderBase(lockitFileInfo *interactions.GameDataInfo, codeTable string) er
 
 	defer common.RemoveFile(codeTable)
 
-	targetFile := lockitFileInfo.GameData.AbsolutePath
+	targetFile := lockitFileInfo.GameData.FullFilePath
 
 	extractLocation := lockitFileInfo.ExtractLocation
 

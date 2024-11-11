@@ -16,8 +16,8 @@ type SpiraFolder struct {
 }
 
 func NewSpiraFolder(dataInfo *interactions.GameDataInfo, extractPath, translatePath string) *SpiraFolder {
-	dataInfo.ExtractLocation.TargetPath = filepath.Join(extractPath, dataInfo.GameData.RelativePath)
-	dataInfo.TranslateLocation.TargetPath = filepath.Join(translatePath, dataInfo.GameData.RelativePath)
+	dataInfo.ExtractLocation.TargetPath = filepath.Join(extractPath, dataInfo.GameData.RelativeGameDataPath)
+	dataInfo.TranslateLocation.TargetPath = filepath.Join(translatePath, dataInfo.GameData.RelativeGameDataPath)
 
 	return &SpiraFolder{
 		ctx:      interactions.NewInteraction().Ctx,
@@ -60,7 +60,7 @@ func (d SpiraFolder) Compress() {
 }
 
 func (d SpiraFolder) processFiles() []interactions.IFileProcessor {
-	results, err := common.ListFilesInDirectory(d.DataInfo.GameData.AbsolutePath)
+	results, err := common.ListFilesInDirectory(d.DataInfo.GameData.FullFilePath)
 	if err != nil {
 		events.NotifyError(err)
 		return nil
