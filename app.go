@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -40,7 +41,7 @@ func NewApp() *App {
 		CompressService:   services.NewCompressService(),
 
 		appConfig: &AppConfig{
-			filePath: common.PathJoin(common.GetExecDir(), "config.json"),
+			filePath: filepath.Join(common.GetExecDir(), "config.json"),
 		},
 	}
 }

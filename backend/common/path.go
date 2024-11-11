@@ -13,10 +13,6 @@ func sanitizationPath(path string) string {
 	return filepath.Clean(path)
 }
 
-func GetAbsolutePath(path string) (string, error) {
-	return filepath.Abs(path)
-}
-
 func GetDir(path string) string {
 	cPath := sanitizationPath(path)
 	return filepath.Dir(cPath)
@@ -44,7 +40,7 @@ func EnsurePathExists(path string) error {
 }
 
 func ListFilesInDirectory(s string) ([]string, error) {
-	fullpath, err := GetAbsolutePath(s)
+	fullpath, err := filepath.Abs(s)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +67,7 @@ func ListFilesInDirectory(s string) ([]string, error) {
 }
 
 func ListFilesMatchingPattern(files *[]string, path, pattern string) error {
-	fullpath, err := GetAbsolutePath(path)
+	fullpath, err := filepath.Abs(path)
 	if err != nil {
 		return err
 	}
