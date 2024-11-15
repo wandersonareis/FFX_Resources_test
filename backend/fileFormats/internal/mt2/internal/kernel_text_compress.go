@@ -1,43 +1,52 @@
 package internal
 
 import (
-	"ffxresources/backend/common"
-	"ffxresources/backend/events"
+	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
+	"fmt"
 )
 
-func KernelTextPacker(kernelFileInfo *interactions.GameDataInfo) error {
-	handler, err := GetKernelFileHandler()
+func KernelTextPacker(gameData interactions.IGameDataInfo) error {
+	gamePart := interactions.NewInteraction().GamePart.GetGamePart()
+
+	handler := newKernelHandler(gamePart)
+	defer handler.Dispose()
+
+	executable, err := handler.getKernelFileHandler()
 	if err != nil {
 		return err
 	}
 
-	defer common.RemoveFile(handler)
+	translateLocation := gameData.GetTranslateLocation()
+	importLocation := gameData.GetImportLocation()
 
-	if err := kernelFileInfo.TranslateLocation.Validate(); err != nil {
-		events.NotifyWarn(err.Error())
-		return nil
-	}
-
-	targetFile := kernelFileInfo.GameData.FullFilePath
-	extractedFile := kernelFileInfo.ExtractLocation.TargetFile
-	translateLocation := kernelFileInfo.TranslateLocation
-
-	if err := translateLocation.ProvideTargetPath(); err != nil {
+	if err := translateLocation.Validate(); err != nil {
 		return err
 	}
 
-	args, codeTable, err := encoderArgs()
+	if err := importLocation.ProvideTargetPath(); err != nil {
+		return err
+	}
+
+	args, err := util.EncoderDlgKrnlArgs()
 	if err != nil {
 		return err
 	}
 
-	defer common.RemoveFile(codeTable)
+	codeTableHandler := new(util.CharacterTable)
+	defer codeTableHandler.Dispose()
 
-	args = append(args, targetFile, extractedFile, translateLocation.TargetFile)
+	codeTable, err := codeTableHandler.GetFfx2CharacterTable()
+	if err != nil {
+		return fmt.Errorf("failed to get code table: %w", err)
+	}
 
-	if err := lib.RunCommand(handler, args); err != nil {
+	targetFile := gameData.GetGameData().FullFilePath
+
+	args = append(args, codeTable, targetFile, translateLocation.TargetFile, importLocation.TargetFile)
+
+	if err := lib.RunCommand(executable, args); err != nil {
 		return err
 	}
 

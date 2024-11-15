@@ -2,7 +2,7 @@ package internal
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/fileFormats/lib"
+	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/interactions"
 )
 
@@ -19,7 +19,7 @@ func SegmentFile(parts *[]LockitFileParts) {
 		})
 }
 
-func EnsurePartsExists(info *interactions.GameDataInfo) error {
+func EnsurePartsExists(info interactions.IGameDataInfo) error {
 	partsSizes := interactions.NewInteraction().GamePartOptions.GetGamePartOptions().LockitPartsSizes
 	if err := ffx2Xplitter(info, partsSizes); err != nil {
 		return err
@@ -28,16 +28,16 @@ func EnsurePartsExists(info *interactions.GameDataInfo) error {
 	return nil
 }
 
-func ffx2Xplitter(dataInfo *interactions.GameDataInfo, sizes []int) error {
+func ffx2Xplitter(dataInfo interactions.IGameDataInfo, sizes []int) error {
 	handler := NewLockitFileXplit(dataInfo)
 
-	extractLocation := dataInfo.ExtractLocation
+	extractLocation := dataInfo.GetExtractLocation()
 
 	if err := extractLocation.ProvideTargetPath(); err != nil {
 		return err
 	}
 
-	if err := handler.XplitFile(sizes, lib.LOCKIT_NAME_BASE, extractLocation.TargetPath); err != nil {
+	if err := handler.XplitFile(sizes, util.LOCKIT_NAME_BASE, extractLocation.TargetPath); err != nil {
 		return err
 	}
 

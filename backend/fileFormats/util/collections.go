@@ -1,11 +1,11 @@
-package lib
+package util
 
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/interactions"
 )
 
-func FindFileParts[T any](parts *[]T, targetPath, pattern string, partsInstance func(info *interactions.GameDataInfo) *T) error {
+func FindFileParts[T any](parts *[]T, targetPath, pattern string, partsInstance func(info interactions.IGameDataInfo) *T) error {
 	fileParts := make([]string, 0, len(*parts))
 
 	common.EnsurePathExists(targetPath)
@@ -18,7 +18,7 @@ func FindFileParts[T any](parts *[]T, targetPath, pattern string, partsInstance 
 
 	worker.ForEach(fileParts, func(_ int, item string) error {
 		info := interactions.NewGameDataInfo(item)
-		if info.GameData.Size == 0 {
+		if info.GetGameData().Size == 0 {
 			return nil
 		}
 

@@ -1,32 +1,49 @@
 package internal
 
-import "ffxresources/backend/fileFormats/lib"
+import (
+	"ffxresources/backend/core"
+	"ffxresources/backend/fileFormats/util"
+	"fmt"
+	"os"
+)
 
-func GetKernelFileHandler(targetExtension ...string) (string, error) {
-	targetFile, err := lib.GetFromResources(lib.KERNEL_HANDLER_APPLICATION, lib.DEFAULT_APPLICATION_EXTENSION)
+type kernelHandler struct {
+	gamePart core.GamePart
+	handler  string
+}
+
+func newKernelHandler(gamePart core.GamePart) *kernelHandler {
+	return &kernelHandler{
+		gamePart: gamePart,
+	}
+}
+
+func (kh *kernelHandler) getKernelFileHandler() (string, error) {
+	var (
+		err        error
+		targetFile string
+	)
+
+	switch kh.gamePart {
+	case core.FFX:
+		targetFile, err = util.GetFromResources(util.FFX_KERNEL_HANDLER_APPLICATION, util.DEFAULT_APPLICATION_EXTENSION)
+	case core.FFX2:
+		targetFile, err = util.GetFromResources(util.FFX2_KERNEL_HANDLER_APPLICATION, util.DEFAULT_APPLICATION_EXTENSION)
+	default:
+		return "", fmt.Errorf("unknown game part: %v", kh.gamePart)
+	}
+
 	if err != nil {
 		return "", err
 	}
 
-	/* extension := common.DEFAULT_APPLICATION_EXTENSION
-	handlerApp := common.KERNEL_HANDLER_APPLICATION
+	kh.handler = targetFile
 
-	if len(targetExtension) > 0 {
-		extension = targetExtension[0]
+	return kh.handler, nil
+}
+
+func (kh *kernelHandler) Dispose() {
+	if kh.handler != "" {
+		os.Remove(kh.handler)
 	}
-
-	targetHandler := []string{
-		common.DEFAULT_RESOURCES_ROOTDIR,
-		handlerApp,
-	}
-
-	tempProvider := common.NewTempProvider()
-	tempProvide := tempProvider.ProvideTempFileWithExtension(handlerApp, extension)
-	targetFile := tempProvide.FilePath
-
-	if err := common.GetFileFromResources(targetHandler, targetFile); err != nil {
-		return "", err
-	} */
-
-	return targetFile, nil
 }

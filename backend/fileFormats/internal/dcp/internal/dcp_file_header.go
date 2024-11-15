@@ -75,32 +75,6 @@ func (h *Header) DataLengths(header *Header, file *os.File) error {
 		return nil
 	})
 
-	/* results := h.DataRanges
-	h.DataRanges = []DataLength{}
-	
-	for i := 0; i < len(header.Pointers); i++ {
-		ranges := DataLength{}
-		ranges.Start = int64(header.Pointers[i].Value)
-
-		if i+1 < len(header.Pointers) {
-			ranges.End = int64(header.Pointers[i+1].Value)
-		} else {
-			fileInfo, err := file.Stat()
-			if err != nil {
-				return fmt.Errorf("erro ao obter informações do arquivo: %w", err)
-			}
-			ranges.End = fileInfo.Size()
-		}
-
-		h.DataRanges = append(h.DataRanges, ranges)
-	}
-
-	if reflect.DeepEqual(h.DataRanges, results) {
-		fmt.Println("ranges calculated successfully")
-	} else {
-		fmt.Println("error calculating the ranges")
-	} */
-
 	return nil
 }
 
@@ -108,7 +82,7 @@ func (h *Header) Update(dcpParts []DcpFileParts) error {
 	var currentOffset = uint32(h.Pointers[0].Value)
 
 	for i, pointer := range h.Pointers {
-		data := dcpParts[i].gameDataInfo.GameData
+		data := dcpParts[i].GetGameData()
 
 		if i == 0 {
 			currentOffset = uint32(pointer.Value) + uint32(data.Size)

@@ -1,7 +1,13 @@
 package interactions
 
+import "ffxresources/backend/core"
+
+type IGamePartOptions interface {
+	GetGamePartOptions() *GamePartOptions
+}
+
 type GamePartOptions struct {
-	*FfxGamePart
+	*core.FfxGamePart
 
 	DcpPartsLength    int
 	LockitPartsLength int
@@ -10,7 +16,7 @@ type GamePartOptions struct {
 
 var gamePartOptionsInstance *GamePartOptions
 
-func NewGamePartOptions(gamePart *FfxGamePart) *GamePartOptions {
+func NewGamePartOptions(gamePart *core.FfxGamePart) *GamePartOptions {
 	if gamePartOptionsInstance == nil {
 		gamePartOptionsInstance = &GamePartOptions{
 			FfxGamePart: gamePart,
@@ -22,9 +28,9 @@ func NewGamePartOptions(gamePart *FfxGamePart) *GamePartOptions {
 
 func (g *GamePartOptions) GetGamePartOptions() *GamePartOptions {
 	switch g.FfxGamePart.GetGamePart() {
-	case Ffx:
+	case core.FFX:
 		return ffxOptions()
-	case Ffx2:
+	case core.FFX2:
 		return ffx2Options()
 	}
 
@@ -33,7 +39,7 @@ func (g *GamePartOptions) GetGamePartOptions() *GamePartOptions {
 
 func ffxOptions() *GamePartOptions {
 	return &GamePartOptions{
-		DcpPartsLength:    5,
+		DcpPartsLength: 5,
 	}
 }
 

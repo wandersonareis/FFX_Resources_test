@@ -2,7 +2,7 @@ package internal
 
 import (
 	"ffxresources/backend/events"
-	"ffxresources/backend/fileFormats/lib"
+	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"fmt"
@@ -20,13 +20,15 @@ const (
 	LocEnc
 )
 
-func NewLockitFileParts(dataInfo *interactions.GameDataInfo) *LockitFileParts {
-	dataInfo.GameData.RelativeGameDataPath = filepath.Join(lib.LOCKIT_TARGET_DIR_NAME, dataInfo.GameData.NamePrefix)
+func NewLockitFileParts(dataInfo interactions.IGameDataInfo) *LockitFileParts {
+	gData := dataInfo.GetGameData()
+	gData.RelativeGameDataPath = filepath.Join(util.LOCKIT_TARGET_DIR_NAME, dataInfo.GetGameData().NamePrefix)
+	dataInfo.SetGameData(gData)
 
 	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
 
 	return &LockitFileParts{
-		dataInfo: dataInfo,
+		dataInfo: dataInfo.GetGameDataInfo(),
 	}
 }
 

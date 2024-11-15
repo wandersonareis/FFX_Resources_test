@@ -5,6 +5,7 @@ import (
 	"ffxresources/backend/events"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/spira"
+	"fmt"
 )
 
 type CollectionService struct{}
@@ -13,11 +14,13 @@ func NewCollectionService() *CollectionService {
 	return &CollectionService{}
 }
 
-func (c *CollectionService) PopulateTree() []interactions.TreeNode {
-	path := interactions.NewInteraction().GameLocation.GetPath()
+func (c *CollectionService) BuildTree() []interactions.TreeNode {
+	path := interactions.NewInteraction().GameLocation.GetTargetDirectory()
 	if path == "" {
 		return nil
 	}
+
+	fmt.Println("Building tree for", interactions.NewInteraction().ImportLocation.GetTargetDirectory())
 
 	if err := interactions.NewInteraction().GameLocation.IsSpira(); err != nil {
 		events.NotifyError(err)
@@ -36,6 +39,6 @@ func (c *CollectionService) PopulateTree() []interactions.TreeNode {
 		events.NotifyError(err)
 		return nil
 	}
-	
+
 	return tree
 }

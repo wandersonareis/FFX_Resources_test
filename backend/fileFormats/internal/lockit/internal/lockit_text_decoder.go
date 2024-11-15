@@ -2,13 +2,13 @@ package internal
 
 import (
 	"ffxresources/backend/common"
-	tbstables "ffxresources/backend/fileFormats/internal/tbs"
+	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 )
 
-func lockitDecoderFfx(lockitFileInfo *interactions.GameDataInfo) error {
-	codeTable, err := tbstables.NewCharacterTable().GetCharacterOnlyTable()
+func lockitDecoderFfx(lockitFileInfo interactions.IGameDataInfo) error {
+	codeTable, err := new(util.CharacterTable).GetCharacterOnlyTable()
 	if err != nil {
 		return err
 	}
@@ -16,8 +16,8 @@ func lockitDecoderFfx(lockitFileInfo *interactions.GameDataInfo) error {
 	return decoderBase(lockitFileInfo, codeTable)
 }
 
-func lockitDecoderLoc(lockitFileInfo *interactions.GameDataInfo) error {
-	codeTable, err := tbstables.NewCharacterTable().GetCharacterLocTable()
+func lockitDecoderLoc(lockitFileInfo interactions.IGameDataInfo) error {
+	codeTable, err := new(util.CharacterTable).GetCharacterLocTable()
 	if err != nil {
 		return err
 	}
@@ -25,7 +25,7 @@ func lockitDecoderLoc(lockitFileInfo *interactions.GameDataInfo) error {
 	return decoderBase(lockitFileInfo, codeTable)
 }
 
-func decoderBase(lockitFileInfo *interactions.GameDataInfo, codeTable string) error {
+func decoderBase(lockitFileInfo interactions.IGameDataInfo, codeTable string) error {
 	handler, err := getLockitFileHandler()
 	if err != nil {
 		return err
@@ -35,9 +35,9 @@ func decoderBase(lockitFileInfo *interactions.GameDataInfo, codeTable string) er
 
 	defer common.RemoveFile(codeTable)
 
-	targetFile := lockitFileInfo.GameData.FullFilePath
+	targetFile := lockitFileInfo.GetGameData().FullFilePath
 
-	extractLocation := lockitFileInfo.ExtractLocation
+	extractLocation := lockitFileInfo.GetExtractLocation()
 
 	if err := extractLocation.ProvideTargetPath(); err != nil {
 		return err

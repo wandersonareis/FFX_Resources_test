@@ -1,7 +1,7 @@
 package interactions
 
 type IFileProcessor interface {
-	GetFileInfo() *GameDataInfo
+	GetFileInfo() IGameDataInfo
 	Extract()
 	Compress()
 }

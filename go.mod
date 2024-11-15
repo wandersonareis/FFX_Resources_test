@@ -7,7 +7,9 @@ toolchain go1.23.1
 require (
 	github.com/denisvmedia/asar v0.0.0-20220910114414-6afbb52dd143
 	github.com/google/uuid v1.6.0
+	github.com/rs/zerolog v1.33.0
 	github.com/wailsapp/wails/v2 v2.9.2
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
 require (
@@ -35,7 +37,7 @@ require (
 	github.com/wailsapp/mimetype v1.4.1 // indirect
 	golang.org/x/crypto v0.27.0 // indirect
 	golang.org/x/net v0.29.0 // indirect
-	golang.org/x/sys v0.25.0 // indirect
+	golang.org/x/sys v0.27.0 // indirect
 	golang.org/x/text v0.18.0 // indirect
 )
 

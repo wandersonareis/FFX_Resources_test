@@ -3,6 +3,7 @@ package core
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/models"
+	"path/filepath"
 )
 
 type GameFiles struct {
@@ -18,19 +19,24 @@ type GameFiles struct {
 	ClonedItems          []string        `json:"cloned_items"`
 }
 
-func NewGameData(path string) (*GameFiles, error) {
+func NewGameData(path string, gamePart GamePart) (*GameFiles, error) {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+
 	data := &GameFiles{}
-	source, err := NewSource(path)
+	source, err := NewSource(absPath)
 	if err != nil {
 		return data, err
 	}
 
-	data.updateGameDataFromSource(source)
+	data.updateGameDataFromSource(source, gamePart)
 
 	return data, nil
 }
 
-func (g *GameFiles) updateGameDataFromSource(source *Source) {
+func (g *GameFiles) updateGameDataFromSource(source *Source, gamePart GamePart) {
 	g.Name = source.Name
 	g.NamePrefix = source.NamePrefix
 	g.Size = source.Size
@@ -40,5 +46,19 @@ func (g *GameFiles) updateGameDataFromSource(source *Source) {
 	g.Extension = source.Extension
 	g.FullFilePath = source.Path
 	g.RelativeGameDataPath = common.GetRelativePathFromMarker(g.FullFilePath)
-	g.ClonedItems = NewFfx2Duplicate().TryFind(source.NamePrefix)
+	g.ClonedItems = g.GetGamePartDuplicates(gamePart)
+}
+
+func (g *GameFiles) GetGamePartDuplicates(gamePart GamePart) []string {
+	switch gamePart {
+	case FFX:
+		//NewFfxDuplicate().AddFfxTextDuplicate()
+		fallthrough
+	case FFX2:
+		dupes := NewFfx2Duplicate()
+		dupes.AddFfx2TextDuplicate()
+		return dupes.TryFind(g.NamePrefix)
+	}
+
+	return nil
 }

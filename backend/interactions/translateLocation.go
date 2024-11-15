@@ -2,6 +2,11 @@ package interactions
 
 import "fmt"
 
+type ITranslateLocation interface {
+	ILocationBase
+	IValidate
+}
+
 type TranslateLocation struct {
 	LocationBase
 }
@@ -21,7 +26,7 @@ func NewTranslateLocation() *TranslateLocation {
 }
 
 func (t *TranslateLocation) Validate() error {
-	if !t.targetFileExists() {
+	if !t.isTargetFileAvailable() {
 		return fmt.Errorf("translated file does not exist")
 	}
 

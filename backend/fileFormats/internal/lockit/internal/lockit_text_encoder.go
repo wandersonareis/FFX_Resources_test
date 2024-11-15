@@ -2,13 +2,13 @@ package internal
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/fileFormats/internal/tbs"
+	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 )
 
-func lockitEncoderFfx(lockitFileInfo *interactions.GameDataInfo) error {
-	codeTable, err := tbstables.NewCharacterTable().GetCharacterOnlyTable()
+func lockitEncoderFfx(lockitFileInfo interactions.IGameDataInfo) error {
+	codeTable, err := new(util.CharacterTable).GetCharacterOnlyTable()
 	if err != nil {
 		return err
 	}
@@ -17,7 +17,7 @@ func lockitEncoderFfx(lockitFileInfo *interactions.GameDataInfo) error {
 }
 
 func lockitEncoderLoc(lockitFileInfo *interactions.GameDataInfo) error {
-	codeTable, err := tbstables.NewCharacterTable().GetCharacterLocTable()
+	codeTable, err := new(util.CharacterTable).GetCharacterLocTable()
 	if err != nil {
 		return err
 	}
@@ -32,7 +32,7 @@ func lockitEncoderLoc(lockitFileInfo *interactions.GameDataInfo) error {
 	return ensureUtf8Bom(encodedFile)
 }
 
-func encoderBase(lockitFileInfo *interactions.GameDataInfo, codeTable string) error {
+func encoderBase(lockitFileInfo interactions.IGameDataInfo, codeTable string) error {
 	handler, err := getLockitFileHandler()
 	if err != nil {
 		return err
@@ -42,9 +42,9 @@ func encoderBase(lockitFileInfo *interactions.GameDataInfo, codeTable string) er
 
 	defer common.RemoveFile(codeTable)
 
-	targetFile := lockitFileInfo.TranslateLocation.TargetFile
+	targetFile := lockitFileInfo.GetTranslateLocation().TargetFile
 	
-	importLocation := lockitFileInfo.ImportLocation
+	importLocation := lockitFileInfo.GetImportLocation()
 
 	if err := importLocation.ProvideTargetPath(); err != nil {
 		return err

@@ -1,21 +1,23 @@
 package internal
 
 import (
-	"ffxresources/backend/common"
+	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
+	"fmt"
 )
 
-func DialogsTextCompress(dialogsFileInfo *interactions.GameDataInfo) error {
-	handler, err := getDialogsHandler()
+func DialogsFileCompressor(gameData interactions.IGameDataInfo) error {
+	handler := newDialogsHandler(gameData.GetGameData().Type)
+	defer handler.dispose()
+
+	executable, err := handler.getDialogsHandler()
 	if err != nil {
 		return err
 	}
 
-	defer common.RemoveFile(handler)
-
-	translateLocation := dialogsFileInfo.TranslateLocation
-	importLocation := dialogsFileInfo.ImportLocation
+	translateLocation := gameData.GetTranslateLocation()
+	importLocation := gameData.GetImportLocation()
 
 	if err := translateLocation.Validate(); err != nil {
 		return err
@@ -25,18 +27,24 @@ func DialogsTextCompress(dialogsFileInfo *interactions.GameDataInfo) error {
 		return err
 	}
 
-	args, codeTable, err := encoderArgs()
+	args, err := util.EncoderDlgKrnlArgs()
 	if err != nil {
 		return err
 	}
 
-	defer common.RemoveFile(codeTable)
+	codeTableHandler := new(util.CharacterTable)
+	defer codeTableHandler.Dispose()
 
-	targetFile := dialogsFileInfo.GameData.FullFilePath
+	codeTable, err := codeTableHandler.GetFfx2CharacterTable()
+	if err != nil {
+		return fmt.Errorf("failed to get code table: %w", err)
+	}
 
-	args = append(args, targetFile, translateLocation.TargetFile, importLocation.TargetFile)
+	targetFile := gameData.GetGameData().FullFilePath
 
-	if err := lib.RunCommand(handler, args); err != nil {
+	args = append(args, codeTable, targetFile, translateLocation.TargetFile, importLocation.TargetFile)
+
+	if err := lib.RunCommand(executable, args); err != nil {
 		return err
 	}
 

@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/fileFormats/internal/dlg"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
@@ -8,34 +9,30 @@ import (
 )
 
 type DcpFileParts struct {
-	gameDataInfo *interactions.GameDataInfo
+	*base.FormatsBase
 }
 
-func NewDcpFileParts(dataInfo *interactions.GameDataInfo) *DcpFileParts {
+func NewDcpFileParts(dataInfo interactions.IGameDataInfo) *DcpFileParts {
 	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
 
 	return &DcpFileParts{
-		gameDataInfo: dataInfo,
+		FormatsBase: base.NewFormatsBase(dataInfo),
 	}
 }
 
-func (d DcpFileParts) GetFileInfo() *interactions.GameDataInfo {
-	return d.gameDataInfo
-}
-
 func (d DcpFileParts) Extract() {
-	dlg := dlg.NewDialogs(d.gameDataInfo)
+	dlg := dlg.NewDialogs(d.GetFileInfo())
 	dlg.Extract()
 }
 
 func (d DcpFileParts) Compress() {
-	dlg := dlg.NewDialogs(d.gameDataInfo)
+	dlg := dlg.NewDialogs(d.GetFileInfo())
 	dlg.Compress()
 }
 
 func (d DcpFileParts) Validate() error {
-	if err := d.gameDataInfo.TranslateLocation.Validate(); err != nil {
-		return fmt.Errorf("translated dcp parts file not found: %s", d.gameDataInfo.GameData.Name)
+	if err := d.GetTranslateLocation().Validate(); err != nil {
+		return fmt.Errorf("translated dcp parts file not found: %s", d.GetGameData().Name)
 	}
 
 	return nil

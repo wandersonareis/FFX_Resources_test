@@ -10,41 +10,44 @@ import (
 	"ffxresources/backend/models"
 )
 
-func NewFileExtractor(dataInfo *interactions.GameDataInfo) models.IExtractor {
+// formats is a map that associates models.NodeType values with functions that 
+// create instances of interactions.IFileProcessor. Each entry in the map 
+// corresponds to a specific type of node
+var formats = map[models.NodeType]func(interactions.IGameDataInfo) interactions.IFileProcessor{
+	models.Dialogs:        dlg.NewDialogs,
+	models.DialogsSpecial: dlg.NewDialogs,
+	models.Tutorial:       dlg.NewDialogs,
+	models.DcpParts:       dlg.NewDialogs,
+	models.Kernel:         mt2.NewKernel,
+	models.Dcp:            dcp.NewDcpFile,
+	models.Lockit:         lockit.NewLockitFile,
+	models.Folder:         NewSpiraFolder,
+}
+
+func NewFileExtractor(dataInfo interactions.IGameDataInfo) models.IExtractor {
 	return NewFileProcessor(dataInfo)
 }
 
-func NewFileCompressor(dataInfo *interactions.GameDataInfo) models.ICompressor {
+func NewFileCompressor(dataInfo interactions.IGameDataInfo) models.ICompressor {
 	return NewFileProcessor(dataInfo)
 }
 
-func NewFileProcessor(dataInfo *interactions.GameDataInfo) interactions.IFileProcessor {
-	fileType := dataInfo.GameData.Type
+func NewFileProcessor(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor {
+	fileType := dataInfo.GetGameData().Type
 
-	switch fileType {
-	case models.Dialogs, models.Tutorial, models.DcpParts:
-		return dlg.NewDialogs(dataInfo)
-	case models.Kernel:
-		return mt2.NewKernel(dataInfo)
-	case models.Dcp:
-		return dcp.NewDcpFile(dataInfo)
-	case models.Lockit:
-		return lockit.NewLockitFile(dataInfo)
-	case models.Folder:
-		extractPath, err := interactions.NewInteraction().ExtractLocation.ProvideTargetDirectory()
-		if err != nil {
-			events.NotifyError(err)
-			return nil
-		}
-
-		translatePath, err := interactions.NewInteraction().TranslateLocation.ProvideTargetDirectory()
-		if err != nil {
-			events.NotifyError(err)
-			return nil
-		}
-
-		return NewSpiraFolder(dataInfo, extractPath, translatePath)
-	default:
+	if err := interactions.NewInteraction().ExtractLocation.ProvideTargetDirectory(); err != nil {
+		events.NotifyError(err)
 		return nil
 	}
+
+	if err := interactions.NewInteraction().TranslateLocation.ProvideTargetDirectory(); err != nil {
+		events.NotifyError(err)
+		return nil
+	}
+
+	if value, ok := formats[fileType]; ok {
+		return value(dataInfo)
+	}
+
+	return nil
 }

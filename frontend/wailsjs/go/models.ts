@@ -1,6 +1,6 @@
 export namespace core {
 	
-	export class GameData {
+	export class GameFiles {
 	    name: string;
 	    name_prefix: string;
 	    size: number;
@@ -8,12 +8,12 @@ export namespace core {
 	    extension: string;
 	    parent: string;
 	    is_dir: boolean;
-	    absolute_path: string;
+	    full_path: string;
 	    relative_path: string;
-	    clones: string[];
+	    cloned_items: string[];
 	
 	    static createFrom(source: any = {}) {
-	        return new GameData(source);
+	        return new GameFiles(source);
 	    }
 	
 	    constructor(source: any = {}) {
@@ -25,9 +25,9 @@ export namespace core {
 	        this.extension = source["extension"];
 	        this.parent = source["parent"];
 	        this.is_dir = source["is_dir"];
-	        this.absolute_path = source["absolute_path"];
+	        this.full_path = source["full_path"];
 	        this.relative_path = source["relative_path"];
-	        this.clones = source["clones"];
+	        this.cloned_items = source["cloned_items"];
 	    }
 	}
 
@@ -102,7 +102,7 @@ export namespace interactions {
 	    }
 	}
 	export class GameDataInfo {
-	    game_data: core.GameData;
+	    game_data: core.GameFiles;
 	    extract_location: ExtractLocation;
 	    translate_location: TranslateLocation;
 	    import_location: ImportLocation;
@@ -113,7 +113,7 @@ export namespace interactions {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.game_data = this.convertValues(source["game_data"], core.GameData);
+	        this.game_data = this.convertValues(source["game_data"], core.GameFiles);
 	        this.extract_location = this.convertValues(source["extract_location"], ExtractLocation);
 	        this.translate_location = this.convertValues(source["translate_location"], TranslateLocation);
 	        this.import_location = this.convertValues(source["import_location"], ImportLocation);

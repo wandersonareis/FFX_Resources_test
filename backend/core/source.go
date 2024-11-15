@@ -29,7 +29,7 @@ func NewSource(path string) (*Source, error) {
 	}
 
 	var size int64
-	if !info.IsDir() {
+	if info != nil && !info.IsDir() {
 		size = info.Size()
 	}
 

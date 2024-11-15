@@ -2,7 +2,6 @@ package lib
 
 import (
 	"bytes"
-	"ffxresources/backend/events"
 	"fmt"
 	"os/exec"
 	"syscall"
@@ -16,18 +15,15 @@ func RunCommand(tool string, args []string) error {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Start(); err != nil {
-		events.LogSeverity(events.SeverityError, fmt.Sprintf("erro ao iniciar comando: %s", err.Error()))
-		return fmt.Errorf("erro ao iniciar comando: %w", err)
+		return fmt.Errorf("error starting command: %w", err)
 	}
 
 	if err := cmd.Wait(); err != nil {
-		events.LogSeverity(events.SeverityError, fmt.Sprintf("erro cmd.Wait na execução do comando: %s", err.Error()))
-		return fmt.Errorf("erro cmd.Wait na execução do comando: %w", err)
+		return fmt.Errorf("error cmd.Wait:\n %w", err)
 	}
 
 	if stderr.Len() > 0 {
-		events.LogSeverity(events.SeverityError, fmt.Sprintf("erro stderr na execução do comando: %s", stderr.String()))
-		return fmt.Errorf("erro stderr na execução do comando: %s", stderr.String())
+		return fmt.Errorf("error stderr:\n %s", stderr.String())
 	}
 
 	return nil

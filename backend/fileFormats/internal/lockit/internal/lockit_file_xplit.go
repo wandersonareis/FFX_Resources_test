@@ -14,8 +14,8 @@ type LockitFileXplit struct {
 	path string
 }
 
-func NewLockitFileXplit(dataInfo *interactions.GameDataInfo) *LockitFileXplit {
-	return &LockitFileXplit{path: dataInfo.GameData.FullFilePath}
+func NewLockitFileXplit(dataInfo interactions.IGameDataInfo) *LockitFileXplit {
+	return &LockitFileXplit{path: dataInfo.GetGameData().FullFilePath}
 }
 
 func (fh *LockitFileXplit) countOccurrences(data []byte) int {

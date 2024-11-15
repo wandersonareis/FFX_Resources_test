@@ -31,7 +31,7 @@ func generateNode(key string, source *core.Source) (interactions.TreeNode, error
 	var node = interactions.TreeNode{
 		Key:   key,
 		Label: source.Name,
-		Data:  *dataInfo,
+		Data:  *dataInfo.GetGameDataInfo(),
 	}
 
 	return node, nil

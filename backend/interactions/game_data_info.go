@@ -2,9 +2,21 @@ package interactions
 
 import (
 	"ffxresources/backend/core"
+	"ffxresources/backend/logger"
 	"os"
 	"strings"
 )
+
+type IGameDataInfo interface {
+	GetGameDataInfo() *GameDataInfo
+	InitializeLocations(formatter ITextFormatter)
+	CreateRelativePath(target ...string)
+	GetGameData() *core.GameFiles
+	SetGameData(gameData *core.GameFiles)
+	GetExtractLocation() *ExtractLocation
+	GetTranslateLocation() *TranslateLocation
+	GetImportLocation() *ImportLocation
+}
 
 type GameDataInfo struct {
 	GameData          core.GameFiles    `json:"game_data"`
@@ -13,9 +25,12 @@ type GameDataInfo struct {
 	ImportLocation    ImportLocation    `json:"import_location"`
 }
 
-func NewGameDataInfo(path string) *GameDataInfo {
-	gameData, err := core.NewGameData(path)
+func NewGameDataInfo(path string) IGameDataInfo {
+	gamePart := NewInteraction().GamePart.GetGamePart()
+	gameData, err := core.NewGameData(path, gamePart)
 	if err != nil {
+		l := logger.Get()
+		l.Error().Err(err).Str("Path", path).Msg("Error creating game data")
 		return nil
 	}
 
@@ -28,9 +43,33 @@ func NewGameDataInfo(path string) *GameDataInfo {
 }
 
 func (g *GameDataInfo) InitializeLocations(formatter ITextFormatter) {
-	g.ExtractLocation.GenerateTargetOutput(formatter, g)
-	g.TranslateLocation.GenerateTargetOutput(formatter, g)
+	g.ExtractLocation.CreateTargetFileOutput(formatter, g)
+	g.TranslateLocation.CreateTargetFileOutput(formatter, g)
 	g.ImportLocation.GenerateTargetOutput(formatter, g)
+}
+
+func (g *GameDataInfo) GetGameDataInfo() *GameDataInfo {
+	return g
+}
+
+func (g *GameDataInfo) GetGameData() *core.GameFiles {
+	return &g.GameData
+}
+
+func (g *GameDataInfo) GetExtractLocation() *ExtractLocation {
+	return &g.ExtractLocation
+}
+
+func (g *GameDataInfo) SetGameData(gameData *core.GameFiles) {
+	g.GameData = *gameData
+}
+
+func (g *GameDataInfo) GetTranslateLocation() *TranslateLocation {
+	return &g.TranslateLocation
+}
+
+func (g *GameDataInfo) GetImportLocation() *ImportLocation {
+	return &g.ImportLocation
 }
 
 // CreateRelativePath sets the RelativeGameDataPath field of the GameDataInfo struct
@@ -46,7 +85,7 @@ func (g *GameDataInfo) InitializeLocations(formatter ITextFormatter) {
 //
 //	s.CreateRelativePath("C:\\Games\\TargetDir")
 func (g *GameDataInfo) CreateRelativePath(target ...string) {
-	targetPath := NewInteraction().GameLocation.TargetDirectory
+	targetPath := NewInteraction().GameLocation.GetTargetDirectory()
 
 	if len(target) > 0 {
 		targetPath = target[0]

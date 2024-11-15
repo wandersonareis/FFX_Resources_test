@@ -2,6 +2,11 @@ package interactions
 
 import "ffxresources/backend/common"
 
+type IGameLocation interface {
+	ILocationBase
+	IsSpira() error
+}
+
 type GameLocation struct {
 	LocationBase
 }

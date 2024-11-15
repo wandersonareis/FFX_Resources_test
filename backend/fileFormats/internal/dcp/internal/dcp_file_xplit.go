@@ -6,13 +6,13 @@ import (
 	"os"
 )
 
-func DcpFileXpliter(dataInfo *interactions.GameDataInfo) error {
-	targetFile := dataInfo.GameData.FullFilePath
+func DcpFileXpliter(dataInfo interactions.IGameDataInfo) error {
+	targetFile := dataInfo.GetGameData().FullFilePath
 
-	extractLocation := dataInfo.ExtractLocation
+	extractLocation := dataInfo.GetExtractLocation()
 
 	if err := extractLocation.ProvideTargetPath(); err != nil {
-		return err
+		return fmt.Errorf("error when creating the extraction directory: %w", err)
 	}
 
 	if err := dcpReader(targetFile, extractLocation.TargetPath); err != nil {
@@ -34,13 +34,13 @@ func dcpReader(dcpFilePath, outputDir string) error {
 	header.FromFile(dcpFilePath)
 
 	if err := header.DataLengths(header, file); err != nil {
-		return fmt.Errorf("erro ao calcular os intervalos de dados: %w", err)
+		return fmt.Errorf("error when calculating the data intervals: %w", err)
 	}
 
 	content := NewContent(header, outputDir)
 
 	if err := content.Read(file); err != nil {
-		return fmt.Errorf("erro ao ler os dados: %w", err)
+		return fmt.Errorf("error reading the data: %w", err)
 	}
 
 	return nil

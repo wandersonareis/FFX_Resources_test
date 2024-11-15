@@ -6,6 +6,20 @@ import (
 	"path/filepath"
 )
 
+type IValidate interface {
+	Validate() error
+}
+
+type ILocationBase interface {
+	SetTargetDirectory(path string)
+	GetTargetDirectory() string
+	SetTargetFile(targetFile string)
+	SetTargetPath(targetPath string)
+	ProvideTargetDirectory() error
+	ProvideTargetPath() error
+	CreateTargetFileOutput(formatter ITextFormatter, fileInfo *GameDataInfo)
+}
+
 type ITextFormatter interface {
 	ReadFile(fileInfo *GameDataInfo, targetDirectory string) (string, string)
 	WriteFile(fileInfo *GameDataInfo, targetDirectory string) (string, string)
@@ -29,7 +43,7 @@ func NewLocationBase(targetDirectoryName string) LocationBase {
 	}
 }
 
-func (lb *LocationBase) SetPath(path string) {
+func (lb *LocationBase) SetTargetDirectory(path string) {
 	if path == "" {
 		return
 	}
@@ -37,25 +51,29 @@ func (lb *LocationBase) SetPath(path string) {
 	lb.TargetDirectory = path
 }
 
-func (lb *LocationBase) GetPath() string {
+func (lb *LocationBase) GetTargetDirectory() string {
 	return lb.TargetDirectory
 }
 
-func (lb *LocationBase) ProvideTargetDirectory() (string, error) {
-	if lb.TargetDirectory != "" {
-		return lb.TargetDirectory, providerTargetDirectory(lb.TargetDirectory)
-	}
+func (lb *LocationBase) SetTargetFile(targetFile string) {
+	lb.TargetFile = targetFile
+}
 
+func (lb *LocationBase) SetTargetPath(targetPath string) {
+	lb.TargetPath = targetPath
+}
+
+func (lb *LocationBase) ProvideTargetDirectory() error {
 	path := filepath.Join(common.GetExecDir(), lb.TargetDirectoryName)
 
 	err := providerTargetDirectory(path)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	lb.TargetDirectory = path
 
-	return path, nil
+	return nil
 }
 
 func (lb *LocationBase) ProvideTargetPath() error {
@@ -66,13 +84,13 @@ func (lb *LocationBase) ProvideTargetPath() error {
 	return fmt.Errorf("target path is empty")
 }
 
-func (t *LocationBase) GenerateTargetOutput(formatter ITextFormatter, fileInfo *GameDataInfo) {
-	t.TargetFile, t.TargetPath = formatter.ReadFile(fileInfo, t.TargetDirectory)
+func (lb *LocationBase) CreateTargetFileOutput(formatter ITextFormatter, fileInfo *GameDataInfo) {
+	lb.TargetFile, lb.TargetPath = formatter.ReadFile(fileInfo, lb.TargetDirectory)
 
-	t.TargetFileName = filepath.Base(t.TargetFile)
+	lb.TargetFileName = filepath.Base(lb.TargetFile)
 }
 
-func (t *LocationBase) targetFileExists() bool {
+func (t *LocationBase) isTargetFileAvailable() bool {
 	t.IsExist = common.IsFileExists(t.TargetFile)
 	return t.IsExist
 }

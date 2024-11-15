@@ -7,13 +7,13 @@ import (
 	"os"
 )
 
-func DcpFileJoiner(dataInfo *interactions.GameDataInfo, xplitedFiles *[]DcpFileParts, targetReimportFile string) error {
-	originalDcpFile := dataInfo.GameData.FullFilePath
+func DcpFileJoiner(dataInfo interactions.IGameDataInfo, xplitedFiles *[]DcpFileParts, targetReimportFile string) error {
+	originalDcpFile := dataInfo.GetGameData().FullFilePath
 
-	importLocation := dataInfo.ImportLocation
+	importLocation := dataInfo.GetImportLocation()
 
 	if err := importLocation.ProvideTargetPath(); err != nil {
-		return err
+		return fmt.Errorf("error when providing target path: %w", err)
 	}
 
 	err := dcpWriter(originalDcpFile, xplitedFiles, targetReimportFile)
@@ -49,7 +49,6 @@ func dcpWriter(inputFilePath string, parts *[]DcpFileParts, newContainerPath str
 
 	newFile, err := os.Create(newContainerPath)
 	if err != nil {
-		fmt.Println(err)
 		return fmt.Errorf("error when creating the new container file: %w", err)
 	}
 
@@ -59,7 +58,7 @@ func dcpWriter(inputFilePath string, parts *[]DcpFileParts, newContainerPath str
 		return fmt.Errorf("error when writing buffer to file: %w", err)
 	}
 
-	originalData, err := os.ReadFile(inputFilePath)
+	/* originalData, err := os.ReadFile(inputFilePath)
 	if err != nil {
 		return fmt.Errorf("error reading the original file: %v", err)
 	}
@@ -71,7 +70,7 @@ func dcpWriter(inputFilePath string, parts *[]DcpFileParts, newContainerPath str
 		return fmt.Errorf("arquivos não correspondem")
 	} else {
 		fmt.Println("Arquivos dcp correspondem")
-	}
+	} */
 
 	return nil
 }

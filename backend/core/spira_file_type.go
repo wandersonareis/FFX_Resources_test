@@ -38,6 +38,10 @@ var spiraFiles = []spiraFilesTypes{
 		regex:     regexp.MustCompile(`.*loc_kit_ps3.*\.part([0-9]{2})$`),
 		spiratype: models.LockitParts,
 	},
+	{
+		regex:     regexp.MustCompile(`.*ffx2.*(monlist|credits|crjiten|crcr0000)\.bin$`),
+		spiratype: models.DialogsSpecial,
+	},
 }
 
 func guessFileType(path string) models.NodeType {

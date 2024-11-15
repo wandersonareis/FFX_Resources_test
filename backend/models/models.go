@@ -8,6 +8,7 @@ const (
 	File
 	Folder
 	Dialogs
+	DialogsSpecial
 	Tutorial
 	Kernel
 	Dcp
@@ -15,13 +16,6 @@ const (
 	Lockit
 	LockitParts
 )
-
-type LocationInterface interface {
-	SetPath(path string)
-	GetPath() string
-	ProvideTargetDirectory() (string, error)
-	TargetFileExists() bool
-}
 
 type Pointer struct {
 	Offset int64

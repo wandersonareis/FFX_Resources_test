@@ -1,22 +1,25 @@
 package interactions
 
-import "context"
+import (
+	"context"
+	"ffxresources/backend/core"
+)
 
 type Interaction struct {
 	Ctx               context.Context
-	GameLocation      *GameLocation
-	GamePart          *FfxGamePart
-	GamePartOptions   *GamePartOptions
-	ExtractLocation   *ExtractLocation
-	TranslateLocation *TranslateLocation
-	ImportLocation    *ImportLocation
+	GameLocation      IGameLocation
+	GamePart          core.IFfxGamePart
+	GamePartOptions   IGamePartOptions
+	ExtractLocation   IExtractLocation
+	TranslateLocation ITranslateLocation
+	ImportLocation    IImportLocation
 }
 
 var interactionInstance *Interaction
 
 func NewInteraction() *Interaction {
 	if interactionInstance == nil {
-		gamePart := NewFfxGamePart()
+		gamePart := core.NewFfxGamePart()
 		interactionInstance = &Interaction{
 			Ctx:               context.Background(),
 			GameLocation:      NewGameLocation(),

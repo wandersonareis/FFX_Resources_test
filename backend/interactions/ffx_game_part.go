@@ -1,5 +1,12 @@
 package interactions
 
+/* type IFfxGamePart interface {
+	GetGamePart() GamePart
+	GetGamePartNumber() int
+	SetGamePart(GamePart)
+	SetGamePartNumber(int)
+}
+
 type GamePart int
 
 const (
@@ -40,4 +47,4 @@ func (f *FfxGamePart) SetGamePartNumber(partNumber int) {
 	}
 
 	f.gamePart = GamePart(partNumber)
-}
+} */

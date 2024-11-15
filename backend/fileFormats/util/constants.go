@@ -1,11 +1,13 @@
-package lib
+package util
 
 const FFX_CODE_TABLE_NAME = "ffx.tbs"
 const FFX2_CODE_TABLE_NAME = "ffx2.tbs"
 const CHARACTER_CODE_TABLE = "ffx_chars.tbs"
 const CHARACTER_LOC_CODE_TABLE = "ffxloc.tbs"
 const DIALOG_HANDLER_APPLICATION = "ffxdlg_new.exe"
-const KERNEL_HANDLER_APPLICATION = "ffx2mt.exe"
+const DIALOG_SPECIAL_HANDLER_APPLICATION = "ffxdlg_ignore_F0FF_size_flags.exe"
+const FFX_KERNEL_HANDLER_APPLICATION = "ffxmt.exe"
+const FFX2_KERNEL_HANDLER_APPLICATION = "ffx2mt.exe"
 const DCP_FILE_XPLITTER_APPLICATION = "SHSplit.exe"
 const LOCKIT_HANDLER_APPLICATION = "fcopy.exe"
 

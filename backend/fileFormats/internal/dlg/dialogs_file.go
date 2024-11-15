@@ -1,40 +1,52 @@
 package dlg
 
 import (
-	"ffxresources/backend/events"
+	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/fileFormats/internal/dlg/internal"
+	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
+	"path/filepath"
+	"slices"
 )
 
 type DialogsFile struct {
-	dataInfo *interactions.GameDataInfo
+	*base.FormatsBase
 }
 
-func NewDialogs(dataInfo *interactions.GameDataInfo) *DialogsFile {
+func NewDialogs(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor {
 	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
 
 	return &DialogsFile{
-		dataInfo: dataInfo,
+		FormatsBase: base.NewFormatsBase(dataInfo),
 	}
 }
 
-func (d DialogsFile) GetFileInfo() *interactions.GameDataInfo {
-	return d.dataInfo
-}
-
 func (d DialogsFile) Extract() {
-	err := internal.DialogsUnpacker(d.dataInfo)
-	if err != nil {
-		events.NotifyError(err)
+	if slices.Contains(d.GetGameData().ClonedItems, d.GetGameData().RelativeGameDataPath) {
+		return
+	}
+
+	if err := internal.DialogsFileExtractor(d.GetFileInfo()); err != nil {
+		d.Log.Error().Err(err).Interface("DialogFile", util.ErrorObject(d.GetFileInfo())).Msg("Error extracting dialog file")
 		return
 	}
 }
 
 func (d DialogsFile) Compress() {
-	err := internal.DialogsTextCompress(d.dataInfo)
-	if err != nil {
-		events.NotifyError(err)
+	if err := internal.DialogsFileCompressor(d.GetFileInfo()); err != nil {
+		d.Log.Error().Err(err).Interface("DialogFile", util.ErrorObject(d.GetFileInfo())).Msg("Error compressing dialog file")
 		return
+	}
+
+	if d.GetGameData().ClonedItems != nil {
+		for _, clone := range d.GetGameData().ClonedItems {
+			cloneReimportPath := filepath.Join(d.GetImportLocation().TargetDirectory, clone)
+
+			if err := util.DuplicateFile(d.GetImportLocation().TargetFile, cloneReimportPath); err != nil {
+				d.Log.Error().Err(err).Str("File", clone).Str("TargetPath", cloneReimportPath).Msg("Error duplicating dialog file")
+				continue
+			}
+		}
 	}
 }

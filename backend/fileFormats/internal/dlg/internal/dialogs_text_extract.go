@@ -1,39 +1,45 @@
 package internal
 
 import (
-	"ffxresources/backend/common"
+	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
+	"fmt"
 )
 
-func DialogsUnpacker(dialogsFileInfo *interactions.GameDataInfo) error {
-	handler, err := getDialogsHandler()
+func DialogsFileExtractor(dialogsFileInfo interactions.IGameDataInfo) error {
+	handler := newDialogsHandler(dialogsFileInfo.GetGameData().Type)
+	defer handler.dispose()
+
+	executable, err := handler.getDialogsHandler()
 	if err != nil {
 		return err
 	}
 
-	defer common.RemoveFile(handler)
+	targetFile := dialogsFileInfo.GetGameData().FullFilePath
 
-	targetFile := dialogsFileInfo.GameData.FullFilePath
+	extractLocation := dialogsFileInfo.GetExtractLocation()
 
-	extractLocation := dialogsFileInfo.ExtractLocation
+	if err = extractLocation.ProvideTargetPath(); err != nil {
+		return err
+	}
 
-	err = extractLocation.ProvideTargetPath()
+	args, err := util.DecoderDlgKrnlArgs()
 	if err != nil {
 		return err
 	}
 
-	args, codeTable, err := decoderArgs()
+	codeTableHandler := new(util.CharacterTable)
+	defer codeTableHandler.Dispose()
+
+	codeTable, err := codeTableHandler.GetFfx2CharacterTable()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get code table: %w", err)
 	}
 
-	defer common.RemoveFile(codeTable)
+	args = append(args, codeTable, targetFile, extractLocation.TargetFile)
 
-	args = append(args, targetFile, extractLocation.TargetFile)
-
-	err = lib.RunCommand(handler, args)
-	if err != nil {
+	if err = lib.RunCommand(executable, args); err != nil {
 		return err
 	}
 

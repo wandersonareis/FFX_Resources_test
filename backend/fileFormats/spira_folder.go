@@ -1,68 +1,74 @@
 package fileFormats
 
 import (
-	"context"
 	"ffxresources/backend/common"
-	"ffxresources/backend/events"
+	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/interactions"
-	"ffxresources/backend/lib"
-	"fmt"
 	"path/filepath"
 )
 
 type SpiraFolder struct {
-	ctx      context.Context
-	DataInfo *interactions.GameDataInfo
+	*base.FormatsBase
 }
 
-func NewSpiraFolder(dataInfo *interactions.GameDataInfo, extractPath, translatePath string) *SpiraFolder {
-	dataInfo.ExtractLocation.TargetPath = filepath.Join(extractPath, dataInfo.GameData.RelativeGameDataPath)
-	dataInfo.TranslateLocation.TargetPath = filepath.Join(translatePath, dataInfo.GameData.RelativeGameDataPath)
+func NewSpiraFolder(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor {
+	gameFilesPath := interactions.NewInteraction().GameLocation.GetTargetDirectory()
+
+	extractLocation := dataInfo.GetExtractLocation()
+	translateLocation := dataInfo.GetTranslateLocation()
+
+	relative := common.MakeRelativePath(dataInfo.GetGameData().FullFilePath, gameFilesPath)
+
+	dataInfo.GetGameData().RelativeGameDataPath = relative
+
+	dataInfo.GetExtractLocation().TargetPath = filepath.Join(extractLocation.TargetDirectory, relative)
+	dataInfo.GetTranslateLocation().TargetPath = filepath.Join(translateLocation.TargetDirectory, relative)
 
 	return &SpiraFolder{
-		ctx:      interactions.NewInteraction().Ctx,
-		DataInfo: dataInfo,
+		FormatsBase: base.NewFormatsBase(dataInfo),
 	}
-}
-
-func (d SpiraFolder) GetFileInfo() *interactions.GameDataInfo {
-	return d.DataInfo
 }
 
 func (d SpiraFolder) Extract() {
 	fileProcessors := d.processFiles()
-	totalFiles := len(fileProcessors)
-	processedCount := 0
 
-	lib.SendProgress(d.ctx, lib.Progress{
-		Total:      totalFiles,
-		Processed:  processedCount,
-		Percentage: 0,
-	})
-
-	lib.ShowProgressBar(d.ctx)
+	progress := common.NewProgress(d.Ctx)
+	progress.SetMax(len(fileProcessors))
+	progress.Start()
 
 	worker := common.NewWorker[interactions.IFileProcessor]()
 
 	worker.ParallelForEach(fileProcessors, func(_ int, fileProcessor interactions.IFileProcessor) {
 		fileProcessor.Extract()
+
+		progress.Step()
 	})
+
+	progress.Stop()
 }
 
 func (d SpiraFolder) Compress() {
 	fileProcessors := d.processFiles()
 
+	progress := common.NewProgress(d.Ctx)
+	progress.SetMax(len(fileProcessors))
+	progress.Start()
+
 	worker := common.NewWorker[interactions.IFileProcessor]()
 
 	worker.ParallelForEach(fileProcessors, func(_ int, fileProcessor interactions.IFileProcessor) {
 		fileProcessor.Compress()
+
+		progress.Step()
 	})
+
+	progress.Stop()
 }
 
 func (d SpiraFolder) processFiles() []interactions.IFileProcessor {
-	results, err := common.ListFilesInDirectory(d.DataInfo.GameData.FullFilePath)
+	results, err := common.ListFilesInDirectory(d.GetFileInfo().GetGameData().FullFilePath)
 	if err != nil {
-		events.NotifyError(err)
+		d.Log.Error().Err(err).Msgf("error listing files in directory: %s", d.GetFileInfo().GetGameData().FullFilePath)
 		return nil
 	}
 
@@ -75,7 +81,7 @@ func (d SpiraFolder) processFiles() []interactions.IFileProcessor {
 
 		fileProcessor := NewFileProcessor(dataInfo)
 		if fileProcessor == nil {
-			events.NotifyError(fmt.Errorf("invalid file type: %s", dataInfo.GameData.Name))
+			d.Log.Error().Msgf("invalid file type: %s", dataInfo.GetGameData().Name)
 			return
 		}
 

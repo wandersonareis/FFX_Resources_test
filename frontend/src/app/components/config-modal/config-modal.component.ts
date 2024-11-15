@@ -4,7 +4,7 @@ import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectDirectory } from '../../../../wailsjs/go/main/App';
-import { EventsEmit, EventsOnce } from '../../../../wailsjs/runtime/runtime';
+import { EventsEmit, EventsOn } from '../../../../wailsjs/runtime/runtime';
 import { gameDirectory } from '../signals/signals.signal';
 
 @Component({
@@ -23,6 +23,8 @@ export class ConfigModalComponent implements OnInit {
 
   extractedDirectory = signal<string>("");
   translatedDirectory = signal<string>("");
+  importedDirectory = signal<string>("");
+
   inputs: { eventName: string, label: string, dialogTitle: string, value: Signal<string> }[] = [];
 
   async selectDirectory(eventName: string, dialogTitle: string) {
@@ -37,23 +39,27 @@ export class ConfigModalComponent implements OnInit {
   }
 
   async ngOnInit() {
-    EventsOnce("GameFilesLocation", (data: string) => {
+    EventsOn("GameFilesLocation", (data: string) => {
       gameDirectory.set(data)
     })
 
-    EventsOnce("ExtractLocation", (data: string) => {
+    EventsOn("ExtractLocation", (data: string) => {
       this.extractedDirectory.set(data)
     })
 
-    EventsOnce("TranslateLocation", (data: string) => {
+    EventsOn("TranslateLocation", (data: string) => {
       this.translatedDirectory.set(data)
+    })
+
+    EventsOn("ReimportLocation", (data: string) => {
+      this.importedDirectory.set(data)
     })
 
     this.inputs = [
       {
         eventName: 'GameLocationChanged',
         label: 'Original files:',
-        dialogTitle: 'Select original output folder',
+        dialogTitle: 'Select game original files folder',
         value: gameDirectory
       },
       {
@@ -65,9 +71,15 @@ export class ConfigModalComponent implements OnInit {
       {
         eventName: 'TranslateLocationChanged',
         label: 'Translated files:',
-        dialogTitle: 'Select translated output folder',
+        dialogTitle: 'Select translated files folder',
         value: this.translatedDirectory,
       },
+      {
+        eventName: 'ReimportLocationChanged',
+        label: 'Output files:',
+        dialogTitle: 'Select reimported output folder',
+        value: this.importedDirectory,
+      }
     ];
   }
 
@@ -79,6 +91,7 @@ export class ConfigModalComponent implements OnInit {
   saveWorkingDirectories() {
     this.showConfigModal()
     EventsEmit("Refresh_Tree")
+    EventsEmit("SaveConfig")
   }
 
 }

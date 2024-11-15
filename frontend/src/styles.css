@@ -9,12 +9,19 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  body {
+    background: url("/assets/images/logo_us.png") no-repeat center fixed;
+  }
+}
 .p-treenode-children {
-    margin: 0;
-    margin-left: 20px;
+  @apply m-0 ml-5;
+}
+
+.p-highlight {
+  @apply bg-slate-200/60 outline outline-1 outline-blue-400;
 }
 
 .p-tree .p-tree-container .p-treenode .p-treenode-content {
-    padding: 0px;
+  @apply font-semibold  text-slate-600 capitalize p-0 hover:bg-blue-300/60 focus:bg-slate-600;
 }
-

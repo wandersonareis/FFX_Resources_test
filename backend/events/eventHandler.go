@@ -4,6 +4,7 @@ import (
 	"ffxresources/backend/interactions"
 	"fmt"
 	"log"
+	"strconv"
 
 	goRT "runtime"
 
@@ -43,7 +44,7 @@ func logInFile(msg string) {
 	log.Println(msg)
 
 }
-func captureTrace() (string, string, int) {
+func CaptureTrace() (string, string, int) {
 	// Pega o frame da stack do local de onde essa função foi chamada
 	pc, file, line, ok := goRT.Caller(2) // 2 níveis acima (porque estamos chamando de dentro do logger)
 	if !ok {
@@ -60,10 +61,11 @@ func captureTrace() (string, string, int) {
 }
 
 func LogSeverity(severity Severity, message string) {
-	file, funcName, line := captureTrace()
+	file, funcName, line := CaptureTrace()
 
-	trace := "file: " + file + ", func: " + funcName + ", line: " + string(line)
+	trace := "file: " + file + ", func: " + funcName + ", line: " + strconv.Itoa(line)
 	debugLine := fmt.Sprintf("Severity: %s, Message: %s, Trace: %s", severity.String(), message, trace)
+	fmt.Println(debugLine)
 
 	switch severity {
 	case SeveritySuccess:
