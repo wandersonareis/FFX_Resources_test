@@ -25,11 +25,6 @@ func KernelUnpacker(kernelFileInfo interactions.IGameDataInfo) error {
 		return err
 	}
 
-	/* args, err := util.DecoderDlgKrnlArgs()
-	if err != nil {
-		return err
-	} */
-
 	characterTable := util.NewCharacterTable()
 	characterTable.Dispose()
 
@@ -39,7 +34,6 @@ func KernelUnpacker(kernelFileInfo interactions.IGameDataInfo) error {
 	}
 	
 	args := []string{"-e", "-t", codeTable, targetFile, extractLocation.TargetFile}
-	//args = append(args, codeTable, targetFile, extractLocation.TargetFile)
 
 	if err := lib.RunCommand(executable, args); err != nil {
 		return err

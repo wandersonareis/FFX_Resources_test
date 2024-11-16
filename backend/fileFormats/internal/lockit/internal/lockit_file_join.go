@@ -20,7 +20,6 @@ func NewLockitFileJoiner(dataInfo interactions.IGameDataInfo, parts *[]LockitFil
 	lockitSizes := interactions.NewInteraction().GamePartOptions.GetGamePartOptions().LockitPartsSizes
 	return &LockitFileJoin{
 		FormatsBase:         base.NewFormatsBase(dataInfo),
-		//dataInfo:            dataInfo,
 		parts:               parts,
 		partsSizes:          &lockitSizes,
 		expectedPartsLength: len(lockitSizes) + 1,

@@ -54,7 +54,6 @@ func (p *Progress) Start() {
 
 func (p *Progress) Stop() {
 	p.restart()
-	//runtime.EventsEmit(p.ctx, "ShowProgress", false)
 }
 
 func (p *Progress) Restart() {

@@ -29,11 +29,6 @@ func KernelTextPacker(gameData interactions.IGameDataInfo) error {
 		return err
 	}
 
-	/* args, err := util.EncoderDlgKrnlArgs()
-	if err != nil {
-		return err
-	} */
-
 	characterTable := util.NewCharacterTable()
 	characterTable.Dispose()
 
@@ -45,8 +40,6 @@ func KernelTextPacker(gameData interactions.IGameDataInfo) error {
 	targetFile := gameData.GetGameData().FullFilePath
 
 	args := []string{"-i", "-t", codeTable, targetFile, translateLocation.TargetFile, importLocation.TargetFile}
-
-	//args = append(args, codeTable, targetFile, translateLocation.TargetFile, importLocation.TargetFile)
 
 	if err := lib.RunCommand(executable, args); err != nil {
 		return err

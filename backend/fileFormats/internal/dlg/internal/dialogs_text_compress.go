@@ -39,7 +39,6 @@ func DialogsFileCompressor(gameData interactions.IGameDataInfo) error {
 
 	args := []string{"-i", "-t", codeTable, targetFile, translateLocation.TargetFile, importLocation.TargetFile}
 
-	//args = append(args, codeTable, targetFile, translateLocation.TargetFile, importLocation.TargetFile)
 
 	if err := lib.RunCommand(executable, args); err != nil {
 		return err

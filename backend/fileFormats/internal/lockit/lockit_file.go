@@ -11,7 +11,6 @@ import (
 
 type LockitFile struct {
 	*base.FormatsBase
-	//DataInfo interactions.IGameDataInfo
 	Parts    *[]internal.LockitFileParts
 }
 
@@ -32,7 +31,6 @@ func NewLockitFile(dataInfo interactions.IGameDataInfo) interactions.IFileProces
 
 	return &LockitFile{
 		FormatsBase: base.NewFormatsBase(dataInfo),
-		//DataInfo: dataInfo.GetGameDataInfo(),
 		Parts:    &parts,
 	}
 }
@@ -49,7 +47,6 @@ func (l *LockitFile) Extract() {
 
 		newLockitFile := NewLockitFile(l.GetFileInfo()).(*LockitFile)
 
-		//l.DataInfo = newLockitFile.GetFileInfo()
 		l.SetFileInfo(newLockitFile.GetFileInfo())
 		l.Parts = newLockitFile.Parts
 	}

@@ -22,8 +22,6 @@ const UTF8BOM_NORMALIZER_APPLICATION string = "utf8bom.exe"
 const DEFAULT_APPLICATION_FILE_EXTENSION string = ".exe"
 const DEFAULT_ENCODING_TABLE_FILE_EXTENSION string = ".tbs"
 
-//const DEFAULT_RESOURCES_ROOTDIR = "bin"
-
 const DIALOGS_TARGET_DIR_NAME string = "dialogs_text"
 const KERNEL_TARGET_DIR_NAME string = "kernel_text"
 
