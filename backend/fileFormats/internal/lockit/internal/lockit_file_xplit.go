@@ -3,7 +3,6 @@ package internal
 import (
 	"bufio"
 	"bytes"
-	"ffxresources/backend/events"
 	"ffxresources/backend/interactions"
 	"fmt"
 	"os"
@@ -14,7 +13,7 @@ type LockitFileXplit struct {
 	path string
 }
 
-func NewLockitFileXplit(dataInfo interactions.IGameDataInfo) *LockitFileXplit {
+func newLockitFileXplit(dataInfo interactions.IGameDataInfo) *LockitFileXplit {
 	return &LockitFileXplit{path: dataInfo.GetGameData().FullFilePath}
 }
 
@@ -31,7 +30,7 @@ func (fh *LockitFileXplit) ensureCrescentOrder(sizes []int) error {
 	return nil
 }
 
-func (fh *LockitFileXplit) XplitFile(sizes []int, outputFileNameBase, outputDir string) error {
+func (fh *LockitFileXplit) xplitFile(sizes []int, outputFileNameBase, outputDir string) error {
 	file, err := os.Open(fh.path)
 	if err != nil {
 		return fmt.Errorf("error when opening the file: %v", err)
@@ -42,8 +41,6 @@ func (fh *LockitFileXplit) XplitFile(sizes []int, outputFileNameBase, outputDir 
 	if err := fh.ensureCrescentOrder(sizes); err != nil {
 		return err
 	}
-
-	events.LogSeverity(events.SeverityInfo, "Creating parts of the file ...")
 
 	reader := bufio.NewReader(file)
 	occurrences := 0
@@ -70,7 +67,6 @@ func (fh *LockitFileXplit) XplitFile(sizes []int, outputFileNameBase, outputDir 
 				return fmt.Errorf("error when writing the file: %v", err)
 			}
 
-			events.LogSeverity(events.SeverityInfo, fmt.Sprintf("Part %d created", partIndex))
 			buffer = nil
 			partIndex++
 		}
@@ -82,8 +78,6 @@ func (fh *LockitFileXplit) XplitFile(sizes []int, outputFileNameBase, outputDir 
 		if err := os.WriteFile(outputFileName, buffer, 0644); err != nil {
 			return fmt.Errorf("error when writing the file: %v", err)
 		}
-
-		events.LogSeverity(events.SeverityInfo, fmt.Sprintf("Part %d created", partIndex))
 	}
 
 	return nil

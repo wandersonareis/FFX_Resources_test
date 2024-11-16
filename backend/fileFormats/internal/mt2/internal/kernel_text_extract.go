@@ -25,20 +25,21 @@ func KernelUnpacker(kernelFileInfo interactions.IGameDataInfo) error {
 		return err
 	}
 
-	args, err := util.DecoderDlgKrnlArgs()
+	/* args, err := util.DecoderDlgKrnlArgs()
 	if err != nil {
 		return err
-	}
+	} */
 
-	codeTableHandler := new(util.CharacterTable)
-	defer codeTableHandler.Dispose()
+	characterTable := util.NewCharacterTable()
+	characterTable.Dispose()
 
-	codeTable, err := codeTableHandler.GetFfx2CharacterTable()
+	codeTable, err := characterTable.GetFfx2CharacterTable()
 	if err != nil {
 		return fmt.Errorf("failed to get code table: %w", err)
 	}
 	
-	args = append(args, codeTable, targetFile, extractLocation.TargetFile)
+	args := []string{"-e", "-t", codeTable, targetFile, extractLocation.TargetFile}
+	//args = append(args, codeTable, targetFile, extractLocation.TargetFile)
 
 	if err := lib.RunCommand(executable, args); err != nil {
 		return err

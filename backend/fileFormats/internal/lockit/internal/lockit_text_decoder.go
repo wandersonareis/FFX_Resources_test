@@ -1,14 +1,16 @@
 package internal
 
 import (
-	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
 )
 
 func lockitDecoderFfx(lockitFileInfo interactions.IGameDataInfo) error {
-	codeTable, err := new(util.CharacterTable).GetCharacterOnlyTable()
+	characterTable := util.NewCharacterTable()
+	characterTable.Dispose()
+
+	codeTable, err := characterTable.GetCharacterOnlyTable()
 	if err != nil {
 		return err
 	}
@@ -17,7 +19,10 @@ func lockitDecoderFfx(lockitFileInfo interactions.IGameDataInfo) error {
 }
 
 func lockitDecoderLoc(lockitFileInfo interactions.IGameDataInfo) error {
-	codeTable, err := new(util.CharacterTable).GetCharacterLocTable()
+	characterTable := util.NewCharacterTable()
+	characterTable.Dispose()
+
+	codeTable, err := characterTable.GetCharacterLocTable()
 	if err != nil {
 		return err
 	}
@@ -26,14 +31,13 @@ func lockitDecoderLoc(lockitFileInfo interactions.IGameDataInfo) error {
 }
 
 func decoderBase(lockitFileInfo interactions.IGameDataInfo, codeTable string) error {
-	handler, err := getLockitFileHandler()
+	handler := newLockitHandler()
+	defer handler.dispose()
+
+	executable, err := handler.getLockitFileHandler()
 	if err != nil {
 		return err
 	}
-
-	defer common.RemoveFile(handler)
-
-	defer common.RemoveFile(codeTable)
 
 	targetFile := lockitFileInfo.GetGameData().FullFilePath
 
@@ -43,12 +47,14 @@ func decoderBase(lockitFileInfo interactions.IGameDataInfo, codeTable string) er
 		return err
 	}
 
-	args := make([]string, 0, 4)
+	args := []string{"-t", codeTable, targetFile, extractLocation.TargetFile}
+
+	/* args := make([]string, 0, 4)
 	args = append(args, "-t", codeTable)
 	args = append(args, targetFile)
-	args = append(args, extractLocation.TargetFile)
+	args = append(args, extractLocation.TargetFile) */
 
-	if err := lib.RunCommand(handler, args); err != nil {
+	if err := lib.RunCommand(executable, args); err != nil {
 		return err
 	}
 

@@ -6,8 +6,12 @@ type CharacterTable struct {
 	targetFile string
 }
 
+func NewCharacterTable() *CharacterTable {
+	return &CharacterTable{}
+}
+
 func (ct *CharacterTable) GetFfx2CharacterTable() (string, error) {
-	targetFile, err := GetFromResources(FFX2_CODE_TABLE_NAME, DEFAULT_TABLE_EXTENSION)
+	targetFile, err := GetFromResources(CHARACTER_TABLE_RESOURCES_DIR, FFX2_ENCODING_TABLE_NAME, DEFAULT_ENCODING_TABLE_FILE_EXTENSION)
 	if err != nil {
 		return "", err
 	}
@@ -18,7 +22,7 @@ func (ct *CharacterTable) GetFfx2CharacterTable() (string, error) {
 }
 
 func (ct *CharacterTable) GetCharacterOnlyTable() (string, error) {
-	targetFile, err := GetFromResources(CHARACTER_CODE_TABLE, DEFAULT_TABLE_EXTENSION)
+	targetFile, err := GetFromResources(CHARACTER_TABLE_RESOURCES_DIR, CHARACTER_ENCODING_TABLE, DEFAULT_ENCODING_TABLE_FILE_EXTENSION)
 	if err != nil {
 		return "", err
 	}
@@ -29,7 +33,7 @@ func (ct *CharacterTable) GetCharacterOnlyTable() (string, error) {
 }
 
 func (ct *CharacterTable) GetCharacterLocTable() (string, error) {
-	targetFile, err := GetFromResources(CHARACTER_LOC_CODE_TABLE, DEFAULT_TABLE_EXTENSION)
+	targetFile, err := GetFromResources("tbs", CHARACTER_LOC_ENCODING_TABLE, DEFAULT_ENCODING_TABLE_FILE_EXTENSION)
 	if err != nil {
 		return "", err
 	}

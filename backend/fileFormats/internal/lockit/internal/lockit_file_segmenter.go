@@ -29,7 +29,7 @@ func EnsurePartsExists(info interactions.IGameDataInfo) error {
 }
 
 func ffx2Xplitter(dataInfo interactions.IGameDataInfo, sizes []int) error {
-	handler := NewLockitFileXplit(dataInfo)
+	handler := newLockitFileXplit(dataInfo)
 
 	extractLocation := dataInfo.GetExtractLocation()
 
@@ -37,7 +37,7 @@ func ffx2Xplitter(dataInfo interactions.IGameDataInfo, sizes []int) error {
 		return err
 	}
 
-	if err := handler.XplitFile(sizes, util.LOCKIT_NAME_BASE, extractLocation.TargetPath); err != nil {
+	if err := handler.xplitFile(sizes, util.LOCKIT_NAME_BASE, extractLocation.TargetPath); err != nil {
 		return err
 	}
 

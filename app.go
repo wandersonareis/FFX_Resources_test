@@ -91,7 +91,7 @@ func (a App) domReady(ctx context.Context) {
 	services.TestExtractFile(testPath, false, false)
 
 	testPath = `F:\ffxWails\FFX_Resources\build\bin\data\ffx_ps2\ffx2\master\new_uspc\menu`
-	services.TestExtractDir(testPath, true, true)
+	services.TestExtractDir(testPath, false, false)
 
 }
 

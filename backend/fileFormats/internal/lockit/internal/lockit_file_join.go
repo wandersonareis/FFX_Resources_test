@@ -11,7 +11,6 @@ import (
 
 type LockitFileJoin struct {
 	*base.FormatsBase
-	//dataInfo            interactions.IGameDataInfo
 	parts               *[]LockitFileParts
 	partsSizes          *[]int
 	expectedPartsLength int

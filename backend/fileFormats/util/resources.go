@@ -2,9 +2,9 @@ package util
 
 import "ffxresources/backend/common"
 
-func GetFromResources(resourceName, ext string) (string, error) {
+func GetFromResources(subDir, resourceName, ext string) (string, error) {
 	targetHandler := []string{
-		DEFAULT_RESOURCES_ROOTDIR,
+		subDir,
 		resourceName,
 	}
 

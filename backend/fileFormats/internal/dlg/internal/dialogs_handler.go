@@ -23,7 +23,7 @@ func (d *dialogsHandler) getDialogsHandler() (string, error) {
 	return d.getHandler()
 }
 func (d *dialogsHandler) getHandler() (string, error) {
-	targetFile, err := util.GetFromResources(util.DIALOG_HANDLER_APPLICATION, util.DEFAULT_TABLE_EXTENSION)
+	targetFile, err := util.GetFromResources(util.DIALOG_HANDLER_RESOURCES_DIR, util.DIALOG_HANDLER_APPLICATION, util.DEFAULT_APPLICATION_FILE_EXTENSION)
 	if err != nil {
 		return "", err
 	}
@@ -34,7 +34,7 @@ func (d *dialogsHandler) getHandler() (string, error) {
 }
 
 func (d *dialogsHandler) getSpecialHandler() (string, error) {
-	targetFile, err := util.GetFromResources(util.DIALOG_SPECIAL_HANDLER_APPLICATION, util.DEFAULT_TABLE_EXTENSION)
+	targetFile, err := util.GetFromResources(util.DIALOG_HANDLER_RESOURCES_DIR, util.DIALOG_SPECIAL_HANDLER_APPLICATION, util.DEFAULT_APPLICATION_FILE_EXTENSION)
 	if err != nil {
 		return "", err
 	}

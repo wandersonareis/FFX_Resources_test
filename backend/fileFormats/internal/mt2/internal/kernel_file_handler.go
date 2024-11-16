@@ -26,9 +26,9 @@ func (kh *kernelHandler) getKernelFileHandler() (string, error) {
 
 	switch kh.gamePart {
 	case core.FFX:
-		targetFile, err = util.GetFromResources(util.FFX_KERNEL_HANDLER_APPLICATION, util.DEFAULT_APPLICATION_EXTENSION)
+		targetFile, err = util.GetFromResources(util.KERNEL_HANDLER_RESOURCES_DIR, util.FFX_KERNEL_HANDLER_APPLICATION, util.DEFAULT_APPLICATION_FILE_EXTENSION)
 	case core.FFX2:
-		targetFile, err = util.GetFromResources(util.FFX2_KERNEL_HANDLER_APPLICATION, util.DEFAULT_APPLICATION_EXTENSION)
+		targetFile, err = util.GetFromResources(util.KERNEL_HANDLER_RESOURCES_DIR, util.FFX2_KERNEL_HANDLER_APPLICATION, util.DEFAULT_APPLICATION_FILE_EXTENSION)
 	default:
 		return "", fmt.Errorf("unknown game part: %v", kh.gamePart)
 	}

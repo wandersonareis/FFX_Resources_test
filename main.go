@@ -7,7 +7,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/rs/zerolog"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/logger"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -35,20 +34,6 @@ func logToFile() {
 	logFile = file
 	log.SetOutput(file)
 	log.SetFlags(log.Ldate | log.LstdFlags | log.Lshortfile)
-}
-
-func loggerInit() zerolog.Logger {
-	currentTime := time.Now().Format("02-01-2006")
-	fileName := fmt.Sprintf("tracker-%s.log", currentTime)
-
-	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	fileLogger := zerolog.New(file).With().Caller().Stack().Timestamp().Logger()
-
-	return fileLogger
 }
 
 func main() {

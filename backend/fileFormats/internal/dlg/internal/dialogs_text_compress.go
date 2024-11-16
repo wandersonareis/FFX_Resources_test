@@ -27,11 +27,6 @@ func DialogsFileCompressor(gameData interactions.IGameDataInfo) error {
 		return err
 	}
 
-	args, err := util.EncoderDlgKrnlArgs()
-	if err != nil {
-		return err
-	}
-
 	codeTableHandler := new(util.CharacterTable)
 	defer codeTableHandler.Dispose()
 
@@ -42,7 +37,9 @@ func DialogsFileCompressor(gameData interactions.IGameDataInfo) error {
 
 	targetFile := gameData.GetGameData().FullFilePath
 
-	args = append(args, codeTable, targetFile, translateLocation.TargetFile, importLocation.TargetFile)
+	args := []string{"-i", "-t", codeTable, targetFile, translateLocation.TargetFile, importLocation.TargetFile}
+
+	//args = append(args, codeTable, targetFile, translateLocation.TargetFile, importLocation.TargetFile)
 
 	if err := lib.RunCommand(executable, args); err != nil {
 		return err
