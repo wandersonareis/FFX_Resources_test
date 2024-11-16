@@ -34,15 +34,20 @@ func NewLockitFile(dataInfo interactions.IGameDataInfo) interactions.IFileProces
 }
 
 func (l *LockitFile) Extract() {
-	if err := internal.EnsurePartsExists(l.GetFileInfo()); err != nil {
-		l.Log.Error().Err(err).Msg("error when ensuring lockit parts exist")
-		return
+	currentPartsLength := len(*l.Parts)
+	expectedPartsLength := interactions.NewInteraction().GamePartOptions.GetGamePartOptions().LockitPartsLength + 1
+
+	if currentPartsLength != expectedPartsLength {
+		if err := internal.EnsurePartsExists(l.GetFileInfo()); err != nil {
+			l.Log.Error().Err(err).Msg("error when ensuring lockit parts exist")
+			return
+		}
+
+		newLockitFile := NewLockitFile(l.GetFileInfo()).(*LockitFile)
+
+		l.SetFileInfo(newLockitFile.GetFileInfo())
+		l.Parts = newLockitFile.Parts
 	}
-
-	newLockitFile := NewLockitFile(l.GetFileInfo()).(*LockitFile)
-
-	l.SetFileInfo(newLockitFile.GetFileInfo())
-	l.Parts = newLockitFile.Parts
 
 	internal.SegmentFile(l.Parts)
 }
@@ -52,14 +57,11 @@ func (l *LockitFile) Compress() {
 
 	lockitSizesLength := interactions.GamePartOptions.GetGamePartOptions().LockitPartsLength + 1
 
-	translatedParts := []internal.LockitFileParts{}
+	partsJoiner := internal.NewLockitFileJoiner(l.GetFileInfo(), l.Parts)
 
-	if err := util.FindFileParts(
-		&translatedParts,
-		l.GetTranslateLocation().TargetPath,
-		util.LOCKIT_TXT_PARTS_PATTERN,
-		internal.NewLockitFileParts); err != nil {
-		l.Log.Error().Err(err).Str("Path", l.GetTranslateLocation().TargetPath).Msg("error when finding lockit parts")
+	translatedParts, err := partsJoiner.FindTextParts()
+	if err != nil {
+		l.Log.Error().Err(err).Msg("error when finding lockit text parts")
 		return
 	}
 
@@ -67,8 +69,6 @@ func (l *LockitFile) Compress() {
 		l.Log.Error().Int("TranslatedParts", len(translatedParts)).Int("ExpectedParts", lockitSizesLength).Msg("invalid number of translated parts")
 		return
 	}
-
-	partsJoiner := internal.NewLockitFileJoiner(l.GetFileInfo(), l.Parts)
 
 	if err := partsJoiner.EncodeFilesParts(); err != nil {
 		l.Log.Error().Err(err).Interface("LockitFile", l.GetFileInfo()).Msg("error when encoding lockit file parts")

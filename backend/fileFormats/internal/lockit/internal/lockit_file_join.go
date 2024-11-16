@@ -4,21 +4,23 @@ import (
 	"bytes"
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/internal/base"
+	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/interactions"
 	"fmt"
 	"os"
+	"slices"
 )
 
-type LockitFileJoin struct {
+type lockitFileJoin struct {
 	*base.FormatsBase
 	parts               *[]LockitFileParts
 	partsSizes          *[]int
 	expectedPartsLength int
 }
 
-func NewLockitFileJoiner(dataInfo interactions.IGameDataInfo, parts *[]LockitFileParts) *LockitFileJoin {
+func NewLockitFileJoiner(dataInfo interactions.IGameDataInfo, parts *[]LockitFileParts) *lockitFileJoin {
 	lockitSizes := interactions.NewInteraction().GamePartOptions.GetGamePartOptions().LockitPartsSizes
-	return &LockitFileJoin{
+	return &lockitFileJoin{
 		FormatsBase:         base.NewFormatsBase(dataInfo),
 		parts:               parts,
 		partsSizes:          &lockitSizes,
@@ -26,12 +28,27 @@ func NewLockitFileJoiner(dataInfo interactions.IGameDataInfo, parts *[]LockitFil
 	}
 }
 
-func (lj *LockitFileJoin) EncodeFilesParts() error {
+func (lj *lockitFileJoin) FindTextParts() ([]LockitFileParts, error) {
+	parts := []LockitFileParts{}
+	err := util.FindFileParts(
+		&parts,
+		lj.GetTranslateLocation().TargetPath,
+		util.LOCKIT_TXT_PARTS_PATTERN,
+		NewLockitFileParts)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return slices.Clip(parts), nil
+}
+
+func (lj *lockitFileJoin) EncodeFilesParts() error {
 	worker := common.NewWorker[LockitFileParts]()
 
 	worker.ParallelForEach(*lj.parts,
 		func(index int, part LockitFileParts) {
-			if index > 0 && index % 2 == 0 {
+			if index > 0 && index%2 == 0 {
 				part.Compress(LocEnc)
 			} else {
 				part.Compress(FfxEnc)
@@ -45,7 +62,7 @@ func (lj *LockitFileJoin) EncodeFilesParts() error {
 	return nil
 }
 
-func (lj *LockitFileJoin) JoinFileParts() error {
+func (lj *lockitFileJoin) JoinFileParts() error {
 	importLocation := lj.GetImportLocation()
 
 	if len(*lj.parts) != lj.expectedPartsLength {
