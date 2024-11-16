@@ -11,7 +11,7 @@ func SegmentFile(parts *[]LockitFileParts) {
 
 	worker.ParallelForEach(*parts,
 		func(index int, part LockitFileParts) {
-			if index > 0 && index%2 == 0 {
+			if index > 0 && index % 2 == 0 {
 				part.Extract(LocEnc)
 			} else {
 				part.Extract(FfxEnc)

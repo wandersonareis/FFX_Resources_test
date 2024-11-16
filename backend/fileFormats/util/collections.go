@@ -3,6 +3,7 @@ package util
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/interactions"
+	"slices"
 )
 
 func FindFileParts[T any](parts *[]T, targetPath, pattern string, partsInstance func(info interactions.IGameDataInfo) *T) error {
@@ -22,14 +23,16 @@ func FindFileParts[T any](parts *[]T, targetPath, pattern string, partsInstance 
 			return nil
 		}
 
-		dcpPart := partsInstance(info)
-		if dcpPart == nil {
+		part := partsInstance(info)
+		if part == nil {
 			return nil
 		}
 
-		*parts = append(*parts, *dcpPart)
+		*parts = append(*parts, *part)
 		return nil
 	})
+
+	*parts = slices.Clip(*parts)
 
 	return nil
 }

@@ -26,12 +26,12 @@ func NewLockitFileJoiner(dataInfo interactions.IGameDataInfo, parts *[]LockitFil
 	}
 }
 
-func (lj *LockitFileJoin) UnSegmenterFile() error {
+func (lj *LockitFileJoin) EncodeFilesParts() error {
 	worker := common.NewWorker[LockitFileParts]()
 
 	worker.ParallelForEach(*lj.parts,
 		func(index int, part LockitFileParts) {
-			if index > 0 && index%2 == 0 {
+			if index > 0 && index % 2 == 0 {
 				part.Compress(LocEnc)
 			} else {
 				part.Compress(FfxEnc)
@@ -42,14 +42,10 @@ func (lj *LockitFileJoin) UnSegmenterFile() error {
 		return err
 	}
 
-	if err := lj.joinFile(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
-func (lj *LockitFileJoin) joinFile() error {
+func (lj *LockitFileJoin) JoinFileParts() error {
 	importLocation := lj.GetImportLocation()
 
 	if len(*lj.parts) != lj.expectedPartsLength {
@@ -61,11 +57,11 @@ func (lj *LockitFileJoin) joinFile() error {
 	worker := common.NewWorker[LockitFileParts]()
 
 	err := worker.ForEach(*lj.parts, func(_ int, part LockitFileParts) error {
-		fileName := part.dataInfo.GetImportLocation().TargetFile
+		fileName := part.GetFileInfo().GetImportLocation().TargetFile
 
 		partData, err := os.ReadFile(fileName)
 		if err != nil {
-			return fmt.Errorf("erro ao ler a parte %s: %v", fileName, err)
+			return fmt.Errorf("error reading the separate %s: %v", fileName, err)
 		}
 		combinedBuffer.Write(partData)
 
@@ -81,15 +77,24 @@ func (lj *LockitFileJoin) joinFile() error {
 	}
 
 	if err := os.WriteFile(importLocation.TargetFile, combinedBuffer.Bytes(), 0644); err != nil {
-		return fmt.Errorf("erro ao criar arquivo de saída: %v", err)
+		return fmt.Errorf("error when creating output file: %v", err)
 	}
 
-	originalData, err := os.ReadFile(lj.GetGameData().FullFilePath)
+	err = valideLockit(importLocation.TargetFile, combinedBuffer.Bytes())
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func valideLockit(file string, buffer []byte) error {
+	originalData, err := os.ReadFile(file)
 	if err != nil {
 		return fmt.Errorf("erro ao ler o arquivo original: %v", err)
 	}
 
-	isExactMatch := bytes.Equal(originalData, combinedBuffer.Bytes())
+	isExactMatch := bytes.Equal(originalData, buffer)
 	if !isExactMatch {
 		return fmt.Errorf("arquivos não correspondem")
 	} else {

@@ -18,7 +18,7 @@ func lockitEncoderFfx(lockitFileInfo interactions.IGameDataInfo) error {
 	return encoderBase(lockitFileInfo, codeTable)
 }
 
-func lockitEncoderLoc(lockitFileInfo *interactions.GameDataInfo) error {
+func lockitEncoderLoc(lockitFileInfo interactions.IGameDataInfo) error {
 	characterTable := util.NewCharacterTable()
 	characterTable.Dispose()
 
@@ -32,7 +32,7 @@ func lockitEncoderLoc(lockitFileInfo *interactions.GameDataInfo) error {
 		return err
 	}
 
-	encodedFile := lockitFileInfo.ImportLocation.TargetFile
+	encodedFile := lockitFileInfo.GetImportLocation().TargetFile
 
 	return ensureUtf8Bom(encodedFile)
 }

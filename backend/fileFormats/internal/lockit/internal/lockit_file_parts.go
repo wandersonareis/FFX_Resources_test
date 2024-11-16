@@ -1,7 +1,7 @@
 package internal
 
 import (
-	"ffxresources/backend/events"
+	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
@@ -10,7 +10,7 @@ import (
 )
 
 type LockitFileParts struct {
-	dataInfo *interactions.GameDataInfo
+	*base.FormatsBase
 }
 
 type LockitPartEncodeType int
@@ -28,28 +28,24 @@ func NewLockitFileParts(dataInfo interactions.IGameDataInfo) *LockitFileParts {
 	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
 
 	return &LockitFileParts{
-		dataInfo: dataInfo.GetGameDataInfo(),
+		FormatsBase: base.NewFormatsBase(dataInfo),
 	}
 }
 
-func (l LockitFileParts) GetFileInfo() *interactions.GameDataInfo {
-	return l.dataInfo
-}
-
-func (l *LockitFileParts) Extract(enc LockitPartEncodeType) {
+func (l *LockitFileParts) Extract(dec LockitPartEncodeType) {
 	var err error
 
-	switch enc {
+	switch dec {
 	case FfxEnc:
-		err = lockitDecoderFfx(l.dataInfo)
+		err = lockitDecoderFfx(l.GetFileInfo())
 	case LocEnc:
-		err = lockitDecoderLoc(l.dataInfo)
+		err = lockitDecoderLoc(l.GetFileInfo())
 	default:
-		err = fmt.Errorf("invalid encode type: %d", enc)
+		err = fmt.Errorf("invalid encode type: %d", dec)
 	}
 
 	if err != nil {
-		events.NotifyError(err)
+		l.Log.Error().Err(err).Msg("error when decoding lockit file")
 		return
 	}
 }
@@ -59,15 +55,15 @@ func (l *LockitFileParts) Compress(enc LockitPartEncodeType) {
 
 	switch enc {
 	case FfxEnc:
-		err = lockitEncoderFfx(l.dataInfo)
+		err = lockitEncoderFfx(l.GetFileInfo())
 	case LocEnc:
-		err = lockitEncoderLoc(l.dataInfo)
+		err = lockitEncoderLoc(l.GetFileInfo())
 	default:
 		err = fmt.Errorf("invalid encode type: %d", enc)
 	}
 
 	if err != nil {
-		events.NotifyError(err)
+		l.Log.Error().Err(err).Msg("error when encoding lockit file")
 		return
 	}
 }

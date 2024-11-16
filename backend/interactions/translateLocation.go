@@ -26,7 +26,9 @@ func NewTranslateLocation() *TranslateLocation {
 }
 
 func (t *TranslateLocation) Validate() error {
-	if !t.isTargetFileAvailable() {
+	t.IsExist = t.isTargetFileAvailable()
+
+	if !t.IsExist {
 		return fmt.Errorf("translated file does not exist")
 	}
 

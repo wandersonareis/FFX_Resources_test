@@ -11,13 +11,11 @@ import (
 
 type LockitFile struct {
 	*base.FormatsBase
-	Parts    *[]internal.LockitFileParts
+	Parts *[]internal.LockitFileParts
 }
 
 func NewLockitFile(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor {
-	partsLength := interactions.NewInteraction().GamePartOptions.GetGamePartOptions().LockitPartsLength
-
-	parts := make([]internal.LockitFileParts, 0, partsLength)
+	parts := []internal.LockitFileParts{}
 
 	dataInfo.CreateRelativePath()
 
@@ -31,25 +29,20 @@ func NewLockitFile(dataInfo interactions.IGameDataInfo) interactions.IFileProces
 
 	return &LockitFile{
 		FormatsBase: base.NewFormatsBase(dataInfo),
-		Parts:    &parts,
+		Parts:       &parts,
 	}
 }
 
 func (l *LockitFile) Extract() {
-	currentPartsLength := len(*l.Parts)
-	expectedPartsLength := interactions.NewInteraction().GamePartOptions.GetGamePartOptions().LockitPartsLength + 1
-
-	if currentPartsLength != expectedPartsLength {
-		if err := internal.EnsurePartsExists(l.GetFileInfo()); err != nil {
-			l.Log.Error().Err(err).Msg("error when ensuring lockit parts exist")
-			return
-		}
-
-		newLockitFile := NewLockitFile(l.GetFileInfo()).(*LockitFile)
-
-		l.SetFileInfo(newLockitFile.GetFileInfo())
-		l.Parts = newLockitFile.Parts
+	if err := internal.EnsurePartsExists(l.GetFileInfo()); err != nil {
+		l.Log.Error().Err(err).Msg("error when ensuring lockit parts exist")
+		return
 	}
+
+	newLockitFile := NewLockitFile(l.GetFileInfo()).(*LockitFile)
+
+	l.SetFileInfo(newLockitFile.GetFileInfo())
+	l.Parts = newLockitFile.Parts
 
 	internal.SegmentFile(l.Parts)
 }
@@ -57,9 +50,9 @@ func (l *LockitFile) Extract() {
 func (l *LockitFile) Compress() {
 	interactions := interactions.NewInteraction()
 
-	lockitSizesLength := interactions.GamePartOptions.GetGamePartOptions().LockitPartsLength
+	lockitSizesLength := interactions.GamePartOptions.GetGamePartOptions().LockitPartsLength + 1
 
-	translatedParts := make([]internal.LockitFileParts, 0, lockitSizesLength)
+	translatedParts := []internal.LockitFileParts{}
 
 	if err := util.FindFileParts(
 		&translatedParts,
@@ -70,15 +63,20 @@ func (l *LockitFile) Compress() {
 		return
 	}
 
-	if len(translatedParts) != lockitSizesLength+1 {
+	if len(translatedParts) != lockitSizesLength {
 		l.Log.Error().Int("TranslatedParts", len(translatedParts)).Int("ExpectedParts", lockitSizesLength).Msg("invalid number of translated parts")
 		return
 	}
 
 	partsJoiner := internal.NewLockitFileJoiner(l.GetFileInfo(), l.Parts)
 
-	if err := partsJoiner.UnSegmenterFile(); err != nil {
-		l.Log.Error().Err(err).Interface("LockitFile", l.GetFileInfo()).Msg("error when unsegmenting lockit file")
+	if err := partsJoiner.EncodeFilesParts(); err != nil {
+		l.Log.Error().Err(err).Interface("LockitFile", l.GetFileInfo()).Msg("error when encoding lockit file parts")
+		return
+	}
+
+	if err := partsJoiner.JoinFileParts(); err != nil {
+		l.Log.Error().Err(err).Interface("LockitFile", l.GetFileInfo()).Msg("error when joining lockit file parts")
 		return
 	}
 }

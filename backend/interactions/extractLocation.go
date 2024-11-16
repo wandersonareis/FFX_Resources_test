@@ -26,7 +26,9 @@ func NewExtractLocation() *ExtractLocation {
 }
 
 func (e *ExtractLocation) Validate() error {
-	if !e.isTargetFileAvailable() {
+	e.IsExist = e.isTargetFileAvailable()
+	
+	if !e.IsExist {
 		return fmt.Errorf("extracted file does not exist")
 	}
 
