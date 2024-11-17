@@ -76,7 +76,7 @@ func (a App) domReady(ctx context.Context) {
 	EventsOnSaveConfig(ctx, a.appConfig.filePath)
 
 	testPath := "F:\\ffxWails\\FFX_Resources\\build\\bin\\data\\ffx-2_data\\gamedata\\ps3data\\lockit\\ffx2_loc_kit_ps3_us.bin"
-	services.TestExtractFile(testPath, false, false)
+	services.TestExtractFile(testPath, true, true)
 
 	testPath = `F:\ffxWails\FFX_Resources\build\bin\data\ffx_ps2\ffx2\master\new_uspc\menu\macrodic.dcp`
 	services.TestExtractFile(testPath, false, false)

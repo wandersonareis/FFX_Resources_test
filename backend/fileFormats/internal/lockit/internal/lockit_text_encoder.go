@@ -56,9 +56,6 @@ func encoderBase(lockitFileInfo interactions.IGameDataInfo, codeTable string) er
 	
 	args := []string{"-tr", codeTable, targetFile, importLocation.TargetFile}
 
-	/* args := make([]string, 0, 4)
-	args = append(args, "-tr", codeTable, targetFile, importLocation.TargetFile) */
-
 	if err := lib.RunCommand(executable, args); err != nil {
 		return err
 	}
@@ -76,9 +73,6 @@ func ensureUtf8Bom(target string) error {
 	}
 
 	args := []string{"-r", target}
-
-	/* args := make([]string, 0, 2)
-	args = append(args, "-r", target) */
 
 	if err := lib.RunCommand(executable, args); err != nil {
 		return err

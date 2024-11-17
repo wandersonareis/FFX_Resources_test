@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -62,6 +63,8 @@ func ListFilesInDirectory(s string) ([]string, error) {
 		return nil, err
 	}
 
+	results = slices.Clip(results)
+
 	return results, nil
 }
 
@@ -90,6 +93,8 @@ func ListFilesMatchingPattern(files *[]string, path, pattern string) error {
 		}
 		return nil
 	})
+
+	*files = slices.Clip(*files)
 
 	return err
 }

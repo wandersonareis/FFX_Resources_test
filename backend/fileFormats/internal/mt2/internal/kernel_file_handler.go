@@ -28,15 +28,15 @@ func (kh *kernelHandler) getKernelFileHandler() (string, error) {
 
 	switch kh.gamePart {
 	case core.FFX:
-		targetFile, err = util.GetFromResources(util.KERNEL_HANDLER_RESOURCES_DIR, util.FFX_KERNEL_HANDLER_APPLICATION, util.DEFAULT_APPLICATION_FILE_EXTENSION)
-		kh.SetChecksumString(util.FFX_KERNEL_HANDLER_SHA256)
+		targetFile, err = util.GetFromResources(KERNEL_HANDLER_RESOURCES_DIR, FFX_KERNEL_HANDLER_APPLICATION, util.DEFAULT_APPLICATION_FILE_EXTENSION)
+		kh.SetChecksumString(FFX_KERNEL_HANDLER_SHA256)
 
 		if !kh.IsValid(targetFile) {
 			return "", fmt.Errorf("invalid checksum for kernel file handler")
 		}
 	case core.FFX2:
-		targetFile, err = util.GetFromResources(util.KERNEL_HANDLER_RESOURCES_DIR, util.FFX2_KERNEL_HANDLER_APPLICATION, util.DEFAULT_APPLICATION_FILE_EXTENSION)
-		kh.SetChecksumString(util.FFX2_KERNEL_HANDLER_SHA256)
+		targetFile, err = util.GetFromResources(KERNEL_HANDLER_RESOURCES_DIR, FFX2_KERNEL_HANDLER_APPLICATION, util.DEFAULT_APPLICATION_FILE_EXTENSION)
+		kh.SetChecksumString(FFX2_KERNEL_HANDLER_SHA256)
 
 		if !kh.IsValid(targetFile) {
 			return "", fmt.Errorf("invalid checksum for kernel file handler")

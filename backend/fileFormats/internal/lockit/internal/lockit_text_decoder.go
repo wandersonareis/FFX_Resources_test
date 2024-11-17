@@ -49,11 +49,6 @@ func decoderBase(lockitFileInfo interactions.IGameDataInfo, codeTable string) er
 
 	args := []string{"-t", codeTable, targetFile, extractLocation.TargetFile}
 
-	/* args := make([]string, 0, 4)
-	args = append(args, "-t", codeTable)
-	args = append(args, targetFile)
-	args = append(args, extractLocation.TargetFile) */
-
 	if err := lib.RunCommand(executable, args); err != nil {
 		return err
 	}

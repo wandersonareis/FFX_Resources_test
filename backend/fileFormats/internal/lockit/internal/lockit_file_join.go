@@ -13,18 +13,15 @@ import (
 
 type lockitFileJoin struct {
 	*base.FormatsBase
-	parts               *[]LockitFileParts
-	partsSizes          *[]int
-	expectedPartsLength int
+	parts   *[]LockitFileParts
+	options *interactions.LockitFileOptions
 }
 
 func NewLockitFileJoiner(dataInfo interactions.IGameDataInfo, parts *[]LockitFileParts) *lockitFileJoin {
-	lockitSizes := interactions.NewInteraction().GamePartOptions.GetGamePartOptions().LockitPartsSizes
 	return &lockitFileJoin{
-		FormatsBase:         base.NewFormatsBase(dataInfo),
-		parts:               parts,
-		partsSizes:          &lockitSizes,
-		expectedPartsLength: len(lockitSizes) + 1,
+		FormatsBase: base.NewFormatsBase(dataInfo),
+		options:     interactions.NewInteraction().GamePartOptions.GetLockitFileOptions(),
+		parts:       parts,
 	}
 }
 
@@ -33,7 +30,7 @@ func (lj *lockitFileJoin) FindTextParts() ([]LockitFileParts, error) {
 	err := util.FindFileParts(
 		&parts,
 		lj.GetTranslateLocation().TargetPath,
-		util.LOCKIT_TXT_PARTS_PATTERN,
+		LOCKIT_TXT_PARTS_PATTERN,
 		NewLockitFileParts)
 
 	if err != nil {
@@ -65,8 +62,8 @@ func (lj *lockitFileJoin) EncodeFilesParts() error {
 func (lj *lockitFileJoin) JoinFileParts() error {
 	importLocation := lj.GetImportLocation()
 
-	if len(*lj.parts) != lj.expectedPartsLength {
-		return fmt.Errorf("invalid number of parts: %d expected: %d", len(*lj.parts), lj.expectedPartsLength)
+	if len(*lj.parts) != lj.options.PartsLength {
+		return fmt.Errorf("invalid number of parts: %d expected: %d", len(*lj.parts), lj.options.PartsLength)
 	}
 
 	var combinedBuffer bytes.Buffer
@@ -93,19 +90,29 @@ func (lj *lockitFileJoin) JoinFileParts() error {
 		return err
 	}
 
-	if err := os.WriteFile(importLocation.TargetFile, combinedBuffer.Bytes(), 0644); err != nil {
-		return fmt.Errorf("error when creating output file: %v", err)
-	}
-
-	err = valideLockit(importLocation.TargetFile, combinedBuffer.Bytes())
+	err = lj.valideLockit(lj.GetGameData().FullFilePath, combinedBuffer.Bytes())
 	if err != nil {
 		return err
+	}
+
+	if err := os.WriteFile(importLocation.TargetFile, combinedBuffer.Bytes(), 0644); err != nil {
+		return fmt.Errorf("error when creating output file: %v", err)
 	}
 
 	return nil
 }
 
-func valideLockit(file string, buffer []byte) error {
+func (lj *lockitFileJoin) countAllLineEndings(buffer []byte) int {
+	return bytes.Count(buffer, []byte("\r\n"))
+}
+
+func (lj *lockitFileJoin) valideLockit(file string, buffer []byte) error {
+	bufferLineBreaksCount := lj.countAllLineEndings(buffer)
+
+	if lj.options.LineBreaksCount != bufferLineBreaksCount {
+		return fmt.Errorf("line breaks count does not match. Expected: %d, got: %d", lj.options.LineBreaksCount, bufferLineBreaksCount)
+	}
+
 	originalData, err := os.ReadFile(file)
 	if err != nil {
 		return fmt.Errorf("erro ao ler o arquivo original: %v", err)
@@ -115,7 +122,7 @@ func valideLockit(file string, buffer []byte) error {
 	if !isExactMatch {
 		return fmt.Errorf("arquivos não correspondem")
 	} else {
-		fmt.Println("Arquivos lockkt correspondem")
+		fmt.Println("Arquivos lockit correspondem")
 	}
 
 	return nil

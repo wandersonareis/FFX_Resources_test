@@ -3,6 +3,7 @@ package internal
 import (
 	"bytes"
 	"ffxresources/backend/common"
+	"ffxresources/backend/interactions"
 	"fmt"
 	"io"
 	"os"
@@ -12,12 +13,14 @@ import (
 type Content struct {
 	header    *Header
 	container *bytes.Buffer
+	options   *interactions.DcpFileOptions
 	outputDir string
 }
 
 func NewContent(header *Header, outputDir string) *Content {
 	return &Content{
 		header:    header,
+		options:   interactions.NewInteraction().GamePartOptions.GetDcpFileOptions(),
 		outputDir: outputDir,
 	}
 }
@@ -38,7 +41,7 @@ func (c Content) Read(file *os.File) error {
 
 		data := make([]byte, dataLentgh)
 
-		outputFileName := fmt.Sprintf("%s.%03d", "macrodic", i)
+		outputFileName := fmt.Sprintf("%s.%03d", c.options.NameBase, i)
 
 		outputFilePartsPath := filepath.Join(c.outputDir, outputFileName)
 
