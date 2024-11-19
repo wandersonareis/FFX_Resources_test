@@ -56,12 +56,12 @@ func (g *GameDataInfo) GetGameData() *core.GameFiles {
 	return &g.GameData
 }
 
-func (g *GameDataInfo) GetExtractLocation() *ExtractLocation {
-	return &g.ExtractLocation
-}
-
 func (g *GameDataInfo) SetGameData(gameData *core.GameFiles) {
 	g.GameData = *gameData
+}
+
+func (g *GameDataInfo) GetExtractLocation() *ExtractLocation {
+	return &g.ExtractLocation
 }
 
 func (g *GameDataInfo) GetTranslateLocation() *TranslateLocation {
