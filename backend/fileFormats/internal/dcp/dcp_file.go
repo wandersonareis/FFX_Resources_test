@@ -119,3 +119,27 @@ func (d *DcpFile) ensureDcpPartsLength(expected int) error {
 
 	return nil
 }
+
+func (d *DcpFile) VerifyExtract() bool {
+	extractedParts := []internal.DcpFileParts{}
+
+	if err := util.FindFileParts(&extractedParts, d.GetExtractLocation().TargetPath, util.DCP_FILE_PARTS_PATTERN, internal.NewDcpFileParts); err != nil {
+		return false
+	}
+
+	if len(extractedParts) != d.options.PartsLength {
+		return false
+	}
+
+	partsLength := d.options.PartsLength
+
+	if len(*d.Parts) != partsLength {
+		return false
+	}
+
+	return true
+}
+
+func (d *DcpFile) VerifyCompress() error {
+	return nil
+}

@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-func KernelTextPacker(gameData interactions.IGameDataInfo) error {
+func KernelFileCompressor(gameData interactions.IGameDataInfo) error {
 	gamePart := interactions.NewInteraction().GamePart.GetGamePart()
 
 	handler := newKernelHandler(gamePart)

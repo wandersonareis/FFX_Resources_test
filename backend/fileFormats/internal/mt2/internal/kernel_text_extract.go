@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-func KernelUnpacker(kernelFileInfo interactions.IGameDataInfo) error {
+func KernelFileExtractor(kernelFileInfo interactions.IGameDataInfo) error {
 	gamePart := interactions.NewInteraction().GamePart.GetGamePart()
 
 	handler := newKernelHandler(gamePart)
@@ -32,7 +32,7 @@ func KernelUnpacker(kernelFileInfo interactions.IGameDataInfo) error {
 	if err != nil {
 		return fmt.Errorf("failed to get code table: %w", err)
 	}
-	
+
 	args := []string{"-e", "-t", codeTable, targetFile, extractLocation.TargetFile}
 
 	if err := lib.RunCommand(executable, args); err != nil {

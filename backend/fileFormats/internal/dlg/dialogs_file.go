@@ -1,7 +1,6 @@
 package dlg
 
 import (
-	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/fileFormats/internal/dlg/internal"
 	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/formatters"
@@ -11,14 +10,14 @@ import (
 )
 
 type DialogsFile struct {
-	*base.FormatsBase
+	*util.DlgKrnlVerify
 }
 
 func NewDialogs(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor {
 	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
 
 	return &DialogsFile{
-		FormatsBase: base.NewFormatsBase(dataInfo),
+		DlgKrnlVerify: util.NewDlgKrnlVerify(dataInfo),
 	}
 }
 
@@ -31,11 +30,23 @@ func (d DialogsFile) Extract() {
 		d.Log.Error().Err(err).Interface("DialogFile", util.ErrorObject(d.GetFileInfo())).Msg("Error extracting dialog file")
 		return
 	}
+
+	if err := d.VerifyExtract(d.GetExtractLocation()); err != nil {
+		d.Log.Error().Err(err).Interface("DialogFile", util.ErrorObject(d.GetFileInfo())).Msg("Error verifying dialog file")
+		return
+	}
+
+	d.Log.Info().Msgf("Dialog file extracted: %s", d.GetGameData().Name)
 }
 
 func (d DialogsFile) Compress() {
 	if err := internal.DialogsFileCompressor(d.GetFileInfo()); err != nil {
 		d.Log.Error().Err(err).Interface("DialogFile", util.ErrorObject(d.GetFileInfo())).Msg("Error compressing dialog file")
+		return
+	}
+
+	if err := d.VerifyCompress(d.GetFileInfo(), internal.DialogsFileExtractor); err != nil {
+		d.Log.Error().Err(err).Interface("DialogFile", util.ErrorObject(d.GetFileInfo())).Msg("Error verifying compressed dialog file")
 		return
 	}
 
@@ -48,5 +59,9 @@ func (d DialogsFile) Compress() {
 				continue
 			}
 		}
+
+		d.Log.Info().Msgf("All duplicated dialog files for %s have been created", d.GetGameData().Name)
 	}
+
+	d.Log.Info().Msgf("Dialog file compressed: %s", d.GetGameData().Name)
 }
