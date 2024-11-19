@@ -11,51 +11,53 @@ import (
 type TempProvider struct {
 	FilePrefix string
 	Extension  string
+	File       string
 	FilePath   string
 }
 
 // NewTempProvider returns a new TempProvider with empty file prefix and extension.
 // The FilePath will be set to a new temporary file path in the OS temp directory.
 func NewTempProvider() *TempProvider {
-	return baseTempProvider("", "")
+	return &TempProvider{
+		FilePath: os.TempDir(),
+	}
 }
-
-// NewTempProviderWithPrefix returns a new TempProvider with the given file prefix.
-// The file extension will be empty.
-/* func NewTempProviderWithPrefix(prefix string) *TempProvider {
-	return baseTempProvider(prefix, "")
-} */
-
-/* // NewTempProviderWithPrefixAndExtension returns a new TempProvider with the given file prefix and extension.
-// The returned TempProvider will have the FilePath set to the full path of the temp file.
-func NewTempProviderWithPrefixAndExtension(prefix string, extension string) *TempProvider {
-	return baseTempProvider(prefix, extension)
-} */
 
 // baseTempProvider creates a new TempProvider with the given file prefix and extension.
 // The file will be written to the OS temp directory with a UUID appended to the prefix.
 // The extension will be sanitized to ensure it is in the correct format.
 // The returned TempProvider will have the FilePath set to the full path of the temp file.
-func baseTempProvider(filePrefix string, extension string) *TempProvider {
+func (tp *TempProvider) baseTempProvider(filePrefix string, extension string) *TempProvider {
 	tempPath := os.TempDir()
 	uuid := uuid.New().String()
 	return &TempProvider{
 		FilePrefix: filePrefix,
 		Extension:  extension,
-		FilePath:   filepath.Join(tempPath, filePrefix+uuid+validExtension(extension)),
+		File:       filepath.Join(tempPath, filePrefix+uuid+validExtension(extension)),
+		FilePath:   tempPath,
 	}
 }
 
 // ProvideTempFile returns a new TempProvider with the given file prefix.
 // The extension will be empty.
 func (tp *TempProvider) ProvideTempFile(filePrefix string) *TempProvider {
-	return baseTempProvider(filePrefix, "")
+	return tp.baseTempProvider(filePrefix, "")
+}
+
+func (tp *TempProvider) ProvideTempFilePath() string {
+	return tp.FilePath
 }
 
 // ProvideTempFileWithExtension returns a new TempProvider with the given file prefix and extension.
 // The returned TempProvider will have the FilePath set to the full path of the temp file.
 func (tp *TempProvider) ProvideTempFileWithExtension(filePrefix string, extension string) *TempProvider {
-	return baseTempProvider(filePrefix, extension)
+	return tp.baseTempProvider(filePrefix, extension)
+}
+
+// Dispose removes the temporary file associated with the TempProvider instance.
+// It calls os.Remove on the file path stored in the tp.File field.
+func (tp *TempProvider) Dispose() {
+	os.Remove(tp.File)
 }
 
 // validExtension takes a file extension and returns a valid file extension.
@@ -65,7 +67,7 @@ func validExtension(extension string) string {
 	if extension == "" {
 		return ""
 	}
-	
+
 	if strings.HasPrefix(extension, ".") {
 		return extension
 	}
