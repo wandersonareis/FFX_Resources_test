@@ -2,9 +2,8 @@ package services
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/core"
 	"ffxresources/backend/events"
-	formatsDev "ffxresources/backend/fileFormats"
+	"ffxresources/backend/fileFormats"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
 	"fmt"
@@ -32,18 +31,18 @@ func (c *CompressService) Compress(dataInfo *interactions.GameDataInfo) {
 			return
 		}
 
-		if err := core.EnsureWindowsLineBreaks(translateLocation.TargetFile, gameData.Type); err != nil {
+		if err := common.EnsureWindowsLineBreaks(translateLocation.TargetFile, gameData.Type); err != nil {
 			events.NotifyError(err)
 			return
 		}
 
-		if core.CountSegments(translateLocation.TargetFile) < 0 {
+		if common.CountSegments(translateLocation.TargetFile) < 0 {
 			events.NotifyError(fmt.Errorf("text file %s is empty", gameData.Name))
 			return
 		}
 	}
 
-	fileProcessor := formatsDev.NewFileCompressor(dataInfo)
+	fileProcessor := fileFormats.NewFileCompressor(dataInfo)
 	if fileProcessor == nil {
 		events.NotifyError(fmt.Errorf("invalid file type: %s", gameData.Name))
 		return

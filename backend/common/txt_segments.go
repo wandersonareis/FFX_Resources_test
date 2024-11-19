@@ -1,8 +1,7 @@
-package core
+package common
 
 import (
 	"bufio"
-	"ffxresources/backend/common"
 	"ffxresources/backend/models"
 	"fmt"
 	"os"
@@ -11,9 +10,9 @@ import (
 )
 
 func CountSegments(targetFile string) int {
-	separator := common.FFX_TEXT_FORMAT_SEPARATOR
+	separator := FFX_TEXT_FORMAT_SEPARATOR
 
-	input, err := common.ReadFile(targetFile)
+	input, err := ReadFile(targetFile)
 	if err != nil {
 		return 0
 	}
@@ -39,7 +38,7 @@ func EnsureWindowsLineBreaks(targetFile string, nodeType models.NodeType) error 
 
 	ensureLineBreaksAtStartAndEnd(&text)
 
-	err = common.WriteStringToFile(targetFile, text)
+	err = WriteStringToFile(targetFile, text)
 	if err != nil {
 		return fmt.Errorf("error saving the modified file: %s", err)
 	}
