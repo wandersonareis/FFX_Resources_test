@@ -1,7 +1,6 @@
 package lockit
 
 import (
-	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/fileFormats/internal/lockit/internal"
 	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/formatters"
@@ -10,7 +9,7 @@ import (
 )
 
 type LockitFile struct {
-	*base.FormatsBase
+	*internal.LockitFileVerify
 
 	options *interactions.LockitFileOptions
 	Parts   *[]internal.LockitFileParts
@@ -30,18 +29,16 @@ func NewLockitFile(dataInfo interactions.IGameDataInfo) interactions.IFileProces
 	}
 
 	return &LockitFile{
-		FormatsBase: base.NewFormatsBase(dataInfo),
+		LockitFileVerify: internal.NewLockitFileVerify(dataInfo),
 		options:     interactions.NewInteraction().GamePartOptions.GetLockitFileOptions(),
 		Parts:       &parts,
 	}
 }
 
 func (l *LockitFile) Extract() {
-	currentPartsLength := len(*l.Parts)
-
 	xplitter := internal.NewLockitFileXplitter(l.GetFileInfo())
 
-	if currentPartsLength != l.options.PartsLength {
+	if len(*l.Parts) != l.options.PartsLength {
 		if err := xplitter.EnsurePartsExists(); err != nil {
 			l.Log.Error().Err(err).Msg("error when ensuring lockit parts exist")
 			return
@@ -54,6 +51,8 @@ func (l *LockitFile) Extract() {
 	}
 
 	xplitter.SegmentFile(l.Parts)
+
+	l.VerifyExtract(l.GetExtractLocation().TargetPath, l.options)
 }
 
 func (l *LockitFile) Compress() {
@@ -78,5 +77,9 @@ func (l *LockitFile) Compress() {
 	if err := partsJoiner.JoinFileParts(); err != nil {
 		l.Log.Error().Err(err).Interface("LockitFile", l.GetFileInfo()).Msg("error when joining lockit file parts")
 		return
+	}
+
+	if err := l.VerifyCompress(l.GetFileInfo(), l.options); err != nil {
+		l.Log.Error().Err(err).Send()
 	}
 }

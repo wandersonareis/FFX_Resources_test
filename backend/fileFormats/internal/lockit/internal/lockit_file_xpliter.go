@@ -80,16 +80,6 @@ func (lx *lockitFileXplitter) xplitter() error {
 
 	lx.divideFileByLineEndingCount(reader, extractLocation.TargetPath)
 
-	/* handler := newLockitSegmenter(
-		lx.dataInfo.GetGameData().FullFilePath,
-		extractLocation.TargetPath,
-		lx.options,
-	) */
-
-	/* if err := handler.segmentFileByCounts(); err != nil {
-		return err
-	} */
-
 	return nil
 }
 

@@ -90,39 +90,8 @@ func (lj *lockitFileJoin) JoinFileParts() error {
 		return err
 	}
 
-	err = lj.valideLockit(lj.GetGameData().FullFilePath, combinedBuffer.Bytes())
-	if err != nil {
-		return err
-	}
-
 	if err := os.WriteFile(importLocation.TargetFile, combinedBuffer.Bytes(), 0644); err != nil {
 		return fmt.Errorf("error when creating output file: %v", err)
-	}
-
-	return nil
-}
-
-func (lj *lockitFileJoin) countAllLineEndings(buffer []byte) int {
-	return bytes.Count(buffer, []byte("\r\n"))
-}
-
-func (lj *lockitFileJoin) valideLockit(file string, buffer []byte) error {
-	bufferLineBreaksCount := lj.countAllLineEndings(buffer)
-
-	if lj.options.LineBreaksCount != bufferLineBreaksCount {
-		return fmt.Errorf("line breaks count does not match. Expected: %d, got: %d", lj.options.LineBreaksCount, bufferLineBreaksCount)
-	}
-
-	originalData, err := os.ReadFile(file)
-	if err != nil {
-		return fmt.Errorf("erro ao ler o arquivo original: %v", err)
-	}
-
-	isExactMatch := bytes.Equal(originalData, buffer)
-	if !isExactMatch {
-		return fmt.Errorf("arquivos não correspondem")
-	} else {
-		fmt.Println("Arquivos lockit correspondem")
 	}
 
 	return nil
