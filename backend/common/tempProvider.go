@@ -54,6 +54,15 @@ func (tp *TempProvider) ProvideTempFileWithExtension(filePrefix string, extensio
 	return tp.baseTempProvider(filePrefix, extension)
 }
 
+// ProvideTempDir generates a unique temporary folder path.
+// It uses the system's temporary directory and appends a new UUID to ensure uniqueness.
+// Returns the full path to the temporary folder as a string.
+func (tp *TempProvider) ProvideTempDir() string {
+	tempPath := os.TempDir()
+	uuid := uuid.New().String()
+	return filepath.Join(tempPath, uuid)
+}
+
 // Dispose removes the temporary file associated with the TempProvider instance.
 // It calls os.Remove on the file path stored in the tp.File field.
 func (tp *TempProvider) Dispose() {
