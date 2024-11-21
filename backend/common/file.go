@@ -3,15 +3,12 @@ package common
 import (
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func IsFileExists(path string) bool {
 	_, err := os.Stat(path)
 	return !os.IsNotExist(err)
-}
-
-func RemoveFile(path string) error {
-	return os.RemoveAll(path)
 }
 
 func ReadFile(path string) (string, error) {
@@ -21,47 +18,6 @@ func ReadFile(path string) (string, error) {
 	}
 	return string(data), nil
 }
-
-/* func DuplicateFile(src string, dst string) error {
-	info, err := os.Stat(src)
-	if err != nil {
-		return fmt.Errorf("error when accessing the origin file: %w", err)
-	}
-	if info.IsDir() {
-		return fmt.Errorf("path of origin is not a file")
-	}
-
-	outputDirectory := filepath.Dir(dst)
-
-	err = EnsurePathExists(outputDirectory)
-	if err != nil {
-		return err
-	}
-
-	inputFile, err := os.Open(src)
-	if err != nil {
-		return fmt.Errorf("error when opening the origin file:%w", err)
-	}
-	defer inputFile.Close()
-
-	outputFile, err := os.Create(dst)
-	if err != nil {
-		return fmt.Errorf("error when creating the destination file: %w", err)
-	}
-	defer outputFile.Close()
-
-	_, err = io.Copy(outputFile, inputFile)
-	if err != nil {
-		return fmt.Errorf("error when copying the contents: %w", err)
-	}
-
-	err = outputFile.Sync()
-	if err != nil {
-		return fmt.Errorf("error when synchronizing the destination file: %w", err)
-	}
-
-	return nil
-} */
 
 func ChangeExtension(path, newExt string) string {
 	ext := filepath.Ext(path)
@@ -77,7 +33,35 @@ func AddExtension(path, newExt string) string {
 	return path + newExt
 }
 
-func RemoveFileExtension(filePath string) string {
+func RemoveOneFileExtension(filePath string) string {
 	ext := filepath.Ext(filePath)
 	return filePath[:len(filePath)-len(ext)]
+}
+
+func RecursiveRemoveFileExtension(filePath string) string {
+	base := filepath.Base(filePath)
+
+	parts := strings.Split(base, ".")
+
+	if len(parts) <= 2 {
+		return filePath
+	}
+
+	trimmed := strings.Join(parts[:len(parts)-1], ".")
+
+	return RecursiveRemoveFileExtension(filepath.Join(filepath.Dir(filePath), trimmed))
+}
+
+func RecursiveRemoveAllExtensions(filePath string) string {
+	base := filepath.Base(filePath)
+
+	parts := strings.Split(base, ".")
+
+	if len(parts) == 1 {
+		return filePath
+	}
+
+	trimmed := parts[0]
+
+	return RecursiveRemoveAllExtensions(filepath.Join(filepath.Dir(filePath), trimmed))
 }
