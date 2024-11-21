@@ -29,46 +29,50 @@ func NewSpiraFolder(dataInfo interactions.IGameDataInfo) interactions.IFileProce
 	}
 }
 
-func (d SpiraFolder) Extract() {
-	fileProcessors := d.processFiles()
+func (sf SpiraFolder) Extract() {
+	fileProcessors := sf.processFiles()
 
-	progress := common.NewProgress(d.Ctx)
+	progress := common.NewProgress(sf.Ctx)
 	progress.SetMax(len(fileProcessors))
 	progress.Start()
 
 	worker := common.NewWorker[interactions.IFileProcessor]()
 
-	worker.ParallelForEach(fileProcessors, func(_ int, fileProcessor interactions.IFileProcessor) {
+	worker.ParallelForEach(&fileProcessors, func(_ int, fileProcessor interactions.IFileProcessor) {
 		fileProcessor.Extract()
 
 		progress.Step()
 	})
 
 	progress.Stop()
+
+	sf.Log.Info().Msgf("Spira folder extracted: %s", sf.GetGameData().FullFilePath)
 }
 
-func (d SpiraFolder) Compress() {
-	fileProcessors := d.processFiles()
+func (sf SpiraFolder) Compress() {
+	fileProcessors := sf.processFiles()
 
-	progress := common.NewProgress(d.Ctx)
+	progress := common.NewProgress(sf.Ctx)
 	progress.SetMax(len(fileProcessors))
 	progress.Start()
 
 	worker := common.NewWorker[interactions.IFileProcessor]()
 
-	worker.ParallelForEach(fileProcessors, func(_ int, fileProcessor interactions.IFileProcessor) {
+	worker.ParallelForEach(&fileProcessors, func(_ int, fileProcessor interactions.IFileProcessor) {
 		fileProcessor.Compress()
 
 		progress.Step()
 	})
 
 	progress.Stop()
+
+	sf.Log.Info().Msgf("Spira folder compressed: %s", sf.GetGameData().FullFilePath)
 }
 
-func (d SpiraFolder) processFiles() []interactions.IFileProcessor {
-	results, err := common.ListFilesInDirectory(d.GetFileInfo().GetGameData().FullFilePath)
+func (sf SpiraFolder) processFiles() []interactions.IFileProcessor {
+	results, err := common.ListFilesInDirectory(sf.GetFileInfo().GetGameData().FullFilePath)
 	if err != nil {
-		d.Log.Error().Err(err).Msgf("error listing files in directory: %s", d.GetFileInfo().GetGameData().FullFilePath)
+		sf.Log.Error().Err(err).Msgf("error listing files in directory: %s", sf.GetFileInfo().GetGameData().FullFilePath)
 		return nil
 	}
 
@@ -76,12 +80,12 @@ func (d SpiraFolder) processFiles() []interactions.IFileProcessor {
 
 	worker := common.NewWorker[string]()
 
-	worker.ParallelForEach(results, func(_ int, result string) {
+	worker.ParallelForEach(&results, func(_ int, result string) {
 		dataInfo := interactions.NewGameDataInfo(result)
 
 		fileProcessor := NewFileProcessor(dataInfo)
 		if fileProcessor == nil {
-			d.Log.Error().Msgf("invalid file type: %s", dataInfo.GetGameData().Name)
+			sf.Log.Error().Msgf("invalid file type: %s", dataInfo.GetGameData().Name)
 			return
 		}
 
