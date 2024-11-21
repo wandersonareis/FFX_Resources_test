@@ -17,14 +17,13 @@ func RunCommand(tool string, args []string) error {
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("error starting command: %w", err)
 	}
-
+	
 	if err := cmd.Wait(); err != nil {
+		if stderr.Len() > 0 {
+			return fmt.Errorf("error stderr:\n %s", stderr.String())
+		}
+
 		return fmt.Errorf("error cmd.Wait:\n %w", err)
 	}
-
-	if stderr.Len() > 0 {
-		return fmt.Errorf("error stderr:\n %s", stderr.String())
-	}
-
 	return nil
 }
