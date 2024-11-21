@@ -27,6 +27,10 @@ var spiraFiles = []spiraFilesTypes{
 		spiratype: models.DcpParts,
 	},
 	{
+		regex:     regexp.MustCompile(`.*macrodic.*\.00[0-6].txt$`),
+		spiratype: models.DcpParts,
+	},
+	{
 		regex:     regexp.MustCompile(`.*kernel.*\.bin$`),
 		spiratype: models.Kernel,
 	},
