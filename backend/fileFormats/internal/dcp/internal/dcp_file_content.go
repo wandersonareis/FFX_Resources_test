@@ -58,7 +58,7 @@ func (c Content) Read(file *os.File) error {
 }
 func (c Content) Write(header *Header, parts *[]DcpFileParts) error {
 	for _, part := range *parts {
-		filePath := part.GetGameData().FullFilePath
+		filePath := part.GetImportLocation().TargetFile
 		fileName := filepath.Base(filePath)
 
 		file, err := os.Open(filePath)
