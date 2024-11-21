@@ -43,8 +43,8 @@ func NewGameDataInfo(path string) IGameDataInfo {
 }
 
 func (g *GameDataInfo) InitializeLocations(formatter ITextFormatter) {
-	g.ExtractLocation.CreateTargetFileOutput(formatter, g)
-	g.TranslateLocation.CreateTargetFileOutput(formatter, g)
+	g.ExtractLocation.BuildTargetOutput(formatter, g)
+	g.TranslateLocation.BuildTargetOutput(formatter, g)
 	g.ImportLocation.GenerateTargetOutput(formatter, g)
 }
 

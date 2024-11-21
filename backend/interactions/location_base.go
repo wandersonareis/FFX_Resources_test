@@ -2,7 +2,9 @@ package interactions
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/logger"
 	"fmt"
+	"os"
 	"path/filepath"
 )
 
@@ -17,7 +19,7 @@ type ILocationBase interface {
 	SetTargetPath(targetPath string)
 	ProvideTargetDirectory() error
 	ProvideTargetPath() error
-	CreateTargetFileOutput(formatter ITextFormatter, fileInfo *GameDataInfo)
+	BuildTargetOutput(formatter ITextFormatter, fileInfo *GameDataInfo)
 }
 
 type ITextFormatter interface {
@@ -84,10 +86,30 @@ func (lb *LocationBase) ProvideTargetPath() error {
 	return fmt.Errorf("target path is empty")
 }
 
-func (lb *LocationBase) CreateTargetFileOutput(formatter ITextFormatter, fileInfo *GameDataInfo) {
+func (lb *LocationBase) BuildTargetOutput(formatter ITextFormatter, fileInfo *GameDataInfo) {
 	lb.TargetFile, lb.TargetPath = formatter.ReadFile(fileInfo, lb.TargetDirectory)
 
 	lb.TargetFileName = filepath.Base(lb.TargetFile)
+}
+
+func (lb *LocationBase) DisposeTargetFile() {
+	if common.IsFileExists(lb.TargetFile) {
+		err := os.Remove(lb.TargetFile)
+		if err != nil {
+			l := logger.Get()
+			l.Error().Msgf("error when removing file: %s", err)
+		}
+	}
+}
+
+func (lb *LocationBase) DisposeTargetPath() {
+	if common.IsPathExists(lb.TargetPath) {
+		err := os.RemoveAll(lb.TargetPath)
+		if err != nil {
+			l := logger.Get()
+			l.Error().Msgf("error when removing path: %s", err)
+		}
+	}
 }
 
 func (t *LocationBase) isTargetFileAvailable() bool {
