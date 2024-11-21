@@ -10,7 +10,7 @@ type Interaction struct {
 	GameLocation      IGameLocation
 	GamePart          core.IFfxGamePart
 	GamePartOptions   IGamePartOptions
-	ExtractLocation   IExtractLocation
+	ExtractLocation   *ExtractLocation
 	TranslateLocation ITranslateLocation
 	ImportLocation    IImportLocation
 }
