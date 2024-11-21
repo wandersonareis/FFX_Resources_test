@@ -82,17 +82,20 @@ func (h *Header) Update(dcpParts []DcpFileParts) error {
 	var currentOffset = uint32(h.Pointers[0].Value)
 
 	for i, pointer := range h.Pointers {
-		data := dcpParts[i].GetGameData()
+		partInfo, err := os.Stat(dcpParts[i].GetImportLocation().TargetFile)
+		if err != nil {
+			return fmt.Errorf("error getting file info: %w", err)
+		}
 
 		if i == 0 {
-			currentOffset = uint32(pointer.Value) + uint32(data.Size)
+			currentOffset = uint32(pointer.Value) + uint32(partInfo.Size())
 			continue
 		}
 
 		newPointer := currentOffset
 		binary.LittleEndian.PutUint32(h.Header[pointer.Offset:], newPointer)
 
-		currentOffset = newPointer + uint32(data.Size)
+		currentOffset = newPointer + uint32(partInfo.Size())
 	}
 
 	return nil

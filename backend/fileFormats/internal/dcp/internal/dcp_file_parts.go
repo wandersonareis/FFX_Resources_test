@@ -6,6 +6,7 @@ import (
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"fmt"
+	"path/filepath"
 )
 
 type DcpFileParts struct {
@@ -13,6 +14,7 @@ type DcpFileParts struct {
 }
 
 func NewDcpFileParts(dataInfo interactions.IGameDataInfo) *DcpFileParts {
+	dataInfo.GetGameData().RelativeGameDataPath = filepath.Join("system", dataInfo.GetGameData().Name)
 	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
 
 	return &DcpFileParts{

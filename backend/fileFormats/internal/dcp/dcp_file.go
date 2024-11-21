@@ -3,7 +3,6 @@ package dcp
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/events"
-	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/fileFormats/internal/dcp/internal"
 	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/formatters"
@@ -12,7 +11,7 @@ import (
 )
 
 type DcpFile struct {
-	*base.FormatsBase
+	*internal.DcpFileVerify
 
 	options *interactions.DcpFileOptions
 	Parts   *[]internal.DcpFileParts
@@ -35,9 +34,9 @@ func NewDcpFile(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor
 	}
 
 	return &DcpFile{
-		FormatsBase: base.NewFormatsBase(dataInfo),
-		options:     interactions.GamePartOptions.GetDcpFileOptions(),
-		Parts:       &parts,
+		DcpFileVerify: internal.NewDcpFileVerify(dataInfo),
+		options:       interactions.GamePartOptions.GetDcpFileOptions(),
+		Parts:         &parts,
 	}
 }
 
@@ -51,19 +50,25 @@ func (d *DcpFile) Extract() {
 
 	if len(*d.Parts) != expectedDcpPartsLength {
 		d.Log.Error().Err(fmt.Errorf("invalid number of xplited files: %d", expectedDcpPartsLength)).Interface("object", util.ErrorObject(d.GetFileInfo())).Send()
-
 		return
 	}
 
 	worker := common.NewWorker[internal.DcpFileParts]()
-	worker.ParallelForEach(*d.Parts, func(i int, extractor internal.DcpFileParts) {
-		if err := extractor.Validate(); err != nil {
-			d.Log.Error().Err(err).Interface("object", util.ErrorObject(extractor.GetFileInfo())).Msg("Error processing macrodic file parts")
+	worker.ParallelForEach(d.Parts, func(i int, part internal.DcpFileParts) {
+		if err := part.Validate(); err != nil {
+			d.Log.Error().Err(err).Interface("object", util.ErrorObject(part.GetFileInfo())).Msg("Error processing macrodic file parts")
 			return
 		}
 
-		extractor.Extract()
+		part.Extract()
 	})
+
+	if err := d.VerifyExtract(d.GetExtractLocation(), d.options); err != nil {
+		d.Log.Error().Err(err).Interface("object", util.ErrorObject(d.GetFileInfo())).Msg("Error verifying system macrodic file")
+		return
+	}
+
+	d.Log.Info().Msgf("System macrodic file extracted: %s", d.GetFileInfo().GetGameData().Name)
 }
 
 func (d DcpFile) Compress() {
@@ -94,14 +99,19 @@ func (d DcpFile) Compress() {
 	}
 
 	worker := common.NewWorker[internal.DcpFileParts]()
-	worker.ParallelForEach(*d.Parts, func(i int, compressor internal.DcpFileParts) {
-		compressor.Compress()
+	worker.ParallelForEach(d.Parts, func(i int, part internal.DcpFileParts) {
+		part.Compress()
 	})
 
 	targetReimportFile := d.GetFileInfo().GetImportLocation().TargetFile
 
 	if err := internal.DcpFileJoiner(d.GetFileInfo(), d.Parts, targetReimportFile); err != nil {
 		d.Log.Error().Err(err).Interface("DcpParts", d.Parts).Str("ImportTo", targetReimportFile).Msg("Error joining macrodic file")
+		return
+	}
+
+	if err := d.VerifyCompress(d.GetFileInfo(), d.options); err != nil {
+		d.Log.Error().Err(err).Interface("object", util.ErrorObject(d.GetFileInfo())).Msg("Error verifying system macrodic file")
 		return
 	}
 }
@@ -117,29 +127,5 @@ func (d *DcpFile) ensureDcpPartsLength(expected int) error {
 		d.Parts = newDcpFile.Parts
 	}
 
-	return nil
-}
-
-func (d *DcpFile) VerifyExtract() bool {
-	extractedParts := []internal.DcpFileParts{}
-
-	if err := util.FindFileParts(&extractedParts, d.GetExtractLocation().TargetPath, util.DCP_FILE_PARTS_PATTERN, internal.NewDcpFileParts); err != nil {
-		return false
-	}
-
-	if len(extractedParts) != d.options.PartsLength {
-		return false
-	}
-
-	partsLength := d.options.PartsLength
-
-	if len(*d.Parts) != partsLength {
-		return false
-	}
-
-	return true
-}
-
-func (d *DcpFile) VerifyCompress() error {
 	return nil
 }
