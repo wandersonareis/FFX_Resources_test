@@ -43,7 +43,7 @@ func (lj *lockitFileJoin) FindTextParts() ([]LockitFileParts, error) {
 func (lj *lockitFileJoin) EncodeFilesParts() error {
 	worker := common.NewWorker[LockitFileParts]()
 
-	worker.ParallelForEach(*lj.parts,
+	worker.ParallelForEach(lj.parts,
 		func(index int, part LockitFileParts) {
 			if index > 0 && index%2 == 0 {
 				part.Compress(LocEnc)
@@ -70,7 +70,7 @@ func (lj *lockitFileJoin) JoinFileParts() error {
 
 	worker := common.NewWorker[LockitFileParts]()
 
-	err := worker.ForEach(*lj.parts, func(_ int, part LockitFileParts) error {
+	err := worker.ForEach(lj.parts, func(_ int, part LockitFileParts) error {
 		fileName := part.GetFileInfo().GetImportLocation().TargetFile
 
 		partData, err := os.ReadFile(fileName)

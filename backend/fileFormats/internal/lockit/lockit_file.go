@@ -1,15 +1,18 @@
 package lockit
 
 import (
+	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/fileFormats/internal/lockit/internal"
 	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
+	"fmt"
 )
 
 type LockitFile struct {
-	*internal.LockitFileVerify
+	*base.FormatsBase
+	internal.ILockitFileVerifier
 
 	options *interactions.LockitFileOptions
 	Parts   *[]internal.LockitFileParts
@@ -22,27 +25,41 @@ func NewLockitFile(dataInfo interactions.IGameDataInfo) interactions.IFileProces
 
 	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
 
-	if err := util.FindFileParts(&parts, dataInfo.GetExtractLocation().TargetPath, internal.LOCKIT_FILE_PARTS_PATTERN, internal.NewLockitFileParts); err != nil {
+	if err := util.FindFileParts(&parts,
+		dataInfo.GetExtractLocation().TargetPath,
+		internal.LOCKIT_FILE_PARTS_PATTERN,
+		internal.NewLockitFileParts); err != nil {
 		l := logger.Get()
 		l.Error().Err(err).Msg("error when finding lockit parts")
 		return nil
 	}
 
 	return &LockitFile{
-		LockitFileVerify: internal.NewLockitFileVerify(dataInfo),
-		options:     interactions.NewInteraction().GamePartOptions.GetLockitFileOptions(),
-		Parts:       &parts,
+		FormatsBase:         base.NewFormatsBase(dataInfo),
+		ILockitFileVerifier: internal.NewLockitFileVerifier(dataInfo),
+		options:             interactions.NewInteraction().GamePartOptions.GetLockitFileOptions(),
+		Parts:               &parts,
 	}
 }
 
 func (l *LockitFile) Extract() {
-	xplitter := internal.NewLockitFileXplitter(l.GetFileInfo())
+	errChan := make(chan error, 1)
 
-	if len(*l.Parts) != l.options.PartsLength {
-		if err := xplitter.EnsurePartsExists(); err != nil {
-			l.Log.Error().Err(err).Msg("error when ensuring lockit parts exist")
+	go func() {
+		for err := range errChan {
+			fmt.Printf("Captured error: %s\n", err)
+			l.Log.Error().Err(err).Msg("error when verifying monted lockit file")
+			l.GetFileInfo().GetImportLocation().DisposeTargetFile()
 			return
 		}
+	}()
+
+	if len(*l.Parts) != l.options.PartsLength {
+		internal.FileSplitter(l.GetFileInfo(), *l.options)
+		/* if err := internal.FileSplitter(l.GetFileInfo(), *l.options); err != nil {
+			l.Log.Error().Err(err).Msg("error when ensuring lockit parts exist")
+			return
+		} */
 
 		newLockitFile := NewLockitFile(l.GetFileInfo()).(*LockitFile)
 
@@ -50,12 +67,28 @@ func (l *LockitFile) Extract() {
 		l.Parts = newLockitFile.Parts
 	}
 
-	xplitter.SegmentFile(l.Parts)
+	internal.DecoderPartsFiles(l.Parts)
 
-	l.VerifyExtract(l.GetExtractLocation().TargetPath, l.options)
+	if err := l.VerifyExtract(l.GetExtractLocation(), l.options); err != nil {
+		l.Log.Error().Err(err).Send()
+		return
+	}
+
+	l.Log.Info().Msgf("Lockit file extracted: %s", l.GetGameData().Name)
 }
 
 func (l *LockitFile) Compress() {
+	errChan := make(chan error, 1)
+
+	go func() {
+		for err := range errChan {
+			fmt.Printf("Captured error: %s\n", err)
+			l.Log.Error().Err(err).Msg("error when verifying monted lockit file")
+			l.GetFileInfo().GetImportLocation().DisposeTargetFile()
+			return
+		}
+	}()
+
 	partsJoiner := internal.NewLockitFileJoiner(l.GetFileInfo(), l.Parts)
 
 	translatedParts, err := partsJoiner.FindTextParts()
@@ -79,7 +112,9 @@ func (l *LockitFile) Compress() {
 		return
 	}
 
-	if err := l.VerifyCompress(l.GetFileInfo(), l.options); err != nil {
+	if err := l.VerifyCompress(l.GetFileInfo(), l.options, errChan); err != nil {
 		l.Log.Error().Err(err).Send()
 	}
+
+	l.Log.Info().Msgf("Lockit file monted: %s", l.GetGameData().Name)
 }
