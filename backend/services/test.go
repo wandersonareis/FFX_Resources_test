@@ -25,7 +25,7 @@ func TestExtractDir(path string, testExtract, testCompress bool) {
 	}
 
 	worker := common.NewWorker[interactions.TreeNode]()
-	worker.ParallelForEach(tree, func(_ int, n interactions.TreeNode) {
+	worker.ParallelForEach(&tree, func(_ int, n interactions.TreeNode) {
 		dataInfo := &n.Data
 
 		if testExtract {
