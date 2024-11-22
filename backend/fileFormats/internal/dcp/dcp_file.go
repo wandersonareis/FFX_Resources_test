@@ -114,6 +114,8 @@ func (d DcpFile) Compress() {
 		d.Log.Error().Err(err).Interface("object", util.ErrorObject(d.GetFileInfo())).Msg("Error verifying system macrodic file")
 		return
 	}
+
+	d.Log.Info().Msgf("Macrodic file compressed: %s", d.GetFileInfo().GetGameData().Name)
 }
 
 func (d *DcpFile) ensureDcpPartsLength(expected int) error {

@@ -25,7 +25,7 @@ func NewDcpFileVerify(dataInfo interactions.IGameDataInfo) *DcpFileVerify {
 func (lv *DcpFileVerify) VerifyExtract(extractLocation *interactions.ExtractLocation, options *interactions.DcpFileOptions) error {
 	errChan := make(chan error, 10)
 
-	lv.Log.Info().Msgf("Verifying splited macrodic file: %s", extractLocation.TargetFileName)
+	lv.Log.Info().Msgf("Verifying splited macrodic file: %s", extractLocation.TargetPath)
 
 	if err := lv.verifyDcpFileParts(extractLocation.TargetPath, options, errChan); err != nil {
 		errChan <- fmt.Errorf("error when verifying splited macrodic file: %w", err)
@@ -69,7 +69,7 @@ func (lv *DcpFileVerify) VerifyCompress(dataInfo interactions.IGameDataInfo, opt
 		errChan <- fmt.Errorf("error when verifying reimported macrodic text parts: %w", err)
 		return <-errChan
 	}
-	
+
 	if err := lv.valideDcpFile(dataInfo.GetImportLocation().TargetFile, options, errChan); err != nil {
 		errChan <- fmt.Errorf("error when validating reimported macrodic file: %w", err)
 		return <-errChan
@@ -118,17 +118,17 @@ func (lv *DcpFileVerify) verifyDcpFileParts(targetPath string, options *interact
 }
 
 func (lv *DcpFileVerify) verifyDcpTextParts(targetPath string, options *interactions.DcpFileOptions, errChan chan error) error {
-	parts := []DcpFileParts{}
+	parts := &[]DcpFileParts{}
 
 	worker := common.NewWorker[DcpFileParts]()
 	defer worker.Close()
 
 	worker.Execute(func() error {
-		return util.FindFileParts(&parts, targetPath, util.DCP_TXT_PARTS_PATTERN, NewDcpFileParts)
+		return util.FindFileParts(parts, targetPath, util.DCP_TXT_PARTS_PATTERN, NewDcpFileParts)
 	}, lv.Log, fmt.Sprintf("error when finding macrodic text parts in %s", targetPath), errChan)
 
-	if len(parts) != options.PartsLength {
-		errChan <- fmt.Errorf("text parts: %d Expected text parts: %d", len(parts), options.PartsLength)
+	if len(*parts) != options.PartsLength {
+		errChan <- fmt.Errorf("text parts: %d Expected text parts: %d", len(*parts), options.PartsLength)
 		return <-errChan
 	}
 
@@ -175,7 +175,7 @@ func (lv *DcpFileVerify) valideDcpFile(dcpFile string, options *interactions.Dcp
 	worker.Execute(func() error {
 		return lv.tmpPartsVerify(parts, tmpDir, errChan)
 	}, lv.Log, "error when verifying reimported macrodic file", errChan)
-	
+
 	return nil
 }
 
@@ -189,8 +189,11 @@ func (dv *DcpFileVerify) tmpPartsVerify(parts *[]DcpFileParts, tmpDir string, er
 		tmpPart.GetExtractLocation().SetTargetFile(newPartFile)
 		tmpPart.GetExtractLocation().SetTargetDirectory(tmpDir)
 
-		dv.comparePartsContent(tmpPart.GetGameData().Name, tmpPart.GetGameData().FullFilePath, tmpPart.GetImportLocation().TargetFile,
-			"extracted part is different from imported", errChan)
+		if err := dv.comparePartsContent(tmpPart.GetGameData().Name, tmpPart.GetGameData().FullFilePath, tmpPart.GetImportLocation().TargetFile,
+			"extracted part is different from imported", errChan); err != nil {
+			errChan <- err
+			return
+		}
 
 		tmpPart.Extract()
 
