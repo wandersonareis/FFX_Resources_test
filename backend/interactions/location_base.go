@@ -108,6 +108,7 @@ func (lb *LocationBase) DisposeTargetPath() {
 		if err != nil {
 			l := logger.Get()
 			l.Error().Msgf("error when removing path: %s", err)
+			return
 		}
 	}
 }
