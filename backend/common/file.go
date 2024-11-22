@@ -6,6 +6,10 @@ import (
 	"strings"
 )
 
+func GetFileName(path string) string {
+	return filepath.Base(path)
+}
+
 func IsFileExists(path string) bool {
 	_, err := os.Stat(path)
 	return !os.IsNotExist(err)
