@@ -1,9 +1,11 @@
-package internal
+package joiner
 
 import (
 	"bytes"
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/internal/base"
+	"ffxresources/backend/fileFormats/internal/lockit/internal/lib"
+	"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
 	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/interactions"
 	"fmt"
@@ -14,46 +16,49 @@ import (
 type IPartsJoiner interface {
 	JoinFileParts() error
 	EncodeFilesParts() error
-	FindTranslatedTextParts() ([]LockitFileParts, error)
+	FindTranslatedTextParts() (*[]parts.LockitFileParts, error)
 }
 
 type lockitFileJoiner struct {
 	*base.FormatsBase
-	parts   []LockitFileParts
-	options interactions.LockitFileOptions
-	worker  common.IWorker[LockitFileParts]
+	partsList *[]parts.LockitFileParts
+	options   interactions.LockitFileOptions
+	worker    common.IWorker[parts.LockitFileParts]
 }
 
-func NewLockitFileJoiner(dataInfo interactions.IGameDataInfo, parts []LockitFileParts) IPartsJoiner {
+func NewLockitFileJoiner(dataInfo interactions.IGameDataInfo, partsList *[]parts.LockitFileParts) IPartsJoiner {
 	return &lockitFileJoiner{
 		FormatsBase: base.NewFormatsBase(dataInfo),
 		options:     interactions.NewInteraction().GamePartOptions.GetLockitFileOptions(),
-		parts:       parts,
+		partsList:   partsList,
+		worker:      common.NewWorker[parts.LockitFileParts](),
 	}
 }
 
-func (lj *lockitFileJoiner) FindTranslatedTextParts() ([]LockitFileParts, error) {
-	parts := []LockitFileParts{}
+func (lj *lockitFileJoiner) FindTranslatedTextParts() (*[]parts.LockitFileParts, error) {
+	partsList := []parts.LockitFileParts{}
 	err := util.FindFileParts(
-		&parts,
+		&partsList,
 		lj.GetTranslateLocation().TargetPath,
-		LOCKIT_TXT_PARTS_PATTERN,
-		NewLockitFileParts)
+		lib.LOCKIT_TXT_PARTS_PATTERN,
+		parts.NewLockitFileParts)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return slices.Clip(parts), nil
+	partsList = slices.Clip(partsList)
+
+	return &partsList, nil
 }
 
 func (lj *lockitFileJoiner) EncodeFilesParts() error {
-	lj.worker.ParallelForEach(&lj.parts,
-		func(index int, part LockitFileParts) {
+	lj.worker.ParallelForEach(lj.partsList,
+		func(index int, part parts.LockitFileParts) {
 			if index > 0 && index%2 == 0 {
-				part.Compress(LocEnc)
+				part.Compress(parts.LocEnc)
 			} else {
-				part.Compress(FfxEnc)
+				part.Compress(parts.FfxEnc)
 			}
 		})
 
@@ -67,13 +72,13 @@ func (lj *lockitFileJoiner) EncodeFilesParts() error {
 func (lj *lockitFileJoiner) JoinFileParts() error {
 	importLocation := lj.GetImportLocation()
 
-	if len(lj.parts) != lj.options.PartsLength {
-		return fmt.Errorf("invalid number of parts: %d expected: %d", len(lj.parts), lj.options.PartsLength)
+	if len(*lj.partsList) != lj.options.PartsLength {
+		return fmt.Errorf("invalid number of parts: %d expected: %d", len(*lj.partsList), lj.options.PartsLength)
 	}
 
 	var combinedBuffer bytes.Buffer
 
-	err := lj.worker.ForEach(lj.parts, func(_ int, part LockitFileParts) error {
+	err := lj.worker.ForEach(lj.partsList, func(_ int, part parts.LockitFileParts) error {
 		fileName := part.GetFileInfo().GetImportLocation().TargetFile
 
 		partData, err := os.ReadFile(fileName)

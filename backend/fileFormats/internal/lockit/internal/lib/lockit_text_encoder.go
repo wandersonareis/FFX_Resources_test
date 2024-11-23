@@ -1,4 +1,4 @@
-package internal
+package lib
 
 import (
 	"ffxresources/backend/fileFormats/util"
@@ -6,29 +6,30 @@ import (
 	"ffxresources/backend/lib"
 )
 
-func lockitEncoderFfx(lockitFileInfo interactions.IGameDataInfo) error {
+func LockitEncoderFfx(lockitFileInfo interactions.IGameDataInfo) error {
 	characterTable := util.NewCharacterTable()
-	characterTable.Dispose()
 
 	codeTable, err := characterTable.GetCharacterOnlyTable()
 	if err != nil {
 		return err
 	}
 
+	defer characterTable.Dispose(codeTable)
+
 	return encoderBase(lockitFileInfo, codeTable)
 }
 
-func lockitEncoderLoc(lockitFileInfo interactions.IGameDataInfo) error {
+func LockitEncoderLoc(lockitFileInfo interactions.IGameDataInfo) error {
 	characterTable := util.NewCharacterTable()
-	characterTable.Dispose()
 
 	codeTable, err := characterTable.GetCharacterLocTable()
 	if err != nil {
 		return err
 	}
 
-	err = encoderBase(lockitFileInfo, codeTable)
-	if err != nil {
+	defer characterTable.Dispose(codeTable)
+
+	if err := encoderBase(lockitFileInfo, codeTable); err != nil {
 		return err
 	}
 
@@ -47,13 +48,13 @@ func encoderBase(lockitFileInfo interactions.IGameDataInfo, codeTable string) er
 	}
 
 	targetFile := lockitFileInfo.GetTranslateLocation().TargetFile
-	
+
 	importLocation := lockitFileInfo.GetImportLocation()
 
 	if err := importLocation.ProvideTargetPath(); err != nil {
 		return err
 	}
-	
+
 	args := []string{"-tr", codeTable, targetFile, importLocation.TargetFile}
 
 	if err := lib.RunCommand(executable, args); err != nil {

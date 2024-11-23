@@ -1,4 +1,4 @@
-package internal
+package lib
 
 import (
 	"ffxresources/backend/fileFormats/util"

@@ -1,9 +1,10 @@
-package internal
+package splitter
 
 import (
 	"bufio"
 	"bytes"
 	"ffxresources/backend/common"
+	"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
 	"ffxresources/backend/interactions"
 	"fmt"
 	"os"
@@ -11,31 +12,27 @@ import (
 )
 
 type IFileSplitter interface {
-	DecoderPartsFiles(parts *[]LockitFileParts)
+	DecoderPartsFiles(partsList *[]parts.LockitFileParts)
 	FileSplitter(dataInfo interactions.IGameDataInfo, options interactions.LockitFileOptions) error
 }
 
 type LockitFileSplitter struct {
-	worker common.IWorker[LockitFileParts]
+	worker common.IWorker[parts.LockitFileParts]
 }
 
 func NewLockitFileSplitter() IFileSplitter {
-	worker := common.NewWorker[LockitFileParts]()
-
 	return &LockitFileSplitter{
-		worker: worker,
+		worker: common.NewWorker[parts.LockitFileParts](),
 	}
 }
 
-func (ls *LockitFileSplitter) DecoderPartsFiles(parts *[]LockitFileParts) {
-	worker := common.NewWorker[LockitFileParts]()
-
-	worker.ParallelForEach(parts,
-		func(index int, part LockitFileParts) {
-			if index > 0 && index%2 == 0 {
-				part.Extract(LocEnc)
+func (ls *LockitFileSplitter) DecoderPartsFiles(partsList *[]parts.LockitFileParts) {
+	ls.worker.ParallelForEach(partsList,
+		func(index int, part parts.LockitFileParts) {
+			if index > 0 && index % 2 == 0 {
+				part.Extract(parts.LocEnc)
 			} else {
-				part.Extract(FfxEnc)
+				part.Extract(parts.FfxEnc)
 			}
 		})
 }

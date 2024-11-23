@@ -1,14 +1,15 @@
-package internal
+package verify
 
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/internal/base"
+	"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
 	"ffxresources/backend/interactions"
 	"fmt"
 )
 
 type ILockitFileVerifier interface {
-	VerifyExtract(parts []LockitFileParts, extractLocation *interactions.ExtractLocation, options interactions.LockitFileOptions) error
+	VerifyExtract(partsList *[]parts.LockitFileParts, extractLocation *interactions.ExtractLocation, options interactions.LockitFileOptions) error
 	VerifyCompress(dataInfo interactions.IGameDataInfo, options interactions.LockitFileOptions) error
 }
 
@@ -19,11 +20,11 @@ type LockitFileVerifier struct {
 	LineBreakCounter ILineBreakCounter
 	PartsComparer    IPartComparer
 
-	worker common.IWorker[LockitFileParts]
+	worker common.IWorker[parts.LockitFileParts]
 }
 
 func NewLockitFileVerifier(dataInfo interactions.IGameDataInfo) ILockitFileVerifier {
-	worker := common.NewWorker[LockitFileParts]()
+	worker := common.NewWorker[parts.LockitFileParts]()
 
 	return &LockitFileVerifier{
 		FormatsBase:      base.NewFormatsBase(dataInfo),
@@ -34,9 +35,9 @@ func NewLockitFileVerifier(dataInfo interactions.IGameDataInfo) ILockitFileVerif
 	}
 }
 
-func (lv *LockitFileVerifier) VerifyExtract(parts []LockitFileParts, location *interactions.ExtractLocation, options interactions.LockitFileOptions) error {
-	if len(parts) != options.PartsLength {
-		return fmt.Errorf("error when ensuring splited lockit parts: expected %d | got %d", options.PartsLength, len(parts))
+func (lv *LockitFileVerifier) VerifyExtract(parts *[]parts.LockitFileParts, location *interactions.ExtractLocation, options interactions.LockitFileOptions) error {
+	if len(*parts) != options.PartsLength {
+		return fmt.Errorf("error when ensuring splited lockit parts: expected %d | got %d", options.PartsLength, len(*parts))
 	}
 
 	if err := lv.LineBreakCounter.CountBinaryParts(parts, options); err != nil {

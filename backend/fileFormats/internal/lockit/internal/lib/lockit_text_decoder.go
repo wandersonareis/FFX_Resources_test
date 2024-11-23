@@ -1,4 +1,4 @@
-package internal
+package lib
 
 import (
 	"ffxresources/backend/fileFormats/util"
@@ -6,27 +6,29 @@ import (
 	"ffxresources/backend/lib"
 )
 
-func lockitDecoderFfx(lockitFileInfo interactions.IGameDataInfo) error {
+func LockitDecoderFfx(lockitFileInfo interactions.IGameDataInfo) error {
 	characterTable := util.NewCharacterTable()
-	characterTable.Dispose()
-
+	
 	codeTable, err := characterTable.GetCharacterOnlyTable()
 	if err != nil {
 		return err
 	}
 
+	defer characterTable.Dispose(codeTable)
+
 	return decoderBase(lockitFileInfo, codeTable)
 }
 
-func lockitDecoderLoc(lockitFileInfo interactions.IGameDataInfo) error {
+func LockitDecoderLoc(lockitFileInfo interactions.IGameDataInfo) error {
 	characterTable := util.NewCharacterTable()
-	characterTable.Dispose()
-
+	
 	codeTable, err := characterTable.GetCharacterLocTable()
 	if err != nil {
 		return err
 	}
-
+	
+	defer characterTable.Dispose(codeTable)
+	
 	return decoderBase(lockitFileInfo, codeTable)
 }
 

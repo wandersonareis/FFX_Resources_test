@@ -1,7 +1,8 @@
-package internal
+package verify
 
 import (
 	"bytes"
+	"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
 	"ffxresources/backend/interactions"
 	"fmt"
 	"os"
@@ -14,49 +15,52 @@ type ILineBreakCounter interface {
 	// It returns an error if the verification fails.
 	//
 	// Parameters:
-	//   - parts: A slice of LockitFileParts to be verified and counted.
+	//   - partsList: A slice of LockitFileParts to be verified and counted.
 	//   - options: LockitFileOptions containing the parts sizes and expected line breaks count.
 	//
 	// Returns:
 	//   - error: An error if the verification fails, otherwise nil.
-	CountBinaryParts(parts []LockitFileParts, options interactions.LockitFileOptions) error
-	CountTextParts(parts []LockitFileParts, options interactions.LockitFileOptions) error
+	CountBinaryParts(partsList *[]parts.LockitFileParts, options interactions.LockitFileOptions) error
+	CountTextParts(partsList *[]parts.LockitFileParts, options interactions.LockitFileOptions) error
 }
 
 type LineBreakCounter struct{}
 
-func (lc LineBreakCounter) CountBinaryParts(parts []LockitFileParts, options interactions.LockitFileOptions) error {
-	pathList := make([]string, len(parts))
+func (lc LineBreakCounter) CountBinaryParts(partsList *[]parts.LockitFileParts, options interactions.LockitFileOptions) error {
+	list := *partsList
+	pathList := make([]string, len(list))
 
-	for index, part := range parts {
+	for index, part := range list {
 		pathList[index] = part.GetGameData().FullFilePath
 	}
 
-	if err := lc.verify(pathList, options.PartsSizes, len(options.PartsSizes), options.LineBreaksCount); err != nil {
+	if err := lc.verify(&pathList, options.PartsSizes, len(options.PartsSizes), options.LineBreaksCount); err != nil {
 		return fmt.Errorf("error when counting line breaks: %w", err)
 	}
 
 	return nil
 }
 
-func (lc LineBreakCounter) CountTextParts(parts []LockitFileParts, options interactions.LockitFileOptions) error {
-	pathList := make([]string, len(parts))
+func (lc LineBreakCounter) CountTextParts(partsList *[]parts.LockitFileParts, options interactions.LockitFileOptions) error {
+	list := *partsList
+	pathList := make([]string, len(list))
 
-	for index, part := range parts {
+	for index, part := range list {
 		pathList[index] = part.GetExtractLocation().TargetFile
 	}
 
-	if err := lc.verify(pathList, options.PartsSizes, len(options.PartsSizes), options.LineBreaksCount); err != nil {
+	if err := lc.verify(&pathList, options.PartsSizes, len(options.PartsSizes), options.LineBreaksCount); err != nil {
 		return fmt.Errorf("error when counting line breaks: %w", err)
 	}
 
 	return nil
 }
 
-func (lc LineBreakCounter) verify(parts []string, ocorrencesCount []int, ocorrencesLength int, expectedLineBreaksCount int) error {
+func (lc LineBreakCounter) verify(pathList *[]string, ocorrencesCount []int, ocorrencesLength int, expectedLineBreaksCount int) error {
 	ocorrencesExpected := 0
 
-	for index, part := range parts {
+	list := *pathList
+	for index, part := range list {
 		ocorrencesExpected = lc.getOcorrencesExpected(ocorrencesCount, index, ocorrencesLength, expectedLineBreaksCount)
 
 		data, err := lc.readFilePart(part)

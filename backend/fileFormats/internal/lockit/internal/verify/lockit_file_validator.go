@@ -1,8 +1,9 @@
-package internal
+package verify
 
 import (
 	"bytes"
 	"ffxresources/backend/common"
+	"ffxresources/backend/fileFormats/internal/lockit/internal/splitter"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"fmt"
@@ -14,13 +15,13 @@ type IFileValidator interface {
 }
 
 type FileValidator struct {
-	fileSplitter  IFileSplitter
+	fileSplitter  splitter.IFileSplitter
 	partsVerifier IPartsVerifier
 }
 
 func newFileValidator() IFileValidator {
 	return &FileValidator{
-		fileSplitter:  NewLockitFileSplitter(),
+		fileSplitter:  splitter.NewLockitFileSplitter(),
 		partsVerifier: newPartsVerifier(),
 	}
 }
