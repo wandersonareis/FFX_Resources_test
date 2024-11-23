@@ -132,7 +132,7 @@ func (lv *DcpFileVerify) verifyDcpTextParts(targetPath string, options interacti
 		return <-errChan
 	}
 
-	worker.ForEach(*parts, func(i int, part DcpFileParts) error {
+	worker.ForEach(parts, func(i int, part DcpFileParts) error {
 		if common.CountSegments(part.GetTranslateLocation().TargetFile) == 0 {
 			errChan <- fmt.Errorf("invalid number of segments in text part: %s", part.GetTranslateLocation().TargetFile)
 			return nil
@@ -179,10 +179,10 @@ func (lv *DcpFileVerify) valideDcpFile(dcpFile string, options interactions.DcpF
 	return nil
 }
 
-func (dv *DcpFileVerify) tmpPartsVerify(parts *[]DcpFileParts, tmpDir string, errChan chan error) error {
+func (dv *DcpFileVerify) tmpPartsVerify(partsList *[]DcpFileParts, tmpDir string, errChan chan error) error {
 	worker := common.NewWorker[DcpFileParts]()
 
-	worker.ParallelForEach(parts, func(i int, part DcpFileParts) {
+	worker.ParallelForEach(partsList, func(i int, part DcpFileParts) {
 		tmpPart := &part
 		newPartFile := filepath.Join(tmpDir, part.GetExtractLocation().TargetFileName)
 

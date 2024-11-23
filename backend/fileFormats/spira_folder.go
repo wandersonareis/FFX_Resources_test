@@ -76,11 +76,11 @@ func (sf SpiraFolder) processFiles() []interactions.IFileProcessor {
 		return nil
 	}
 
-	var fileProcessors = make([]interactions.IFileProcessor, 0, len(results))
+	var fileProcessors = make([]interactions.IFileProcessor, 0, len(*results))
 
 	worker := common.NewWorker[string]()
 
-	worker.ParallelForEach(&results, func(_ int, result string) {
+	worker.ParallelForEach(results, func(_ int, result string) {
 		dataInfo := interactions.NewGameDataInfo(result)
 
 		fileProcessor := NewFileProcessor(dataInfo)

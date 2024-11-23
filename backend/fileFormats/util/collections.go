@@ -17,7 +17,7 @@ func FindFileParts[T any](parts *[]T, targetPath, pattern string, partsInstance 
 
 	worker := common.NewWorker[string]()
 
-	worker.ForEach(fileParts, func(_ int, item string) error {
+	worker.ForEach(&fileParts, func(_ int, item string) error {
 		info := interactions.NewGameDataInfo(item)
 		if info.GetGameData().Size == 0 {
 			return nil

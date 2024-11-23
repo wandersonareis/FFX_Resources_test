@@ -10,15 +10,15 @@ import (
 type IWorker[T any] interface {
 	Execute(workerFunc func() error, logger zerolog.Logger, errMsg string, errChan chan error)
 	ForIndex(data *[]T, workerFunc func(index int, count int, data []T) error) error
-	ForEach(data []T, workerFunc func(index int, item T) error) error
+	ForEach(data *[]T, workerFunc func(index int, item T) error) error
 	VoidForEach(data *[]T, workerFunc func(index int, item T))
 	ParallelForEach(data *[]T, workerFunc func(index int, item T))
 	Close()
 }
 
 type Worker[T any] struct {
-	in chan func()
-	wg sync.WaitGroup
+	in        chan func()
+	wg        sync.WaitGroup
 	closeOnce sync.Once
 }
 
@@ -50,8 +50,9 @@ func (w *Worker[T]) Execute(workerFunc func() error, logger zerolog.Logger, errM
 }
 
 func (w *Worker[T]) ForIndex(data *[]T, workerFunc func(index int, count int, data []T) error) error {
-	len := len(*data)
-	for i := range *data {
+	list := *data
+	len := len(list)
+	for i := range list {
 		err := workerFunc(i, len, *data)
 		if err != nil {
 			return err
@@ -61,8 +62,9 @@ func (w *Worker[T]) ForIndex(data *[]T, workerFunc func(index int, count int, da
 	return nil
 }
 
-func (w *Worker[T]) ForEach(data []T, workerFunc func(index int, item T) error) error {
-	for i, item := range data {
+func (w *Worker[T]) ForEach(data *[]T, workerFunc func(index int, item T) error) error {
+	list := *data
+	for i, item := range list {
 		err := workerFunc(i, item)
 		if err != nil {
 			return err
@@ -73,19 +75,21 @@ func (w *Worker[T]) ForEach(data []T, workerFunc func(index int, item T) error) 
 }
 
 func (w *Worker[T]) VoidForEach(data *[]T, workerFunc func(index int, item T)) {
-	for i, item := range *data {
+	list := *data
+	for i, item := range list {
 		workerFunc(i, item)
 	}
 }
 
 func (w *Worker[T]) ParallelForEach(data *[]T, workerFunc func(index int, item T)) {
-	for i, item := range *data {
-		i, item := i, item
+	list := *data
+	for i, item := range list {
 		w.in <- func() {
 			workerFunc(i, item)
 		}
 	}
 
+	w.Close()
 	w.wg.Wait()
 }
 

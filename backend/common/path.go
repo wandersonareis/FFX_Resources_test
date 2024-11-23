@@ -39,7 +39,7 @@ func EnsurePathExists(path string) error {
 	return nil
 }
 
-func ListFilesInDirectory(s string) ([]string, error) {
+func ListFilesInDirectory(s string) (*[]string, error) {
 	fullpath, err := filepath.Abs(s)
 	if err != nil {
 		return nil, err
@@ -65,7 +65,7 @@ func ListFilesInDirectory(s string) ([]string, error) {
 
 	results = slices.Clip(results)
 
-	return results, nil
+	return &results, nil
 }
 
 func ListFilesMatchingPattern(files *[]string, path, pattern string) error {
