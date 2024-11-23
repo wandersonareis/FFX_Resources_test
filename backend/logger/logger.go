@@ -64,7 +64,6 @@ func Get() zerolog.Logger {
 		log = zerolog.New(output).
 			Level(zerolog.Level(logLevel)).
 			With().
-			Caller().
 			Timestamp().
 			Logger()
 	})
