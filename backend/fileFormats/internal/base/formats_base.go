@@ -43,6 +43,6 @@ func (f *FormatsBase) GetTranslateLocation() *interactions.TranslateLocation {
 	return f.dataInfo.GetTranslateLocation()
 }
 
-func (f *FormatsBase) GetImportLocation() interactions.ImportLocation {
-	return *f.dataInfo.GetImportLocation()
+func (f *FormatsBase) GetImportLocation() *interactions.ImportLocation {
+	return f.dataInfo.GetImportLocation()
 }
