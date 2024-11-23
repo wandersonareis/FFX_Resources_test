@@ -3,8 +3,8 @@ package interactions
 import "ffxresources/backend/core"
 
 type IGamePartOptions interface {
-	GetDcpFileOptions() *DcpFileOptions
-	GetLockitFileOptions() *LockitFileOptions
+	GetDcpFileOptions() DcpFileOptions
+	GetLockitFileOptions() LockitFileOptions
 }
 
 type LockitFileOptions struct {
@@ -21,13 +21,13 @@ type DcpFileOptions struct {
 type GamePartOptions struct {
 	*core.FfxGamePart
 
-	DcpFile    *DcpFileOptions
-	LockitFile *LockitFileOptions
+	DcpFile    DcpFileOptions
+	LockitFile LockitFileOptions
 }
 
 var gamePartOptionsInstance *GamePartOptions
 
-func NewGamePartOptions(gamePart *core.FfxGamePart) *GamePartOptions {
+func NewGamePartOptions(gamePart *core.FfxGamePart) IGamePartOptions {
 	if gamePartOptionsInstance == nil {
 		gamePartOptionsInstance = &GamePartOptions{
 			FfxGamePart: gamePart,
@@ -37,7 +37,7 @@ func NewGamePartOptions(gamePart *core.FfxGamePart) *GamePartOptions {
 	return gamePartOptionsInstance
 }
 
-func (g *GamePartOptions) getGamePartOptions() *GamePartOptions {
+func (g *GamePartOptions) getGamePartOptions() GamePartOptions {
 	switch g.FfxGamePart.GetGamePart() {
 	case core.FFX:
 		return ffxOptions()
@@ -45,35 +45,35 @@ func (g *GamePartOptions) getGamePartOptions() *GamePartOptions {
 		return ffx2Options()
 	}
 
-	return nil
+	return GamePartOptions{}
 }
 
-func (g *GamePartOptions) GetDcpFileOptions() *DcpFileOptions {
+func (g *GamePartOptions) GetDcpFileOptions() DcpFileOptions {
 	return g.getGamePartOptions().DcpFile
 }
 
-func (g *GamePartOptions) GetLockitFileOptions() *LockitFileOptions {
+func (g *GamePartOptions) GetLockitFileOptions() LockitFileOptions {
 	return g.getGamePartOptions().LockitFile
 }
 
-func ffxOptions() *GamePartOptions {
-	return &GamePartOptions{
-		DcpFile: &DcpFileOptions{
+func ffxOptions() GamePartOptions {
+	return GamePartOptions{
+		DcpFile: DcpFileOptions{
 			NameBase:    "macrodic",
 			PartsLength: 5,
 		},
 	}
 }
 
-func ffx2Options() *GamePartOptions {
+func ffx2Options() GamePartOptions {
 	lockitPartsSizes := []int{80, 88, 90, 93, 94, 95, 102, 1223, 1224, 1230, 1232, 1233, 1240, 1241, 1502, 1534}
 
-	return &GamePartOptions{
-		DcpFile: &DcpFileOptions{
+	return GamePartOptions{
+		DcpFile: DcpFileOptions{
 			NameBase:    "macrodic",
 			PartsLength: 7,
 		},
-		LockitFile: &LockitFileOptions{
+		LockitFile: LockitFileOptions{
 			NameBase:        "loc_kit_ps3",
 			LineBreaksCount: 1696,
 			PartsLength:     len(lockitPartsSizes) + 1,
