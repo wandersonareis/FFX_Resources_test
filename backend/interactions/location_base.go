@@ -59,6 +59,7 @@ func (lb *LocationBase) GetTargetDirectory() string {
 
 func (lb *LocationBase) SetTargetFile(targetFile string) {
 	lb.TargetFile = targetFile
+	lb.IsExist = lb.isTargetFileAvailable()
 }
 
 func (lb *LocationBase) SetTargetPath(targetPath string) {

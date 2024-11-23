@@ -30,7 +30,9 @@ func (i *ImportLocation) GenerateTargetOutput(formatter ITextFormatter, fileInfo
 }
 
 func (i *ImportLocation) Validate() error {
-	if !i.isTargetFileAvailable() {
+	i.IsExist = i.isTargetFileAvailable()
+
+	if !i.IsExist {
 		return fmt.Errorf("reimport file not exists: %s", i.TargetFile)
 	}
 
