@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,7 +16,16 @@ func IsFileExists(path string) bool {
 	return !os.IsNotExist(err)
 }
 
-func ReadFile(path string) (string, error) {
+func ReadFile(path string) ([]byte, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("error when reading file %s: %s", GetFileName(path), err)
+	}
+
+	return data, nil
+}
+
+func ReadFileAsString(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
