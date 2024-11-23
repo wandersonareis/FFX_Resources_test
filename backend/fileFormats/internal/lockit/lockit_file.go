@@ -50,10 +50,17 @@ func (l *LockitFile) Extract() {
 	errChan := make(chan error, 1)
 
 	go func() {
+		defer func() {
+			l.Log.Info().Msgf("Disposing target file: %s", l.GetFileInfo().GetImportLocation().TargetFile)
+
+			l.GetFileInfo().GetImportLocation().DisposeTargetFile()
+
+			close(errChan)
+		}()
+
 		for err := range errChan {
 			fmt.Printf("Captured error: %s\n", err)
 			l.Log.Error().Err(err).Msg("error when verifying monted lockit file")
-			l.GetFileInfo().GetImportLocation().DisposeTargetFile()
 			return
 		}
 	}()
@@ -83,10 +90,17 @@ func (l *LockitFile) Compress() {
 	errChan := make(chan error, 1)
 
 	go func() {
+		defer func() {
+			l.Log.Info().Msgf("Disposing target file: %s", l.GetFileInfo().GetImportLocation().TargetFile)
+
+			l.GetFileInfo().GetImportLocation().DisposeTargetFile()
+
+			close(errChan)
+		}()
+
 		for err := range errChan {
 			fmt.Printf("Captured error: %s\n", err)
 			l.Log.Error().Err(err).Msg("error when verifying monted lockit file")
-			l.GetFileInfo().GetImportLocation().DisposeTargetFile()
 			return
 		}
 	}()
