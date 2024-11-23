@@ -12,7 +12,7 @@ import (
 func CountSegments(targetFile string) int {
 	separator := FFX_TEXT_FORMAT_SEPARATOR
 
-	input, err := ReadFile(targetFile)
+	input, err := ReadFileAsString(targetFile)
 	if err != nil {
 		return 0
 	}
