@@ -25,13 +25,14 @@ func DialogsFileExtractor(dialogsFileInfo interactions.IGameDataInfo) error {
 	}
 
 	characterTable := util.NewCharacterTable()
-	characterTable.Dispose()
-
+	
 	codeTable, err := characterTable.GetFfx2CharacterTable()
 	if err != nil {
 		return fmt.Errorf("failed to get code table: %w", err)
 	}
-
+	
+	defer characterTable.Dispose(codeTable)
+	
 	args := []string{"-e", "-t", codeTable, targetFile, extractLocation.TargetFile}
 
 	if err = lib.RunCommand(executable, args); err != nil {

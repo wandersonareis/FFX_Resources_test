@@ -30,12 +30,13 @@ func KernelFileCompressor(gameData interactions.IGameDataInfo) error {
 	}
 
 	characterTable := util.NewCharacterTable()
-	characterTable.Dispose()
-
+	
 	codeTable, err := characterTable.GetFfx2CharacterTable()
 	if err != nil {
 		return fmt.Errorf("failed to get code table: %w", err)
 	}
+	
+	defer characterTable.Dispose(codeTable)
 
 	targetFile := gameData.GetGameData().FullFilePath
 

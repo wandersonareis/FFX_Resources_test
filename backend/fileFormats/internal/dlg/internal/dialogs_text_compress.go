@@ -28,13 +28,14 @@ func DialogsFileCompressor(gameData interactions.IGameDataInfo) error {
 	}
 
 	codeTableHandler := new(util.CharacterTable)
-	defer codeTableHandler.Dispose()
-
+	
 	codeTable, err := codeTableHandler.GetFfx2CharacterTable()
 	if err != nil {
 		return fmt.Errorf("failed to get code table: %w", err)
 	}
-
+	
+	defer codeTableHandler.Dispose(codeTable)
+	
 	targetFile := gameData.GetGameData().FullFilePath
 
 	args := []string{"-i", "-t", codeTable, targetFile, translateLocation.TargetFile, importLocation.TargetFile}

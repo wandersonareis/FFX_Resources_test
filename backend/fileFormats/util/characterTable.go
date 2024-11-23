@@ -2,9 +2,7 @@ package util
 
 import "os"
 
-type CharacterTable struct {
-	targetFile string
-}
+type CharacterTable struct{}
 
 func NewCharacterTable() *CharacterTable {
 	return &CharacterTable{}
@@ -16,9 +14,7 @@ func (ct *CharacterTable) GetFfx2CharacterTable() (string, error) {
 		return "", err
 	}
 
-	ct.targetFile = targetFile
-
-	return ct.targetFile, nil
+	return targetFile, nil
 }
 
 func (ct *CharacterTable) GetCharacterOnlyTable() (string, error) {
@@ -27,9 +23,7 @@ func (ct *CharacterTable) GetCharacterOnlyTable() (string, error) {
 		return "", err
 	}
 
-	ct.targetFile = targetFile
-
-	return ct.targetFile, nil
+	return targetFile, nil
 }
 
 func (ct *CharacterTable) GetCharacterLocTable() (string, error) {
@@ -38,14 +32,9 @@ func (ct *CharacterTable) GetCharacterLocTable() (string, error) {
 		return "", err
 	}
 
-	ct.targetFile = targetFile
-
-	return ct.targetFile, nil
+	return targetFile, nil
 }
 
-func (ct *CharacterTable) Dispose() {
-	if ct.targetFile != "" {
-		os.Remove(ct.targetFile)
-		ct.targetFile = ""
-	}
+func (ct *CharacterTable) Dispose(file string) {
+	os.Remove(file)
 }
