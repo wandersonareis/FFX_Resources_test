@@ -132,7 +132,7 @@ func (lv *DcpFileVerify) verifyDcpTextParts(targetPath string, options *interact
 		return <-errChan
 	}
 
-	worker.ForEach(parts, func(i int, part DcpFileParts) error {
+	worker.ForEach(*parts, func(i int, part DcpFileParts) error {
 		if common.CountSegments(part.GetTranslateLocation().TargetFile) == 0 {
 			errChan <- fmt.Errorf("invalid number of segments in text part: %s", part.GetTranslateLocation().TargetFile)
 			return nil
