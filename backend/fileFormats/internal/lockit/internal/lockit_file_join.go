@@ -13,11 +13,11 @@ import (
 
 type lockitFileJoin struct {
 	*base.FormatsBase
-	parts   *[]LockitFileParts
+	parts   []LockitFileParts
 	options *interactions.LockitFileOptions
 }
 
-func NewLockitFileJoiner(dataInfo interactions.IGameDataInfo, parts *[]LockitFileParts) *lockitFileJoin {
+func NewLockitFileJoiner(dataInfo interactions.IGameDataInfo, parts []LockitFileParts) *lockitFileJoin {
 	return &lockitFileJoin{
 		FormatsBase: base.NewFormatsBase(dataInfo),
 		options:     interactions.NewInteraction().GamePartOptions.GetLockitFileOptions(),
@@ -25,7 +25,7 @@ func NewLockitFileJoiner(dataInfo interactions.IGameDataInfo, parts *[]LockitFil
 	}
 }
 
-func (lj *lockitFileJoin) FindTextParts() ([]LockitFileParts, error) {
+func (lj *lockitFileJoin) FindTranslatedTextParts() ([]LockitFileParts, error) {
 	parts := []LockitFileParts{}
 	err := util.FindFileParts(
 		&parts,
@@ -43,7 +43,7 @@ func (lj *lockitFileJoin) FindTextParts() ([]LockitFileParts, error) {
 func (lj *lockitFileJoin) EncodeFilesParts() error {
 	worker := common.NewWorker[LockitFileParts]()
 
-	worker.ParallelForEach(lj.parts,
+	worker.ParallelForEach(&lj.parts,
 		func(index int, part LockitFileParts) {
 			if index > 0 && index%2 == 0 {
 				part.Compress(LocEnc)
@@ -62,8 +62,8 @@ func (lj *lockitFileJoin) EncodeFilesParts() error {
 func (lj *lockitFileJoin) JoinFileParts() error {
 	importLocation := lj.GetImportLocation()
 
-	if len(*lj.parts) != lj.options.PartsLength {
-		return fmt.Errorf("invalid number of parts: %d expected: %d", len(*lj.parts), lj.options.PartsLength)
+	if len(lj.parts) != lj.options.PartsLength {
+		return fmt.Errorf("invalid number of parts: %d expected: %d", len(lj.parts), lj.options.PartsLength)
 	}
 
 	var combinedBuffer bytes.Buffer

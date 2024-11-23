@@ -56,10 +56,6 @@ func (l *LockitFile) Extract() {
 
 	if len(*l.Parts) != l.options.PartsLength {
 		internal.FileSplitter(l.GetFileInfo(), *l.options)
-		/* if err := internal.FileSplitter(l.GetFileInfo(), *l.options); err != nil {
-			l.Log.Error().Err(err).Msg("error when ensuring lockit parts exist")
-			return
-		} */
 
 		newLockitFile := NewLockitFile(l.GetFileInfo()).(*LockitFile)
 
@@ -69,7 +65,7 @@ func (l *LockitFile) Extract() {
 
 	internal.DecoderPartsFiles(l.Parts)
 
-	if err := l.VerifyExtract(l.GetExtractLocation(), l.options); err != nil {
+	if err := l.VerifyExtract(*l.Parts, l.GetExtractLocation(), *l.options); err != nil {
 		l.Log.Error().Err(err).Send()
 		return
 	}
@@ -89,31 +85,33 @@ func (l *LockitFile) Compress() {
 		}
 	}()
 
-	partsJoiner := internal.NewLockitFileJoiner(l.GetFileInfo(), l.Parts)
+	partsJoiner := internal.NewLockitFileJoiner(l.GetFileInfo(), *l.Parts)
 
-	translatedParts, err := partsJoiner.FindTextParts()
+	translatedParts, err := partsJoiner.FindTranslatedTextParts()
 	if err != nil {
-		l.Log.Error().Err(err).Msg("error when finding lockit text parts")
+		errChan <- err
 		return
 	}
 
 	if len(translatedParts) != l.options.PartsLength {
-		l.Log.Error().Int("TranslatedParts", len(translatedParts)).Int("ExpectedParts", l.options.PartsLength).Msg("invalid number of translated parts")
+		errChan <- fmt.Errorf("invalid number of translated parts")
 		return
 	}
 
 	if err := partsJoiner.EncodeFilesParts(); err != nil {
 		l.Log.Error().Err(err).Interface("LockitFile", l.GetFileInfo()).Msg("error when encoding lockit file parts")
+		errChan <- err
 		return
 	}
 
 	if err := partsJoiner.JoinFileParts(); err != nil {
-		l.Log.Error().Err(err).Interface("LockitFile", l.GetFileInfo()).Msg("error when joining lockit file parts")
+		errChan <- err
 		return
 	}
 
-	if err := l.VerifyCompress(l.GetFileInfo(), l.options, errChan); err != nil {
-		l.Log.Error().Err(err).Send()
+	if err := l.VerifyCompress(l.GetFileInfo(), l.options); err != nil {
+		errChan <- err
+		return
 	}
 
 	l.Log.Info().Msgf("Lockit file monted: %s", l.GetGameData().Name)
