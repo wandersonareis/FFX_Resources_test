@@ -13,7 +13,7 @@ import (
 type Content struct {
 	header    *Header
 	container *bytes.Buffer
-	options   *interactions.DcpFileOptions
+	options   interactions.DcpFileOptions
 	outputDir string
 }
 

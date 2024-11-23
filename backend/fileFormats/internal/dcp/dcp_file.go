@@ -13,7 +13,7 @@ import (
 type DcpFile struct {
 	*internal.DcpFileVerify
 
-	options *interactions.DcpFileOptions
+	options interactions.DcpFileOptions
 	Parts   *[]internal.DcpFileParts
 }
 

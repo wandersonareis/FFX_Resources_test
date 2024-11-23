@@ -22,7 +22,7 @@ func NewDcpFileVerify(dataInfo interactions.IGameDataInfo) *DcpFileVerify {
 	}
 }
 
-func (lv *DcpFileVerify) VerifyExtract(extractLocation *interactions.ExtractLocation, options *interactions.DcpFileOptions) error {
+func (lv *DcpFileVerify) VerifyExtract(extractLocation *interactions.ExtractLocation, options interactions.DcpFileOptions) error {
 	errChan := make(chan error, 10)
 
 	lv.Log.Info().Msgf("Verifying splited macrodic file: %s", extractLocation.TargetPath)
@@ -55,7 +55,7 @@ func (lv *DcpFileVerify) VerifyExtract(extractLocation *interactions.ExtractLoca
 	}
 }
 
-func (lv *DcpFileVerify) VerifyCompress(dataInfo interactions.IGameDataInfo, options *interactions.DcpFileOptions) error {
+func (lv *DcpFileVerify) VerifyCompress(dataInfo interactions.IGameDataInfo, options interactions.DcpFileOptions) error {
 	errChan := make(chan error, 10)
 
 	lv.Log.Info().Msgf("Verifying reimported macrodic file: %s", dataInfo.GetImportLocation().TargetFile)
@@ -93,7 +93,7 @@ func (lv *DcpFileVerify) VerifyCompress(dataInfo interactions.IGameDataInfo, opt
 	}
 }
 
-func (lv *DcpFileVerify) verifyDcpFileParts(targetPath string, options *interactions.DcpFileOptions, errChan chan error) error {
+func (lv *DcpFileVerify) verifyDcpFileParts(targetPath string, options interactions.DcpFileOptions, errChan chan error) error {
 	parts := []DcpFileParts{}
 
 	if err := util.FindFileParts(&parts, targetPath, util.DCP_FILE_PARTS_PATTERN, NewDcpFileParts); err != nil {
@@ -117,7 +117,7 @@ func (lv *DcpFileVerify) verifyDcpFileParts(targetPath string, options *interact
 	return nil
 }
 
-func (lv *DcpFileVerify) verifyDcpTextParts(targetPath string, options *interactions.DcpFileOptions, errChan chan error) error {
+func (lv *DcpFileVerify) verifyDcpTextParts(targetPath string, options interactions.DcpFileOptions, errChan chan error) error {
 	parts := &[]DcpFileParts{}
 
 	worker := common.NewWorker[DcpFileParts]()
@@ -145,7 +145,7 @@ func (lv *DcpFileVerify) verifyDcpTextParts(targetPath string, options *interact
 	return nil
 }
 
-func (lv *DcpFileVerify) valideDcpFile(dcpFile string, options *interactions.DcpFileOptions, errChan chan error) error {
+func (lv *DcpFileVerify) valideDcpFile(dcpFile string, options interactions.DcpFileOptions, errChan chan error) error {
 	tmpDir := common.NewTempProvider().ProvideTempDir()
 
 	tmpInfo := interactions.NewGameDataInfo(dcpFile)

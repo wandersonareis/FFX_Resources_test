@@ -7,6 +7,15 @@ import (
 	"github.com/rs/zerolog"
 )
 
+type IWorker[T any] interface {
+	Execute(workerFunc func() error, logger zerolog.Logger, errMsg string, errChan chan error)
+	ForIndex(data *[]T, workerFunc func(index int, count int, data []T) error) error
+	ForEach(data []T, workerFunc func(index int, item T) error) error
+	VoidForEach(data *[]T, workerFunc func(index int, item T))
+	ParallelForEach(data *[]T, workerFunc func(index int, item T))
+	Close()
+}
+
 type Worker[T any] struct {
 	in chan func()
 	wg sync.WaitGroup
@@ -52,8 +61,8 @@ func (w *Worker[T]) ForIndex(data *[]T, workerFunc func(index int, count int, da
 	return nil
 }
 
-func (w *Worker[T]) ForEach(data *[]T, workerFunc func(index int, item T) error) error {
-	for i, item := range *data {
+func (w *Worker[T]) ForEach(data []T, workerFunc func(index int, item T) error) error {
+	for i, item := range data {
 		err := workerFunc(i, item)
 		if err != nil {
 			return err
@@ -77,7 +86,6 @@ func (w *Worker[T]) ParallelForEach(data *[]T, workerFunc func(index int, item T
 		}
 	}
 
-	w.Close()
 	w.wg.Wait()
 }
 
