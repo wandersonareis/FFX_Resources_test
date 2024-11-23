@@ -13,12 +13,14 @@ type IFileValidator interface {
 	Validate(filePath string, options interactions.LockitFileOptions) error
 }
 
-type FileValidator struct{
-	partsVerifier    IPartsVerifier
+type FileValidator struct {
+	fileSplitter  IFileSplitter
+	partsVerifier IPartsVerifier
 }
 
 func newFileValidator() IFileValidator {
 	return &FileValidator{
+		fileSplitter:  NewLockitFileSplitter(),
 		partsVerifier: newPartsVerifier(),
 	}
 }
@@ -38,7 +40,7 @@ func (fv *FileValidator) Validate(filePath string, options interactions.LockitFi
 	tmpInfo, tmpDir := fv.createTemporaryFileInfo(filePath)
 	defer tmpInfo.GetExtractLocation().DisposeTargetPath()
 
-	if err := FileSplitter(tmpInfo, options); err != nil {
+	if err := fv.fileSplitter.FileSplitter(tmpInfo, options); err != nil {
 		return fmt.Errorf("error when splitting file %s | %w", filePath, err)
 	}
 

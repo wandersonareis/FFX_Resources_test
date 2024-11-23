@@ -9,7 +9,7 @@ import (
 
 type ILockitFileVerifier interface {
 	VerifyExtract(parts []LockitFileParts, extractLocation *interactions.ExtractLocation, options interactions.LockitFileOptions) error
-	VerifyCompress(dataInfo interactions.IGameDataInfo, options *interactions.LockitFileOptions) error
+	VerifyCompress(dataInfo interactions.IGameDataInfo, options interactions.LockitFileOptions) error
 }
 
 type LockitFileVerifier struct {
@@ -34,9 +34,7 @@ func NewLockitFileVerifier(dataInfo interactions.IGameDataInfo) ILockitFileVerif
 	}
 }
 
-func (lv *LockitFileVerifier) VerifyExtract(parts []LockitFileParts, extractLocation *interactions.ExtractLocation, options interactions.LockitFileOptions) error {
-	lv.Log.Info().Msgf("Verifying splited lockit file: %s", extractLocation.TargetPath)
-
+func (lv *LockitFileVerifier) VerifyExtract(parts []LockitFileParts, location *interactions.ExtractLocation, options interactions.LockitFileOptions) error {
 	if len(parts) != options.PartsLength {
 		return fmt.Errorf("error when ensuring splited lockit parts: expected %d | got %d", options.PartsLength, len(parts))
 	}
@@ -52,14 +50,14 @@ func (lv *LockitFileVerifier) VerifyExtract(parts []LockitFileParts, extractLoca
 	return nil
 }
 
-func (lv *LockitFileVerifier) VerifyCompress(dataInfo interactions.IGameDataInfo, options *interactions.LockitFileOptions) error {
+func (lv *LockitFileVerifier) VerifyCompress(dataInfo interactions.IGameDataInfo, options interactions.LockitFileOptions) error {
 	lv.Log.Info().Msgf("Verifying reimported lockit file: %s", dataInfo.GetImportLocation().TargetFile)
 
 	if err := dataInfo.GetImportLocation().Validate(); err != nil {
 		return fmt.Errorf("reimport file not exists: %s | %w", dataInfo.GetImportLocation().TargetFile, err)
 	}
 
-	if err := lv.FileValidator.Validate(dataInfo.GetImportLocation().TargetFile, *options); err != nil {
+	if err := lv.FileValidator.Validate(dataInfo.GetImportLocation().TargetFile, options); err != nil {
 		return err
 	}
 

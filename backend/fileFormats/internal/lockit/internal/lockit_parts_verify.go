@@ -15,6 +15,7 @@ type IPartsVerifier interface {
 
 type partsVerifier struct {
 	PartsComparer IPartComparer
+	fileSplitter  IFileSplitter
 	worker        common.IWorker[LockitFileParts]
 }
 
@@ -22,6 +23,7 @@ func newPartsVerifier() IPartsVerifier {
 	worker := common.NewWorker[LockitFileParts]()
 	return &partsVerifier{
 		PartsComparer: newPartComparer(),
+		fileSplitter:  NewLockitFileSplitter(),
 		worker:        worker,
 	}
 }
@@ -43,7 +45,7 @@ func (pv *partsVerifier) Verify(path string, options interactions.LockitFileOpti
 
 	tmpParts := pv.createExtractTemporaryPartsList(parts, path)
 
-	DecoderPartsFiles(&tmpParts)
+	pv.fileSplitter.DecoderPartsFiles(&tmpParts)
 
 	if err := pv.PartsComparer.CompareTranslatedTextParts(tmpParts); err != nil {
 		return fmt.Errorf("error when comparing text parts: %w", err)

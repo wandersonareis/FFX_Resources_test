@@ -11,21 +11,28 @@ import (
 	"slices"
 )
 
-type lockitFileJoin struct {
-	*base.FormatsBase
-	parts   []LockitFileParts
-	options *interactions.LockitFileOptions
+type IPartsJoiner interface {
+	JoinFileParts() error
+	EncodeFilesParts() error
+	FindTranslatedTextParts() ([]LockitFileParts, error)
 }
 
-func NewLockitFileJoiner(dataInfo interactions.IGameDataInfo, parts []LockitFileParts) *lockitFileJoin {
-	return &lockitFileJoin{
+type lockitFileJoiner struct {
+	*base.FormatsBase
+	parts   []LockitFileParts
+	options interactions.LockitFileOptions
+	worker  common.IWorker[LockitFileParts]
+}
+
+func NewLockitFileJoiner(dataInfo interactions.IGameDataInfo, parts []LockitFileParts) IPartsJoiner {
+	return &lockitFileJoiner{
 		FormatsBase: base.NewFormatsBase(dataInfo),
 		options:     interactions.NewInteraction().GamePartOptions.GetLockitFileOptions(),
 		parts:       parts,
 	}
 }
 
-func (lj *lockitFileJoin) FindTranslatedTextParts() ([]LockitFileParts, error) {
+func (lj *lockitFileJoiner) FindTranslatedTextParts() ([]LockitFileParts, error) {
 	parts := []LockitFileParts{}
 	err := util.FindFileParts(
 		&parts,
@@ -40,10 +47,8 @@ func (lj *lockitFileJoin) FindTranslatedTextParts() ([]LockitFileParts, error) {
 	return slices.Clip(parts), nil
 }
 
-func (lj *lockitFileJoin) EncodeFilesParts() error {
-	worker := common.NewWorker[LockitFileParts]()
-
-	worker.ParallelForEach(&lj.parts,
+func (lj *lockitFileJoiner) EncodeFilesParts() error {
+	lj.worker.ParallelForEach(&lj.parts,
 		func(index int, part LockitFileParts) {
 			if index > 0 && index%2 == 0 {
 				part.Compress(LocEnc)
@@ -59,7 +64,7 @@ func (lj *lockitFileJoin) EncodeFilesParts() error {
 	return nil
 }
 
-func (lj *lockitFileJoin) JoinFileParts() error {
+func (lj *lockitFileJoiner) JoinFileParts() error {
 	importLocation := lj.GetImportLocation()
 
 	if len(lj.parts) != lj.options.PartsLength {
@@ -68,9 +73,7 @@ func (lj *lockitFileJoin) JoinFileParts() error {
 
 	var combinedBuffer bytes.Buffer
 
-	worker := common.NewWorker[LockitFileParts]()
-
-	err := worker.ForEach(lj.parts, func(_ int, part LockitFileParts) error {
+	err := lj.worker.ForEach(lj.parts, func(_ int, part LockitFileParts) error {
 		fileName := part.GetFileInfo().GetImportLocation().TargetFile
 
 		partData, err := os.ReadFile(fileName)
@@ -93,6 +96,8 @@ func (lj *lockitFileJoin) JoinFileParts() error {
 	if err := os.WriteFile(importLocation.TargetFile, combinedBuffer.Bytes(), 0644); err != nil {
 		return fmt.Errorf("error when creating output file: %v", err)
 	}
+
+	lj.worker.Close()
 
 	return nil
 }

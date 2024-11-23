@@ -10,9 +10,25 @@ import (
 	"path/filepath"
 )
 
-func DecoderPartsFiles(parts *[]LockitFileParts) {
+type IFileSplitter interface {
+	DecoderPartsFiles(parts *[]LockitFileParts)
+	FileSplitter(dataInfo interactions.IGameDataInfo, options interactions.LockitFileOptions) error
+}
+
+type LockitFileSplitter struct {
+	worker common.IWorker[LockitFileParts]
+}
+
+func NewLockitFileSplitter() IFileSplitter {
 	worker := common.NewWorker[LockitFileParts]()
-	defer worker.Close()
+
+	return &LockitFileSplitter{
+		worker: worker,
+	}
+}
+
+func (ls *LockitFileSplitter) DecoderPartsFiles(parts *[]LockitFileParts) {
+	worker := common.NewWorker[LockitFileParts]()
 
 	worker.ParallelForEach(parts,
 		func(index int, part LockitFileParts) {
@@ -24,7 +40,7 @@ func DecoderPartsFiles(parts *[]LockitFileParts) {
 		})
 }
 
-func FileSplitter(dataInfo interactions.IGameDataInfo, options interactions.LockitFileOptions) error {
+func (ls *LockitFileSplitter) FileSplitter(dataInfo interactions.IGameDataInfo, options interactions.LockitFileOptions) error {
 	extractLocation := dataInfo.GetExtractLocation()
 
 	if err := extractLocation.ProvideTargetPath(); err != nil {

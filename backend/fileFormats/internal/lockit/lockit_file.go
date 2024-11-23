@@ -12,10 +12,12 @@ import (
 
 type LockitFile struct {
 	*base.FormatsBase
-	internal.ILockitFileVerifier
 
-	options *interactions.LockitFileOptions
-	Parts   *[]internal.LockitFileParts
+	fileVerifier internal.ILockitFileVerifier
+	fileSplitter internal.IFileSplitter
+	options      interactions.LockitFileOptions
+	parts        *[]internal.LockitFileParts
+	partsJoiner  internal.IPartsJoiner
 }
 
 func NewLockitFile(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor {
@@ -35,10 +37,12 @@ func NewLockitFile(dataInfo interactions.IGameDataInfo) interactions.IFileProces
 	}
 
 	return &LockitFile{
-		FormatsBase:         base.NewFormatsBase(dataInfo),
-		ILockitFileVerifier: internal.NewLockitFileVerifier(dataInfo),
-		options:             interactions.NewInteraction().GamePartOptions.GetLockitFileOptions(),
-		Parts:               &parts,
+		FormatsBase:  base.NewFormatsBase(dataInfo),
+		fileVerifier: internal.NewLockitFileVerifier(dataInfo),
+		fileSplitter: internal.NewLockitFileSplitter(),
+		options:      interactions.NewInteraction().GamePartOptions.GetLockitFileOptions(),
+		parts:        &parts,
+		partsJoiner:  internal.NewLockitFileJoiner(dataInfo, parts),
 	}
 }
 
@@ -54,18 +58,20 @@ func (l *LockitFile) Extract() {
 		}
 	}()
 
-	if len(*l.Parts) != l.options.PartsLength {
-		internal.FileSplitter(l.GetFileInfo(), *l.options)
+	if len(*l.parts) != l.options.PartsLength {
+		l.fileSplitter.FileSplitter(l.GetFileInfo(), l.options)
 
 		newLockitFile := NewLockitFile(l.GetFileInfo()).(*LockitFile)
 
 		l.SetFileInfo(newLockitFile.GetFileInfo())
-		l.Parts = newLockitFile.Parts
+		l.parts = newLockitFile.parts
 	}
 
-	internal.DecoderPartsFiles(l.Parts)
+	l.fileSplitter.DecoderPartsFiles(l.parts)
 
-	if err := l.VerifyExtract(*l.Parts, l.GetExtractLocation(), *l.options); err != nil {
+	l.Log.Info().Msgf("Verifying splited lockit file: %s", l.GetExtractLocation().TargetPath)
+
+	if err := l.fileVerifier.VerifyExtract(*l.parts, l.GetExtractLocation(), l.options); err != nil {
 		l.Log.Error().Err(err).Send()
 		return
 	}
@@ -85,9 +91,14 @@ func (l *LockitFile) Compress() {
 		}
 	}()
 
-	partsJoiner := internal.NewLockitFileJoiner(l.GetFileInfo(), *l.Parts)
+	l.Log.Info().Msgf("Verifying splited parts before compressing: %s", l.GetExtractLocation().TargetPath)
 
-	translatedParts, err := partsJoiner.FindTranslatedTextParts()
+	if err := l.fileVerifier.VerifyExtract(*l.parts, l.GetExtractLocation(), l.options); err != nil {
+		l.Log.Error().Err(err).Send()
+		return
+	}
+
+	translatedParts, err := l.partsJoiner.FindTranslatedTextParts()
 	if err != nil {
 		errChan <- err
 		return
@@ -98,18 +109,18 @@ func (l *LockitFile) Compress() {
 		return
 	}
 
-	if err := partsJoiner.EncodeFilesParts(); err != nil {
+	if err := l.partsJoiner.EncodeFilesParts(); err != nil {
 		l.Log.Error().Err(err).Interface("LockitFile", l.GetFileInfo()).Msg("error when encoding lockit file parts")
 		errChan <- err
 		return
 	}
 
-	if err := partsJoiner.JoinFileParts(); err != nil {
+	if err := l.partsJoiner.JoinFileParts(); err != nil {
 		errChan <- err
 		return
 	}
 
-	if err := l.VerifyCompress(l.GetFileInfo(), l.options); err != nil {
+	if err := l.fileVerifier.VerifyCompress(l.GetFileInfo(), l.options); err != nil {
 		errChan <- err
 		return
 	}
