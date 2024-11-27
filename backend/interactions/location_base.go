@@ -69,7 +69,7 @@ func (lb *LocationBase) SetTargetPath(targetPath string) {
 func (lb *LocationBase) ProvideTargetDirectory() error {
 	path := filepath.Join(common.GetExecDir(), lb.TargetDirectoryName)
 
-	err := providerTargetDirectory(path)
+	err := lb.providerTargetDirectory(path)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (lb *LocationBase) ProvideTargetDirectory() error {
 
 func (lb *LocationBase) ProvideTargetPath() error {
 	if lb.TargetPath != "" {
-		return providerTargetDirectory(lb.TargetPath)
+		return lb.providerTargetDirectory(lb.TargetPath)
 	}
 
 	return fmt.Errorf("target path is empty")
@@ -119,7 +119,7 @@ func (t *LocationBase) isTargetFileAvailable() bool {
 	return t.IsExist
 }
 
-func providerTargetDirectory(targetDirectory string) error {
+func (t *LocationBase) providerTargetDirectory(targetDirectory string) error {
 	if targetDirectory != "" && common.IsPathExists(targetDirectory) {
 		return nil
 	}
