@@ -7,11 +7,9 @@ import (
 	"strings"
 )
 
-type Checksum struct {
-	Checksum string
-}
+type Checksum struct {}
 
-func (c *Checksum) IsValid(file string) bool {
+func (c *Checksum) VerifyChecksum(file, checksum string) bool {
 	data, err := c.readBytes(file)
 	if err != nil {
 		return false
@@ -19,11 +17,7 @@ func (c *Checksum) IsValid(file string) bool {
 	
 	hash := sha256.Sum256(data)
 
-	return c.Checksum == hex.EncodeToString(hash[:])
-}
-
-func (c *Checksum) SetChecksumString(sum string) {
-	c.Checksum = strings.ToLower(sum)
+	return strings.ToLower(checksum) == hex.EncodeToString(hash[:])
 }
 
 func (c *Checksum) readBytes(file string) ([]byte, error) {

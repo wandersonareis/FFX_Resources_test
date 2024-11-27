@@ -33,9 +33,7 @@ func (d *dialogsHandler) getHandler() (string, error) {
 		return "", err
 	}
 
-	d.SetChecksumString(DIALOG_HANDLER_SHA256)
-	
-	if !d.IsValid(targetFile) {
+	if !d.VerifyChecksum(targetFile, DIALOG_HANDLER_SHA256) {
 		return "", fmt.Errorf("invalid checksum for dialog file handler")
 	}
 
@@ -50,9 +48,7 @@ func (d *dialogsHandler) getSpecialHandler() (string, error) {
 		return "", err
 	}
 
-	d.SetChecksumString(DIALOG_SPECIAL_HANDLER_SHA256)
-
-	if !d.IsValid(targetFile) {
+	if !d.VerifyChecksum(targetFile, DIALOG_SPECIAL_HANDLER_SHA256) {
 		return "", fmt.Errorf("invalid checksum for dialog special file handler")
 	}
 
