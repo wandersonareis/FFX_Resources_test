@@ -43,6 +43,16 @@ func NewInteractionWithCtx(ctx context.Context) *Interaction {
 	}
 
 	interactionInstance.Ctx = ctx
+
+	activeCtx, cancel := context.WithCancel(ctx)
+
+	interactionInstance.activeCtx = activeCtx
+	interactionInstance.cancel = cancel
+
+	return interactionInstance
+}
+
+func Get() *Interaction {
 	return interactionInstance
 }
 
