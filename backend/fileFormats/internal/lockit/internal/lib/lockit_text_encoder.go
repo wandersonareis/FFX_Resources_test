@@ -39,10 +39,10 @@ func LockitEncoderLoc(lockitFileInfo interactions.IGameDataInfo) error {
 }
 
 func encoderBase(lockitFileInfo interactions.IGameDataInfo, codeTable string) error {
-	handler := newLockitHandler()
-	defer handler.dispose()
+	handler := NewLockitHandler()
+	defer handler.Dispose()
 
-	executable, err := handler.getLockitFileHandler()
+	executable, err := handler.GetLockitFileHandler()
 	if err != nil {
 		return err
 	}
@@ -65,8 +65,8 @@ func encoderBase(lockitFileInfo interactions.IGameDataInfo, codeTable string) er
 }
 
 func ensureUtf8Bom(target string) error {
-	handler := newLockitHandler()
-	defer handler.dispose()
+	handler := NewLockitHandler()
+	defer handler.Dispose()
 
 	executable, err := handler.getLockitFileUtf8BomNormalizer()
 	if err != nil {

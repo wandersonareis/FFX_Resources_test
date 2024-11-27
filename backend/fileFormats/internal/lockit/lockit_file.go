@@ -118,7 +118,7 @@ func (l *LockitFile) Compress() {
 
 	l.Log.Info().Msg("Compressing lockit file parts...")
 	l.Log.Info().Msgf("Verifying splited parts before compressing: %s", l.GetExtractLocation().TargetPath)
-	
+
 	if err := l.fileVerifier.VerifyExtract(l.parts, l.GetExtractLocation(), l.options); err != nil {
 		l.Log.Error().Err(err).Send()
 		return

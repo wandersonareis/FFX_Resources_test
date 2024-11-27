@@ -33,10 +33,10 @@ func LockitDecoderLoc(lockitFileInfo interactions.IGameDataInfo) error {
 }
 
 func decoderBase(lockitFileInfo interactions.IGameDataInfo, codeTable string) error {
-	handler := newLockitHandler()
-	defer handler.dispose()
+	handler := NewLockitHandler()
+	defer handler.Dispose()
 
-	executable, err := handler.getLockitFileHandler()
+	executable, err := handler.GetLockitFileHandler()
 	if err != nil {
 		return err
 	}

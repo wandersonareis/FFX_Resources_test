@@ -3,6 +3,7 @@ package joiner
 import (
 	"bytes"
 	"ffxresources/backend/common"
+	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lib"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
@@ -53,12 +54,15 @@ func (lj *lockitFileJoiner) FindTranslatedTextParts() (*[]parts.LockitFileParts,
 }
 
 func (lj *lockitFileJoiner) EncodeFilesParts() error {
+	encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextLocalizationEncoding()
+	defer encoding.Dispose()
+
 	lj.worker.ParallelForEach(lj.partsList,
 		func(index int, part parts.LockitFileParts) {
 			if index > 0 && index%2 == 0 {
-				part.Compress(parts.LocEnc)
+				part.Compress(parts.LocEnc, encoding)
 			} else {
-				part.Compress(parts.FfxEnc)
+				part.Compress(parts.FfxEnc, encoding)
 			}
 		})
 

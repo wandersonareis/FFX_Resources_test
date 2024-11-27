@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"ffxresources/backend/common"
+	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
 	"ffxresources/backend/interactions"
 	"fmt"
@@ -27,12 +28,15 @@ func NewLockitFileSplitter() IFileSplitter {
 }
 
 func (ls *LockitFileSplitter) DecoderPartsFiles(partsList *[]parts.LockitFileParts) {
+	encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextLocalizationEncoding()
+	defer encoding.Dispose()
+
 	ls.worker.ParallelForEach(partsList,
 		func(index int, part parts.LockitFileParts) {
 			if index > 0 && index % 2 == 0 {
-				part.Extract(parts.LocEnc)
+				part.Extract(parts.LocEnc, encoding)
 			} else {
-				part.Extract(parts.FfxEnc)
+				part.Extract(parts.FfxEnc, encoding)
 			}
 		})
 }

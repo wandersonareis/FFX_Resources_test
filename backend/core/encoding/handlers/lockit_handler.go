@@ -1,4 +1,4 @@
-package lib
+package encodingHandler
 
 import (
 	"ffxresources/backend/fileFormats/util"
@@ -6,18 +6,19 @@ import (
 	"os"
 )
 
-type lockitHandler struct {
+type lockitEncodingHandler struct {
 	util.Checksum
-	targetFile string
+	handlerFile string
+	utf8BomFile string
 }
 
-func NewLockitHandler() *lockitHandler {
-	return &lockitHandler{
+func NewLockitHandler() *lockitEncodingHandler {
+	return &lockitEncodingHandler{
 		Checksum: util.Checksum{},
 	}
 }
 
-func (lh *lockitHandler) GetLockitFileHandler() (string, error) {
+func (lh *lockitEncodingHandler) FetchLockitHandler() (string, error) {
 	targetFile, err := util.GetFromResources(LOCKIT_RESOURCES_DIR, LOCKIT_HANDLER_APPLICATION, util.DEFAULT_APPLICATION_FILE_EXTENSION)
 	if err != nil {
 		return "", err
@@ -27,12 +28,12 @@ func (lh *lockitHandler) GetLockitFileHandler() (string, error) {
 		return "", fmt.Errorf("invalid checksum for lockit file handler")
 	}
 
-	lh.targetFile = targetFile
+	lh.handlerFile = targetFile
 
-	return lh.targetFile, nil
+	return lh.handlerFile, nil
 }
 
-func (lh *lockitHandler) getLockitFileUtf8BomNormalizer() (string, error) {
+func (lh *lockitEncodingHandler) FetchLockitUtf8BomNormalizer() (string, error) {
 	targetFile, err := util.GetFromResources(LOCKIT_RESOURCES_DIR, UTF8BOM_NORMALIZER_APPLICATION, util.DEFAULT_APPLICATION_FILE_EXTENSION)
 	if err != nil {
 		return "", err
@@ -42,14 +43,22 @@ func (lh *lockitHandler) getLockitFileUtf8BomNormalizer() (string, error) {
 		return "", fmt.Errorf("invalid checksum for lockit file utf8bom normalizer")
 	}
 
-	lh.targetFile = targetFile
+	lh.utf8BomFile = targetFile
 
-	return lh.targetFile, nil
+	return lh.utf8BomFile, nil
 }
 
-func (lh *lockitHandler) Dispose() {
-	if lh.targetFile != "" {
-		os.Remove(lh.targetFile)
-		lh.targetFile = ""
+func (lh *lockitEncodingHandler) Dispose() {
+	if lh.handlerFile != "" {
+		if err := os.Remove(lh.handlerFile); err != nil {
+			fmt.Println("error when removing lockit file handler")
+		}
+		
+		lh.handlerFile = ""
+	}
+
+	if lh.utf8BomFile != "" {
+		os.Remove(lh.utf8BomFile)
+		lh.utf8BomFile = ""
 	}
 }

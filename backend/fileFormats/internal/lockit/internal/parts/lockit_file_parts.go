@@ -1,8 +1,9 @@
 package parts
 
 import (
+	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/fileFormats/internal/base"
-	"ffxresources/backend/fileFormats/internal/lockit/internal/lib"
+	"ffxresources/backend/fileFormats/internal/lockit/internal/encoding"
 	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
@@ -33,14 +34,16 @@ func NewLockitFileParts(dataInfo interactions.IGameDataInfo) *LockitFileParts {
 	}
 }
 
-func (l *LockitFileParts) Extract(dec LockitPartEncodeType) {
+func (l *LockitFileParts) Extract(dec LockitPartEncodeType, encoding ffxencoding.IFFXTextLockitEncoding) {
 	errChan := make(chan error, 1)
+
+	decoder := lockitencoding.NewDecoder()
 
 	switch dec {
 	case FfxEnc:
-		errChan <- lib.LockitDecoderFfx(l.GetFileInfo())
+		errChan <- decoder.LockitDecoderFfx(l.GetGameData().FullFilePath, l.GetExtractLocation().TargetFile, encoding)
 	case LocEnc:
-		errChan <- lib.LockitDecoderLoc(l.GetFileInfo())
+		errChan <- decoder.LockitDecoderLoc(l.GetGameData().FullFilePath, l.GetExtractLocation().TargetFile, encoding)
 	default:
 		errChan <- fmt.Errorf("invalid encode type: %d", dec)
 	}
@@ -52,14 +55,18 @@ func (l *LockitFileParts) Extract(dec LockitPartEncodeType) {
 	}
 }
 
-func (l *LockitFileParts) Compress(enc LockitPartEncodeType) {
+func (l *LockitFileParts) Compress(enc LockitPartEncodeType, encoding ffxencoding.IFFXTextLockitEncoding) {
 	errChan := make(chan error, 1)
+
+	encoder := lockitencoding.NewEncoder()
+
+	l.GetImportLocation().ProvideTargetPath()
 
 	switch enc {
 	case FfxEnc:
-		errChan <- lib.LockitEncoderFfx(l.GetFileInfo())
+		errChan <- encoder.LockitEncoderFfx(l.GetTranslateLocation().TargetFile, l.GetImportLocation().TargetFile, encoding)
 	case LocEnc:
-		errChan <- lib.LockitEncoderLoc(l.GetFileInfo())
+		errChan <- encoder.LockitEncoderLoc(l.GetTranslateLocation().TargetFile, l.GetImportLocation().TargetFile, encoding)
 	default:
 		errChan <- fmt.Errorf("invalid encode type: %d", enc)
 	}
