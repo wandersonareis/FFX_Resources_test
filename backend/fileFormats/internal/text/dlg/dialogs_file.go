@@ -3,7 +3,6 @@ package dlg
 import (
 	"ffxresources/backend/fileFormats/internal/text/dlg/internal"
 	"ffxresources/backend/fileFormats/internal/text/lib/dlg_krnl_verify"
-	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
@@ -29,8 +28,9 @@ func NewDialogs(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor
 		decoder:       internal.NewDlgDecoder(),
 		encoder:       internal.NewDlgEncoder(),
 		textVerifyer:  verify.NewDlgKrnlVerify(),
-		dataInfo:      dataInfo,
-		log:           logger.Get().With().Str("module", "dialogs_file").Logger(),
+
+		dataInfo: dataInfo,
+		log:      logger.Get().With().Str("module", "dialogs_file").Logger(),
 	}
 }
 
@@ -39,53 +39,55 @@ func (d DialogsFile) GetFileInfo() interactions.IGameDataInfo {
 }
 
 func (d DialogsFile) Extract() {
-	errChan := make(chan error, 1)
-
-	go func() {
-		defer func() {
-			d.log.Info().Msgf("Disposing target file: %s", d.GetFileInfo().GetImportLocation().TargetFile)
-
-			d.GetFileInfo().GetImportLocation().DisposeTargetFile()
-
-			close(errChan)
-		}()
-
-		for err := range errChan {
-			d.log.Error().Err(err).Msg("error when verifying monted macrodic file")
-
-			return
-		}
-	}()
-
 	if slices.Contains(d.dataInfo.GetGameData().ClonedItems, d.dataInfo.GetGameData().RelativeGameDataPath) {
 		return
 	}
 
 	if err := d.decoder.Decoder(d.GetFileInfo()); err != nil {
-		d.log.Error().Err(err).Interface("DialogFile", util.ErrorObject(d.GetFileInfo())).Msg("Error extracting dialog file")
+		d.log.Error().
+			Err(err).
+			Str("file", d.GetFileInfo().GetGameData().FullFilePath).
+			Msg("Error decoding dialog file")
+
 		return
 	}
 
 	if err := d.textVerifyer.VerifyExtract(d.dataInfo.GetExtractLocation()); err != nil {
-		d.log.Error().Err(err).Msg("Error verifying text file")
+		d.log.Error().
+			Err(err).
+			Str("file", d.GetFileInfo().GetExtractLocation().TargetFile).
+			Msg("Error verifying text file")
+
 		return
 	}
 
-	d.log.Info().Msgf("Dialog file extracted successfully: %s", d.dataInfo.GetGameData().Name)
+	d.log.Info().
+		Str("file", d.GetFileInfo().GetExtractLocation().TargetFile).
+		Msg("Dialog file extracted successfully")
 }
 
 func (d DialogsFile) Compress() {
 	if err := d.encoder.Encoder(d.GetFileInfo()); err != nil {
-		d.log.Error().Err(err).Interface("DialogFile", util.ErrorObject(d.GetFileInfo())).Msg("Error compressing dialog file")
+		d.log.Error().
+			Err(err).
+			Str("file", d.GetFileInfo().GetTranslateLocation().TargetFile).
+			Msg("Error compressing dialog file")
+
 		return
 	}
 
 	if err := d.textVerifyer.VerifyCompress(d.GetFileInfo(), d.decoder.Decoder); err != nil {
-		d.log.Error().Err(err).Msg("Error verifying text file")
+		d.log.Error().
+			Err(err).
+			Str("file", d.GetFileInfo().GetImportLocation().TargetFile).
+			Msg("Error verifying text file")
+
 		return
 	}
 
 	d.dialogsClones.Clone()
 
-	d.log.Info().Msgf("Dialog file compressed: %s", d.dataInfo.GetGameData().Name)
+	d.log.Info().
+		Str("file", d.GetFileInfo().GetImportLocation().TargetFile).
+		Msg("Dialog file compressed")
 }

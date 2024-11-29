@@ -32,14 +32,22 @@ func (d *dlgDecoder) Decoder(dialogsFileInfo interactions.IGameDataInfo) error {
 	extractLocation := dialogsFileInfo.GetExtractLocation()
 
 	if err := extractLocation.ProvideTargetPath(); err != nil {
-		d.log.Error().Err(err).Msgf("Error providing extract path: %s", extractLocation.TargetPath)
+		d.log.Error().
+			Err(err).
+			Str("path", extractLocation.TargetPath).
+			Msg("Error providing extract path")
+
 		return err
 	}
 
 	decoder := textsEncoding.NewDecoder()
 
 	if err := decoder.DlgDecoder(sourceFile, extractLocation.TargetFile, encoding); err != nil {
-		d.log.Error().Err(err).Msgf("Error on decoding dialog file: %s", sourceFile)
+		d.log.Error().
+			Err(err).
+			Str("file", sourceFile).
+			Msg("Error on decoding dialog file")
+
 		return err
 	}
 
