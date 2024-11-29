@@ -5,7 +5,10 @@ import (
 	"ffxresources/backend/fileFormats/internal/dcp/internal/splitter"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/logger"
 	"fmt"
+
+	"github.com/rs/zerolog"
 )
 
 type IFileValidator interface {
@@ -15,12 +18,16 @@ type IFileValidator interface {
 type FileValidator struct {
 	fileSplitter  splitter.IDcpFileSpliter
 	partsVerifier IPartsVerifier
+
+	log zerolog.Logger
 }
 
 func newFileValidator() IFileValidator {
 	return &FileValidator{
 		fileSplitter:  splitter.NewDcpFileSpliter(),
 		partsVerifier: newPartsVerifier(),
+
+		log: logger.Get().With().Str("module", "dcp_file_validator").Logger(),
 	}
 }
 
@@ -29,11 +36,21 @@ func (fv *FileValidator) Validate(filePath string, options interactions.DcpFileO
 	defer tmpInfo.GetExtractLocation().DisposeTargetPath()
 
 	if err := fv.fileSplitter.Split(tmpInfo); err != nil {
-		return fmt.Errorf("error when splitting file %s | %w", filePath, err)
+		fv.log.Error().
+			Err(err).
+			Str("file", filePath).
+			Msg("error when splitting the file")
+
+		return fmt.Errorf("error when splitting file")
 	}
 
 	if err := fv.partsVerifier.Verify(tmpDir, options); err != nil {
-		return fmt.Errorf("error when verifying monted lockit file parts: %w", err)
+		fv.log.Error().
+			Err(err).
+			Str("file", filePath).
+			Msg("error when verifying monted lockit file parts")
+
+		return fmt.Errorf("error when verifying monted lockit file parts")
 	}
 
 	return nil

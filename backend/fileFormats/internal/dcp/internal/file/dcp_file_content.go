@@ -5,6 +5,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/logger"
 	"fmt"
 	"io"
 	"os"
@@ -18,7 +19,8 @@ type Content struct {
 	container *bytes.Buffer
 	options   interactions.DcpFileOptions
 	outputDir string
-	log       zerolog.Logger
+
+	log zerolog.Logger
 }
 
 func NewContent(header *Header, outputDir string) *Content {
@@ -26,13 +28,16 @@ func NewContent(header *Header, outputDir string) *Content {
 		header:    header,
 		options:   interactions.NewInteraction().GamePartOptions.GetDcpFileOptions(),
 		outputDir: outputDir,
+
+		log: logger.Get().With().Str("module", "dcp_file_content").Logger(),
 	}
 }
 
 func NewContentWithBuffer(container *bytes.Buffer) *Content {
 	return &Content{
 		container: container,
-		log:       zerolog.New(os.Stdout).With().Str("module", "dcp_file_content").Logger(),
+
+		log: logger.Get().With().Str("module", "dcp_file_content").Logger(),
 	}
 }
 
@@ -41,8 +46,11 @@ func (c Content) Read(file *os.File) error {
 		dataLentgh := dataRange.End - dataRange.Start
 
 		if _, err := file.Seek(dataRange.Start, io.SeekStart); err != nil {
-			c.log.Error().Err(err).Msgf("error when positioning in the file: %s", file.Name())
-			c.log.Error().Err(err).Msgf("%s", err.Error())
+			c.log.Error().
+				Err(err).
+				Str("file", file.Name()).
+				Msg("error when positioning in the file")
+
 			return err
 		}
 
@@ -53,13 +61,20 @@ func (c Content) Read(file *os.File) error {
 		outputFilePartsPath := filepath.Join(c.outputDir, outputFileName)
 
 		if _, err := io.ReadFull(file, data); err != nil {
-			c.log.Error().Err(err).Msgf("error reading data: %s", file.Name())
-			c.log.Error().Err(err).Msgf("%s", err.Error())
+			c.log.Error().
+				Err(err).
+				Str("file", file.Name()).
+				Msg("error reading data")
+
 			return err
 		}
 
 		if err := common.WriteBytesToFile(outputFilePartsPath, data); err != nil {
-			c.log.Error().Err(err).Msgf("error saving the file %s", outputFilePartsPath)
+			c.log.Error().
+				Err(err).
+				Str("file", outputFilePartsPath).
+				Msg("error saving the file")
+
 			return err
 		}
 	}
@@ -69,20 +84,25 @@ func (c Content) Read(file *os.File) error {
 func (c Content) Write(header *Header, parts *[]parts.DcpFileParts) error {
 	for _, part := range *parts {
 		filePath := part.GetImportLocation().TargetFile
-		fileName := filepath.Base(filePath)
 
 		file, err := os.Open(filePath)
 		if err != nil {
-			c.log.Error().Err(err).Msgf("error when opening the file %s", fileName)
-			c.log.Error().Err(err).Msgf("%s", err.Error())
+			c.log.Error().
+				Err(err).
+				Str("file", filePath).
+				Msg("error when opening the file")
+
 			return err
 		}
 
 		defer file.Close()
 
 		if _, err := io.Copy(c.container, file); err != nil {
-			c.log.Error().Err(err).Msgf("error recording the data from the file %s to the container", fileName)
-			c.log.Error().Err(err).Msgf("%s", err.Error())
+			c.log.Error().
+				Err(err).
+				Str("file", filePath).
+				Msg("error recording the data from the file")
+
 			return err
 		}
 	}

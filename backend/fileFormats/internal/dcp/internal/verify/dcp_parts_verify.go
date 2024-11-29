@@ -22,8 +22,9 @@ type IPartsVerifier interface {
 type partsVerifier struct {
 	PartsComparer IPartComparer
 	fileSplitter  splitter.IDcpFileSpliter
-	log           zerolog.Logger
-	worker        common.IWorker[parts.DcpFileParts]
+
+	log    zerolog.Logger
+	worker common.IWorker[parts.DcpFileParts]
 }
 
 func newPartsVerifier() IPartsVerifier {
@@ -31,8 +32,9 @@ func newPartsVerifier() IPartsVerifier {
 	return &partsVerifier{
 		PartsComparer: newPartComparer(),
 		fileSplitter:  new(splitter.DcpFileSpliter),
-		log:           logger.Get().With().Str("module", "dcp_parts_verify").Logger(),
-		worker:        worker,
+
+		log:    logger.Get().With().Str("module", "dcp_parts_verify").Logger(),
+		worker: worker,
 	}
 }
 
@@ -40,16 +42,29 @@ func (pv *partsVerifier) Verify(path string, options interactions.DcpFileOptions
 	partsList := &[]parts.DcpFileParts{}
 
 	if err := util.FindFileParts(partsList, path, lib.DCP_FILE_PARTS_PATTERN, parts.NewDcpFileParts); err != nil {
-		pv.log.Error().Err(err).Msgf("Error when finding lockit parts: %v", err)
+		pv.log.Error().
+			Err(err).
+			Str("path", path).
+			Msg("Error when finding lockit parts")
+
 		return fmt.Errorf("error when finding lockit parts")
 	}
 
 	if err := pv.EnsurePartsLength(len(*partsList), options.PartsLength); err != nil {
-		pv.log.Error().Err(err).Msgf("Error when ensuring lockit parts length: %v", err)
+		pv.log.Error().
+			Err(err).
+			Int("Expected parts", options.PartsLength).
+			Int("Found parts", len(*partsList)).
+			Msg("Error when ensuring lockit parts length")
+
 		return fmt.Errorf("error when ensuring lockit parts length")
 	}
 
 	if err := pv.PartsComparer.CompareGameDataBinaryParts(partsList); err != nil {
+		pv.log.Error().
+			Err(err).
+			Msg("Error when comparing binary parts")
+
 		return fmt.Errorf("error when comparing binary parts")
 	}
 
@@ -57,7 +72,11 @@ func (pv *partsVerifier) Verify(path string, options interactions.DcpFileOptions
 
 	pv.worker.ParallelForEach(partsList, func(i int, part parts.DcpFileParts) {
 		if err := part.Validate(); err != nil {
-			pv.log.Error().Err(err).Msgf("Error processing macrodic file part: %s", part.GetGameData().Name)
+			pv.log.Error().
+				Err(err).
+				Str("part", part.GetGameData().FullFilePath).
+				Msg("Error processing macrodic file part")
+
 			return
 		}
 
@@ -65,6 +84,10 @@ func (pv *partsVerifier) Verify(path string, options interactions.DcpFileOptions
 	})
 
 	if err := pv.PartsComparer.CompareTranslatedTextParts(tmpParts); err != nil {
+		pv.log.Error().
+			Err(err).
+			Msg("Error when comparing text parts")
+
 		return fmt.Errorf("error when comparing text parts")
 	}
 
@@ -73,7 +96,7 @@ func (pv *partsVerifier) Verify(path string, options interactions.DcpFileOptions
 
 func (lc *partsVerifier) EnsurePartsLength(partsLength, expectedLength int) error {
 	if partsLength != expectedLength {
-		return fmt.Errorf("parts length is %d, expected %d", partsLength, expectedLength)
+		return fmt.Errorf("parts length is different from expected")
 	}
 
 	return nil

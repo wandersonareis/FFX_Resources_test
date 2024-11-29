@@ -69,6 +69,11 @@ func (pc PartComparer) CompareGameDataBinaryParts(partsList *[]parts.DcpFilePart
 func (pc PartComparer) CompareTranslatedTextParts(partsList *[]parts.DcpFileParts) error {
 	compareTextParts := func(index int, item parts.DcpFileParts) error {
 		if err := pc.compare(item.GetTranslateLocation().TargetFile, item.GetExtractLocation().TargetFile); err != nil {
+			pc.log.Error().
+				Err(err).
+				Str("part", item.GetImportLocation().TargetFile).
+				Msg("Error when comparing translated text parts")
+
 			return err
 		}
 
@@ -85,18 +90,32 @@ func (pc PartComparer) CompareTranslatedTextParts(partsList *[]parts.DcpFilePart
 func (pc PartComparer) compare(fromFile, toFile string) error {
 	newExtractedPartData, err := os.ReadFile(fromFile)
 	if err != nil {
-		pc.log.Error().Err(err).Msgf("Error when reading extracted part: %s", common.GetFileName(fromFile))
+		pc.log.Error().
+			Err(err).
+			Str("file", fromFile).
+			Msg("Error when reading extracted part")
+
 		return fmt.Errorf("error when reading extracted part")
 	}
 
 	importedPartData, err := os.ReadFile(toFile)
 	if err != nil {
-		pc.log.Error().Err(err).Msgf("Error when reading imported part: %s", common.GetFileName(toFile))
+		pc.log.Error().
+			Err(err).
+			Str("file", toFile).
+			Msg("Error when reading imported part")
+
 		return fmt.Errorf("error when reading imported part")
 	}
 
 	if !bytes.Equal(newExtractedPartData, importedPartData) {
-		pc.log.Error().Msgf("Extracted part is different from imported part: %s | Expected length: %d Got length: %d", common.GetFileName(fromFile), len(importedPartData), len(newExtractedPartData))
+		pc.log.Error().
+			Str("fromFile", fromFile).
+			Str("toFile", toFile).
+			Int("expectedLength", len(importedPartData)).
+			Int("gotLength", len(newExtractedPartData)).
+			Msg("Extracted part is different from imported part")
+
 		return fmt.Errorf("extracted part is different from imported part")
 	}
 

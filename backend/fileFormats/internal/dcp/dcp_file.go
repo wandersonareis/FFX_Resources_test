@@ -5,6 +5,7 @@ import (
 	"ffxresources/backend/events"
 	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/joinner"
+	"ffxresources/backend/fileFormats/internal/dcp/internal/lib"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/splitter"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/verify"
@@ -37,7 +38,7 @@ func NewDcpFile(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor
 
 	if err := util.FindFileParts(dcpFileParts,
 		dataInfo.GetExtractLocation().TargetPath,
-		util.DCP_FILE_PARTS_PATTERN,
+		lib.DCP_FILE_PARTS_PATTERN,
 		parts.NewDcpFileParts); err != nil {
 		events.NotifyError(err)
 		return nil
@@ -131,7 +132,7 @@ func (d DcpFile) Compress() {
 
 	dcpXplitedTextFiles := make([]string, 0, expectedDcpPartsLength)
 
-	if err := common.ListFilesMatchingPattern(&dcpXplitedTextFiles, dcpTranslatedPartsTextPath, util.DCP_TXT_PARTS_PATTERN); err != nil {
+	if err := common.ListFilesMatchingPattern(&dcpXplitedTextFiles, dcpTranslatedPartsTextPath, lib.DCP_TXT_PARTS_PATTERN); err != nil {
 		d.log.Error().
 			Err(err).
 			Str("Path", dcpTranslatedPartsTextPath).

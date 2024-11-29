@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
+	"ffxresources/backend/logger"
 	"fmt"
 	"io"
 	"os"
@@ -26,13 +27,15 @@ type Header struct {
 	Header     [0x40]byte
 	Pointers   []Pointer
 	DataRanges []DataLength
-	log        zerolog.Logger
+
+	log zerolog.Logger
 }
 
 func NewHeader() *Header {
 	return &Header{
 		Pointers: make([]Pointer, 0, 7),
-		log:      zerolog.New(os.Stdout).With().Str("module", "dcp_file_header").Logger(),
+
+		log: logger.Get().With().Str("module", "dcp_file_header").Logger(),
 	}
 }
 
@@ -43,14 +46,20 @@ func (h *Header) GetHeader() [0x40]byte {
 func (h *Header) FromFile(file string) error {
 	openFile, err := os.Open(file)
 	if err != nil {
-		h.log.Error().Err(err).Msgf("error when opening the file: %s", file)
-		h.log.Error().Err(err).Msgf("%s", err.Error())
+		h.log.Error().
+			Err(err).
+			Str("file", file).
+			Msg("error when opening the file")
+
 		return fmt.Errorf("error when opening the file")
 	}
 
 	if _, err := io.ReadFull(openFile, h.Header[:]); err != nil {
-		h.log.Error().Err(err).Msgf("error reading the header: %s", file)
-		h.log.Error().Err(err).Msgf("%s", err.Error())
+		h.log.Error().
+			Err(err).
+			Str("file", file).
+			Msg("error reading the header")
+
 		return fmt.Errorf("error reading the header")
 	}
 
@@ -74,8 +83,11 @@ func (h *Header) DataLengths(header *Header, file *os.File) error {
 			} else {
 				fileInfo, err := file.Stat()
 				if err != nil {
-					h.log.Error().Err(err).Msgf("error getting file info on: %s", file.Name())
-					h.log.Error().Err(err).Msgf("%s", err.Error())
+					h.log.Error().
+						Err(err).
+						Str("file", file.Name()).
+						Msg("error getting file info")
+
 					return err
 				}
 				ranges.End = fileInfo.Size()
@@ -95,8 +107,11 @@ func (h *Header) Update(dcpParts []parts.DcpFileParts) error {
 	for i, pointer := range h.Pointers {
 		partInfo, err := os.Stat(dcpParts[i].GetImportLocation().TargetFile)
 		if err != nil {
-			h.log.Error().Err(err).Msgf("error getting file info: %s", dcpParts[i].GetImportLocation().TargetFile)
-			h.log.Error().Err(err).Msgf("%s", err.Error())
+			h.log.Error().
+				Err(err).
+				Str("file", dcpParts[i].GetImportLocation().TargetFile).
+				Msg("error getting file info")
+
 			return err
 		}
 
@@ -116,7 +131,10 @@ func (h *Header) Update(dcpParts []parts.DcpFileParts) error {
 
 func (h *Header) Write(buffer *bytes.Buffer) error {
 	if _, err := buffer.Write(h.Header[:]); err != nil {
-		h.log.Error().Err(err).Msgf("error when recording the header: %s", err.Error())
+		h.log.Error().
+			Err(err).
+			Msg("error when writing the header")
+
 		return err
 	}
 

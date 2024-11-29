@@ -3,6 +3,7 @@ package splitter
 import (
 	"ffxresources/backend/fileFormats/internal/dcp/internal/file"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/logger"
 	"fmt"
 	"os"
 
@@ -19,7 +20,7 @@ type DcpFileSpliter struct {
 
 func NewDcpFileSpliter() IDcpFileSpliter {
 	return &DcpFileSpliter{
-		log: zerolog.New(os.Stdout).With().Str("module", "dcp_file_splitter").Logger(),
+		log: logger.Get().With().Str("module", "dcp_file_splitter").Logger(),
 	}
 }
 
@@ -29,7 +30,11 @@ func (ds *DcpFileSpliter) Split(dataInfo interactions.IGameDataInfo) error {
 	extractLocation := dataInfo.GetExtractLocation()
 
 	if err := extractLocation.ProvideTargetPath(); err != nil {
-		ds.log.Error().Err(err).Msgf("error when providing the extraction directory: %v", err)
+		ds.log.Error().
+			Err(err).
+			Str("path", extractLocation.TargetPath).
+			Msg("error when providing the extraction directory")
+
 		return fmt.Errorf("error when creating the extraction directory")
 	}
 
@@ -43,8 +48,11 @@ func (ds *DcpFileSpliter) Split(dataInfo interactions.IGameDataInfo) error {
 func (ds *DcpFileSpliter) dcpReader(dcpFilePath, outputDir string) error {
 	dcpFileStream, err := os.Open(dcpFilePath)
 	if err != nil {
-		ds.log.Error().Err(err).Msgf("error when opening the file %s", dcpFilePath)
-		ds.log.Error().Err(err).Msgf("%s", err.Error())
+		ds.log.Error().
+			Err(err).
+			Str("file", dcpFilePath).
+			Msg("error when opening the file")
+
 		return fmt.Errorf("error when opening the file %s", dcpFilePath)
 	}
 
@@ -54,13 +62,21 @@ func (ds *DcpFileSpliter) dcpReader(dcpFilePath, outputDir string) error {
 	header.FromFile(dcpFilePath)
 
 	if err := header.DataLengths(header, dcpFileStream); err != nil {
-		return fmt.Errorf("error when calculating the data intervals: %w", err)
+		ds.log.Error().
+			Err(err).
+			Msg("error when calculating the data intervals")
+
+		return fmt.Errorf("error when calculating the data intervals")
 	}
 
 	content := file.NewContent(header, outputDir)
 
 	if err := content.Read(dcpFileStream); err != nil {
-		return fmt.Errorf("error reading the data: %w", err)
+		ds.log.Error().
+			Err(err).
+			Msg("error when reading the data")
+
+		return fmt.Errorf("error reading the data")
 	}
 
 	return nil
