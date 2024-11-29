@@ -13,6 +13,8 @@ import (
 
 type kernelFile struct {
 	textVerifyer *verify.DlgKrnlVerify
+	decoder      internal.IKrnlDecoder
+	encoder      internal.IKrnlEncoder
 	dataInfo     interactions.IGameDataInfo
 
 	log zerolog.Logger
@@ -23,6 +25,8 @@ func NewKernel(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor 
 
 	return &kernelFile{
 		textVerifyer: verify.NewDlgKrnlVerify(),
+		decoder:      internal.NewKrnlDecoder(),
+		encoder:      internal.NewKrnlEncoder(),
 		dataInfo:     dataInfo,
 		log:          logger.Get().With().Str("module", "kernel_file").Logger(),
 	}
@@ -33,26 +37,26 @@ func (k kernelFile) GetFileInfo() interactions.IGameDataInfo {
 }
 
 func (k kernelFile) Extract() {
-	if err := internal.KernelFileExtractor(k.GetFileInfo()); err != nil {
-		k.log.Error().Err(err).Interface("object", util.ErrorObject(k.GetFileInfo())).Msg("Error unpacking kernel file")
+	if err := k.decoder.Decoder(k.GetFileInfo()); err != nil {
+		k.log.Error().Err(err).Msg("Error on decoding kernel file")
 		return
 	}
 
 	if err := k.textVerifyer.VerifyExtract(k.dataInfo.GetExtractLocation()); err != nil {
-		k.log.Error().Err(err).Interface("DialogFile", util.ErrorObject(k.GetFileInfo())).Msg("Error verifying dialog file")
+		k.log.Error().Err(err).Msg("Error verifying kernel file")
 		return
 	}
 
-	k.log.Info().Msgf("Kernel file extracted: %s", k.dataInfo.GetGameData().Name)
+	k.log.Info().Msgf("Kernel file decoded: %s", k.dataInfo.GetGameData().Name)
 }
 
 func (k kernelFile) Compress() {
-	if err := internal.KernelFileCompressor(k.GetFileInfo()); err != nil {
+	if err := k.encoder.Encoder(k.GetFileInfo()); err != nil {
 		k.log.Error().Err(err).Interface("object", util.ErrorObject(k.GetFileInfo())).Msg("Error compressing kernel file")
 		return
 	}
 
-	if err := k.textVerifyer.VerifyCompress(k.GetFileInfo(), internal.KernelFileExtractor); err != nil {
+	if err := k.textVerifyer.VerifyCompress(k.GetFileInfo(), k.decoder.Decoder); err != nil {
 		k.log.Error().Err(err).Interface("kialogFile", util.ErrorObject(k.GetFileInfo())).Msg("Error verifying compressed dialog file")
 		return
 	}
