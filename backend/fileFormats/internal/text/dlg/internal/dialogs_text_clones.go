@@ -18,30 +18,41 @@ type IDlgClones interface {
 
 type dialogsClones struct {
 	dataInfo interactions.IGameDataInfo
-	log      zerolog.Logger
+
+	log zerolog.Logger
 }
 
 func NewDlgClones(dataInfo interactions.IGameDataInfo) *dialogsClones {
 	return &dialogsClones{
 		dataInfo: dataInfo,
-		log:      logger.Get().With().Str("module", "dialogs_clones").Logger(),
+
+		log: logger.Get().With().Str("module", "dialogs_clones").Logger(),
 	}
 }
 
 func (dc *dialogsClones) Clone() {
-	dc.log.Info().Msgf("Creating duplicated files for: %s", dc.dataInfo.GetGameData().Name)
+	dc.log.Info().
+		Str("Clones from: ", dc.dataInfo.GetImportLocation().TargetFile).
+		Msg("Creating duplicated files for")
 
 	if dc.dataInfo.GetGameData().ClonedItems != nil {
 		for _, clone := range dc.dataInfo.GetGameData().ClonedItems {
 			cloneReimportPath := filepath.Join(dc.dataInfo.GetImportLocation().TargetDirectory, clone)
 
 			if err := dc.duplicateFile(dc.dataInfo.GetImportLocation().TargetFile, cloneReimportPath); err != nil {
-				dc.log.Error().Err(err).Str("File", clone).Str("TargetPath", cloneReimportPath).Msg("Error duplicating dialog file")
+				dc.log.Error().
+					Err(err).
+					Str("Clone from: ", dc.dataInfo.GetImportLocation().TargetFile).
+					Str("Clone path: ", clone).
+					Msg("Error duplicating dialog file")
+
 				continue
 			}
 		}
 
-		dc.log.Info().Msgf("Create files clones for %s successfully", dc.dataInfo.GetGameData().Name)
+		dc.log.Info().
+			Str("Clone from: ", dc.dataInfo.GetImportLocation().TargetFile).
+			Msgf("Create files clones for %s successfully", dc.dataInfo.GetGameData().Name)
 	}
 }
 
