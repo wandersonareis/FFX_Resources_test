@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,8 +10,8 @@ import (
 )
 
 type TempProvider struct {
-	FilePrefix string
-	Extension  string
+	filePrefix string
+	extension  string
 	File       string
 	FilePath   string
 }
@@ -18,8 +19,22 @@ type TempProvider struct {
 // NewTempProvider returns a new TempProvider with empty file prefix and extension.
 // The FilePath will be set to a new temporary file path in the OS temp directory.
 func NewTempProvider() *TempProvider {
+	tempPath := os.TempDir()
 	return &TempProvider{
-		FilePath: os.TempDir(),
+		FilePath: tempPath,
+	}
+}
+
+//TODO: Remove this function
+func NewTempProviderDev(prefix, ext string) *TempProvider {
+	tempPath := os.TempDir()
+	uuid := uuid.New().String()
+
+	fileName := fmt.Sprintf("%s-%s.%s", prefix, uuid, ext)
+	file := filepath.Join(tempPath, fileName)
+	return &TempProvider{
+		FilePath: tempPath,
+		File:     file,
 	}
 }
 
@@ -30,10 +45,11 @@ func NewTempProvider() *TempProvider {
 func (tp *TempProvider) baseTempProvider(filePrefix string, extension string) *TempProvider {
 	tempPath := os.TempDir()
 	uuid := uuid.New().String()
+	file := filepath.Join(tempPath, filePrefix+uuid+validExtension(extension))
 	return &TempProvider{
-		FilePrefix: filePrefix,
-		Extension:  extension,
-		File:       filepath.Join(tempPath, filePrefix+uuid+validExtension(extension)),
+		filePrefix: filePrefix,
+		extension:  extension,
+		File:       file,
 		FilePath:   tempPath,
 	}
 }
