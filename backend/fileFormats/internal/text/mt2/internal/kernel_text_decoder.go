@@ -30,7 +30,11 @@ func (d *krnlDecoder) Decoder(fileInfo interactions.IGameDataInfo) error {
 	extractLocation := fileInfo.GetExtractLocation()
 
 	if err := extractLocation.ProvideTargetPath(); err != nil {
-		d.log.Error().Err(err).Msgf("Error providing extract path: %s", extractLocation.TargetPath)
+		d.log.Error().
+			Err(err).
+			Str("path", extractLocation.TargetPath).
+			Msg("Error providing extract path")
+
 		return err
 	}
 
@@ -39,7 +43,11 @@ func (d *krnlDecoder) Decoder(fileInfo interactions.IGameDataInfo) error {
 	sourceFile := fileInfo.GetGameData().FullFilePath
 
 	if err := decoder.KnrlDecoder(sourceFile, extractLocation.TargetFile, encoding); err != nil {
-		d.log.Error().Err(err).Msgf("Error on decoding kernel file: %s", sourceFile)
+		d.log.Error().
+			Err(err).
+			Str("file", sourceFile).
+			Msg("Error on decoding kernel file")
+
 		return err
 	}
 

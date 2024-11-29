@@ -31,12 +31,20 @@ func (e *krnlEncoder) Encoder(fileInfo interactions.IGameDataInfo) error {
 	importLocation := fileInfo.GetImportLocation()
 
 	if err := translateLocation.Validate(); err != nil {
-		e.log.Error().Err(err).Msgf("Error validating translate file: %s", translateLocation.TargetFile)
+		e.log.Error().
+			Err(err).
+			Str("path", translateLocation.TargetFile).
+			Msg("Error validating translate file")
+
 		return err
 	}
 
 	if err := importLocation.ProvideTargetPath(); err != nil {
-		e.log.Error().Err(err).Msgf("Error providing import path: %s", importLocation.TargetPath)
+		e.log.Error().
+			Err(err).
+			Str("path", importLocation.TargetPath).
+			Msg("Error providing import path")
+
 		return err
 	}
 
@@ -45,7 +53,11 @@ func (e *krnlEncoder) Encoder(fileInfo interactions.IGameDataInfo) error {
 	encoder := textsEncoding.NewEncoder()
 
 	if err := encoder.KnrlEncoder(sourceFile, translateLocation.TargetFile, importLocation.TargetFile, encoding); err != nil {
-		e.log.Error().Err(err).Msgf("Error on encoding kernel file: %s", sourceFile)
+		e.log.Error().
+			Err(err).
+			Str("file", sourceFile).
+			Msg("Error on encoding kernel file")
+
 		return err
 	}
 

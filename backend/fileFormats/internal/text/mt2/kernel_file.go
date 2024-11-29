@@ -1,9 +1,8 @@
 package mt2
 
 import (
-	verify "ffxresources/backend/fileFormats/internal/text/lib/dlg_krnl_verify"
+	"ffxresources/backend/fileFormats/internal/text/lib/dlg_krnl_verify"
 	"ffxresources/backend/fileFormats/internal/text/mt2/internal"
-	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
@@ -38,12 +37,20 @@ func (k kernelFile) GetFileInfo() interactions.IGameDataInfo {
 
 func (k kernelFile) Extract() {
 	if err := k.decoder.Decoder(k.GetFileInfo()); err != nil {
-		k.log.Error().Err(err).Msg("Error on decoding kernel file")
+		k.log.Error().
+			Err(err).
+			Str("file", k.GetFileInfo().GetGameData().FullFilePath).
+			Msg("Error on decoding kernel file")
+
 		return
 	}
 
 	if err := k.textVerifyer.VerifyExtract(k.dataInfo.GetExtractLocation()); err != nil {
-		k.log.Error().Err(err).Msg("Error verifying kernel file")
+		k.log.Error().
+			Err(err).
+			Str("file", k.GetFileInfo().GetExtractLocation().TargetFile).
+			Msg("Error verifying kernel file")
+
 		return
 	}
 
@@ -52,14 +59,24 @@ func (k kernelFile) Extract() {
 
 func (k kernelFile) Compress() {
 	if err := k.encoder.Encoder(k.GetFileInfo()); err != nil {
-		k.log.Error().Err(err).Interface("object", util.ErrorObject(k.GetFileInfo())).Msg("Error compressing kernel file")
+		k.log.Error().
+			Err(err).
+			Str("file", k.GetFileInfo().GetTranslateLocation().TargetFile).
+			Msg("Error compressing kernel file")
+
 		return
 	}
 
 	if err := k.textVerifyer.VerifyCompress(k.GetFileInfo(), k.decoder.Decoder); err != nil {
-		k.log.Error().Err(err).Interface("kialogFile", util.ErrorObject(k.GetFileInfo())).Msg("Error verifying compressed dialog file")
+		k.log.Error().
+			Err(err).
+			Str("file", k.GetFileInfo().GetImportLocation().TargetFile).
+			Msg("Error verifying compressed dialog file")
+
 		return
 	}
 
-	k.log.Info().Msgf("Kernel file compressed: %s", k.dataInfo.GetGameData().Name)
+	k.log.Info().
+		Str("file", k.GetFileInfo().GetImportLocation().TargetFile).
+		Msg("Kernel file compressed")
 }
