@@ -1,17 +1,23 @@
-package fileFormats
+package folder
 
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/logger"
 	"path/filepath"
+
+	"github.com/rs/zerolog"
 )
 
 type SpiraFolder struct {
 	*base.FormatsBase
+	fileProcessor func(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor
+
+	log zerolog.Logger
 }
 
-func NewSpiraFolder(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor {
+func NewSpiraFolder(dataInfo interactions.IGameDataInfo, fileProcessor func(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor) interactions.IFileProcessor {
 	gameFilesPath := interactions.NewInteraction().GameLocation.GetTargetDirectory()
 
 	extractLocation := dataInfo.GetExtractLocation()
@@ -25,7 +31,10 @@ func NewSpiraFolder(dataInfo interactions.IGameDataInfo) interactions.IFileProce
 	dataInfo.GetTranslateLocation().TargetPath = filepath.Join(translateLocation.TargetDirectory, relative)
 
 	return &SpiraFolder{
-		FormatsBase: base.NewFormatsBase(dataInfo),
+		FormatsBase:   base.NewFormatsBase(dataInfo),
+		fileProcessor: fileProcessor,
+
+		log: logger.Get().With().Str("module", "spira_folder").Logger(),
 	}
 }
 
@@ -46,7 +55,9 @@ func (sf SpiraFolder) Extract() {
 
 	progress.Stop()
 
-	sf.Log.Info().Msgf("Spira folder extracted: %s", sf.GetGameData().FullFilePath)
+	sf.Log.Info().
+		Str("folder", sf.GetGameData().FullFilePath).
+		Msg("Spira folder extracted")
 }
 
 func (sf SpiraFolder) Compress() {
@@ -66,13 +77,19 @@ func (sf SpiraFolder) Compress() {
 
 	progress.Stop()
 
-	sf.Log.Info().Msgf("Spira folder compressed: %s", sf.GetGameData().FullFilePath)
+	sf.log.Info().
+		Str("folder", sf.GetGameData().FullFilePath).
+		Msg("Spira folder compressed")
 }
 
 func (sf SpiraFolder) processFiles() []interactions.IFileProcessor {
 	results, err := common.ListFilesInDirectory(sf.GetFileInfo().GetGameData().FullFilePath)
 	if err != nil {
-		sf.Log.Error().Err(err).Msgf("error listing files in directory: %s", sf.GetFileInfo().GetGameData().FullFilePath)
+		sf.log.Error().
+			Err(err).
+			Str("directory", sf.GetFileInfo().GetGameData().FullFilePath).
+			Msg("error listing files in directory")
+
 		return nil
 	}
 
@@ -83,9 +100,12 @@ func (sf SpiraFolder) processFiles() []interactions.IFileProcessor {
 	worker.ParallelForEach(results, func(_ int, result string) {
 		dataInfo := interactions.NewGameDataInfo(result)
 
-		fileProcessor := NewFileProcessor(dataInfo)
+		fileProcessor := sf.fileProcessor(dataInfo)
 		if fileProcessor == nil {
-			sf.Log.Error().Msgf("invalid file type: %s", dataInfo.GetGameData().Name)
+			sf.Log.Error().
+				Str("file", dataInfo.GetGameData().Name).
+				Msg("invalid file type")
+
 			return
 		}
 

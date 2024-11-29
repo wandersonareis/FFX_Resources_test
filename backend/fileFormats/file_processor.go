@@ -3,11 +3,10 @@ package fileFormats
 import (
 	"ffxresources/backend/events"
 	"ffxresources/backend/fileFormats/internal/dcp"
+	"ffxresources/backend/fileFormats/internal/folder"
 	"ffxresources/backend/fileFormats/internal/lockit"
-	"ffxresources/backend/fileFormats/internal/text/mt2"
 	"ffxresources/backend/fileFormats/internal/text/dlg"
-
-	//"ffxresources/backend/formatters"
+	"ffxresources/backend/fileFormats/internal/text/mt2"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
 )
@@ -23,7 +22,6 @@ var formats = map[models.NodeType]func(interactions.IGameDataInfo) interactions.
 	models.Kernel:         mt2.NewKernel,
 	models.Dcp:            dcp.NewDcpFile,
 	models.Lockit:         lockit.NewLockitFile,
-	models.Folder:         NewSpiraFolder,
 }
 
 func NewFileExtractor(dataInfo interactions.IGameDataInfo) models.IExtractor {
@@ -37,7 +35,9 @@ func NewFileCompressor(dataInfo interactions.IGameDataInfo) models.ICompressor {
 func NewFileProcessor(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor {
 	fileType := dataInfo.GetGameData().Type
 
-	//dataInfo.InitializeLocations(formatters.NewTxtFormatter())
+	if fileType == models.Folder {
+		return folder.NewSpiraFolder(dataInfo, NewFileProcessor)
+	}
 
 	if err := interactions.NewInteraction().ExtractLocation.ProvideTargetDirectory(); err != nil {
 		events.NotifyError(err)
