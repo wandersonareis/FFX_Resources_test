@@ -29,6 +29,8 @@ func NewDlgClones(dataInfo interactions.IGameDataInfo) *dialogsClones {
 }
 
 func (dc *dialogsClones) Clone() {
+	dc.log.Info().Msgf("Creating duplicated files for: %s", dc.dataInfo.GetGameData().Name)
+
 	if dc.dataInfo.GetGameData().ClonedItems != nil {
 		for _, clone := range dc.dataInfo.GetGameData().ClonedItems {
 			cloneReimportPath := filepath.Join(dc.dataInfo.GetImportLocation().TargetDirectory, clone)
@@ -39,7 +41,7 @@ func (dc *dialogsClones) Clone() {
 			}
 		}
 
-		dc.log.Info().Msgf("All duplicated dialog files for %s have been created", dc.dataInfo.GetGameData().Name)
+		dc.log.Info().Msgf("Create files clones for %s successfully", dc.dataInfo.GetGameData().Name)
 	}
 }
 
