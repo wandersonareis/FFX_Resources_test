@@ -2,7 +2,7 @@ package dlg
 
 import (
 	"ffxresources/backend/fileFormats/internal/text/dlg/internal"
-	"ffxresources/backend/fileFormats/internal/text/lib/dlg_krnl_verify"
+	verify "ffxresources/backend/fileFormats/internal/text/lib/dlg_krnl_verify"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
@@ -15,7 +15,7 @@ type DialogsFile struct {
 	dialogsClones internal.IDlgClones
 	decoder       internal.IDlgDecoder
 	encoder       internal.IDlgEncoder
-	textVerifyer  *verify.DlgKrnlVerify
+	textVerifyer  verify.ITextsVerify
 	dataInfo      interactions.IGameDataInfo
 	log           zerolog.Logger
 }
@@ -27,7 +27,7 @@ func NewDialogs(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor
 		dialogsClones: internal.NewDlgClones(dataInfo),
 		decoder:       internal.NewDlgDecoder(),
 		encoder:       internal.NewDlgEncoder(),
-		textVerifyer:  verify.NewDlgKrnlVerify(),
+		textVerifyer:  verify.NewTextsVerify(),
 
 		dataInfo: dataInfo,
 		log:      logger.Get().With().Str("module", "dialogs_file").Logger(),

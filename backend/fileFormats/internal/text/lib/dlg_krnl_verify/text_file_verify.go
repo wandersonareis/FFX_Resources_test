@@ -9,23 +9,28 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type DlgKrnlVerify struct {
+type ITextsVerify interface {
+	VerifyExtract(extract *interactions.ExtractLocation) error
+	VerifyCompress(dataInfo interactions.IGameDataInfo, extractor func(dataInfo interactions.IGameDataInfo) error) error
+}
+
+type TextsVerify struct {
 	segmentCounter ISegmentCounter
 	filesComparer  IComparer
 
 	log zerolog.Logger
 }
 
-func NewDlgKrnlVerify() *DlgKrnlVerify {
-	return &DlgKrnlVerify{
+func NewTextsVerify() ITextsVerify {
+	return &TextsVerify{
 		segmentCounter: new(segmentCounter),
 		filesComparer:  newPartComparer(),
 
-		log: logger.Get().With().Str("module", "dlg_krnl_verify").Logger(),
+		log: logger.Get().With().Str("module", "texts_verify").Logger(),
 	}
 }
 
-func (dv *DlgKrnlVerify) VerifyExtract(extract *interactions.ExtractLocation) error {
+func (dv *TextsVerify) VerifyExtract(extract *interactions.ExtractLocation) error {
 	if err := dv.segmentCounter.CountBinary(extract.TargetFile); err != nil {
 		dv.log.Error().Err(err).Send()
 
@@ -51,7 +56,7 @@ func (dv *DlgKrnlVerify) VerifyExtract(extract *interactions.ExtractLocation) er
 	return nil
 }
 
-func (dv *DlgKrnlVerify) VerifyCompress(dataInfo interactions.IGameDataInfo, extractor func(dataInfo interactions.IGameDataInfo) error) error {
+func (dv *TextsVerify) VerifyCompress(dataInfo interactions.IGameDataInfo, extractor func(dataInfo interactions.IGameDataInfo) error) error {
 	if err := dataInfo.GetImportLocation().Validate(); err != nil {
 		dv.log.Error().Msgf("Reimport file not exists: %s", dataInfo.GetImportLocation().TargetFile)
 		return err
@@ -75,7 +80,7 @@ func (dv *DlgKrnlVerify) VerifyCompress(dataInfo interactions.IGameDataInfo, ext
 	return nil
 }
 
-func (dv *DlgKrnlVerify) createTemporaryFileInfo(dataInfo *interactions.GameDataInfo) {
+func (dv *TextsVerify) createTemporaryFileInfo(dataInfo *interactions.GameDataInfo) {
 	tmp := common.NewTempProviderDev("tmp", ".txt")
 
 	dataInfo.GetExtractLocation().TargetFile = tmp.TempFile

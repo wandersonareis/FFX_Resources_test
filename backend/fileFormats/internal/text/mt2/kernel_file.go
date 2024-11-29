@@ -1,7 +1,7 @@
 package mt2
 
 import (
-	"ffxresources/backend/fileFormats/internal/text/lib/dlg_krnl_verify"
+	verify "ffxresources/backend/fileFormats/internal/text/lib/dlg_krnl_verify"
 	"ffxresources/backend/fileFormats/internal/text/mt2/internal"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
@@ -11,7 +11,7 @@ import (
 )
 
 type kernelFile struct {
-	textVerifyer *verify.DlgKrnlVerify
+	textVerifyer verify.ITextsVerify
 	decoder      internal.IKrnlDecoder
 	encoder      internal.IKrnlEncoder
 	dataInfo     interactions.IGameDataInfo
@@ -23,7 +23,7 @@ func NewKernel(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor 
 	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
 
 	return &kernelFile{
-		textVerifyer: verify.NewDlgKrnlVerify(),
+		textVerifyer: verify.NewTextsVerify(),
 		decoder:      internal.NewKrnlDecoder(),
 		encoder:      internal.NewKrnlEncoder(),
 		dataInfo:     dataInfo,
