@@ -1,12 +1,15 @@
-package internal
+package file
 
 import (
 	"bytes"
 	"encoding/binary"
 	"ffxresources/backend/common"
+	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/rs/zerolog"
 )
 
 type DataLength struct {
@@ -23,11 +26,13 @@ type Header struct {
 	Header     [0x40]byte
 	Pointers   []Pointer
 	DataRanges []DataLength
+	log        zerolog.Logger
 }
 
 func NewHeader() *Header {
 	return &Header{
 		Pointers: make([]Pointer, 0, 7),
+		log:      zerolog.New(os.Stdout).With().Str("module", "dcp_file_header").Logger(),
 	}
 }
 
@@ -38,15 +43,19 @@ func (h *Header) GetHeader() [0x40]byte {
 func (h *Header) FromFile(file string) error {
 	openFile, err := os.Open(file)
 	if err != nil {
-		return fmt.Errorf("error when opening the file: %w", err)
+		h.log.Error().Err(err).Msgf("error when opening the file: %s", file)
+		h.log.Error().Err(err).Msgf("%s", err.Error())
+		return fmt.Errorf("error when opening the file")
 	}
 
 	if _, err := io.ReadFull(openFile, h.Header[:]); err != nil {
-		return fmt.Errorf("error reading the header: %w", err)
+		h.log.Error().Err(err).Msgf("error reading the header: %s", file)
+		h.log.Error().Err(err).Msgf("%s", err.Error())
+		return fmt.Errorf("error reading the header")
 	}
 
 	if err := h.getPointers(); err != nil {
-		return fmt.Errorf("error when getting the pointers: %w", err)
+		return err
 	}
 
 	return nil
@@ -56,35 +65,39 @@ func (h *Header) DataLengths(header *Header, file *os.File) error {
 	worker := common.NewWorker[Pointer]()
 
 	worker.ForIndex(&header.Pointers,
-	func(index int, count int, data []Pointer) error {
-		ranges := DataLength{}
-		ranges.Start = int64(data[index].Value)
+		func(index int, count int, data []Pointer) error {
+			ranges := DataLength{}
+			ranges.Start = int64(data[index].Value)
 
-		if next := index+1; next < count {
-			ranges.End = int64(header.Pointers[next].Value)
-		} else {
-			fileInfo, err := file.Stat()
-			if err != nil {
-				return err
+			if next := index + 1; next < count {
+				ranges.End = int64(header.Pointers[next].Value)
+			} else {
+				fileInfo, err := file.Stat()
+				if err != nil {
+					h.log.Error().Err(err).Msgf("error getting file info on: %s", file.Name())
+					h.log.Error().Err(err).Msgf("%s", err.Error())
+					return err
+				}
+				ranges.End = fileInfo.Size()
 			}
-			ranges.End = fileInfo.Size()
-		}
 
-		h.DataRanges = append(h.DataRanges, ranges)
+			h.DataRanges = append(h.DataRanges, ranges)
 
-		return nil
-	})
+			return nil
+		})
 
 	return nil
 }
 
-func (h *Header) Update(dcpParts []DcpFileParts) error {
+func (h *Header) Update(dcpParts []parts.DcpFileParts) error {
 	var currentOffset = uint32(h.Pointers[0].Value)
 
 	for i, pointer := range h.Pointers {
 		partInfo, err := os.Stat(dcpParts[i].GetImportLocation().TargetFile)
 		if err != nil {
-			return fmt.Errorf("error getting file info: %w", err)
+			h.log.Error().Err(err).Msgf("error getting file info: %s", dcpParts[i].GetImportLocation().TargetFile)
+			h.log.Error().Err(err).Msgf("%s", err.Error())
+			return err
 		}
 
 		if i == 0 {
@@ -103,7 +116,8 @@ func (h *Header) Update(dcpParts []DcpFileParts) error {
 
 func (h *Header) Write(buffer *bytes.Buffer) error {
 	if _, err := buffer.Write(h.Header[:]); err != nil {
-		return fmt.Errorf("error when recording the header: %w", err)
+		h.log.Error().Err(err).Msgf("error when recording the header: %s", err.Error())
+		return err
 	}
 
 	return nil

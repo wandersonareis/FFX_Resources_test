@@ -1,13 +1,15 @@
-package internal
+package joinner
 
 import (
 	"bytes"
+	"ffxresources/backend/fileFormats/internal/dcp/internal/file"
+	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"ffxresources/backend/interactions"
 	"fmt"
 	"os"
 )
 
-func DcpFileJoiner(dataInfo interactions.IGameDataInfo, xplitedFiles *[]DcpFileParts, targetReimportFile string) error {
+func DcpFileJoiner(dataInfo interactions.IGameDataInfo, xplitedFiles *[]parts.DcpFileParts, targetReimportFile string) error {
 	originalDcpFile := dataInfo.GetGameData().FullFilePath
 
 	importLocation := dataInfo.GetImportLocation()
@@ -24,7 +26,7 @@ func DcpFileJoiner(dataInfo interactions.IGameDataInfo, xplitedFiles *[]DcpFileP
 	return nil
 }
 
-func dcpWriter(inputFilePath string, parts *[]DcpFileParts, newContainerPath string) error {
+func dcpWriter(inputFilePath string, parts *[]parts.DcpFileParts, newContainerPath string) error {
 	inputFile, err := os.Open(inputFilePath)
 	if err != nil {
 		return fmt.Errorf("error when opening the original file: %w", err)
@@ -32,7 +34,7 @@ func dcpWriter(inputFilePath string, parts *[]DcpFileParts, newContainerPath str
 
 	defer inputFile.Close()
 
-	header := NewHeader()
+	header := file.NewHeader()
 	header.FromFile(inputFilePath)
 	header.Update(*parts)
 
@@ -42,7 +44,7 @@ func dcpWriter(inputFilePath string, parts *[]DcpFileParts, newContainerPath str
 		return fmt.Errorf("error when writing the header: %w", err)
 	}
 
-	content := NewContentWithBuffer(&buffer)
+	content := file.NewContentWithBuffer(&buffer)
 	if err := content.Write(header, parts); err != nil {
 		return fmt.Errorf("error when writing the content: %w", err)
 	}
