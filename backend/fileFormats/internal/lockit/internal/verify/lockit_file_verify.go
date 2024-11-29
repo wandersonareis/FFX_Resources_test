@@ -18,7 +18,6 @@ type LockitFileVerifier struct {
 
 	FileValidator    IFileValidator
 	LineBreakCounter ILineBreakCounter
-	PartsComparer    IPartComparer
 
 	worker common.IWorker[parts.LockitFileParts]
 }
@@ -30,7 +29,6 @@ func NewLockitFileVerifier(dataInfo interactions.IGameDataInfo) ILockitFileVerif
 		FormatsBase:      base.NewFormatsBase(dataInfo),
 		FileValidator:    newFileValidator(),
 		LineBreakCounter: new(LineBreakCounter),
-		PartsComparer:    newPartComparer(),
 		worker:           worker,
 	}
 }

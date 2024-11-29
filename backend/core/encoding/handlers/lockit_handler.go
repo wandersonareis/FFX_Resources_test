@@ -6,6 +6,12 @@ import (
 	"os"
 )
 
+type ILockitEncodingHandler interface {
+	FetchLockitHandler() (string, error)
+	FetchLockitUtf8BomNormalizer() (string, error)
+	Dispose()
+}
+
 type lockitEncodingHandler struct {
 	util.Checksum
 	handlerFile string
@@ -53,7 +59,7 @@ func (lh *lockitEncodingHandler) Dispose() {
 		if err := os.Remove(lh.handlerFile); err != nil {
 			fmt.Println("error when removing lockit file handler")
 		}
-		
+
 		lh.handlerFile = ""
 	}
 
