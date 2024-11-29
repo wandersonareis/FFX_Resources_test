@@ -3,6 +3,7 @@ package dcp
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/events"
+	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/joinner"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/splitter"
@@ -17,13 +18,14 @@ import (
 )
 
 type DcpFile struct {
-	*verify.DcpFileVerify
+	*base.FormatsBase
 
-	fileSplitter splitter.IDcpFileSpliter
-	options      interactions.DcpFileOptions
-	PartsList    *[]parts.DcpFileParts
-	log          zerolog.Logger
-	worker       common.IWorker[parts.DcpFileParts]
+	dcpFileVerify *verify.DcpFileVerify
+	PartsList     *[]parts.DcpFileParts
+	fileSplitter  splitter.IDcpFileSpliter
+	options       interactions.DcpFileOptions
+	log           zerolog.Logger
+	worker        common.IWorker[parts.DcpFileParts]
 }
 
 func NewDcpFile(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor {
@@ -43,7 +45,8 @@ func NewDcpFile(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor
 	}
 
 	return &DcpFile{
-		DcpFileVerify: verify.NewDcpFileVerify(dataInfo),
+		FormatsBase:   base.NewFormatsBase(dataInfo),
+		dcpFileVerify: verify.NewDcpFileVerify(dataInfo),
 		PartsList:     dcpFileParts,
 		fileSplitter:  splitter.NewDcpFileSpliter(),
 		options:       interactions.GamePartOptions.GetDcpFileOptions(),
@@ -78,7 +81,7 @@ func (d *DcpFile) Extract() {
 
 	d.log.Info().Msgf("Verifying monted macrodic file: %s", d.GetFileInfo().GetImportLocation().TargetFile)
 
-	if err := d.VerifyExtract(d.PartsList, d.options); err != nil {
+	if err := d.dcpFileVerify.VerifyExtract(d.PartsList, d.options); err != nil {
 		d.log.Error().Err(err).Interface("object", util.ErrorObject(d.GetFileInfo())).Msg("Error verifying system macrodic file")
 		return
 	}
@@ -130,7 +133,7 @@ func (d DcpFile) Compress() {
 
 	d.log.Info().Msgf("Verifying reimported macrodic file: %s", d.GetFileInfo().GetImportLocation().TargetFile)
 
-	if err := d.VerifyCompress(d.GetFileInfo(), d.options); err != nil {
+	if err := d.dcpFileVerify.VerifyCompress(d.GetFileInfo(), d.options); err != nil {
 		d.log.Error().Err(err).Interface("object", util.ErrorObject(d.GetFileInfo())).Msg("Error verifying system macrodic file")
 		return
 	}

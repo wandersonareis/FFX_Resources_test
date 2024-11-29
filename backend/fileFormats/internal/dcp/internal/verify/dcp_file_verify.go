@@ -1,62 +1,59 @@
 package verify
 
 import (
-	"ffxresources/backend/common"
-	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
-	"ffxresources/backend/fileFormats/internal/dcp/internal/splitter"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/logger"
 	"fmt"
+
+	"github.com/rs/zerolog"
 )
 
 type DcpFileVerify struct {
-	*base.FormatsBase
-
 	fileValidator  IFileValidator
 	segmentCounter ISegmentCounter
-	fileSpliter    splitter.IDcpFileSpliter
-	worker         common.IWorker[parts.DcpFileParts]
+
+	log    zerolog.Logger
 }
 
 func NewDcpFileVerify(dataInfo interactions.IGameDataInfo) *DcpFileVerify {
 	return &DcpFileVerify{
-		FormatsBase:    base.NewFormatsBase(dataInfo),
 		fileValidator:  newFileValidator(),
 		segmentCounter: new(segmentCounter),
-		fileSpliter:    new(splitter.DcpFileSpliter),
-		worker:         common.NewWorker[parts.DcpFileParts](),
+		log:            logger.Get().With().Str("module", "dcp_file_verify").Logger(),
 	}
 }
 
 func (lv *DcpFileVerify) VerifyExtract(dcpFileParts *[]parts.DcpFileParts, options interactions.DcpFileOptions) error {
 	if len(*dcpFileParts) != options.PartsLength {
-		return fmt.Errorf("error when ensuring splited lockit parts: expected %d | got %d", options.PartsLength, len(*dcpFileParts))
+		lv.log.Error().Msgf("Error when ensuring splited lockit parts: expected %d | got %d", options.PartsLength, len(*dcpFileParts))
+		return fmt.Errorf("error when ensuring splited lockit parts")
 	}
 
 	if err := lv.segmentCounter.CountBinaryParts(dcpFileParts, options); err != nil {
-		return fmt.Errorf("error when counting binary line breaks in splited files: %w", err)
+		lv.log.Error().Err(err).Msgf("Error when counting binary parts in splited files: %s", err.Error())
+		return fmt.Errorf("error when counting binary line breaks in splited files")
 	}
 
 	if err := lv.segmentCounter.CountTextParts(dcpFileParts, options); err != nil {
-		return fmt.Errorf("error when counting text segments in splited files: %w", err)
+		lv.log.Error().Err(err).Msgf("Error when counting text segments in splited files: %s", err.Error())
+		return fmt.Errorf("error when counting text segments in splited files")
 	}
 
 	return nil
 }
 
 func (lv *DcpFileVerify) VerifyCompress(dataInfo interactions.IGameDataInfo, options interactions.DcpFileOptions) error {
-	errChan := make(chan error, 10)
-
-	lv.Log.Info().Msgf("Verifying reimported macrodic file: %s", dataInfo.GetImportLocation().TargetFile)
+	lv.log.Info().Msgf("Verifying reimported macrodic file: %s", dataInfo.GetImportLocation().TargetFile)
 
 	if err := dataInfo.GetImportLocation().Validate(); err != nil {
-		errChan <- fmt.Errorf("reimport file not exists: %s | %w", dataInfo.GetImportLocation().TargetFile, err)
-		return <-errChan
+		lv.log.Error().Err(err).Msgf("Error when validating reimported macrodic file: %s", dataInfo.GetImportLocation().TargetFile)
+		return fmt.Errorf("reimport file not exists: %w", err)
 	}
 
 	if err := lv.fileValidator.Validate(dataInfo.GetImportLocation().TargetFile, options); err != nil {
-		errChan <- err
-		return <-errChan
+		lv.log.Error().Err(err).Msgf("Error when validating reimported macrodic file: %s", dataInfo.GetImportLocation().TargetFile)
+		return fmt.Errorf("error when validating reimported macrodic file: %w", err)
 	}
 
 	return nil
