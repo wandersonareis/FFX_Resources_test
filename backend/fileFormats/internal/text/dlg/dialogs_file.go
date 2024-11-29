@@ -14,6 +14,8 @@ import (
 
 type DialogsFile struct {
 	dialogsClones internal.IDlgClones
+	decoder       internal.IDlgDecoder
+	encoder       internal.IDlgEncoder
 	textVerifyer  *verify.DlgKrnlVerify
 	dataInfo      interactions.IGameDataInfo
 	log           zerolog.Logger
@@ -24,6 +26,8 @@ func NewDialogs(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor
 
 	return &DialogsFile{
 		dialogsClones: internal.NewDlgClones(dataInfo),
+		decoder:       internal.NewDlgDecoder(),
+		encoder:       internal.NewDlgEncoder(),
 		textVerifyer:  verify.NewDlgKrnlVerify(),
 		dataInfo:      dataInfo,
 		log:           logger.Get().With().Str("module", "dialogs_file").Logger(),
@@ -57,7 +61,7 @@ func (d DialogsFile) Extract() {
 		return
 	}
 
-	if err := internal.DialogsFileExtractor(d.GetFileInfo()); err != nil {
+	if err := d.decoder.Decoder(d.GetFileInfo()); err != nil {
 		d.log.Error().Err(err).Interface("DialogFile", util.ErrorObject(d.GetFileInfo())).Msg("Error extracting dialog file")
 		return
 	}
@@ -71,16 +75,16 @@ func (d DialogsFile) Extract() {
 }
 
 func (d DialogsFile) Compress() {
-	if err := internal.DialogsFileCompressor(d.GetFileInfo()); err != nil {
+	if err := d.encoder.Encoder(d.GetFileInfo()); err != nil {
 		d.log.Error().Err(err).Interface("DialogFile", util.ErrorObject(d.GetFileInfo())).Msg("Error compressing dialog file")
 		return
 	}
 
-	if err := d.textVerifyer.VerifyCompress(d.GetFileInfo(), internal.DialogsFileExtractor); err != nil {
+	if err := d.textVerifyer.VerifyCompress(d.GetFileInfo(), d.decoder.Decoder); err != nil {
 		d.log.Error().Err(err).Msg("Error verifying text file")
 		return
 	}
-	
+
 	d.dialogsClones.Clone()
 
 	d.log.Info().Msgf("Dialog file compressed: %s", d.dataInfo.GetGameData().Name)
