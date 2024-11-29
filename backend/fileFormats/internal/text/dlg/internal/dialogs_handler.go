@@ -1,10 +1,11 @@
 package internal
 
-import (
+/* import (
 	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/models"
 	"fmt"
 	"os"
+	"time"
 )
 
 type dialogsHandler struct {
@@ -59,7 +60,9 @@ func (d *dialogsHandler) getSpecialHandler() (string, error) {
 
 func (d *dialogsHandler) dispose() {
 	if d.targetFile != "" {
+		time.Sleep(2 * time.Second)
 		os.Remove(d.targetFile)
 		d.targetFile = ""
 	}
 }
+ */

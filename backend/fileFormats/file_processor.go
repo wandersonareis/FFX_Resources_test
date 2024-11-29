@@ -3,15 +3,17 @@ package fileFormats
 import (
 	"ffxresources/backend/events"
 	"ffxresources/backend/fileFormats/internal/dcp"
-	"ffxresources/backend/fileFormats/internal/dlg"
 	"ffxresources/backend/fileFormats/internal/lockit"
-	"ffxresources/backend/fileFormats/internal/mt2"
+	"ffxresources/backend/fileFormats/internal/text/mt2"
+	"ffxresources/backend/fileFormats/internal/text/dlg"
+
+	//"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
 )
 
-// formats is a map that associates models.NodeType values with functions that 
-// create instances of interactions.IFileProcessor. Each entry in the map 
+// formats is a map that associates models.NodeType values with functions that
+// create instances of interactions.IFileProcessor. Each entry in the map
 // corresponds to a specific type of node
 var formats = map[models.NodeType]func(interactions.IGameDataInfo) interactions.IFileProcessor{
 	models.Dialogs:        dlg.NewDialogs,
@@ -34,6 +36,8 @@ func NewFileCompressor(dataInfo interactions.IGameDataInfo) models.ICompressor {
 
 func NewFileProcessor(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor {
 	fileType := dataInfo.GetGameData().Type
+
+	//dataInfo.InitializeLocations(formatters.NewTxtFormatter())
 
 	if err := interactions.NewInteraction().ExtractLocation.ProvideTargetDirectory(); err != nil {
 		events.NotifyError(err)
