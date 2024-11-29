@@ -3,7 +3,7 @@ package ffxencoding
 import encodingHandler "ffxresources/backend/core/encoding/handlers"
 
 type FFXTextEncoding struct {
-	LockitEncodingHandler ILockitEncodingHandler
+	LockitEncodingHandler encodingHandler.ILockitEncodingHandler
 
 	Encoding string
 }

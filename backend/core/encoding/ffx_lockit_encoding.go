@@ -8,14 +8,14 @@ import (
 type IFFXTextLockitEncoding interface {
 	GetFFXTextLockitEncoding() string
 	GetFFXTextLockitLocalizationEncoding() string
-	GetLockitFileHandler() ILockitEncodingHandler
+	GetLockitFileHandler() encodingHandler.ILockitEncodingHandler
 	Dispose()
 }
 
 type FFXTextLockitEncoding struct {
 	charsEncoding string
 	locEncoding   string
-	lockitHandler ILockitEncodingHandler
+	lockitHandler encodingHandler.ILockitEncodingHandler
 }
 
 func newFFXTextLockitEncoding(locEncoding, charsEncoding string) *FFXTextLockitEncoding {
@@ -34,7 +34,7 @@ func (e *FFXTextLockitEncoding) GetFFXTextLockitLocalizationEncoding() string {
 	return e.locEncoding
 }
 
-func (e *FFXTextLockitEncoding) GetLockitFileHandler() ILockitEncodingHandler {
+func (e *FFXTextLockitEncoding) GetLockitFileHandler() encodingHandler.ILockitEncodingHandler {
 	return e.lockitHandler
 }
 

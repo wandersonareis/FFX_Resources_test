@@ -2,25 +2,20 @@ package ffxencoding
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/models"
 	"fmt"
 	"os"
 	"strings"
 )
 
-type ILockitEncodingHandler interface {
-	FetchLockitHandler() (string, error)
-	FetchLockitUtf8BomNormalizer() (string, error)
-	Dispose()
-}
-
 type FFXTextEncodingFactory struct {
-	FFXTextEncoding     *ffxTextEncodingHelper
-	EncodingFile        string
+	FFXTextEncoding *ffxTextEncodingHelper
+	EncodingFile    string
 }
 
 func NewFFXTextEncodingFactory() *FFXTextEncodingFactory {
 	return &FFXTextEncodingFactory{
-		FFXTextEncoding:     newFFXTextEncodingHelper(),
+		FFXTextEncoding: newFFXTextEncodingHelper(),
 	}
 }
 
@@ -33,6 +28,28 @@ func (e *FFXTextEncodingFactory) FFXTextEncodingCodePage() {
 	e.EncodingFile = tmpProvider.File
 
 	e.writeEncodingToFile(e.EncodingFile, codePage)
+}
+
+func (e *FFXTextEncodingFactory) CreateFFXTextDlgEncoding(dlgFileType models.NodeType) IFFXTextDlgEncoding {
+	codePage := e.FFXTextEncoding.createFFXTextEncoding()
+
+	tmpProvider := common.NewTempProvider()
+	tmpProvider.ProvideTempFileWithExtension("ffx_text_encoding", ".tbs")
+
+	e.writeEncodingToFile(tmpProvider.File, codePage)
+
+	return newFFXTextDlgEncoding(tmpProvider.File, dlgFileType)
+}
+
+func (e *FFXTextEncodingFactory) CreateFFXTextKrnlEncoding() IFFXTextKrnlEncoding {
+	codePage := e.FFXTextEncoding.createFFXTextEncoding()
+
+	tmpProvider := common.NewTempProvider()
+	tmpProvider.ProvideTempFileWithExtension("ffx_text_encoding", ".tbs")
+
+	e.writeEncodingToFile(tmpProvider.File, codePage)
+
+	return newFFXTextKrnlEncoding(tmpProvider.File)
 }
 
 func (e *FFXTextEncodingFactory) CreateFFXTextLocalizationEncoding() IFFXTextLockitEncoding {
