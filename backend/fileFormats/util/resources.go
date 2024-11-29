@@ -8,10 +8,9 @@ func GetFromResources(subDir, resourceName, ext string) (string, error) {
 		resourceName,
 	}
 
-	tempProvider := common.NewTempProvider()
-	tempProvide := tempProvider.ProvideTempFileWithExtension(resourceName, ext)
+	tempProvider := common.NewTempProviderDev(resourceName, ext)
 
-	targetFile := tempProvide.File
+	targetFile := tempProvider.TempFile
 
 	err := common.GetFileFromResources(targetHandler, targetFile)
 	if err != nil {

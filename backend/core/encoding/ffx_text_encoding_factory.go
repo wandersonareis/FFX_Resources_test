@@ -22,10 +22,9 @@ func NewFFXTextEncodingFactory() *FFXTextEncodingFactory {
 func (e *FFXTextEncodingFactory) FFXTextEncodingCodePage() {
 	codePage := e.FFXTextEncoding.createFFXTextEncoding()
 
-	tmpProvider := common.NewTempProvider()
-	tmpProvider.ProvideTempFileWithExtension("ffx_text_encoding", ".tbs")
+	tmpProvider := common.NewTempProviderDev("ffx_text_encoding", ".tbs")
 
-	e.EncodingFile = tmpProvider.File
+	e.EncodingFile = tmpProvider.TempFile
 
 	e.writeEncodingToFile(e.EncodingFile, codePage)
 }
@@ -33,36 +32,35 @@ func (e *FFXTextEncodingFactory) FFXTextEncodingCodePage() {
 func (e *FFXTextEncodingFactory) CreateFFXTextDlgEncoding(dlgFileType models.NodeType) IFFXTextDlgEncoding {
 	codePage := e.FFXTextEncoding.createFFXTextEncoding()
 
-	tmpProvider := common.NewTempProvider()
-	tmpProvider.ProvideTempFileWithExtension("ffx_text_encoding", ".tbs")
+	tmpProvider := common.NewTempProviderDev("ffx_text_encoding", ".tbs")
 
-	e.writeEncodingToFile(tmpProvider.File, codePage)
+	e.writeEncodingToFile(tmpProvider.TempFile, codePage)
 
-	return newFFXTextDlgEncoding(tmpProvider.File, dlgFileType)
+	return newFFXTextDlgEncoding(tmpProvider.TempFile, dlgFileType)
 }
 
 func (e *FFXTextEncodingFactory) CreateFFXTextKrnlEncoding() IFFXTextKrnlEncoding {
 	codePage := e.FFXTextEncoding.createFFXTextEncoding()
 
-	tmpProvider := common.NewTempProvider()
-	tmpProvider.ProvideTempFileWithExtension("ffx_text_encoding", ".tbs")
+	tmpProvider := common.NewTempProviderDev("ffx_text_encoding", ".tbs")
 
-	e.writeEncodingToFile(tmpProvider.File, codePage)
+	e.writeEncodingToFile(tmpProvider.TempFile, codePage)
 
-	return newFFXTextKrnlEncoding(tmpProvider.File)
+	return newFFXTextKrnlEncoding(tmpProvider.TempFile)
 }
 
 func (e *FFXTextEncodingFactory) CreateFFXTextLocalizationEncoding() IFFXTextLockitEncoding {
 	locCodePage := e.FFXTextEncoding.createFFXTextLocalizationEncoding()
 	ffxCodePage := e.FFXTextEncoding.createFFXTextSimpleEncoding()
 
-	locEncodingTemp := common.NewTempProvider().ProvideTempFileWithExtension("ffx_text_localization", ".tbs")
-	ffxEcodingTemp := common.NewTempProvider().ProvideTempFileWithExtension("ffx_text_simple_encoding", ".tbs")
+	locEncodingTemp := common.NewTempProviderDev("ffx_text_localization", ".tbs")
 
-	e.writeEncodingToFile(locEncodingTemp.File, locCodePage)
-	e.writeEncodingToFile(ffxEcodingTemp.File, ffxCodePage)
+	ffxEcodingTemp := common.NewTempProviderDev("ffx_text_simple_encoding", ".tbs")
 
-	return newFFXTextLockitEncoding(locEncodingTemp.File, ffxEcodingTemp.File)
+	e.writeEncodingToFile(locEncodingTemp.TempFile, locCodePage)
+	e.writeEncodingToFile(ffxEcodingTemp.TempFile, ffxCodePage)
+
+	return newFFXTextLockitEncoding(locEncodingTemp.TempFile, ffxEcodingTemp.TempFile)
 }
 
 func (e *FFXTextEncodingFactory) writeEncodingToFile(path string, codePage []string) {

@@ -61,13 +61,13 @@ func (fv *FileValidator) ensureLineBreaksCount(targetCount, expectedCount int) e
 }
 
 func (fv *FileValidator) createTemporaryFileInfo(filePath string) (interactions.IGameDataInfo, string) {
-	tmpDir := common.NewTempProvider().ProvideTempDir()
+	tmpProvider := common.NewTempProviderDev("", "")
 
 	tmpInfo := interactions.NewGameDataInfo(filePath)
 	tmpInfo.InitializeLocations(formatters.NewTxtFormatter())
 
-	tmpInfo.GetExtractLocation().TargetPath = tmpDir
+	tmpInfo.GetExtractLocation().TargetPath = tmpProvider.TempFilePath
 	defer tmpInfo.GetExtractLocation().DisposeTargetPath()
 
-	return tmpInfo, tmpDir
+	return tmpInfo, tmpProvider.TempFilePath
 }
