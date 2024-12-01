@@ -15,21 +15,18 @@ func NewTextTagNPC() *FFXTextTagNPC {
 }
 
 func (n *FFXTextTagNPC) FFXTextNPCCodePage() []string {
-	npcsMap := n.getNPCsMap()
-
-	codePage := make([]string, 0, len(npcsMap))
-
-	n.generateNPCsCodePage(&codePage)
-
-	return codePage
+	return n.generateNPCs()
 }
 
-func (n *FFXTextTagNPC) generateNPCsCodePage(codePage *[]string) {
+func (n *FFXTextTagNPC) generateNPCs() []string {
 	npcsMap := n.getNPCsMap()
+	codePage := make([]string, 0, len(npcsMap))
 
 	for key, value := range npcsMap {
-		*codePage = append(*codePage, n.generateNPCCode(key, value))
+		codePage = append(codePage, n.generateNPCCode(key, value))
 	}
+
+	return codePage
 }
 
 func (n *FFXTextTagNPC) generateNPCCode(key byte, value string) string {
