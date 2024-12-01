@@ -7,30 +7,24 @@ type FFXTextTagCharacter struct {
 }
 
 func NewTextTagCharacter() *FFXTextTagCharacter {
-	characterByte := byte(0x13)
-
-	return &FFXTextTagCharacter{
-		characterByte: characterByte,
-	}
+	return &FFXTextTagCharacter{characterByte: 0x13}
 }
 
 func (c *FFXTextTagCharacter) FFXTextCharacterCodePage() []string {
-	charactersMap := c.getCharactersMap()
-
-	codePage := make([]string, 0, len(charactersMap))
-
-	c.generateCharactersCodePage(&codePage)
-
-	return codePage
+	codePage := make([]string, 0, len(c.getCharactersMap()))
+    for key, value := range c.getCharactersMap() {
+        codePage = append(codePage, fmt.Sprintf("\\x%02X\\x%02X={%s}", c.characterByte, key, value))
+    }
+    return codePage
 }
 
-func (c *FFXTextTagCharacter) generateCharactersCodePage(codePage *[]string) {
+/* func (c *FFXTextTagCharacter) generateCharactersCodePage(codePage *[]string) {
 	charactersMap := c.getCharactersMap()
 
 	for key, value := range charactersMap {
 		*codePage = append(*codePage, fmt.Sprintf("\\x%02X\\x%02X={%s}", c.characterByte, key, value))
 	}
-}
+} */
 
 func (c *FFXTextTagCharacter) getCharactersMap() map[byte]string {
 	charactersMap := map[byte]string{
