@@ -3,7 +3,6 @@ package ffxencoding
 import (
 	"ffxresources/backend/core/encoding/tags"
 	"fmt"
-	"regexp"
 	"slices"
 )
 
@@ -55,7 +54,10 @@ func (e *ffxTextEncodingHelper) createFFXTextEncoding() []string {
 	codePage = append(codePage, e.lettersCodePage.FFXTextLettersCodePage()...)
 	codePage = append(codePage, e.lettersCodePage.FFXTextSpecialLettersCodePage()...)
 	codePage = append(codePage, e.textCodePage.FFXTextTextPage()...)
-	codePage = append(codePage, e.unknownCodePage.FFXUnknownBytesCodePage()...)
+
+	unknown := tags.NewTextTagUnknown()
+	unknown.AddUnknownUCodePage(&codePage)
+	unknown.AddUnknownXCodePage(&codePage)
 
 	slices.Sort(codePage)
 
@@ -91,47 +93,9 @@ func (e *ffxTextEncodingHelper) createFFXTextSimpleEncoding() []string {
 	codePage = append(codePage, e.lettersCodePage.FFXTextSpecialLettersCodePage()...)
 	codePage = append(codePage, e.iconsCodePage.FFXTextIconsCodePage()...)
 
-	seen := make(map[string]bool)
-	for _, v := range codePage {
-		seen[v] = true
-	}
-	for i := 0; i <= 0x89; i++ {
-		byteStr := fmt.Sprintf("\\x%02X", i)
-		if i == 0x0A || i == 0x0D {
-			continue
-		}
-		
-		found := false
-		re := regexp.MustCompile("^" + regexp.QuoteMeta(byteStr))
-		for _, v := range codePage {
-			if re.MatchString(v) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			codePage = append(codePage, fmt.Sprintf("%s={u%02X}", byteStr, i))
-		}
-	}
-
-	for i := 0x8A; i <= 0xFF; i++ {
-		byteStr := fmt.Sprintf("\\x%02X", i)
-		if i == 0xDA {
-			continue
-		}
-
-		found := false
-		re := regexp.MustCompile("^" + regexp.QuoteMeta(byteStr))
-		for _, v := range codePage {
-			if re.MatchString(v) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			codePage = append(codePage, fmt.Sprintf("%s={x%02X}", byteStr, i))
-		}
-	}
+	unknown := tags.NewTextTagUnknown()
+	unknown.AddUnknownUCodePage(&codePage)
+	unknown.AddUnknownXCodePage(&codePage)
 
 	slices.Sort(codePage)
 
