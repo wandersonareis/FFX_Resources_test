@@ -15,25 +15,22 @@ func NewTextItems() *FFXTextItems {
 }
 
 func (i *FFXTextItems) FFXTextItemsCodePage() []string {
-	itemsMap := i.getItemsMap()
+	return i.generateItems()
+}
 
+func (i *FFXTextItems) generateItems() []string {
+	itemsMap := i.getItemsMap()
 	codePage := make([]string, 0, len(itemsMap))
 
-	i.generateItemsCodePage(&codePage)
-
-	return codePage
-}
-
-func (i *FFXTextItems) generateItemsCodePage(codePage *[]string) {
-	itemsMap := i.getItemsMap()
+	generateItemCode := func(key byte, value string) string {
+		return fmt.Sprintf("\\x%02X\\x%02X={%s}", i.itemByte, key, value)
+	}
 
 	for key, value := range itemsMap {
-		*codePage = append(*codePage, i.generateItemCode(key, value))
+		codePage = append(codePage, generateItemCode(key, value))
 	}
-}
 
-func (i *FFXTextItems) generateItemCode(key byte, value string) string {
-	return fmt.Sprintf("\\x%02X\\x%02X={%s}", i.itemByte, key, value)
+	return codePage
 }
 
 func (i *FFXTextItems) getItemsMap() map[byte]string {
