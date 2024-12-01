@@ -12,89 +12,81 @@ type FFXTextTagButton struct {
 }
 
 func NewTextTagButton() *FFXTextTagButton {
-	buttonByte := byte(0x0B)
-	buttonTag := byte(0x01)
-
 	return &FFXTextTagButton{
-		buttonByte: buttonByte,
-		buttonTag:  buttonTag,
+		buttonByte: 0x0B,
+		buttonTag:  0x01,
 		lineBreak:  LineBreakString(),
 	}
 }
 
 func (b *FFXTextTagButton) FFXTextFullButtonsCodePage() []string {
-	buttons := make([]string, 0, len(b.getButtonMap())+1)
-
-	buttons = append(buttons, b.buttonCommand())
-
-	b.generateButtonsCodePage(&buttons)
-
-	buttons = slices.Concat(buttons, b.generateButtonsF())
-
-	return buttons
+	return slices.Concat(
+		[]string{b.buttonCommand()},
+		b.generateButtons(),
+		b.buildButtonUnknownSequence(),
+	)
 }
 
 func (b *FFXTextTagButton) FFXTextButtonsCodePage() []string {
-	buttons := make([]string, 0, len(b.getButtonMap()))
-
-	b.generateButtonsCodePage(&buttons)
-
-	return buttons
+	return b.generateButtons()
 }
 
-func (b *FFXTextTagButton) generateButtonsCodePage(codePage *[]string) {
+func (b *FFXTextTagButton) generateButtons() []string {
 	buttonsMap := b.getButtonMap()
+	buttons := make([]string, 0, len(buttonsMap))
+
+	generateButtonCode := func(key byte, value string) string {
+		return fmt.Sprintf("\\x%02X\\x%02X={%s}", b.buttonByte, key, value)
+	}
 
 	for key, value := range buttonsMap {
-		*codePage = append(*codePage, b.generateButtonCode(key, value))
+		buttons = append(buttons, generateButtonCode(key, value))
 	}
-}
 
-func (b *FFXTextTagButton) generateButtonCode(key byte, value string) string {
-	return fmt.Sprintf("\\x%02X\\x%02X={%s}", b.buttonByte, key, value)
+	return buttons
 }
 
 func (b *FFXTextTagButton) buttonCommand() string {
 	return fmt.Sprintf("\\x%02X\\c%02X={u%02X:\\h%02X}", b.buttonByte, b.buttonTag, b.buttonByte, b.buttonTag)
 }
 
-func (b *FFXTextTagButton) generateButtonsF() []string {
-	fBytes := []byte{0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA}
-	unknownBytes := []byte{0x10, 0x08, 0x0C, 0x04}
+func (b *FFXTextTagButton) buildButtonUnknownSequence() []string {
+    fBytes := []byte{0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA}
+    
+    // Mapa que define qual unknownByte usar para cada índice
+    // -1 indica que deve usar generateButtonF ao invés de generateUnknownF
+    unknownByteMap := map[int]int{
+        0: 0,  // 0x10
+        4: 1,  // 0x08
+        5: 2,  // 0x0C
+        6: 3,  // 0x04
+        7: 2,  // 0x0C
+        9: 3,  // 0x04
+    }
 
-	buttonFunctions := []func(byte) string{
-		func(fByte byte) string { return b.generateUnknownF(fByte, unknownBytes[0]) }, // 0
-		b.generateButtonF, // 1
-		b.generateButtonF, // 2
-		b.generateButtonF, // 3
-		func(fByte byte) string { return b.generateUnknownF(fByte, unknownBytes[1]) }, // 4
-		func(fByte byte) string { return b.generateUnknownF(fByte, unknownBytes[2]) }, // 5
-		func(fByte byte) string { return b.generateUnknownF(fByte, unknownBytes[3]) }, // 6
-		func(fByte byte) string { return b.generateUnknownF(fByte, unknownBytes[2]) }, // 7
-		b.generateButtonF, // 8
-		func(fByte byte) string { return b.generateUnknownF(fByte, unknownBytes[3]) }, // 9
-	}
+    unknownBytes := []byte{0x10, 0x08, 0x0C, 0x04}
+    buttons := make([]string, 0, len(fBytes))
 
-	buttons := make([]string, 0, len(fBytes))
+    for i, fByte := range fBytes {
+        if unknownByte, exists := unknownByteMap[i]; exists {
+            // Usar generateUnknownF para índices específicos
+            left := fmt.Sprintf("\\x%02X\\x%02X\\c%02X", 
+                b.buttonByte, fByte, unknownBytes[unknownByte])
+            right := fmt.Sprintf("%s{x%02X%02X\\h%02X}", 
+                b.lineBreak, b.buttonByte, fByte, unknownBytes[unknownByte])
+            buttons = append(buttons, fmt.Sprintf("%s=%s", left, right))
+        } else {
+            // Usar generateButtonF para os demais casos
+            buttons = append(buttons, b.generateButtonUnknownFormat(fByte))
+        }
+    }
 
-	for i, fByte := range fBytes {
-		if i < len(buttonFunctions) {
-			buttons = append(buttons, buttonFunctions[i](fByte))
-		}
-	}
-
-	return buttons
+    return buttons
 }
 
-func (b *FFXTextTagButton) generateButtonF(fByte byte) string {
+func (b *FFXTextTagButton) generateButtonUnknownFormat(fByte byte) string {
 	left := fmt.Sprintf("\\x%02X\\x%02X", b.buttonByte, fByte)
 	right := fmt.Sprintf("%s{x%02X%02X}", b.lineBreak, b.buttonByte, fByte)
-	return fmt.Sprintf("%s=%s", left, right)
-}
-
-func (b *FFXTextTagButton) generateUnknownF(fByte, unknownByte byte) string {
-	left := fmt.Sprintf("\\x%02X\\x%02X\\c%02X", b.buttonByte, fByte, unknownByte)
-	right := fmt.Sprintf("%s{x%02X%02X\\h%02X}", b.lineBreak, b.buttonByte, fByte, unknownByte)
 	return fmt.Sprintf("%s=%s", left, right)
 }
 
