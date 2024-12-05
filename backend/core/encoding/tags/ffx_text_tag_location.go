@@ -2,64 +2,61 @@ package tags
 
 import "fmt"
 
-type FFXTextTagLocation struct{}
+type FFXTextTagLocation struct {
+	ffxTagsBase
+}
 
 func NewTextTagLocation() *FFXTextTagLocation {
-	return &FFXTextTagLocation{}
-}
-
-func (l *FFXTextTagLocation) FFXTextLocationPage() []string {
-	locationLetters := l.getLocationsLetters()
-	locations := make([]string, 0, len(*locationLetters))
-
-	l.generateLocationsCodePage(&locations)
-
-	return locations
-}
-
-func (l *FFXTextTagLocation) generateLocationsCodePage(locations *[]string) {
-	locationLetters := l.getLocationsLetters()
-
-	generateLocationCode := func(value string) string {
-		return fmt.Sprintf("%s=%s", value, value)
-	}
-
-	for _, value := range *locationLetters {
-		*locations = append(*locations, generateLocationCode(value))
+	return &FFXTextTagLocation{
+		ffxTagsBase: ffxTagsBase{},
 	}
 }
 
-func (l *FFXTextTagLocation) getLocationsLetters() *[]string {
-	return &[]string{
-		"À",
-		"Á",
-		"Â",
-		"Ä",
-		"Ç",
-		"È",
-		"É",
-		"Ê",
-		"Ë",
-		"Ì",
-		"Í",
-		"Î",
-		"Ï",
-		"Ñ",
-		"Ò",
-		"à",
-		"á",
-		"â",
-		"ä",
-		"ç",
-		"è",
-		"é",
-		"ê",
-		"ë",
-		"ì",
-		"í",
-		"î",
-		"ï",
-		"ñ",
-		"ò",
+func (l *FFXTextTagLocation) FFXTextLocationCodePage() []string {
+	return l.generateLocationsCodePage()
+}
+
+func (l *FFXTextTagLocation) generateLocationsCodePage() []string {
+	return l.processCodePage(&ffxLocationEncoding{})
+}
+
+type ffxLocationEncoding struct{}
+
+func (l *ffxLocationEncoding) generateCode(key byte, value string) string {
+	return fmt.Sprintf("%s=%s", value, value)
+}
+
+func (l *ffxLocationEncoding) getMap() map[byte]string {
+	return map[byte]string{
+		0xC0: "À",
+		0xC1: "Á",
+		0xC2: "Â",
+		0xC4: "Ä",
+		0xC7: "Ç",
+		0xC8: "È",
+		0xC9: "É",
+		0xCA: "Ê",
+		0xCB: "Ë",
+		0xCC: "Ì",
+		0xCD: "Í",
+		0xCE: "Î",
+		0xCF: "Ï",
+		0xD1: "Ñ",
+		0xD2: "Ò",
+		0xE0: "à",
+		0xE1: "á",
+		0xE2: "â",
+		0xE4: "ä",
+		0xE7: "ç",
+		0xE8: "è",
+		0xE9: "é",
+		0xEA: "ê",
+		0xEB: "ë",
+		0xEC: "ì",
+		0xED: "í",
+		0xEE: "î",
+		0xEF: "ï",
+		0xF1: "ñ",
+		0xF2: "ò",
 	}
 }

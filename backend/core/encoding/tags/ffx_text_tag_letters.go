@@ -5,10 +5,14 @@ import (
 	"slices"
 )
 
-type FFXTextTagLetters struct{}
+type FFXTextTagLetters struct{
+	ffxTagsBase
+}
 
 func NewLetters() *FFXTextTagLetters {
-	return &FFXTextTagLetters{}
+	return &FFXTextTagLetters{
+		ffxTagsBase: ffxTagsBase{},
+	}
 }
 
 func (l *FFXTextTagLetters) FFXTextLettersCodePage() []string {

@@ -2,10 +2,14 @@ package tags
 
 import "fmt"
 
-type FFXTextTagIcons struct{}
+type FFXTextTagIcons struct {
+	ffxTagsBase
+}
 
 func NewTextTagIcons() *FFXTextTagIcons {
-	return &FFXTextTagIcons{}
+	return &FFXTextTagIcons{
+		ffxTagsBase: ffxTagsBase{},
+	}
 }
 
 func (i *FFXTextTagIcons) FFXTextIconsCodePage() []string {
@@ -13,24 +17,18 @@ func (i *FFXTextTagIcons) FFXTextIconsCodePage() []string {
 }
 
 func (i *FFXTextTagIcons) generateIconsCodePage() []string {
-	iconsMap := i.getIconsMap()
+	return i.processCodePage(&ffxIcons{})
+}
 
-	codePage := make([]string, 0, len(iconsMap))
+type ffxIcons struct{}
 
-	generateIconCode := func(key byte, value string) string {
-		return fmt.Sprintf("\\x%02X={%s}", key, value)
-	}
-
-	for key, value := range iconsMap {
-		codePage = append(codePage, generateIconCode(key, value))
-	}
-
-	return codePage
+func (i *ffxIcons) generateCode(key byte, value string) string {
+	return fmt.Sprintf("\\x%02X={%s}", key, value)
 }
 
 // I get this from FFX game font file
-func (i *FFXTextTagIcons) getIconsMap() map[byte]string {
-	iconsMap := map[byte]string{
+func (i *ffxIcons) getMap() map[byte]string {
+	return map[byte]string{
 		0x8E: "POINT",
 		0x8F: "[",
 		0x90: "]",
@@ -61,6 +59,4 @@ func (i *FFXTextTagIcons) getIconsMap() map[byte]string {
 		0xE8: "<",
 		0xE9: "...",
 	}
-
-	return iconsMap
 }

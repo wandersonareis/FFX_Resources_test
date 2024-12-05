@@ -24,36 +24,39 @@ type ffxTextEncodingHelper struct {
 
 func newFFXTextEncodingHelper() *ffxTextEncodingHelper {
 	return &ffxTextEncodingHelper{
-		areaCodePage:      tags.NewTextTagArea(),
-		buttonCodePage:    tags.NewTextTagButton(),
-		characterCodePage: tags.NewTextTagCharacter(),
-		colorCodePage:     tags.NewTextTagColor(),
-		itemsCodePage:     tags.NewTextItems(),
-		npcCodePage:       tags.NewTextTagNPC(),
-		systemCodePage:    tags.NewTextTagSystem(),
-		codesCodePage:     tags.NewTextTagCode(),
-		iconsCodePage:     tags.NewTextTagIcons(),
-		lettersCodePage:   tags.NewLetters(),
-		textCodePage:      tags.NewText(),
-		unknownCodePage:   tags.NewTextTagUnknown(),
+		areaCodePage:         tags.NewTextTagArea(),
+		buttonCodePage:       tags.NewTextTagButton(),
+		characterCodePage:    tags.NewTextTagCharacter(),
+		colorCodePage:        tags.NewTextTagColor(),
+		itemsCodePage:        tags.NewTextItems(),
+		npcCodePage:          tags.NewTextTagNPC(),
+		systemCodePage:       tags.NewTextTagSystem(),
+		codesCodePage:        tags.NewTextTagCode(),
+		iconsCodePage:        tags.NewTextTagIcons(),
+		lettersCodePage:      tags.NewLetters(),
+		textCodePage:         tags.NewText(),
+		unknownCodePage:      tags.NewTextTagUnknown(),
+		localizationCodePage: tags.NewTextTagLocation(),
 	}
 }
 
 func (e *ffxTextEncodingHelper) createFFXTextEncoding() []string {
 	codePage := make([]string, 0, 520)
 
-	codePage = append(codePage, e.areaCodePage.FFXTextAreaCodePage()...)
-	codePage = append(codePage, e.buttonCodePage.FFXTextFullButtonsCodePage()...)
-	codePage = append(codePage, e.characterCodePage.FFXTextCharacterCodePage()...)
-	codePage = append(codePage, e.colorCodePage.FFXColorsPage()...)
-	codePage = append(codePage, e.itemsCodePage.FFXTextItemsCodePage()...)
-	codePage = append(codePage, e.npcCodePage.FFXTextNPCCodePage()...)
-	codePage = append(codePage, e.systemCodePage.FFXTextSystemCodePage()...)
-	codePage = append(codePage, e.codesCodePage.FFXTextCodePage()...)
-	codePage = append(codePage, e.iconsCodePage.FFXTextIconsCodePage()...)
-	codePage = append(codePage, e.lettersCodePage.FFXTextLettersCodePage()...)
-	codePage = append(codePage, e.lettersCodePage.FFXTextSpecialLettersCodePage()...)
-	codePage = append(codePage, e.textCodePage.FFXTextTextPage()...)
+	codePage = slices.Concat(
+		e.areaCodePage.FFXTextAreaCodePage(),
+		e.buttonCodePage.FFXTextFullButtonsCodePage(),
+		e.characterCodePage.FFXTextCharacterCodePage(),
+		e.colorCodePage.FFXColorsCodePage(),
+		e.itemsCodePage.FFXTextItemsCodePage(),
+		e.npcCodePage.FFXTextNPCCodePage(),
+		e.systemCodePage.FFXTextSystemCodePage(),
+		e.codesCodePage.FFXTextCodesCodePage(),
+		e.iconsCodePage.FFXTextIconsCodePage(),
+		e.lettersCodePage.FFXTextLettersCodePage(),
+		e.lettersCodePage.FFXTextSpecialLettersCodePage(),
+		e.textCodePage.FFXTextTextCodePage(),
+	)
 
 	unknown := tags.NewTextTagUnknown()
 	unknown.AddUnknownUCodePage(&codePage)
@@ -61,37 +64,36 @@ func (e *ffxTextEncodingHelper) createFFXTextEncoding() []string {
 
 	slices.Sort(codePage)
 
-	seen := make(map[string]bool)
-	for _, v := range codePage {
-		if seen[v] {
-			println("Duplicate value found:", v)
-		} else {
-			seen[v] = true
-		}
-	}
+	/* original := e.textCodePage.FFXTextTextPage()
+	dev := e.textCodePage.FFXTextTextCodePageDev()
+	slices.Sort(original)
+	slices.Sort(dev)
+
+	equal := slices.Equal(original, dev)
+	fmt.Println(equal) */
 
 	return codePage
 }
 
 func (l *ffxTextEncodingHelper) createFFXTextLocalizationEncoding() []string {
-	codePage := make([]string, 0, 31)
-
-	codePage = append(codePage, l.localizationCodePage.FFXTextLocationPage()...)
-
-	return codePage
+	return l.localizationCodePage.FFXTextLocationCodePage()
 }
 
 func (e *ffxTextEncodingHelper) createFFXTextSimpleEncoding() []string {
 	codePage := make([]string, 0, 31)
 
-	codePage = append(codePage, fmt.Sprintf("\\x%02X={%s}", 0x03, "NEWLINE"))
-	codePage = append(codePage, fmt.Sprintf("\\x%02X\\c%02X={VAR%02X:\\h%02X}", 0x05, 0x01, 0x05, 0x01))
-	codePage = append(codePage, fmt.Sprintf("\\x%02X\\c%02X={u%02X:\\h%02X}", 0x0B, 0x01, 0x0B, 0x01))
+	codePage = slices.Concat(
+		[]string{
+			fmt.Sprintf("\\x%02X={%s}", 0x03, "NEWLINE"),
+			fmt.Sprintf("\\x%02X\\c%02X={VAR%02X:\\h%02X}", 0x05, 0x01, 0x05, 0x01),
+			fmt.Sprintf("\\x%02X\\c%02X={u%02X:\\h%02X}", 0x0B, 0x01, 0x0B, 0x01),
+		},
 
-	codePage = append(codePage, e.buttonCodePage.FFXTextButtonsCodePage()...)
-	codePage = append(codePage, e.lettersCodePage.FFXTextLettersCodePage()...)
-	codePage = append(codePage, e.lettersCodePage.FFXTextSpecialLettersCodePage()...)
-	codePage = append(codePage, e.iconsCodePage.FFXTextIconsCodePage()...)
+		e.buttonCodePage.FFXTextButtonsCodePage(),
+		e.lettersCodePage.FFXTextLettersCodePage(),
+		e.lettersCodePage.FFXTextSpecialLettersCodePage(),
+		e.iconsCodePage.FFXTextIconsCodePage(),
+	)
 
 	unknown := tags.NewTextTagUnknown()
 	unknown.AddUnknownUCodePage(&codePage)

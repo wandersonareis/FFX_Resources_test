@@ -3,40 +3,24 @@ package tags
 import "fmt"
 
 type FFXTextTagArea struct {
-	areaByte byte
+	ffxTagsBase
 }
 
 func NewTextTagArea() *FFXTextTagArea {
-	areaByte := byte(0x20)
-
 	return &FFXTextTagArea{
-		areaByte: areaByte,
+		ffxTagsBase: ffxTagsBase{},
 	}
 }
 
 func (a *FFXTextTagArea) FFXTextAreaCodePage() []string {
-	areasMap := a.getAreasMap()
-
-	codePage := make([]string, 0, len(areasMap))
-
-	a.generateAreasCodePage(&codePage)
-
-	return codePage
+	return a.ffxTagsBase.processCodePage(&areasPage{areaByte: 0x20})
 }
 
-func (a *FFXTextTagArea) generateAreasCodePage(codePage *[]string) {
-	areasMap := a.getAreasMap()
-
-	for key, value := range areasMap {
-		*codePage = append(*codePage, a.generateAreaCode(key, value))
-	}
+type areasPage struct {
+	areaByte byte
 }
 
-func (a *FFXTextTagArea) generateAreaCode(key byte, value string) string {
-	return fmt.Sprintf("\\x%02X\\x%02X={%s}", a.areaByte, key, value)
-}
-
-func (a *FFXTextTagArea) getAreasMap() map[byte]string {
+func (a *areasPage) getMap() map[byte]string {
 	areasMap := map[byte]string{
 		0x30: "noname2", // unknown
 		0x31: "Zanarkand",
@@ -102,4 +86,8 @@ func (a *FFXTextTagArea) getAreasMap() map[byte]string {
 	}
 
 	return areasMap
+}
+
+func (a *areasPage) generateCode(key byte, value string) string {
+	return fmt.Sprintf("\\x%02X\\x%02X={%s}", a.areaByte, key, value)
 }

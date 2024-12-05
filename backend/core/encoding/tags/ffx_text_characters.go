@@ -3,22 +3,22 @@ package tags
 import "fmt"
 
 type FFXTextTagCharacter struct {
-	characterByte byte
+	ffxTagsBase
 }
 
 func NewTextTagCharacter() *FFXTextTagCharacter {
-	return &FFXTextTagCharacter{characterByte: 0x13}
+	return &FFXTextTagCharacter{ffxTagsBase: ffxTagsBase{}}
 }
 
 func (c *FFXTextTagCharacter) FFXTextCharacterCodePage() []string {
-	codePage := make([]string, 0, len(c.getCharactersMap()))
-    for key, value := range c.getCharactersMap() {
-        codePage = append(codePage, fmt.Sprintf("\\x%02X\\x%02X={%s}", c.characterByte, key, value))
-    }
-    return codePage
+	return c.processCodePage(&ffxCharacter{characterByte: 0x13})
 }
 
-func (c *FFXTextTagCharacter) getCharactersMap() map[byte]string {
+type ffxCharacter struct {
+	characterByte byte
+}
+
+func (c *ffxCharacter) getMap() map[byte]string {
 	charactersMap := map[byte]string{
 		0x30: "Tidus",
 		0x31: "Yuna",
@@ -41,4 +41,8 @@ func (c *FFXTextTagCharacter) getCharactersMap() map[byte]string {
 	}
 
 	return charactersMap
+}
+
+func (c *ffxCharacter) generateCode(key byte, value string) string {
+	return fmt.Sprintf("\\x%02X\\x%02X={%s}", c.characterByte, key, value)
 }

@@ -3,38 +3,27 @@ package tags
 import "fmt"
 
 type FFXTextTagNPC struct {
-	npcByte byte
+	ffxTagsBase
 }
 
 func NewTextTagNPC() *FFXTextTagNPC {
-	npcByte := byte(0x19)
-
-	return &FFXTextTagNPC{
-		npcByte: npcByte,
-	}
+	return &FFXTextTagNPC{}
 }
 
 func (n *FFXTextTagNPC) FFXTextNPCCodePage() []string {
-	return n.generateNPCs()
+	return n.processCodePage(&ffxNPC{npcByte: 0x19})
 }
 
-func (n *FFXTextTagNPC) generateNPCs() []string {
-	npcsMap := n.getNPCsMap()
-	codePage := make([]string, 0, len(npcsMap))
-
-	generateNPCCode := func(key byte, value string) string {
-		return fmt.Sprintf("\\x%02X\\x%02X={%s}", n.npcByte, key, value)
-	}
-
-	for key, value := range npcsMap {
-		codePage = append(codePage, generateNPCCode(key, value))
-	}
-
-	return codePage
+type ffxNPC struct {
+	npcByte byte
 }
 
-func (n *FFXTextTagNPC) getNPCsMap() map[byte]string {
-	npcsMap := map[byte]string{
+func (n *ffxNPC) generateCode(key byte, value string) string {
+	return fmt.Sprintf("\\x%02X\\x%02X={%s}", n.npcByte, key, value)
+}
+
+func (n *ffxNPC) getMap() map[byte]string {
+	return map[byte]string{
 		0x30: "noname", // unknown
 		0x31: "Gatta",
 		0x32: "Luzzu",
@@ -145,6 +134,4 @@ func (n *FFXTextTagNPC) getNPCsMap() map[byte]string {
 		0x9B: "summoner2",
 		0x9C: "guradians",
 	}
-
-	return npcsMap
 }

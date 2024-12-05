@@ -3,38 +3,29 @@ package tags
 import "fmt"
 
 type FFXTextItems struct {
-	itemByte byte
+	ffxTagsBase
 }
 
 func NewTextItems() *FFXTextItems {
-	itemByte := byte(0x23)
-
 	return &FFXTextItems{
-		itemByte: itemByte,
+		ffxTagsBase: ffxTagsBase{},
 	}
 }
 
 func (i *FFXTextItems) FFXTextItemsCodePage() []string {
-	return i.generateItems()
+	return i.processCodePage(&ffxItems{itemByte: 0x23})
 }
 
-func (i *FFXTextItems) generateItems() []string {
-	itemsMap := i.getItemsMap()
-	codePage := make([]string, 0, len(itemsMap))
-
-	generateItemCode := func(key byte, value string) string {
-		return fmt.Sprintf("\\x%02X\\x%02X={%s}", i.itemByte, key, value)
-	}
-
-	for key, value := range itemsMap {
-		codePage = append(codePage, generateItemCode(key, value))
-	}
-
-	return codePage
+type ffxItems struct {
+	itemByte byte
 }
 
-func (i *FFXTextItems) getItemsMap() map[byte]string {
-	itemsMap := map[byte]string{
+func (i *ffxItems) generateCode(key byte, value string) string {
+	return fmt.Sprintf("\\x%02X\\x%02X={%s}", i.itemByte, key, value)
+}
+
+func (i *ffxItems) getMap() map[byte]string {
+	return map[byte]string{
 		0x32: "Cloudy Mirror",
 		0x33: "Celestial Mirror",
 		0x50: "Jecht's Sphere",
@@ -57,6 +48,4 @@ func (i *FFXTextItems) getItemsMap() map[byte]string {
 		0x62: "Blossom Crown",
 		0x63: "Flower Scepter",
 	}
-
-	return itemsMap
 }
