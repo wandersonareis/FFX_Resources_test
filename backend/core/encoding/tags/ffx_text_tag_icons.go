@@ -9,25 +9,23 @@ func NewTextTagIcons() *FFXTextTagIcons {
 }
 
 func (i *FFXTextTagIcons) FFXTextIconsCodePage() []string {
+	return i.generateIconsCodePage()
+}
+
+func (i *FFXTextTagIcons) generateIconsCodePage() []string {
 	iconsMap := i.getIconsMap()
 
 	codePage := make([]string, 0, len(iconsMap))
 
-	i.generateIconsCodePage(&codePage)
-
-	return codePage
-}
-
-func (i *FFXTextTagIcons) generateIconsCodePage(codePage *[]string) {
-	iconsMap := i.getIconsMap()
+	generateIconCode := func(key byte, value string) string {
+		return fmt.Sprintf("\\x%02X={%s}", key, value)
+	}
 
 	for key, value := range iconsMap {
-		*codePage = append(*codePage, i.generateIconCode(key, value))
+		codePage = append(codePage, generateIconCode(key, value))
 	}
-}
 
-func (i *FFXTextTagIcons) generateIconCode(key byte, value string) string {
-	return fmt.Sprintf("\\x%02X={%s}", key, value)
+	return codePage
 }
 
 // I get this from FFX game font file

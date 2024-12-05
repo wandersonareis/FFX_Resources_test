@@ -18,14 +18,6 @@ func (c *FFXTextTagCharacter) FFXTextCharacterCodePage() []string {
     return codePage
 }
 
-/* func (c *FFXTextTagCharacter) generateCharactersCodePage(codePage *[]string) {
-	charactersMap := c.getCharactersMap()
-
-	for key, value := range charactersMap {
-		*codePage = append(*codePage, fmt.Sprintf("\\x%02X\\x%02X={%s}", c.characterByte, key, value))
-	}
-} */
-
 func (c *FFXTextTagCharacter) getCharactersMap() map[byte]string {
 	charactersMap := map[byte]string{
 		0x30: "Tidus",

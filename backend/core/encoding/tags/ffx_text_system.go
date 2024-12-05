@@ -1,6 +1,9 @@
 package tags
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+)
 
 type FFXTextTagSystem struct {
 	systemByte byte
@@ -8,35 +11,32 @@ type FFXTextTagSystem struct {
 }
 
 func NewTextTagSystem() *FFXTextTagSystem {
-	systemByte := byte(0x09)
-	systemTag := byte(0x01)
-
 	return &FFXTextTagSystem{
-		systemByte: systemByte,
-		systemTag:  systemTag,
+		systemByte: 0x09,
+		systemTag:  0x01,
 	}
 }
 
 func (s *FFXTextTagSystem) FFXTextSystemCodePage() []string {
-	systems := make([]string, 0, 3)
-
-	s.generateSystemCommand(&systems)
-
-	s.generateSystemCodePage(&systems)
-
-	return systems
+	return slices.Concat(
+		s.generateSystemCommand(),
+		s.generateSystemCodePage(),
+	)
 }
 
-func (s *FFXTextTagSystem) generateSystemCommand(list *[]string) {
+func (s *FFXTextTagSystem) generateSystemCommand() []string {
 	systemCommand := fmt.Sprintf("\\x%02X\\c%02X={x%02X:\\h%02X}", s.systemByte, s.systemTag, s.systemByte, s.systemTag)
 
-	*list = append(*list, systemCommand)
+	return []string{systemCommand}
 }
 
-func (s *FFXTextTagSystem) generateSystemCodePage(list *[]string) {
+func (s *FFXTextTagSystem) generateSystemCodePage() []string {
 	systemWindow := fmt.Sprintf("\\x%02X\\x%02X={%s}%s", s.systemByte, 0x30, "WINDOW", LineBreakString())
 
 	systemArea := fmt.Sprintf("\\x%02X\\x%02X={%s}", s.systemByte, 0x3F, "AREA")
 
-	*list = append(*list, systemWindow, systemArea)
+	return []string{
+		systemWindow,
+		systemArea,
+	}
 }

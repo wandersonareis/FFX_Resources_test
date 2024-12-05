@@ -20,13 +20,13 @@ func (l *FFXTextTagLocation) FFXTextLocationPage() []string {
 func (l *FFXTextTagLocation) generateLocationsCodePage(locations *[]string) {
 	locationLetters := l.getLocationsLetters()
 
-	for _, value := range *locationLetters {
-		*locations = append(*locations, l.generateLocationCode(value))
+	generateLocationCode := func(value string) string {
+		return fmt.Sprintf("%s=%s", value, value)
 	}
-}
 
-func (l *FFXTextTagLocation) generateLocationCode(value string) string {
-	return fmt.Sprintf("%s=%s", value, value)
+	for _, value := range *locationLetters {
+		*locations = append(*locations, generateLocationCode(value))
+	}
 }
 
 func (l *FFXTextTagLocation) getLocationsLetters() *[]string {

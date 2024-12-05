@@ -1,6 +1,9 @@
 package tags
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+)
 
 type FFXTextTagCode struct{}
 
@@ -9,29 +12,31 @@ func NewTextTagCode() *FFXTextTagCode {
 }
 
 func (c *FFXTextTagCode) FFXTextCodePage() []string {
-	codePage := make([]string, 0, 8)
+	return slices.Concat(
+		c.generate2CBytesCodePage(),
+		c.addVarsCode(),
+	)
+}
 
-	c.generate2CBytesCodePage(&codePage)
-	c.addVarsCode(&codePage)
+func (c *FFXTextTagCode) generate2CBytesCodePage() []string {
+	get2CBytesCodeMap := c.get2CBytesCodeMap()
+	byte2C := byte(0x2C)
+
+	codePage := make([]string, 0, len(get2CBytesCodeMap))
+
+	generate2CBytesCode := func(byte2C byte, key byte, value string) string {
+		return fmt.Sprintf("\\x%02X\\x%02X={%s}", byte2C, key, value)
+	}
+
+	for key, value := range get2CBytesCodeMap {
+		codePage = append(codePage, generate2CBytesCode(byte2C, key, value))
+	}
 
 	return codePage
 }
 
-func (c *FFXTextTagCode) generate2CBytesCodePage(codePage *[]string) {
-	bytesMap := c.get2CBytesCodeList()
-	byte2C := byte(0x2C)
-
-	for key, value := range bytesMap {
-		*codePage = append(*codePage, c.generate2CBytesCode(byte2C, key, value))
-	}
-}
-
-func (c *FFXTextTagCode) generate2CBytesCode(byte2C byte, key byte, value string) string {
-	return fmt.Sprintf("\\x%02X\\x%02X={%s}", byte2C, key, value)
-}
-
-func (c *FFXTextTagCode) get2CBytesCodeList() map[byte]string {
-	bytesMap := map[byte]string{
+func (c *FFXTextTagCode) get2CBytesCodeMap() map[byte]string {
+	return map[byte]string{
 		0x30: "A",
 		0x34: "E",
 		0x36: "G",
@@ -40,14 +45,16 @@ func (c *FFXTextTagCode) get2CBytesCodeList() map[byte]string {
 		0x41: "R",
 		0x45: "V",
 	}
-
-	return bytesMap
 }
 
-func (c *FFXTextTagCode) addVarsCode(codePage *[]string) {
-	*codePage = append(*codePage, "\\c01={u\\h01}")
-	*codePage = append(*codePage, "\\x07\\c01={VAR07:\\h01}")
-	*codePage = append(*codePage, "\\x10={CHOICE???}")
-	*codePage = append(*codePage, "\\x10\\c01={CHOICE:\\h01}")
-	*codePage = append(*codePage, "\\x12\\c01={VAR12:\\h01}")
+func (c *FFXTextTagCode) addVarsCode() []string {
+	codePage := make([]string, 0, 5)
+
+	codePage = append(codePage, "\\c01={u\\h01}")
+	codePage = append(codePage, "\\x07\\c01={VAR07:\\h01}")
+	codePage = append(codePage, "\\x10={CHOICE???}")
+	codePage = append(codePage, "\\x10\\c01={CHOICE:\\h01}")
+	codePage = append(codePage, "\\x12\\c01={VAR12:\\h01}")
+
+	return codePage
 }

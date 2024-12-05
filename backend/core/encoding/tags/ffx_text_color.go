@@ -1,38 +1,48 @@
 package tags
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+)
 
 type FFXTextTagColor struct {
-	colorByte byte
-	colorTag  byte
+	textColorByte byte
+	textColorTag  byte
 }
 
 func NewTextTagColor() *FFXTextTagColor {
-	colorByte := byte(0x0A)
-	colorTag := byte(0x01)
-
 	return &FFXTextTagColor{
-		colorByte: colorByte,
-		colorTag:  colorTag,
+		textColorByte: 0x0A,
+		textColorTag:  0x01,
 	}
 }
 
 func (c *FFXTextTagColor) FFXColorsPage() []string {
-	colorsMap := c.getColorsMap()
-	colors := make([]string, 0, len(colorsMap)+1)
+	return slices.Concat(
+		c.generateColorCommand(),
+		c.generateColorsCodePage(),
+	)
+}
 
-	colors = append(colors, c.colorCommand())
+func (c *FFXTextTagColor) generateColorCommand() []string {
+	return []string{
+		fmt.Sprintf("\\x%02X\\c%02X={Color:\\h%02X}", c.textColorByte, c.textColorTag, c.textColorTag),
+	}
+}
+
+func (c *FFXTextTagColor) generateColorsCodePage() []string {
+	colorsMap := c.getColorsMap()
+	colors := make([]string, 0, len(colorsMap))
+
+	generateColorsCode := func(colorByte byte, colorName string) string {
+		return fmt.Sprintf("\\x%02X\\x%02X={%s}", c.textColorByte, colorByte, colorName)
+	}
 
 	for key, value := range colorsMap {
-		colors = append(colors, fmt.Sprintf("\\x%02X\\x%02X={%s}", c.colorByte, key, value))
+		colors = append(colors, generateColorsCode(key, value))
 	}
 
 	return colors
-}
-
-func (c *FFXTextTagColor) colorCommand() string {
-	return fmt.Sprintf("\\x%02X\\c%02X={Color:\\h%02X}", c.colorByte, c.colorTag, c.colorTag)
-
 }
 
 func (c *FFXTextTagColor) getColorsMap() map[byte]string {

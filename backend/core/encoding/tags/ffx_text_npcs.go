@@ -22,15 +22,15 @@ func (n *FFXTextTagNPC) generateNPCs() []string {
 	npcsMap := n.getNPCsMap()
 	codePage := make([]string, 0, len(npcsMap))
 
+	generateNPCCode := func(key byte, value string) string {
+		return fmt.Sprintf("\\x%02X\\x%02X={%s}", n.npcByte, key, value)
+	}
+
 	for key, value := range npcsMap {
-		codePage = append(codePage, n.generateNPCCode(key, value))
+		codePage = append(codePage, generateNPCCode(key, value))
 	}
 
 	return codePage
-}
-
-func (n *FFXTextTagNPC) generateNPCCode(key byte, value string) string {
-	return fmt.Sprintf("\\x%02X\\x%02X={%s}", n.npcByte, key, value)
 }
 
 func (n *FFXTextTagNPC) getNPCsMap() map[byte]string {

@@ -1,6 +1,9 @@
 package tags
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+)
 
 type FFXTextTagLetters struct{}
 
@@ -9,66 +12,30 @@ func NewLetters() *FFXTextTagLetters {
 }
 
 func (l *FFXTextTagLetters) FFXTextLettersCodePage() []string {
-	codePage := &[]string{}
-
-	l.generateNumberCode(codePage)
-	l.generateSpecialCharacterCodePage(codePage)
-	l.generateUpperCaseLetterCode(codePage)
-	l.generateLowerCaseLetterCode(codePage)
-
-	return *codePage
+	return slices.Concat(
+		l.generateCode(l.getNumbersMap()),
+		l.generateCode(l.getUppercaseLettersMap()),
+		l.generateCode(l.getLowercaseLettersMap()),
+		l.generateCode(l.getSpecialCharactersMap()),
+	)
 }
 
 func (l *FFXTextTagLetters) FFXTextSpecialLettersCodePage() []string {
-	codePage := &[]string{}
-
-	l.generateSpecialLetterCode(codePage)
-
-	return *codePage
+	return l.generateCode(l.getSpecialLettersMap())
 }
 
-func (l *FFXTextTagLetters) generateUpperCaseLetterCode(codePage *[]string) {
-	upperCaseLettersMap := l.getUppercaseLettersMap()
+func (l *FFXTextTagLetters) generateCode(codeMap map[byte]string) []string {
+	codePage := make([]string, 0, len(codeMap))
 
-	for key, value := range upperCaseLettersMap {
-		*codePage = append(*codePage, l.generateLetterCode(key, value))
+	generateLetterCode := func(key byte, value string) string {
+		return fmt.Sprintf("\\x%02X=%s", key, value)
 	}
-}
 
-func (l *FFXTextTagLetters) generateLowerCaseLetterCode(codePage *[]string) {
-	lowerCaseLettersMap := l.getLowercaseLettersMap()
-
-	for key, value := range lowerCaseLettersMap {
-		*codePage = append(*codePage, l.generateLetterCode(key, value))
+	for key, value := range codeMap {
+		codePage = append(codePage, generateLetterCode(key, value))
 	}
-}
 
-func (l *FFXTextTagLetters) generateSpecialLetterCode(codePage *[]string) {
-	specialLettersMap := l.getSpecialLettersMap()
-
-	for key, value := range specialLettersMap {
-		*codePage = append(*codePage, l.generateLetterCode(key, value))
-	}
-}
-
-func (l *FFXTextTagLetters) generateNumberCode(codePage *[]string) {
-	numbersMap := l.getNumbersMap()
-
-	for key, value := range numbersMap {
-		*codePage = append(*codePage, l.generateLetterCode(key, value))
-	}
-}
-
-func (l *FFXTextTagLetters) generateSpecialCharacterCodePage(codePage *[]string) {
-	specialCharactersMap := l.getSpecialCharactersMap()
-
-	for key, value := range specialCharactersMap {
-		*codePage = append(*codePage, l.generateLetterCode(key, value))
-	}
-}
-
-func (l *FFXTextTagLetters) generateLetterCode(key byte, value string) string {
-	return fmt.Sprintf("\\x%02X=%s", key, value)
+	return codePage
 }
 
 func (l *FFXTextTagLetters) getNumbersMap() map[byte]string {
