@@ -3,31 +3,31 @@ package joiner
 import (
 	"bytes"
 	"ffxresources/backend/common"
-	ffxencoding "ffxresources/backend/core/encoding"
+	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lib"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
-	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/interactions"
 	"fmt"
 	"os"
-	"slices"
 )
 
 type IPartsJoiner interface {
 	JoinFileParts() error
 	EncodeFilesParts() error
-	FindTranslatedTextParts() (*[]parts.LockitFileParts, error)
+	FindTranslatedTextParts() (components.IList[parts.LockitFileParts], error)
 }
 
 type lockitFileJoiner struct {
 	*base.FormatsBase
-	partsList *[]parts.LockitFileParts
+
+	partsList components.IList[parts.LockitFileParts]
 	options   interactions.LockitFileOptions
 	worker    common.IWorker[parts.LockitFileParts]
 }
 
-func NewLockitFileJoiner(dataInfo interactions.IGameDataInfo, partsList *[]parts.LockitFileParts) IPartsJoiner {
+func NewLockitFileJoiner(dataInfo interactions.IGameDataInfo, partsList components.IList[parts.LockitFileParts]) IPartsJoiner {
 	return &lockitFileJoiner{
 		FormatsBase: base.NewFormatsBase(dataInfo),
 		options:     interactions.NewInteraction().GamePartOptions.GetLockitFileOptions(),
@@ -36,10 +36,11 @@ func NewLockitFileJoiner(dataInfo interactions.IGameDataInfo, partsList *[]parts
 	}
 }
 
-func (lj *lockitFileJoiner) FindTranslatedTextParts() (*[]parts.LockitFileParts, error) {
-	partsList := []parts.LockitFileParts{}
-	err := util.FindFileParts(
-		&partsList,
+func (lj *lockitFileJoiner) FindTranslatedTextParts() (components.IList[parts.LockitFileParts], error) {
+	partsList := components.NewEmptyList[parts.LockitFileParts]()
+
+	err := components.GenerateGameFileParts(
+		partsList,
 		lj.GetTranslateLocation().TargetPath,
 		lib.LOCKIT_TXT_PARTS_PATTERN,
 		parts.NewLockitFileParts)
@@ -48,23 +49,33 @@ func (lj *lockitFileJoiner) FindTranslatedTextParts() (*[]parts.LockitFileParts,
 		return nil, err
 	}
 
-	partsList = slices.Clip(partsList)
+	partsList.Clip()
 
-	return &partsList, nil
+	return partsList, nil
 }
 
 func (lj *lockitFileJoiner) EncodeFilesParts() error {
 	encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextLocalizationEncoding()
 	defer encoding.Dispose()
 
-	lj.worker.ParallelForEach(lj.partsList,
-		func(index int, part parts.LockitFileParts) {
-			if index > 0 && index%2 == 0 {
-				part.Compress(parts.LocEnc, encoding)
-			} else {
-				part.Compress(parts.FfxEnc, encoding)
-			}
-		})
+	compressorFunc := func(index int, part parts.LockitFileParts) {
+		if index > 0 && index%2 == 0 {
+			part.Compress(parts.LocEnc, encoding)
+		} else {
+			part.Compress(parts.FfxEnc, encoding)
+		}
+	}
+
+	lj.partsList.ParallelForEach(compressorFunc)
+
+	/* lj.worker.ParallelForEach(lj.partsList,
+	func(index int, part parts.LockitFileParts) {
+		if index > 0 && index%2 == 0 {
+			part.Compress(parts.LocEnc, encoding)
+		} else {
+			part.Compress(parts.FfxEnc, encoding)
+		}
+	}) */
 
 	if err := lj.GetTranslateLocation().ProvideTargetPath(); err != nil {
 		return err
@@ -76,13 +87,34 @@ func (lj *lockitFileJoiner) EncodeFilesParts() error {
 func (lj *lockitFileJoiner) JoinFileParts() error {
 	importLocation := lj.GetImportLocation()
 
-	if len(*lj.partsList) != lj.options.PartsLength {
-		return fmt.Errorf("invalid number of parts: %d expected: %d", len(*lj.partsList), lj.options.PartsLength)
+	if lj.partsList.GetLength() != lj.options.PartsLength {
+		return fmt.Errorf("invalid number of parts: %d expected: %d", lj.partsList.GetLength(), lj.options.PartsLength)
 	}
 
 	var combinedBuffer bytes.Buffer
 
-	err := lj.worker.ForEach(lj.partsList, func(_ int, part parts.LockitFileParts) error {
+	errChan := make(chan error, 1)
+
+	combineFilesFunc := func(part parts.LockitFileParts) {
+		fileName := part.GetFileInfo().GetImportLocation().TargetFile
+
+		partData, err := os.ReadFile(fileName)
+		if err != nil {
+			errChan <- fmt.Errorf("error reading the separate %s: %v", fileName, err)
+			return
+		}
+
+		combinedBuffer.Write(partData)
+	}
+
+	lj.partsList.ForEach(combineFilesFunc)
+
+	var err error
+	if err = <-errChan; err != nil {
+		return err
+	}
+
+	/* err = lj.worker.ForEach(lj.partsList, func(_ int, part parts.LockitFileParts) error {
 		fileName := part.GetFileInfo().GetImportLocation().TargetFile
 
 		partData, err := os.ReadFile(fileName)
@@ -96,7 +128,7 @@ func (lj *lockitFileJoiner) JoinFileParts() error {
 
 	if err != nil {
 		return err
-	}
+	} */
 
 	if err := importLocation.ProvideTargetPath(); err != nil {
 		return err

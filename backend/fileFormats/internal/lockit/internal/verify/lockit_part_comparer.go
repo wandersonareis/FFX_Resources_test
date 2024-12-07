@@ -3,6 +3,7 @@ package verify
 import (
 	"bytes"
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
 	"fmt"
 	"os"
@@ -18,7 +19,7 @@ type IPartComparer interface {
 	//
 	// Returns:
 	//   error - An error if any comparison fails, otherwise nil.
-	CompareGameDataBinaryParts(partsList *[]parts.LockitFileParts) error
+	CompareGameDataBinaryParts(partsList components.IList[parts.LockitFileParts]) error
 
 	// CompareTranslatedTextParts compares the translated text parts with extracted text parts of the given LockitFileParts.
 	// It iterates over each part and compares the target files of the translate
@@ -31,7 +32,7 @@ type IPartComparer interface {
 	// Returns:
 	//
 	//	error - An error if any comparison fails, otherwise nil.
-	CompareTranslatedTextParts(partsList *[]parts.LockitFileParts) error
+	CompareTranslatedTextParts(partsList components.IList[parts.LockitFileParts]) error
 }
 
 type PartComparer struct {
@@ -45,34 +46,49 @@ func newPartComparer() IPartComparer {
 	}
 }
 
-func (pc PartComparer) CompareGameDataBinaryParts(partsList *[]parts.LockitFileParts) error {
-	compareBinaryParts := func(index int, part parts.LockitFileParts) error {
+func (pc PartComparer) CompareGameDataBinaryParts(partsList components.IList[parts.LockitFileParts]) error {
+	errChan := make(chan error, 1)
+	compareBinaryParts := func(part parts.LockitFileParts) {
 		if err := pc.compare(part.GetGameData().FullFilePath, part.GetImportLocation().TargetFile); err != nil {
-			return err
+			errChan <- err
+			return
 		}
-
-		return nil
 	}
 
-	if err := pc.worker.ForEach(partsList, compareBinaryParts); err != nil {
+	partsList.ForEach(compareBinaryParts)
+
+	var err error
+	if err = <-errChan; err != nil {
 		return err
 	}
+
+	/* if err := pc.worker.ForEach(partsList, compareBinaryParts); err != nil {
+		return err
+	} */
 
 	return nil
 }
 
-func (pc PartComparer) CompareTranslatedTextParts(partsList *[]parts.LockitFileParts) error {
-	compareTextParts := func(index int, item parts.LockitFileParts) error {
-		if err := pc.compare(item.GetTranslateLocation().TargetFile, item.GetExtractLocation().TargetFile); err != nil {
-			return err
-		}
+func (pc PartComparer) CompareTranslatedTextParts(partsList components.IList[parts.LockitFileParts]) error {
+	errChan := make(chan error, 1)
 
-		return nil
+	compareTextParts := func(item parts.LockitFileParts) {
+		if err := pc.compare(item.GetTranslateLocation().TargetFile, item.GetExtractLocation().TargetFile); err != nil {
+			errChan <- err
+			return
+		}
 	}
 
-	if err := pc.worker.ForEach(partsList, compareTextParts); err != nil {
+	partsList.ForEach(compareTextParts)
+
+	var err error
+	if err = <-errChan; err != nil {
 		return err
 	}
+
+	/* if err := pc.worker.ForEach(partsList, compareTextParts); err != nil {
+		return err
+	} */
 
 	return nil
 }

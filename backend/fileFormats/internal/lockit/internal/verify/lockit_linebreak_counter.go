@@ -2,10 +2,13 @@ package verify
 
 import (
 	"bytes"
+	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/logger"
 	"fmt"
 	"os"
+	"sync"
 )
 
 type ILineBreakCounter interface {
@@ -20,60 +23,83 @@ type ILineBreakCounter interface {
 	//
 	// Returns:
 	//   - error: An error if the verification fails, otherwise nil.
-	CountBinaryParts(partsList *[]parts.LockitFileParts, options interactions.LockitFileOptions) error
-	CountTextParts(partsList *[]parts.LockitFileParts, options interactions.LockitFileOptions) error
+	CountBinaryParts(partsList components.IList[parts.LockitFileParts], options interactions.LockitFileOptions) error
+	CountTextParts(partsList components.IList[parts.LockitFileParts], options interactions.LockitFileOptions) error
 }
 
 type LineBreakCounter struct{}
 
-func (lc LineBreakCounter) CountBinaryParts(partsList *[]parts.LockitFileParts, options interactions.LockitFileOptions) error {
-	list := *partsList
-	pathList := make([]string, len(list))
+func (lc LineBreakCounter) CountBinaryParts(partsList components.IList[parts.LockitFileParts], options interactions.LockitFileOptions) error {
+	pathList := components.NewList[string](partsList.GetLength())
 
-	for index, part := range list {
-		pathList[index] = part.GetGameData().FullFilePath
-	}
+	partsList.ForEach(func(part parts.LockitFileParts) {
+		pathList.Add(part.GetGameData().FullFilePath)
+	})
 
-	if err := lc.verify(&pathList, options.PartsSizes, len(options.PartsSizes), options.LineBreaksCount); err != nil {
+	if err := lc.verify(pathList, options.PartsSizes, len(options.PartsSizes), options.LineBreaksCount); err != nil {
 		return fmt.Errorf("error when counting line breaks: %w", err)
 	}
 
 	return nil
 }
 
-func (lc LineBreakCounter) CountTextParts(partsList *[]parts.LockitFileParts, options interactions.LockitFileOptions) error {
-	list := *partsList
-	pathList := make([]string, len(list))
+func (lc LineBreakCounter) CountTextParts(partsList components.IList[parts.LockitFileParts], options interactions.LockitFileOptions) error {
+	pathList := components.NewEmptyList[string]()
 
-	for index, part := range list {
-		pathList[index] = part.GetExtractLocation().TargetFile
-	}
+	partsList.ForEach(func(part parts.LockitFileParts) {
+		pathList.Add(part.GetExtractLocation().TargetFile)
+	})
 
-	if err := lc.verify(&pathList, options.PartsSizes, len(options.PartsSizes), options.LineBreaksCount); err != nil {
+	if err := lc.verify(pathList, options.PartsSizes, len(options.PartsSizes), options.LineBreaksCount); err != nil {
 		return fmt.Errorf("error when counting line breaks: %w", err)
 	}
 
 	return nil
 }
 
-func (lc LineBreakCounter) verify(pathList *[]string, ocorrencesCount []int, ocorrencesLength int, expectedLineBreaksCount int) error {
-	ocorrencesExpected := 0
+func (lc LineBreakCounter) verify(pathList components.IList[string], ocorrencesCount []int, ocorrencesLength int, expectedLineBreaksCount int) error {
+    var wg sync.WaitGroup
+    errChan := make(chan error, pathList.GetLength())
+    
+    comparerOcorrencesFunc := func(index int, part string) {
+        defer wg.Done()
+        
+        ocorrencesExpected := lc.getOcorrencesExpected(ocorrencesCount, index, ocorrencesLength, expectedLineBreaksCount)
 
-	list := *pathList
-	for index, part := range list {
-		ocorrencesExpected = lc.getOcorrencesExpected(ocorrencesCount, index, ocorrencesLength, expectedLineBreaksCount)
+        data, err := lc.readFilePart(part)
+        if err != nil {
+            errChan <- fmt.Errorf("error when reading file part %s: %w", part, err)
+            return
+        }
 
-		data, err := lc.readFilePart(part)
-		if err != nil {
-			return err
-		}
+        if err := lc.compareOcorrrences(&data, ocorrencesExpected); err != nil {
+            errChan <- fmt.Errorf("error when comparing ocorrences on file %s: %w", part, err)
+            return
+        }
+    }
 
-		if err := lc.compareOcorrrences(&data, ocorrencesExpected); err != nil {
-			return err
-		}
-	}
+    wg.Add(pathList.GetLength())
+    pathList.ForIndex(comparerOcorrencesFunc)
 
-	return nil
+    go func() {
+        wg.Wait()
+        close(errChan)
+    }()
+
+    var errors []error
+    for err := range errChan {
+        errors = append(errors, err)
+    }
+
+    if len(errors) > 0 {
+        l := logger.Get().With().Str("module", "linebreak_counter").Logger()
+        for _, err := range errors {
+            l.Error().Err(err).Msg("error when counting line breaks")
+        }
+        return fmt.Errorf("found %d errors when counting line breaks", len(errors))
+    }
+
+    return nil
 }
 
 func (lc LineBreakCounter) readFilePart(path string) ([]byte, error) {
@@ -91,7 +117,7 @@ func (lc LineBreakCounter) getOcorrencesExpected(ocorrencesCount []int, index, o
 	switch true {
 	case index == 0:
 		ocorrencesExpected = ocorrencesCount[index]
-	case index > 0 && index < ocorrencesLength:
+	case index < ocorrencesLength:
 		ocorrencesExpected = ocorrencesCount[index] - ocorrencesCount[index-1]
 	case index <= ocorrencesLength:
 		ocorrencesExpected = expectedLineBreaksCount - ocorrencesCount[index-1]

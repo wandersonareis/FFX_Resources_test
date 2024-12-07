@@ -3,8 +3,8 @@ package splitter
 import (
 	"bufio"
 	"bytes"
-	"ffxresources/backend/common"
-	ffxencoding "ffxresources/backend/core/encoding"
+	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
 	"ffxresources/backend/interactions"
 	"fmt"
@@ -13,32 +13,29 @@ import (
 )
 
 type IFileSplitter interface {
-	DecoderPartsFiles(partsList *[]parts.LockitFileParts)
+	DecoderPartsFiles(partsList components.IList[parts.LockitFileParts])
 	FileSplitter(dataInfo interactions.IGameDataInfo, options interactions.LockitFileOptions) error
 }
 
-type LockitFileSplitter struct {
-	worker common.IWorker[parts.LockitFileParts]
-}
+type LockitFileSplitter struct {}
 
 func NewLockitFileSplitter() IFileSplitter {
-	return &LockitFileSplitter{
-		worker: common.NewWorker[parts.LockitFileParts](),
-	}
+	return &LockitFileSplitter{}
 }
 
-func (ls *LockitFileSplitter) DecoderPartsFiles(partsList *[]parts.LockitFileParts) {
+func (ls *LockitFileSplitter) DecoderPartsFiles(partsList components.IList[parts.LockitFileParts]) {
 	encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextLocalizationEncoding()
 	defer encoding.Dispose()
 
-	ls.worker.ParallelForEach(partsList,
-		func(index int, part parts.LockitFileParts) {
-			if index > 0 && index % 2 == 0 {
-				part.Extract(parts.LocEnc, encoding)
-			} else {
-				part.Extract(parts.FfxEnc, encoding)
-			}
-		})
+	extractorFunc := func(index int, part parts.LockitFileParts) {
+		if index > 0 && index % 2 == 0 {
+			part.Extract(parts.LocEnc, encoding)
+		} else {
+			part.Extract(parts.FfxEnc, encoding)
+		}
+	}
+
+	partsList.ParallelForEach(extractorFunc)
 }
 
 func (ls *LockitFileSplitter) FileSplitter(dataInfo interactions.IGameDataInfo, options interactions.LockitFileOptions) error {
