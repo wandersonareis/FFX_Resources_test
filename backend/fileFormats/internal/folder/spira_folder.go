@@ -2,6 +2,7 @@ package folder
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
@@ -42,13 +43,11 @@ func (sf SpiraFolder) Extract() {
 	fileProcessors := sf.processFiles()
 
 	progress := common.NewProgress(sf.Ctx)
-	progress.SetMax(len(fileProcessors))
+	progress.SetMax(fileProcessors.GetLength())
 	progress.Start()
 
-	worker := common.NewWorker[interactions.IFileProcessor]()
-
-	worker.ParallelForEach(&fileProcessors, func(_ int, fileProcessor interactions.IFileProcessor) {
-		fileProcessor.Extract()
+	fileProcessors.ForEach(func(extractor interactions.IFileProcessor) {
+		extractor.Extract()
 
 		progress.Step()
 	})
@@ -64,13 +63,11 @@ func (sf SpiraFolder) Compress() {
 	fileProcessors := sf.processFiles()
 
 	progress := common.NewProgress(sf.Ctx)
-	progress.SetMax(len(fileProcessors))
+	progress.SetMax(fileProcessors.GetLength())
 	progress.Start()
 
-	worker := common.NewWorker[interactions.IFileProcessor]()
-
-	worker.ParallelForEach(&fileProcessors, func(_ int, fileProcessor interactions.IFileProcessor) {
-		fileProcessor.Compress()
+	fileProcessors.ForEach(func(compressor interactions.IFileProcessor) {
+		compressor.Compress()
 
 		progress.Step()
 	})
@@ -82,23 +79,23 @@ func (sf SpiraFolder) Compress() {
 		Msg("Spira folder compressed")
 }
 
-func (sf SpiraFolder) processFiles() []interactions.IFileProcessor {
-	results, err := common.ListFilesInDirectory(sf.GetFileInfo().GetGameData().FullFilePath)
+func (sf SpiraFolder) processFiles() *components.List[interactions.IFileProcessor] {
+	//results, err := common.ListFilesInDirectoryDev(sf.GetFileInfo().GetGameData().FullFilePath)
+	filesList := components.NewEmptyList[string]()
+	err := components.ListFiles(filesList, sf.GetFileInfo().GetGameData().FullFilePath)
 	if err != nil {
 		sf.log.Error().
 			Err(err).
 			Str("directory", sf.GetFileInfo().GetGameData().FullFilePath).
 			Msg("error listing files in directory")
 
-		return nil
+		return components.NewEmptyList[interactions.IFileProcessor]()
 	}
 
-	var fileProcessors = make([]interactions.IFileProcessor, 0, len(*results))
+	filesProcessorList := components.NewList[interactions.IFileProcessor](filesList.GetLength())
 
-	worker := common.NewWorker[string]()
-
-	worker.ParallelForEach(results, func(_ int, result string) {
-		dataInfo := interactions.NewGameDataInfo(result)
+	generateFilesProcessorListFunc := func(_ int, item string) {
+		dataInfo := interactions.NewGameDataInfo(item)
 
 		fileProcessor := sf.fileProcessor(dataInfo)
 		if fileProcessor == nil {
@@ -109,8 +106,10 @@ func (sf SpiraFolder) processFiles() []interactions.IFileProcessor {
 			return
 		}
 
-		fileProcessors = append(fileProcessors, fileProcessor)
-	})
+		filesProcessorList.Add(fileProcessor)
+	}
 
-	return fileProcessors
+	filesList.ParallelForEach(generateFilesProcessorListFunc)
+
+	return filesProcessorList
 }
