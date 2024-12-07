@@ -48,6 +48,10 @@ func (u *FFXTextTagUnknown) processCodePage(codePage *[]string, generator ICodeP
 
 	for i := start; i <= end; i++ {
 		byteStr := fmt.Sprintf("\\x%02X", i)
+		if u.ignoreList(i) {
+			continue
+		}
+
 		if !u.codeExists(codePage, byteStr) {
 			*codePage = append(*codePage, generator.GenerateCode(byteStr, i))
 		}
@@ -62,6 +66,10 @@ func (u *FFXTextTagUnknown) codeExists(codePage *[]string, byteStr string) bool 
 		}
 	}
 	return false
+}
+
+func (u *FFXTextTagUnknown) ignoreList(value int) bool {
+	return value == 0x0D || value == 0x0A
 }
 
 func (u *FFXTextTagUnknown) AddUnknownUCodePage(codePage *[]string) {
