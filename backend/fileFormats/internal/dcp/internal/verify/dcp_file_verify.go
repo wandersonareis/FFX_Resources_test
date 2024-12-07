@@ -1,6 +1,7 @@
 package verify
 
 import (
+	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
@@ -25,11 +26,11 @@ func NewDcpFileVerify(dataInfo interactions.IGameDataInfo) *DcpFileVerify {
 	}
 }
 
-func (lv *DcpFileVerify) VerifyExtract(dcpFileParts *[]parts.DcpFileParts, options interactions.DcpFileOptions) error {
-	if len(*dcpFileParts) != options.PartsLength {
+func (lv *DcpFileVerify) VerifyExtract(dcpFileParts components.IList[parts.DcpFileParts], options interactions.DcpFileOptions) error {
+	if dcpFileParts.GetLength() != options.PartsLength {
 		lv.log.Error().
 			Int("expected", options.PartsLength).
-			Int("actual", len(*dcpFileParts)).
+			Int("actual", dcpFileParts.GetLength()).
 			Msg("Invalid number of split files")
 
 		return fmt.Errorf("error when ensuring splited lockit parts")

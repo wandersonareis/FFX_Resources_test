@@ -2,6 +2,7 @@ package dcp
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/components"
 	"ffxresources/backend/events"
 	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/joinner"
@@ -9,7 +10,6 @@ import (
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/splitter"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/verify"
-	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
@@ -21,7 +21,7 @@ type DcpFile struct {
 	*base.FormatsBase
 
 	dcpFileVerify *verify.DcpFileVerify
-	PartsList     *[]parts.DcpFileParts
+	PartsList     components.IList[parts.DcpFileParts]
 	fileSplitter  splitter.IDcpFileSpliter
 	options       interactions.DcpFileOptions
 	log           zerolog.Logger
@@ -31,15 +31,18 @@ type DcpFile struct {
 func NewDcpFile(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor {
 	interactions := interactions.NewInteraction()
 
-	dcpFileParts := &[]parts.DcpFileParts{}
+	dcpFileParts := components.NewEmptyList[parts.DcpFileParts]()
 	dataInfo.CreateRelativePath()
 
 	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
 
-	if err := util.FindFileParts(dcpFileParts,
+	err := components.GenerateGameFileParts(
+		dcpFileParts,
 		dataInfo.GetExtractLocation().TargetPath,
 		lib.DCP_FILE_PARTS_PATTERN,
-		parts.NewDcpFileParts); err != nil {
+		parts.NewDcpFileParts)
+
+	if err != nil {
 		events.NotifyError(err)
 		return nil
 	}
@@ -66,15 +69,15 @@ func (d *DcpFile) Extract() {
 		return
 	}
 
-	if len(*d.PartsList) != expectedDcpPartsLength {
+	if d.PartsList.GetLength() != expectedDcpPartsLength {
 		d.log.Error().
 			Int("expected", expectedDcpPartsLength).
-			Int("actual", len(*d.PartsList)).
+			Int("actual", d.PartsList.GetLength()).
 			Msg("Invalid number of split files")
 		return
 	}
 
-	extractParts := func(i int, part parts.DcpFileParts) {
+	extractParts := func(_ int, part parts.DcpFileParts) {
 		if err := part.Validate(); err != nil {
 			d.log.Error().
 				Str("part_file", part.GetGameData().Name).
@@ -86,7 +89,8 @@ func (d *DcpFile) Extract() {
 		part.Extract()
 	}
 
-	d.worker.ParallelForEach(d.PartsList, extractParts)
+	d.PartsList.ParallelForEach(extractParts)
+	//d.worker.ParallelForEach(d.PartsList, extractParts)
 
 	d.log.Info().
 		Str("file", d.GetFileInfo().GetImportLocation().TargetFile).
@@ -122,10 +126,10 @@ func (d DcpFile) Compress() {
 
 	dcpTranslatedPartsTextPath := d.GetFileInfo().GetTranslateLocation().TargetPath
 
-	if len(*d.PartsList) != expectedDcpPartsLength {
+	if d.PartsList.GetLength() != expectedDcpPartsLength {
 		d.log.Error().
 			Int("expected", expectedDcpPartsLength).
-			Int("actual", len(*d.PartsList)).
+			Int("actual", d.PartsList.GetLength()).
 			Msg("Invalid number of split files")
 		return
 	}
@@ -143,15 +147,21 @@ func (d DcpFile) Compress() {
 	if len(dcpXplitedTextFiles) != expectedDcpPartsLength {
 		d.log.Error().
 			Int("expected", expectedDcpPartsLength).
-			Int("actual", len(*d.PartsList)).
+			Int("actual", d.PartsList.GetLength()).
 			Str("Path", dcpTranslatedPartsTextPath).
 			Msg("Invalid number of split text files")
 		return
 	}
 
-	d.worker.ParallelForEach(d.PartsList, func(i int, part parts.DcpFileParts) {
+	compressor := func(_ int, part parts.DcpFileParts) {
 		part.Compress()
-	})
+	}
+
+	d.PartsList.ParallelForEach(compressor)
+
+	/* d.worker.ParallelForEach(d.PartsList, func(i int, part parts.DcpFileParts) {
+		part.Compress()
+	}) */
 
 	targetReimportFile := d.GetFileInfo().GetImportLocation().TargetFile
 
@@ -181,7 +191,7 @@ func (d DcpFile) Compress() {
 }
 
 func (d *DcpFile) ensureDcpPartsLength(expected int) error {
-	if len(*d.PartsList) != expected {
+	if d.PartsList.GetLength() != expected {
 		if err := d.fileSplitter.Split(d.GetFileInfo()); err != nil {
 			return err
 		}

@@ -2,6 +2,7 @@ package verify
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
@@ -12,8 +13,8 @@ import (
 )
 
 type ISegmentCounter interface {
-	CountBinaryParts(dcpFileParts *[]parts.DcpFileParts, options interactions.DcpFileOptions) error
-	CountTextParts(partsList *[]parts.DcpFileParts, options interactions.DcpFileOptions) error
+	CountBinaryParts(dcpFileParts components.IList[parts.DcpFileParts], options interactions.DcpFileOptions) error
+	CountTextParts(partsList components.IList[parts.DcpFileParts], options interactions.DcpFileOptions) error
 }
 
 type segmentCounter struct {
@@ -26,17 +27,17 @@ func NewSegmentCounter() ISegmentCounter {
 	}
 }
 
-func (sc *segmentCounter) CountBinaryParts(dcpFileParts *[]parts.DcpFileParts, options interactions.DcpFileOptions) error {
-	if len(*dcpFileParts) != options.PartsLength {
+func (sc *segmentCounter) CountBinaryParts(dcpFileParts components.IList[parts.DcpFileParts], options interactions.DcpFileOptions) error {
+	if dcpFileParts.GetLength() != options.PartsLength {
 		sc.log.Error().
 			Int("expected parts", options.PartsLength).
-			Int("current parts", len(*dcpFileParts)).
+			Int("current parts", dcpFileParts.GetLength()).
 			Msg("error when ensuring splited macrodic parts")
 
 		return fmt.Errorf("error when ensuring splited macrodic parts")
 	}
 
-	for _, dcpFilePart := range *dcpFileParts {
+	for _, dcpFilePart := range dcpFileParts.GetItems() {
 		if dcpFilePart.GetGameData().Size == 0 {
 			if err := os.Remove(dcpFilePart.GetGameData().FullFilePath); err != nil {
 				sc.log.Error().
@@ -54,10 +55,8 @@ func (sc *segmentCounter) CountBinaryParts(dcpFileParts *[]parts.DcpFileParts, o
 	return nil
 }
 
-func (sc *segmentCounter) CountTextParts(partsList *[]parts.DcpFileParts, options interactions.DcpFileOptions) error {
-	list := *partsList
-
-	for _, part := range list {
+func (sc *segmentCounter) CountTextParts(partsList components.IList[parts.DcpFileParts], options interactions.DcpFileOptions) error {
+	for _, part := range partsList.GetItems() {
 		if common.CountSegments(part.GetExtractLocation().TargetFile) <= 0 {
 			sc.log.Error().
 				Str("part", part.GetExtractLocation().TargetFile).

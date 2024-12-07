@@ -2,6 +2,7 @@ package joinner
 
 import (
 	"bytes"
+	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/file"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"ffxresources/backend/interactions"
@@ -9,7 +10,7 @@ import (
 	"os"
 )
 
-func DcpFileJoiner(dataInfo interactions.IGameDataInfo, xplitedFiles *[]parts.DcpFileParts, targetReimportFile string) error {
+func DcpFileJoiner(dataInfo interactions.IGameDataInfo, xplitedFiles components.IList[parts.DcpFileParts], targetReimportFile string) error {
 	originalDcpFile := dataInfo.GetGameData().FullFilePath
 
 	importLocation := dataInfo.GetImportLocation()
@@ -26,7 +27,7 @@ func DcpFileJoiner(dataInfo interactions.IGameDataInfo, xplitedFiles *[]parts.Dc
 	return nil
 }
 
-func dcpWriter(inputFilePath string, parts *[]parts.DcpFileParts, newContainerPath string) error {
+func dcpWriter(inputFilePath string, parts components.IList[parts.DcpFileParts], newContainerPath string) error {
 	inputFile, err := os.Open(inputFilePath)
 	if err != nil {
 		return fmt.Errorf("error when opening the original file: %w", err)
@@ -36,7 +37,7 @@ func dcpWriter(inputFilePath string, parts *[]parts.DcpFileParts, newContainerPa
 
 	header := file.NewHeader()
 	header.FromFile(inputFilePath)
-	header.Update(*parts)
+	header.Update(parts)
 
 	var buffer bytes.Buffer
 

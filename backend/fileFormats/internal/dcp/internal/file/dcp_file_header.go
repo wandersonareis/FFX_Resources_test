@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"ffxresources/backend/logger"
 	"fmt"
@@ -101,15 +102,16 @@ func (h *Header) DataLengths(header *Header, file *os.File) error {
 	return nil
 }
 
-func (h *Header) Update(dcpParts []parts.DcpFileParts) error {
+func (h *Header) Update(dcpParts components.IList[parts.DcpFileParts]) error {
 	var currentOffset = uint32(h.Pointers[0].Value)
+	items := dcpParts.GetItems()
 
 	for i, pointer := range h.Pointers {
-		partInfo, err := os.Stat(dcpParts[i].GetImportLocation().TargetFile)
+		partInfo, err := os.Stat(items[i].GetImportLocation().TargetFile)
 		if err != nil {
 			h.log.Error().
 				Err(err).
-				Str("file", dcpParts[i].GetImportLocation().TargetFile).
+				Str("file", items[i].GetImportLocation().TargetFile).
 				Msg("error getting file info")
 
 			return err

@@ -3,6 +3,7 @@ package file
 import (
 	"bytes"
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
@@ -81,8 +82,8 @@ func (c Content) Read(file *os.File) error {
 
 	return nil
 }
-func (c Content) Write(header *Header, parts *[]parts.DcpFileParts) error {
-	for _, part := range *parts {
+func (c Content) Write(header *Header, parts components.IList[parts.DcpFileParts]) error {
+	for _, part := range parts.GetItems() {
 		filePath := part.GetImportLocation().TargetFile
 
 		file, err := os.Open(filePath)
