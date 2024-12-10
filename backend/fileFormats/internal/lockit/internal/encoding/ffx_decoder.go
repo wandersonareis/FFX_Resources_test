@@ -1,11 +1,9 @@
 package lockitencoding
 
 import (
-	//"ffxresources/backend/fileFormats/util"
-	//"ffxresources/backend/interactions"
 	"ffxresources/backend/common"
-	ffxencoding "ffxresources/backend/core/encoding"
-	"ffxresources/backend/lib"
+	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/encoding"
 	"fmt"
 )
 
@@ -56,51 +54,9 @@ func (d *LockitDecoder) decoder(executable, sourceFile, targetFile string, encod
 
 	args := []string{"-t", encoding, sourceFile, targetFile}
 
-	if err := lib.RunCommand(executable, args); err != nil {
+	if err := components.RunCommand(executable, args); err != nil {
 		return err
 	}
 
 	return nil
 }
-
-/* func LockitDecoderFfx(lockitFileInfo interactions.IGameDataInfo) error {
-	characterTable := util.NewCharacterTable()
-	
-	codeTable, err := characterTable.GetCharacterOnlyTable()
-	if err != nil {
-		return err
-	}
-
-	defer characterTable.Dispose(codeTable)
-
-	handler := lib.NewLockitHandler()
-	defer handler.dispose()
-
-	executable, err := handler.getLockitFileHandler()
-	if err != nil {
-		return err
-	}
-
-	return Decoder(lockitFileInfo, codeTable)
-} */
-
-/* func LockitDecoderLoc(lockitFileInfo interactions.IGameDataInfo) error {
-	characterTable := util.NewCharacterTable()
-	
-	codeTable, err := characterTable.GetCharacterLocTable()
-	if err != nil {
-		return err
-	}
-
-	extractLocation := lockitFileInfo.GetExtractLocation()
-	if err := extractLocation.ProvideTargetPath(); err != nil {
-		return err
-	}
-
-	sourceFile := lockitFileInfo.GetGameData().FullFilePath
-	targetFile := extractLocation.TargetFile
-	
-	defer characterTable.Dispose(codeTable)
-	
-	return Decoder("test", sourceFile, targetFile, codeTable)
-} */

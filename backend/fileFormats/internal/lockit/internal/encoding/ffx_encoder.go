@@ -2,8 +2,8 @@ package lockitencoding
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/encoding"
-	"ffxresources/backend/lib"
 	"fmt"
 )
 
@@ -63,7 +63,7 @@ func (d *LockitEncoder) encoder(executable, sourceFile, outputFile string, encod
 
 	args := []string{"-tr", encoding, sourceFile, outputFile}
 
-	if err := lib.RunCommand(executable, args); err != nil {
+	if err := components.RunCommand(executable, args); err != nil {
 		return err
 	}
 
@@ -73,7 +73,7 @@ func (d *LockitEncoder) encoder(executable, sourceFile, outputFile string, encod
 func ensureUtf8Bom(executable, target string) error {
 	args := []string{"-r", target}
 
-	if err := lib.RunCommand(executable, args); err != nil {
+	if err := components.RunCommand(executable, args); err != nil {
 		return err
 	}
 
