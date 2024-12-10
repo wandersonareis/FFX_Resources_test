@@ -33,7 +33,6 @@ func newFileValidator() IFileValidator {
 
 func (fv *FileValidator) Validate(filePath string, options interactions.DcpFileOptions) error {
 	tmpInfo, tmpDir := fv.createTemporaryFileInfo(filePath)
-	defer tmpInfo.GetExtractLocation().DisposeTargetPath()
 
 	if err := fv.fileSplitter.Split(tmpInfo); err != nil {
 		fv.log.Error().

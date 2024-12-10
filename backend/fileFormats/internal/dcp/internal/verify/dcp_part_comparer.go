@@ -6,6 +6,7 @@ import (
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"ffxresources/backend/logger"
+	"ffxresources/backend/notifications"
 	"fmt"
 	"os"
 
@@ -51,39 +52,59 @@ func newPartComparer() IPartComparer {
 	}
 }
 
-func (pc PartComparer) CompareGameDataBinaryParts(partsList *[]parts.DcpFileParts) error {
-	compareBinaryParts := func(index int, part parts.DcpFileParts) error {
+func (pc PartComparer) CompareGameDataBinaryParts(partsList components.IList[parts.DcpFileParts]) error {
+	errChan := make(chan error, partsList.GetLength())
+
+	go notifications.ProcessError(errChan, pc.log)
+
+	compareBinaryParts := func(part parts.DcpFileParts) {
 		if err := pc.compare(part.GetGameData().FullFilePath, part.GetImportLocation().TargetFile); err != nil {
-			return err
+			pc.log.Error().
+				Err(err).
+				Str("part", part.GetImportLocation().TargetFile).
+				Msg("Error when comparing gamedata binary parts")
+			
+			errChan <- err
+			return
 		}
-
-		return nil
+		errChan <- nil
 	}
 
-	if err := pc.worker.ForEach(partsList, compareBinaryParts); err != nil {
+	partsList.ForEach(compareBinaryParts)
+
+	defer close(errChan)
+
+	/* if err := pc.worker.ForEach(partsList, compareBinaryParts); err != nil {
 		return err
-	}
+	} */
 
 	return nil
 }
 
-func (pc PartComparer) CompareTranslatedTextParts(partsList *[]parts.DcpFileParts) error {
-	compareTextParts := func(index int, item parts.DcpFileParts) error {
+func (pc PartComparer) CompareTranslatedTextParts(partsList components.IList[parts.DcpFileParts]) error {
+	errChan := make(chan error, partsList.GetLength())
+
+	go notifications.ProcessError(errChan, pc.log)
+
+	compareTextParts := func(item parts.DcpFileParts) {
 		if err := pc.compare(item.GetTranslateLocation().TargetFile, item.GetExtractLocation().TargetFile); err != nil {
 			pc.log.Error().
 				Err(err).
 				Str("part", item.GetImportLocation().TargetFile).
 				Msg("Error when comparing translated text parts")
 
-			return err
+			errChan <- err
+			return
 		}
-
-		return nil
 	}
 
-	if err := pc.worker.ForEach(partsList, compareTextParts); err != nil {
+	partsList.ForEach(compareTextParts)
+
+	defer close(errChan)
+
+	/* if err := pc.worker.ForEach(partsList, compareTextParts); err != nil {
 		return err
-	}
+	} */
 
 	return nil
 }
