@@ -1,9 +1,7 @@
 package dcp
 
 import (
-	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
-	"ffxresources/backend/events"
 	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/joinner"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/lib"
@@ -13,6 +11,8 @@ import (
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
+	"ffxresources/backend/notifications"
+	"fmt"
 
 	"github.com/rs/zerolog"
 )
@@ -25,7 +25,6 @@ type DcpFile struct {
 	fileSplitter  splitter.IDcpFileSpliter
 	options       interactions.DcpFileOptions
 	log           zerolog.Logger
-	worker        common.IWorker[parts.DcpFileParts]
 }
 
 func NewDcpFile(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor {
@@ -43,7 +42,7 @@ func NewDcpFile(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor
 		parts.NewDcpFileParts)
 
 	if err != nil {
-		events.NotifyError(err)
+		notifications.NotifyError(err)
 		return nil
 	}
 
@@ -54,11 +53,10 @@ func NewDcpFile(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor
 		fileSplitter:  splitter.NewDcpFileSpliter(),
 		options:       interactions.GamePartOptions.GetDcpFileOptions(),
 		log:           logger.Get().With().Str("module", "dcp_file").Logger(),
-		worker:        common.NewWorker[parts.DcpFileParts](),
 	}
 }
 
-func (d *DcpFile) Extract() {
+func (d *DcpFile) Extract() error {
 	expectedDcpPartsLength := d.options.PartsLength
 
 	if err := d.ensureDcpPartsLength(expectedDcpPartsLength); err != nil {
@@ -66,7 +64,8 @@ func (d *DcpFile) Extract() {
 			Str("file", d.GetFileInfo().GetImportLocation().TargetFile).
 			Err(err).
 			Msg("Failed to unpack DCP file")
-		return
+
+		return fmt.Errorf("failed to unpack DCP file: %s", d.GetGameData().Name)
 	}
 
 	if d.PartsList.GetLength() != expectedDcpPartsLength {
@@ -74,8 +73,13 @@ func (d *DcpFile) Extract() {
 			Int("expected", expectedDcpPartsLength).
 			Int("actual", d.PartsList.GetLength()).
 			Msg("Invalid number of split files")
-		return
+
+		return fmt.Errorf("invalid number of split files for %s: Expected: %d, Get: %d", d.GetGameData().Name, expectedDcpPartsLength, d.PartsList.GetLength())
 	}
+
+	errChan := make(chan error, d.PartsList.GetLength())
+
+	go notifications.ProcessError(errChan, d.log)
 
 	extractParts := func(_ int, part parts.DcpFileParts) {
 		if err := part.Validate(); err != nil {
@@ -83,14 +87,23 @@ func (d *DcpFile) Extract() {
 				Str("part_file", part.GetGameData().Name).
 				Err(err).
 				Msg("Failed to validate file part")
-			return
+
+			errChan <- fmt.Errorf("failed to validate file part: %s", part.GetGameData().Name)
 		}
 
-		part.Extract()
+		if err := part.Extract(); err != nil {
+			d.log.Error().
+				Str("part_file", part.GetGameData().Name).
+				Err(err).
+				Msg("Failed to extract file part")
+
+			errChan <- fmt.Errorf("failed to extract file part: %s", part.GetGameData().Name)
+		}
 	}
 
 	d.PartsList.ParallelForEach(extractParts)
-	//d.worker.ParallelForEach(d.PartsList, extractParts)
+
+	defer close(errChan)
 
 	d.log.Info().
 		Str("file", d.GetFileInfo().GetImportLocation().TargetFile).
@@ -101,15 +114,18 @@ func (d *DcpFile) Extract() {
 			Str("file", d.GetFileInfo().GetExtractLocation().TargetFile).
 			Err(err).
 			Msg("Failed to verify DCP file")
-		return
+
+		return fmt.Errorf("failed to verify DCP file: %s", d.GetGameData().Name)
 	}
 
 	d.log.Info().
 		Str("file", d.GetFileInfo().GetExtractLocation().TargetFile).
 		Msgf("System macrodic file extracted")
+
+	return nil
 }
 
-func (d DcpFile) Compress() {
+func (d DcpFile) Compress() error {
 	d.log.Info().
 		Str("file", d.GetFileInfo().GetTranslateLocation().TargetFile).
 		Msgf("Compressing macrodic file")
@@ -121,7 +137,8 @@ func (d DcpFile) Compress() {
 			Str("file", d.GetFileInfo().GetImportLocation().TargetFile).
 			Err(err).
 			Msg("Failed to packing DCP file")
-		return
+
+		return fmt.Errorf("failed to packing DCP file: %s", d.GetGameData().Name)
 	}
 
 	dcpTranslatedPartsTextPath := d.GetFileInfo().GetTranslateLocation().TargetPath
@@ -131,26 +148,30 @@ func (d DcpFile) Compress() {
 			Int("expected", expectedDcpPartsLength).
 			Int("actual", d.PartsList.GetLength()).
 			Msg("Invalid number of split files")
-		return
+
+		return fmt.Errorf("invalid number of split files for %s: Expected: %d, Get: %d",
+			d.GetGameData().Name, expectedDcpPartsLength, d.PartsList.GetLength())
 	}
 
-	dcpXplitedTextFiles := make([]string, 0, expectedDcpPartsLength)
+	dcpXplitedTextFiles := components.NewList[string](expectedDcpPartsLength)
 
-	if err := common.ListFilesMatchingPattern(&dcpXplitedTextFiles, dcpTranslatedPartsTextPath, lib.DCP_TXT_PARTS_PATTERN); err != nil {
+	if err := components.ListFilesByRegex(dcpXplitedTextFiles, dcpTranslatedPartsTextPath, lib.DCP_TXT_PARTS_PATTERN); err != nil {
 		d.log.Error().
 			Err(err).
 			Str("Path", dcpTranslatedPartsTextPath).
 			Msg("Error listing xplited text files")
-		return
+
+		return fmt.Errorf("error listing xplited text files: %s", dcpTranslatedPartsTextPath)
 	}
 
-	if len(dcpXplitedTextFiles) != expectedDcpPartsLength {
+	if dcpXplitedTextFiles.GetLength() != expectedDcpPartsLength {
 		d.log.Error().
 			Int("expected", expectedDcpPartsLength).
 			Int("actual", d.PartsList.GetLength()).
 			Str("Path", dcpTranslatedPartsTextPath).
 			Msg("Invalid number of split text files")
-		return
+
+		return fmt.Errorf("invalid number of split text files for %s: Expected: %d, Get: %d", dcpTranslatedPartsTextPath, expectedDcpPartsLength, dcpXplitedTextFiles.GetLength())
 	}
 
 	compressor := func(_ int, part parts.DcpFileParts) {
@@ -170,7 +191,8 @@ func (d DcpFile) Compress() {
 			Err(err).
 			Str("file", targetReimportFile).
 			Msg("Error joining macrodic file")
-		return
+
+		return fmt.Errorf("error joining macrodic file: %s", targetReimportFile)
 	}
 
 	d.log.Info().
@@ -182,12 +204,15 @@ func (d DcpFile) Compress() {
 			Err(err).
 			Str("file", d.GetFileInfo().GetImportLocation().TargetFile).
 			Msg("Error verifying system macrodic file")
-		return
+
+		return fmt.Errorf("error verifying system macrodic file: %s", d.GetFileInfo().GetImportLocation().TargetFile)
 	}
 
 	d.log.Info().
 		Str("file", d.GetFileInfo().GetImportLocation().TargetFile).
 		Msgf("Macrodic file compressed")
+
+	return nil
 }
 
 func (d *DcpFile) ensureDcpPartsLength(expected int) error {
