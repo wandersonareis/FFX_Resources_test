@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-type GameFiles struct {
+type Source struct {
 	Name                 string          `json:"name"`
 	NamePrefix           string          `json:"name_prefix"`
 	Size                 int64           `json:"size"`
@@ -19,13 +19,13 @@ type GameFiles struct {
 	ClonedItems          []string        `json:"cloned_items"`
 }
 
-func NewGameData(path string, gamePart GamePart) (*GameFiles, error) {
+func NewSource(path string, gamePart GamePart) (*Source, error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
 	}
 
-	data := &GameFiles{}
+	data := &Source{}
 	source, err := NewSpiraFileInfo(absPath)
 	if err != nil {
 		return data, err
@@ -36,7 +36,7 @@ func NewGameData(path string, gamePart GamePart) (*GameFiles, error) {
 	return data, nil
 }
 
-func (g *GameFiles) updateGameDataFromSource(source *SpiraFileInfo, gamePart GamePart) {
+func (g *Source) updateGameDataFromSource(source *SpiraFileInfo, gamePart GamePart) {
 	g.Name = source.Name
 	g.NamePrefix = source.NamePrefix
 	g.Size = source.Size
@@ -49,10 +49,10 @@ func (g *GameFiles) updateGameDataFromSource(source *SpiraFileInfo, gamePart Gam
 	g.ClonedItems = g.GetGamePartDuplicates(gamePart)
 }
 
-func (g *GameFiles) GetGamePartDuplicates(gamePart GamePart) []string {
+func (g *Source) GetGamePartDuplicates(gamePart GamePart) []string {
 	switch gamePart {
 	case FFX:
-		//NewFfxDuplicate().AddFfxTextDuplicate()
+		//TODO: return NewFfxDuplicate().AddFfxTextDuplicate()
 		fallthrough
 	case FFX2:
 		dupes := NewFfx2Duplicate()

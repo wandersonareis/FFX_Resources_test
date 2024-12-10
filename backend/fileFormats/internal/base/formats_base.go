@@ -31,7 +31,7 @@ func (f *FormatsBase) SetFileInfo(dataInfo interactions.IGameDataInfo) {
 	f.dataInfo = dataInfo
 }
 
-func (f *FormatsBase) GetGameData() *core.GameFiles {
+func (f *FormatsBase) GetGameData() *core.Source {
 	return f.dataInfo.GetGameData()
 }
 

@@ -11,15 +11,15 @@ type IGameDataInfo interface {
 	GetGameDataInfo() *GameDataInfo
 	InitializeLocations(formatter ITextFormatter)
 	CreateRelativePath(target ...string)
-	GetGameData() *core.GameFiles
-	SetGameData(gameData *core.GameFiles)
+	GetGameData() *core.Source
+	SetGameData(gameData *core.Source)
 	GetExtractLocation() *ExtractLocation
 	GetTranslateLocation() *TranslateLocation
 	GetImportLocation() *ImportLocation
 }
 
 type GameDataInfo struct {
-	GameData          core.GameFiles    `json:"game_data"`
+	GameData          core.Source       `json:"game_data"`
 	ExtractLocation   ExtractLocation   `json:"extract_location"`
 	TranslateLocation TranslateLocation `json:"translate_location"`
 	ImportLocation    ImportLocation    `json:"import_location"`
@@ -27,7 +27,7 @@ type GameDataInfo struct {
 
 func NewGameDataInfo(path string) IGameDataInfo {
 	gamePart := NewInteraction().GamePart.GetGamePart()
-	gameData, err := core.NewGameData(path, gamePart)
+	gameData, err := core.NewSource(path, gamePart)
 	if err != nil {
 		l := logger.Get()
 		l.Error().Err(err).Str("Path", path).Msg("Error creating game data")
@@ -52,11 +52,11 @@ func (g *GameDataInfo) GetGameDataInfo() *GameDataInfo {
 	return g
 }
 
-func (g *GameDataInfo) GetGameData() *core.GameFiles {
+func (g *GameDataInfo) GetGameData() *core.Source {
 	return &g.GameData
 }
 
-func (g *GameDataInfo) SetGameData(gameData *core.GameFiles) {
+func (g *GameDataInfo) SetGameData(gameData *core.Source) {
 	g.GameData = *gameData
 }
 
