@@ -2,8 +2,8 @@ package interactions
 
 type IFileProcessor interface {
 	GetFileInfo() IGameDataInfo
-	Extract()
-	Compress()
+	Extract() error
+	Compress() error
 }
 
 type TreeNode struct {
