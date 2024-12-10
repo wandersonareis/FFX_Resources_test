@@ -64,14 +64,6 @@ func (e *ffxTextEncodingHelper) createFFXTextEncoding() []string {
 
 	slices.Sort(codePage)
 
-	/* original := e.textCodePage.FFXTextTextPage()
-	dev := e.textCodePage.FFXTextTextCodePageDev()
-	slices.Sort(original)
-	slices.Sort(dev)
-
-	equal := slices.Equal(original, dev)
-	fmt.Println(equal) */
-
 	return codePage
 }
 
