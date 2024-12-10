@@ -3,11 +3,10 @@ package main
 import (
 	"context"
 	"ffxresources/backend/common"
-	"ffxresources/backend/events"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
+	"ffxresources/backend/notifications"
 	"ffxresources/backend/services"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -57,7 +56,7 @@ func (a *App) startup(ctx context.Context) {
 	interactions.NewInteractionWithCtx(ctx)
 
 	if err := lib.LoadFromJson(a.appConfig, a.appConfig.filePath); err != nil {
-		events.LogSeverity(events.SeverityError, err.Error())
+		notifications.NotifyError(err)
 	}
 
 	interactions.NewInteraction().GamePart.SetGamePartNumber(a.appConfig.GamePart)
@@ -68,7 +67,6 @@ func (a *App) startup(ctx context.Context) {
 // domReady is called after front-end resources have been loaded
 func (a App) domReady(ctx context.Context) {
 	// Add your action here
-
 	EventsOnLocations(ctx)
 
 	EmitLocationsEvents(ctx)
@@ -76,7 +74,7 @@ func (a App) domReady(ctx context.Context) {
 	EventsOnSaveConfig(ctx, a.appConfig.filePath)
 
 	testPath := "F:\\ffxWails\\FFX_Resources\\build\\bin\\data\\ffx-2_data\\gamedata\\ps3data\\lockit\\ffx2_loc_kit_ps3_us.bin"
-	services.TestExtractFile(testPath, true, true)
+	services.TestExtractFile(testPath, false, false)
 
 	testPath = `F:\ffxWails\FFX_Resources\build\bin\data\ffx_ps2\ffx2\master\new_uspc\menu\macrodic.dcp`
 	services.TestExtractFile(testPath, false, false)
@@ -90,7 +88,7 @@ func (a App) domReady(ctx context.Context) {
 	testPath = `build\bin\data\ffx_ps2\ffx2\master\new_uspc\lastmiss\kernel\lm_accesary.bin`
 	services.TestExtractFile(testPath, false, false)
 
-	testPath = `F:\ffxWails\FFX_Resources\build\bin\data\ffx_ps2\ffx2\master\new_uspc\menu`
+	testPath = `build\bin\data\ffx_ps2\ffx2\master\new_uspc\lastmiss\kernel`
 	services.TestExtractDir(testPath, false, false)
 
 }
@@ -108,7 +106,7 @@ func (a *App) beforeClose(ctx context.Context) (prevent bool) {
 	}
 
 	if err := lib.SaveToJSONFile(config, a.appConfig.filePath); err != nil {
-		events.LogSeverity(events.SeverityError, err.Error())
+		notifications.NotifyError(err)
 	}
 
 	if _, err := runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
@@ -132,14 +130,14 @@ func (a *App) ReadFileAsString(dataInfo interactions.GameDataInfo) string {
 	if err != nil {
 		return ""
 	}
-	fmt.Println(string(content))
+	//fmt.Println(string(content))
 	return string(content)
 }
 
 func (a *App) WriteTextFile(dataInfo interactions.GameDataInfo, text string) {
 	err := os.WriteFile(dataInfo.ExtractLocation.TargetFile, []byte(text), 0644)
 	if err != nil {
-		events.LogSeverity(events.SeverityError, err.Error())
+		notifications.NotifyError(err)
 
 		runtime.EventsEmit(interactions.NewInteraction().Ctx, "Notify", err.Error())
 	}
