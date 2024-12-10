@@ -39,7 +39,6 @@ func (fv *FileValidator) Validate(filePath string, options interactions.LockitFi
 	}
 
 	tmpInfo, tmpDir := fv.createTemporaryFileInfo(filePath)
-	defer tmpInfo.GetExtractLocation().DisposeTargetPath()
 
 	if err := fv.fileSplitter.FileSplitter(tmpInfo, options); err != nil {
 		return fmt.Errorf("error when splitting file %s | %w", filePath, err)
@@ -67,7 +66,6 @@ func (fv *FileValidator) createTemporaryFileInfo(filePath string) (interactions.
 	tmpInfo.InitializeLocations(formatters.NewTxtFormatter())
 
 	tmpInfo.GetExtractLocation().TargetPath = tmpProvider.TempFilePath
-	defer tmpInfo.GetExtractLocation().DisposeTargetPath()
 
 	return tmpInfo, tmpProvider.TempFilePath
 }
