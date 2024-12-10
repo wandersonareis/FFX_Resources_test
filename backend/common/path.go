@@ -5,8 +5,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"regexp"
-	"slices"
 	"strings"
 )
 
@@ -39,66 +37,6 @@ func EnsurePathExists(path string) error {
 	return nil
 }
 
-func ListFilesInDirectory(s string) (*[]string, error) {
-	fullpath, err := filepath.Abs(s)
-	if err != nil {
-		return nil, err
-	}
-
-	var results []string
-
-	err = filepath.Walk(fullpath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if !info.IsDir() {
-			results = append(results, path)
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	results = slices.Clip(results)
-
-	return &results, nil
-}
-
-func ListFilesMatchingPattern(files *[]string, path, pattern string) error {
-	fullpath, err := filepath.Abs(path)
-	if err != nil {
-		return err
-	}
-
-	regex, err := regexp.Compile(pattern)
-	if err != nil {
-		return err
-	}
-
-	err = filepath.WalkDir(fullpath, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if !d.IsDir() && regex.MatchString(d.Name()) {
-			absPath, err := filepath.Abs(path)
-			if err != nil {
-				return err
-			}
-			*files = append(*files, absPath)
-		}
-		return nil
-	})
-
-	*files = slices.Clip(*files)
-
-	return err
-}
-
 func GetRelativePathFromMarker(path string) string {
 	var marker = FFX_DIR_MARKER
 
@@ -113,7 +51,7 @@ func GetRelativePathFromMarker(path string) string {
 
 func MakeRelativePath(from, to string) string {
 	if strings.HasPrefix(from, to) {
-		return strings.TrimPrefix(from, to + "\\")
+		return strings.TrimPrefix(from, to+"\\")
 	}
 	return from
 }
