@@ -3,7 +3,6 @@ package file
 import (
 	"bytes"
 	"encoding/binary"
-	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"ffxresources/backend/logger"
@@ -72,32 +71,35 @@ func (h *Header) FromFile(file string) error {
 }
 
 func (h *Header) DataLengths(header *Header, file *os.File) error {
-	worker := common.NewWorker[Pointer]()
+	createDataRanges := func(index int, count int, data []Pointer) error {
+		ranges := DataLength{}
+		ranges.Start = int64(data[index].Value)
 
-	worker.ForIndex(&header.Pointers,
-		func(index int, count int, data []Pointer) error {
-			ranges := DataLength{}
-			ranges.Start = int64(data[index].Value)
+		if next := index + 1; next < count {
+			ranges.End = int64(header.Pointers[next].Value)
+		} else {
+			fileInfo, err := file.Stat()
+			if err != nil {
+				h.log.Error().
+					Err(err).
+					Str("file", file.Name()).
+					Msg("error getting file info")
 
-			if next := index + 1; next < count {
-				ranges.End = int64(header.Pointers[next].Value)
-			} else {
-				fileInfo, err := file.Stat()
-				if err != nil {
-					h.log.Error().
-						Err(err).
-						Str("file", file.Name()).
-						Msg("error getting file info")
-
-					return err
-				}
-				ranges.End = fileInfo.Size()
+				return err
 			}
+			ranges.End = fileInfo.Size()
+		}
 
-			h.DataRanges = append(h.DataRanges, ranges)
+		h.DataRanges = append(h.DataRanges, ranges)
 
-			return nil
-		})
+		return nil
+	}
+
+	for i := 0; i < len(header.Pointers); i++ {
+		if err := createDataRanges(i, len(header.Pointers), header.Pointers); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

@@ -40,15 +40,12 @@ type IPartComparer interface {
 }
 
 type PartComparer struct {
-	worker common.IWorker[parts.LockitFileParts]
-	log    zerolog.Logger
+	log zerolog.Logger
 }
 
 func newPartComparer() IPartComparer {
-	worker := common.NewWorker[parts.LockitFileParts]()
 	return &PartComparer{
-		worker: worker,
-		log:    logger.Get().With().Str("module", "part_comparer").Logger(),
+		log: logger.Get().With().Str("module", "part_comparer").Logger(),
 	}
 }
 

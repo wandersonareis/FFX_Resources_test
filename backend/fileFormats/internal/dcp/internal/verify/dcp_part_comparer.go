@@ -2,7 +2,6 @@ package verify
 
 import (
 	"bytes"
-	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"ffxresources/backend/logger"
@@ -41,14 +40,11 @@ type IPartComparer interface {
 
 type PartComparer struct {
 	log    zerolog.Logger
-	worker common.IWorker[parts.DcpFileParts]
 }
 
 func newPartComparer() IPartComparer {
-	worker := common.NewWorker[parts.DcpFileParts]()
 	return &PartComparer{
 		log:    logger.Get().With().Str("module", "dcp_parts_verify").Logger(),
-		worker: worker,
 	}
 }
 
@@ -74,10 +70,6 @@ func (pc PartComparer) CompareGameDataBinaryParts(partsList components.IList[par
 
 	defer close(errChan)
 
-	/* if err := pc.worker.ForEach(partsList, compareBinaryParts); err != nil {
-		return err
-	} */
-
 	return nil
 }
 
@@ -101,10 +93,6 @@ func (pc PartComparer) CompareTranslatedTextParts(partsList components.IList[par
 	partsList.ForEach(compareTextParts)
 
 	defer close(errChan)
-
-	/* if err := pc.worker.ForEach(partsList, compareTextParts); err != nil {
-		return err
-	} */
 
 	return nil
 }

@@ -180,10 +180,6 @@ func (d DcpFile) Compress() error {
 
 	d.PartsList.ParallelForEach(compressor)
 
-	/* d.worker.ParallelForEach(d.PartsList, func(i int, part parts.DcpFileParts) {
-		part.Compress()
-	}) */
-
 	targetReimportFile := d.GetFileInfo().GetImportLocation().TargetFile
 
 	if err := joinner.DcpFileJoiner(d.GetFileInfo(), d.PartsList, targetReimportFile); err != nil {
