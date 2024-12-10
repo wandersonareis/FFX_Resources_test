@@ -3,6 +3,7 @@ package verify
 import (
 	"bytes"
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"ffxresources/backend/logger"
 	"fmt"
@@ -21,7 +22,7 @@ type IPartComparer interface {
 	//
 	// Returns:
 	//   error - An error if any comparison fails, otherwise nil.
-	CompareGameDataBinaryParts(partsList *[]parts.DcpFileParts) error
+	CompareGameDataBinaryParts(partsList components.IList[parts.DcpFileParts]) error
 
 	// CompareTranslatedTextParts compares the translated text parts with extracted text parts of the given DcpFileParts.
 	// It iterates over each part and compares the target files of the translate
@@ -34,7 +35,7 @@ type IPartComparer interface {
 	// Returns:
 	//
 	//	error - An error if any comparison fails, otherwise nil.
-	CompareTranslatedTextParts(partsList *[]parts.DcpFileParts) error
+	CompareTranslatedTextParts(partsList components.IList[parts.DcpFileParts]) error
 }
 
 type PartComparer struct {

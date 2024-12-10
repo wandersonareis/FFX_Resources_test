@@ -2,37 +2,34 @@ package util
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/components"
 	"ffxresources/backend/interactions"
-	"slices"
 )
 
-func FindFileParts[T any](parts *[]T, targetPath, pattern string, partsInstance func(info interactions.IGameDataInfo) *T) error {
-	fileParts := make([]string, 0, len(*parts))
+func FindFileParts[T any](partsList components.IList[T], targetPath, pattern string, partsInstance func(info interactions.IGameDataInfo) *T) error {
+	fileParts := components.NewList[string](partsList.GetLength())
 
 	common.EnsurePathExists(targetPath)
 
-	if err := common.ListFilesMatchingPattern(&fileParts, targetPath, pattern); err != nil {
+	if err := components.ListFilesByRegex(fileParts, targetPath, pattern); err != nil {
 		return err
 	}
 
-	worker := common.NewWorker[string]()
-
-	worker.ForEach(&fileParts, func(_ int, item string) error {
+	generatePartInstanceFunc := func(item string) {
 		info := interactions.NewGameDataInfo(item)
 		if info.GetGameData().Size == 0 {
-			return nil
+			return
 		}
 
 		part := partsInstance(info)
 		if part == nil {
-			return nil
+			return
 		}
 
-		*parts = append(*parts, *part)
-		return nil
-	})
+		partsList.Add(*part)
+	}
 
-	*parts = slices.Clip(*parts)
+	fileParts.ForEach(generatePartInstanceFunc)
 
 	return nil
 }

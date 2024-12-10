@@ -1,7 +1,7 @@
 package verify
 
 import (
-	"ffxresources/backend/common"
+	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/lib"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/splitter"
@@ -39,7 +39,7 @@ func newPartsVerifier() IPartsVerifier {
 }
 
 func (pv *partsVerifier) Verify(path string, options interactions.DcpFileOptions) error {
-	partsList := &[]parts.DcpFileParts{}
+	partsList := components.NewEmptyList[parts.DcpFileParts]()
 
 	if err := util.FindFileParts(partsList, path, lib.DCP_FILE_PARTS_PATTERN, parts.NewDcpFileParts); err != nil {
 		pv.log.Error().
@@ -50,11 +50,11 @@ func (pv *partsVerifier) Verify(path string, options interactions.DcpFileOptions
 		return fmt.Errorf("error when finding lockit parts")
 	}
 
-	if err := pv.EnsurePartsLength(len(*partsList), options.PartsLength); err != nil {
+	if err := pv.EnsurePartsLength(partsList.GetLength(), options.PartsLength); err != nil {
 		pv.log.Error().
 			Err(err).
 			Int("Expected parts", options.PartsLength).
-			Int("Found parts", len(*partsList)).
+			Int("Found parts", partsList.GetLength()).
 			Msg("Error when ensuring lockit parts length")
 
 		return fmt.Errorf("error when ensuring lockit parts length")
@@ -70,7 +70,7 @@ func (pv *partsVerifier) Verify(path string, options interactions.DcpFileOptions
 
 	tmpParts := pv.createExtractTemporaryPartsList(partsList, path)
 
-	pv.worker.ParallelForEach(partsList, func(i int, part parts.DcpFileParts) {
+	extractorFunc := func(index int, part parts.DcpFileParts) {
 		if err := part.Validate(); err != nil {
 			pv.log.Error().
 				Err(err).
@@ -81,7 +81,22 @@ func (pv *partsVerifier) Verify(path string, options interactions.DcpFileOptions
 		}
 
 		part.Extract()
-	})
+	}
+
+	partsList.ParallelForEach(extractorFunc)
+
+	/* pv.worker.ParallelForEach(partsList, func(i int, part parts.DcpFileParts) {
+		if err := part.Validate(); err != nil {
+			pv.log.Error().
+				Err(err).
+				Str("part", part.GetGameData().FullFilePath).
+				Msg("Error processing macrodic file part")
+
+			return
+		}
+
+		part.Extract()
+	}) */
 
 	if err := pv.PartsComparer.CompareTranslatedTextParts(tmpParts); err != nil {
 		pv.log.Error().
@@ -102,20 +117,22 @@ func (lc *partsVerifier) EnsurePartsLength(partsLength, expectedLength int) erro
 	return nil
 }
 
-func (pv *partsVerifier) createExtractTemporaryPartsList(partsList *[]parts.DcpFileParts, tmpDir string) *[]parts.DcpFileParts {
-	tmpParts := make([]parts.DcpFileParts, 0, len(*partsList))
+func (pv *partsVerifier) createExtractTemporaryPartsList(partsList components.IList[parts.DcpFileParts], tmpDir string) components.IList[parts.DcpFileParts] {
+	tmpPartsList := components.NewList[parts.DcpFileParts](partsList.GetLength())
 
-	setTemporaryDirectoryForPart := func(index int, part parts.DcpFileParts) {
+	setTemporaryDirectoryForPart := func(part parts.DcpFileParts) {
 		tmpPart := &part
 		newPartFile := filepath.Join(tmpDir, part.GetExtractLocation().TargetFileName)
 
 		tmpPart.GetExtractLocation().SetTargetFile(newPartFile)
 		tmpPart.GetExtractLocation().SetTargetPath(tmpDir)
 
-		tmpParts = append(tmpParts, *tmpPart)
+		tmpPartsList.Add(*tmpPart)
 	}
 
-	pv.worker.VoidForEach(partsList, setTemporaryDirectoryForPart)
+	partsList.ForEach(setTemporaryDirectoryForPart)
 
-	return &tmpParts
+	//pv.worker.VoidForEach(partsList, setTemporaryDirectoryForPart)
+
+	return tmpPartsList
 }
