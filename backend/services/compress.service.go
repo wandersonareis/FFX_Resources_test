@@ -4,6 +4,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/logger"
 	"ffxresources/backend/models"
 	"ffxresources/backend/notifications"
 	"fmt"
@@ -16,6 +17,18 @@ func NewCompressService() *CompressService {
 }
 
 func (c *CompressService) Compress(dataInfo *interactions.GameDataInfo) {
+	defer func() {
+		if r := recover(); r != nil {
+			l := logger.Get()
+			l.Error().
+				Interface("recover", r).
+				Str("file", dataInfo.GameData.Name).
+				Msg("Panic occurred during extraction")
+
+			notifications.NotifyError(fmt.Errorf("panic occurred: %v", r))
+		}
+	}()
+	
 	if !common.IsFileExists(dataInfo.GameData.FullFilePath) {
 		notifications.NotifyError(fmt.Errorf("game file %s not found", dataInfo.GameData.Name))
 		return
