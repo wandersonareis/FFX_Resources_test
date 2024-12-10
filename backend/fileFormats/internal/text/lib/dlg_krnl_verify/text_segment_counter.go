@@ -20,11 +20,11 @@ func (sc *segmentCounter) CountBinary(targetFile string) error {
 	}
 
 	if info.Size() == 0 {
-		if err := os.Remove(targetFile); err != nil {
+		/* if err := os.Remove(targetFile); err != nil {
 			return fmt.Errorf("error when removing file: %w", err)
-		}
+		} */
 
-		return fmt.Errorf("invalid size for part: %s", targetFile)
+		return fmt.Errorf("invalid size for part: %s size: %d", targetFile, info.Size())
 	}
 
 	return nil
