@@ -23,9 +23,9 @@ type Pointer struct {
 }
 
 type IExtractor interface {
-	Extract()
+	Extract() error
 }
 
 type ICompressor interface {
-	Compress()
+	Compress() error
 }
