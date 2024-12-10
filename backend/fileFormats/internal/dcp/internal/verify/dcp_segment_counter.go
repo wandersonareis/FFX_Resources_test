@@ -6,6 +6,7 @@ import (
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
+	"ffxresources/backend/notifications"
 	"fmt"
 	"os"
 
@@ -56,15 +57,21 @@ func (sc *segmentCounter) CountBinaryParts(dcpFileParts components.IList[parts.D
 }
 
 func (sc *segmentCounter) CountTextParts(partsList components.IList[parts.DcpFileParts], options interactions.DcpFileOptions) error {
-	for _, part := range partsList.GetItems() {
+	errChan := make(chan error, partsList.GetLength())
+	
+	go notifications.ProcessError(errChan, sc.log)
+
+	partsList.ForEach(func(part parts.DcpFileParts) {
 		if common.CountSegments(part.GetExtractLocation().TargetFile) <= 0 {
 			sc.log.Error().
 				Str("part", part.GetExtractLocation().TargetFile).
 				Msg("error when counting segments in part")
 
-			return fmt.Errorf("error when counting segments in part")
+			errChan <- fmt.Errorf("error when counting segments in part: %s", part.GetExtractLocation().TargetFile)
 		}
-	}
+	})
+
+	defer close(errChan)
 
 	return nil
 }
