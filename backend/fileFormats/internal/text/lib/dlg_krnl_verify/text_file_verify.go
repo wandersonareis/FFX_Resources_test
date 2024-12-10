@@ -32,10 +32,15 @@ func NewTextsVerify() ITextsVerify {
 
 func (dv *TextsVerify) VerifyExtract(extract *interactions.ExtractLocation) error {
 	if err := dv.segmentCounter.CountBinary(extract.TargetFile); err != nil {
-		dv.log.Error().Err(err).Send()
+		dv.log.Error().
+			Err(err).
+			Str("file", extract.TargetFile).
+			Msg("Error on text file")
 
 		if err := os.Remove(extract.TargetFile); err != nil {
-			dv.log.Error().Err(err).Msgf("Error removing the text file: %s", extract.TargetFile)
+			dv.log.Error().
+				Err(err).
+				Msgf("Error removing the text file: %s", extract.TargetFile)
 		}
 
 		return err
