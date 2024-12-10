@@ -24,17 +24,14 @@ type partsVerifier struct {
 	fileSplitter  splitter.IDcpFileSpliter
 
 	log    zerolog.Logger
-	worker common.IWorker[parts.DcpFileParts]
 }
 
 func newPartsVerifier() IPartsVerifier {
-	worker := common.NewWorker[parts.DcpFileParts]()
 	return &partsVerifier{
 		PartsComparer: newPartComparer(),
 		fileSplitter:  new(splitter.DcpFileSpliter),
 
 		log:    logger.Get().With().Str("module", "dcp_parts_verify").Logger(),
-		worker: worker,
 	}
 }
 
@@ -85,19 +82,6 @@ func (pv *partsVerifier) Verify(path string, options interactions.DcpFileOptions
 
 	partsList.ParallelForEach(extractorFunc)
 
-	/* pv.worker.ParallelForEach(partsList, func(i int, part parts.DcpFileParts) {
-		if err := part.Validate(); err != nil {
-			pv.log.Error().
-				Err(err).
-				Str("part", part.GetGameData().FullFilePath).
-				Msg("Error processing macrodic file part")
-
-			return
-		}
-
-		part.Extract()
-	}) */
-
 	if err := pv.PartsComparer.CompareTranslatedTextParts(tmpParts); err != nil {
 		pv.log.Error().
 			Err(err).
@@ -131,8 +115,6 @@ func (pv *partsVerifier) createExtractTemporaryPartsList(partsList components.IL
 	}
 
 	partsList.ForEach(setTemporaryDirectoryForPart)
-
-	//pv.worker.VoidForEach(partsList, setTemporaryDirectoryForPart)
 
 	return tmpPartsList
 }
