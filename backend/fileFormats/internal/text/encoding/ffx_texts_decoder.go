@@ -2,8 +2,8 @@ package textsEncoding
 
 import (
 	"ffxresources/backend/common"
-	ffxencoding "ffxresources/backend/core/encoding"
-	"ffxresources/backend/lib"
+	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/encoding"
 	"fmt"
 )
 
@@ -54,7 +54,7 @@ func (d *textsDecoder) decoder(executable, sourceFile, targetFile, encoding stri
 
 	args := []string{"-e", "-t", encoding, sourceFile, targetFile}
 
-	if err := lib.RunCommand(executable, args); err != nil {
+	if err := components.RunCommand(executable, args); err != nil {
 		return err
 	}
 

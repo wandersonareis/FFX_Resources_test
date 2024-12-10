@@ -2,8 +2,8 @@ package textsEncoding
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/encoding"
-	"ffxresources/backend/lib"
 	"fmt"
 )
 
@@ -58,7 +58,7 @@ func (d *textsEncoder) encoder(executable, sourceFile, targetFile, outputFile, e
 
 	args := []string{"-i", "-t", encoding, sourceFile, targetFile, outputFile}
 
-	if err := lib.RunCommand(executable, args); err != nil {
+	if err := components.RunCommand(executable, args); err != nil {
 		return err
 	}
 
