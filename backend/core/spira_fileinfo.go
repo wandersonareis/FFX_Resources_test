@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 )
 
-type Source struct {
+type SpiraFileInfo struct {
 	Path       string
 	Info       os.FileInfo
 	Name       string
@@ -21,7 +21,7 @@ type Source struct {
 	IsDir      bool
 }
 
-func NewSource(path string) (*Source, error) {
+func NewSpiraFileInfo(path string) (*SpiraFileInfo, error) {
 	cPath := filepath.Clean(path)
 	info, err := os.Stat(cPath)
 	if err != nil {
@@ -33,7 +33,7 @@ func NewSource(path string) (*Source, error) {
 		size = info.Size()
 	}
 
-	source := &Source{
+	source := &SpiraFileInfo{
 		Path:       cPath,
 		Info:       info,
 		Size:       size,
@@ -50,7 +50,7 @@ func NewSource(path string) (*Source, error) {
 
 }
 
-func (s *Source) ReadDir() ([]fs.DirEntry, error) {
+func (s *SpiraFileInfo) ReadDir() ([]fs.DirEntry, error) {
 	if s.IsDir {
 		return os.ReadDir(s.Path)
 	}

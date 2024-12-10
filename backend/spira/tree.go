@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-func BuildFileTree(result *[]interactions.TreeNode, source *core.Source) error {
+func BuildFileTree(result *[]interactions.TreeNode, source *core.SpiraFileInfo) error {
 	if !source.IsDir {
 		return nil
 	}
@@ -20,17 +20,17 @@ func BuildFileTree(result *[]interactions.TreeNode, source *core.Source) error {
 		entryPath := filepath.Join(source.Path, entry.Name())
 		key := entry.Name()
 
-		entrySource, err := core.NewSource(entryPath)
+		entrySource, err := core.NewSpiraFileInfo(entryPath)
 		if err != nil {
 			return err
 		}
 
-        childrenCapacity := len(entries)
-		
+		childrenCapacity := len(entries)
+
 		var children []interactions.TreeNode
-        if childrenCapacity > 0 {
-            children = make([]interactions.TreeNode, 0, childrenCapacity)
-        }
+		if childrenCapacity > 0 {
+			children = make([]interactions.TreeNode, 0, childrenCapacity)
+		}
 
 		if entrySource.IsDir {
 			err = BuildFileTree(&children, entrySource)

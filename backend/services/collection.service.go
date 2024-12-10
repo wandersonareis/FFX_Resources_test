@@ -27,7 +27,7 @@ func (c *CollectionService) BuildTree() []interactions.TreeNode {
 		return nil
 	}
 
-	source, err := core.NewSource(path)
+	source, err := core.NewSpiraFileInfo(path)
 	if err != nil {
 		notifications.NotifyError(err)
 		return nil

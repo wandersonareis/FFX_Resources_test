@@ -6,7 +6,7 @@ import (
 	"ffxresources/backend/interactions"
 )
 
-func CreateTreeNode(key string, source *core.Source, childrens []interactions.TreeNode) (interactions.TreeNode, error) {
+func CreateTreeNode(key string, source *core.SpiraFileInfo, childrens []interactions.TreeNode) (interactions.TreeNode, error) {
 	node, err := generateNode(key, source)
 	if err != nil {
 		return interactions.TreeNode{}, err
@@ -18,7 +18,7 @@ func CreateTreeNode(key string, source *core.Source, childrens []interactions.Tr
 	return node, nil
 }
 
-func generateNode(key string, source *core.Source) (interactions.TreeNode, error) {
+func generateNode(key string, source *core.SpiraFileInfo) (interactions.TreeNode, error) {
 	fileInfo := interactions.NewGameDataInfo(source.Path)
 
 	fileProcessor := fileFormats.NewFileProcessor(fileInfo)

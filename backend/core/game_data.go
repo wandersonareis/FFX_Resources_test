@@ -26,7 +26,7 @@ func NewGameData(path string, gamePart GamePart) (*GameFiles, error) {
 	}
 
 	data := &GameFiles{}
-	source, err := NewSource(absPath)
+	source, err := NewSpiraFileInfo(absPath)
 	if err != nil {
 		return data, err
 	}
@@ -36,7 +36,7 @@ func NewGameData(path string, gamePart GamePart) (*GameFiles, error) {
 	return data, nil
 }
 
-func (g *GameFiles) updateGameDataFromSource(source *Source, gamePart GamePart) {
+func (g *GameFiles) updateGameDataFromSource(source *SpiraFileInfo, gamePart GamePart) {
 	g.Name = source.Name
 	g.NamePrefix = source.NamePrefix
 	g.Size = source.Size

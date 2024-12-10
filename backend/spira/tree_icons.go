@@ -33,7 +33,7 @@ var icons = []treeNodeIcon{
 	},
 }
 
-func getTreeNodeIcon(source *core.Source) string {
+func getTreeNodeIcon(source *core.SpiraFileInfo) string {
 	nodeIcon := "pi pi-file"
 
 	for _, icon := range icons {
