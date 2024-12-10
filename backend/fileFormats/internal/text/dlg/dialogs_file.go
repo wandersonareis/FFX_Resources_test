@@ -6,6 +6,7 @@ import (
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
+	"fmt"
 	"slices"
 
 	"github.com/rs/zerolog"
@@ -38,9 +39,9 @@ func (d DialogsFile) GetFileInfo() interactions.IGameDataInfo {
 	return d.dataInfo
 }
 
-func (d DialogsFile) Extract() {
+func (d DialogsFile) Extract() error {
 	if slices.Contains(d.dataInfo.GetGameData().ClonedItems, d.dataInfo.GetGameData().RelativeGameDataPath) {
-		return
+		return nil
 	}
 
 	if err := d.decoder.Decoder(d.GetFileInfo()); err != nil {
@@ -49,7 +50,7 @@ func (d DialogsFile) Extract() {
 			Str("file", d.GetFileInfo().GetGameData().FullFilePath).
 			Msg("Error decoding dialog file")
 
-		return
+		return fmt.Errorf("failed to decode dialog file: %s", d.GetFileInfo().GetGameData().Name)
 	}
 
 	if err := d.textVerifyer.VerifyExtract(d.dataInfo.GetExtractLocation()); err != nil {
@@ -58,22 +59,24 @@ func (d DialogsFile) Extract() {
 			Str("file", d.GetFileInfo().GetExtractLocation().TargetFile).
 			Msg("Error verifying text file")
 
-		return
+		return fmt.Errorf("failed to verify text file: %s", d.GetFileInfo().GetExtractLocation().TargetFile)
 	}
 
 	d.log.Info().
 		Str("file", d.GetFileInfo().GetExtractLocation().TargetFile).
 		Msg("Dialog file extracted successfully")
+
+	return nil
 }
 
-func (d DialogsFile) Compress() {
+func (d DialogsFile) Compress() error {
 	if err := d.encoder.Encoder(d.GetFileInfo()); err != nil {
 		d.log.Error().
 			Err(err).
 			Str("file", d.GetFileInfo().GetTranslateLocation().TargetFile).
 			Msg("Error compressing dialog file")
 
-		return
+		return fmt.Errorf("failed to compress dialog file: %s", d.GetFileInfo().GetTranslateLocation().TargetFile)
 	}
 
 	if err := d.textVerifyer.VerifyCompress(d.GetFileInfo(), d.decoder.Decoder); err != nil {
@@ -82,7 +85,7 @@ func (d DialogsFile) Compress() {
 			Str("file", d.GetFileInfo().GetImportLocation().TargetFile).
 			Msg("Error verifying text file")
 
-		return
+		return fmt.Errorf("failed to verify text file: %s", d.GetFileInfo().GetImportLocation().TargetFile)
 	}
 
 	d.dialogsClones.Clone()
@@ -90,4 +93,6 @@ func (d DialogsFile) Compress() {
 	d.log.Info().
 		Str("file", d.GetFileInfo().GetImportLocation().TargetFile).
 		Msg("Dialog file compressed")
+
+	return nil
 }

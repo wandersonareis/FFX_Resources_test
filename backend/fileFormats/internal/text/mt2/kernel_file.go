@@ -6,6 +6,7 @@ import (
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
+	"fmt"
 
 	"github.com/rs/zerolog"
 )
@@ -35,14 +36,14 @@ func (k kernelFile) GetFileInfo() interactions.IGameDataInfo {
 	return k.dataInfo
 }
 
-func (k kernelFile) Extract() {
+func (k kernelFile) Extract() error {
 	if err := k.decoder.Decoder(k.GetFileInfo()); err != nil {
 		k.log.Error().
 			Err(err).
 			Str("file", k.GetFileInfo().GetGameData().FullFilePath).
 			Msg("Error on decoding kernel file")
 
-		return
+		return fmt.Errorf("failed to decode kernel file: %s", k.GetFileInfo().GetGameData().Name)
 	}
 
 	if err := k.textVerifyer.VerifyExtract(k.dataInfo.GetExtractLocation()); err != nil {
@@ -51,20 +52,22 @@ func (k kernelFile) Extract() {
 			Str("file", k.GetFileInfo().GetExtractLocation().TargetFile).
 			Msg("Error verifying kernel file")
 
-		return
+		return fmt.Errorf("failed to verify kernel file: %s", k.GetFileInfo().GetGameData().Name)
 	}
 
 	k.log.Info().Msgf("Kernel file decoded: %s", k.dataInfo.GetGameData().Name)
+
+	return nil
 }
 
-func (k kernelFile) Compress() {
+func (k kernelFile) Compress() error {
 	if err := k.encoder.Encoder(k.GetFileInfo()); err != nil {
 		k.log.Error().
 			Err(err).
 			Str("file", k.GetFileInfo().GetTranslateLocation().TargetFile).
 			Msg("Error compressing kernel file")
 
-		return
+		return fmt.Errorf("failed to compress kernel file: %s", k.GetFileInfo().GetGameData().Name)
 	}
 
 	if err := k.textVerifyer.VerifyCompress(k.GetFileInfo(), k.decoder.Decoder); err != nil {
@@ -73,10 +76,12 @@ func (k kernelFile) Compress() {
 			Str("file", k.GetFileInfo().GetImportLocation().TargetFile).
 			Msg("Error verifying compressed dialog file")
 
-		return
+		return fmt.Errorf("failed to verify compressed kernel file: %s", k.GetFileInfo().GetImportLocation().TargetFile)
 	}
 
 	k.log.Info().
 		Str("file", k.GetFileInfo().GetImportLocation().TargetFile).
 		Msg("Kernel file compressed")
+
+	return nil
 }

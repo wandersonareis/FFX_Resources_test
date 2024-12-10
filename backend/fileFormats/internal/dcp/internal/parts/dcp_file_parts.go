@@ -22,14 +22,24 @@ func NewDcpFileParts(dataInfo interactions.IGameDataInfo) *DcpFileParts {
 	}
 }
 
-func (d DcpFileParts) Extract() {
+func (d DcpFileParts) Extract() error {
 	dlg := dlg.NewDialogs(d.GetFileInfo())
-	dlg.Extract()
+
+	if err := dlg.Extract(); err != nil {
+		return fmt.Errorf("failed to extract dialog file: %s", d.GetFileInfo().GetGameData().Name)
+	}
+
+	return nil
 }
 
-func (d DcpFileParts) Compress() {
+func (d DcpFileParts) Compress() error {
 	dlg := dlg.NewDialogs(d.GetFileInfo())
-	dlg.Compress()
+
+	if err := dlg.Compress(); err != nil {
+		return fmt.Errorf("failed to compress dialog file: %s", d.GetFileInfo().GetGameData().Name)
+	}
+
+	return nil
 }
 
 func (d DcpFileParts) Validate() error {
