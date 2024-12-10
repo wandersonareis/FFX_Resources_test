@@ -1,7 +1,6 @@
 package fileFormats
 
 import (
-	"ffxresources/backend/events"
 	"ffxresources/backend/fileFormats/internal/dcp"
 	"ffxresources/backend/fileFormats/internal/folder"
 	"ffxresources/backend/fileFormats/internal/lockit"
@@ -9,6 +8,7 @@ import (
 	"ffxresources/backend/fileFormats/internal/text/mt2"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
+	"ffxresources/backend/notifications"
 )
 
 // formats is a map that associates models.NodeType values with functions that
@@ -40,12 +40,12 @@ func NewFileProcessor(dataInfo interactions.IGameDataInfo) interactions.IFilePro
 	}
 
 	if err := interactions.NewInteraction().ExtractLocation.ProvideTargetDirectory(); err != nil {
-		events.NotifyError(err)
+		notifications.NotifyError(err)
 		return nil
 	}
 
 	if err := interactions.NewInteraction().TranslateLocation.ProvideTargetDirectory(); err != nil {
-		events.NotifyError(err)
+		notifications.NotifyError(err)
 		return nil
 	}
 
