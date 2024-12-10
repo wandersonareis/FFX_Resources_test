@@ -7,6 +7,7 @@ import (
 	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/notifications"
 	"fmt"
 	"path/filepath"
 )
@@ -37,6 +38,8 @@ func NewLockitFileParts(dataInfo interactions.IGameDataInfo) *LockitFileParts {
 func (l *LockitFileParts) Extract(dec LockitPartEncodeType, encoding ffxencoding.IFFXTextLockitEncoding) {
 	errChan := make(chan error, 1)
 
+	go notifications.ProcessError(errChan, l.Log)
+
 	decoder := lockitencoding.NewDecoder()
 
 	switch dec {
@@ -48,15 +51,14 @@ func (l *LockitFileParts) Extract(dec LockitPartEncodeType, encoding ffxencoding
 		errChan <- fmt.Errorf("invalid encode type: %d", dec)
 	}
 
-	err := <-errChan
-	if err != nil {
-		l.Log.Error().Err(err).Msgf("error when decoding lockit file: %s", l.GetExtractLocation().TargetFile)
-		return
-	}
+	defer close(errChan)
 }
 
 func (l *LockitFileParts) Compress(enc LockitPartEncodeType, encoding ffxencoding.IFFXTextLockitEncoding) {
 	errChan := make(chan error, 1)
+	defer close(errChan)
+
+	go notifications.ProcessError(errChan, l.Log)
 
 	encoder := lockitencoding.NewEncoder()
 
@@ -69,11 +71,5 @@ func (l *LockitFileParts) Compress(enc LockitPartEncodeType, encoding ffxencodin
 		errChan <- encoder.LockitEncoderLoc(l.GetTranslateLocation().TargetFile, l.GetImportLocation().TargetFile, encoding)
 	default:
 		errChan <- fmt.Errorf("invalid encode type: %d", enc)
-	}
-
-	err := <-errChan
-	if err != nil {
-		l.Log.Error().Err(err).Msgf("error when encoding lockit file: %s", l.GetTranslateLocation().TargetFile)
-		return
 	}
 }

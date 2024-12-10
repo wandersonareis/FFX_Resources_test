@@ -2,15 +2,18 @@ package joiner
 
 import (
 	"bytes"
-	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lib"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/logger"
+	"ffxresources/backend/notifications"
 	"fmt"
 	"os"
+
+	"github.com/rs/zerolog"
 )
 
 type IPartsJoiner interface {
@@ -24,7 +27,7 @@ type lockitFileJoiner struct {
 
 	partsList components.IList[parts.LockitFileParts]
 	options   interactions.LockitFileOptions
-	worker    common.IWorker[parts.LockitFileParts]
+	log       zerolog.Logger
 }
 
 func NewLockitFileJoiner(dataInfo interactions.IGameDataInfo, partsList components.IList[parts.LockitFileParts]) IPartsJoiner {
@@ -32,7 +35,8 @@ func NewLockitFileJoiner(dataInfo interactions.IGameDataInfo, partsList componen
 		FormatsBase: base.NewFormatsBase(dataInfo),
 		options:     interactions.NewInteraction().GamePartOptions.GetLockitFileOptions(),
 		partsList:   partsList,
-		worker:      common.NewWorker[parts.LockitFileParts](),
+
+		log: logger.Get().With().Str("module", "lockit_file_joiner").Logger(),
 	}
 }
 
@@ -46,6 +50,11 @@ func (lj *lockitFileJoiner) FindTranslatedTextParts() (components.IList[parts.Lo
 		parts.NewLockitFileParts)
 
 	if err != nil {
+		lj.log.Error().
+			Err(err).
+			Str("path", lj.GetTranslateLocation().TargetPath).
+			Msg("error when finding translated text parts")
+
 		return nil, err
 	}
 
@@ -68,15 +77,6 @@ func (lj *lockitFileJoiner) EncodeFilesParts() error {
 
 	lj.partsList.ParallelForEach(compressorFunc)
 
-	/* lj.worker.ParallelForEach(lj.partsList,
-	func(index int, part parts.LockitFileParts) {
-		if index > 0 && index%2 == 0 {
-			part.Compress(parts.LocEnc, encoding)
-		} else {
-			part.Compress(parts.FfxEnc, encoding)
-		}
-	}) */
-
 	if err := lj.GetTranslateLocation().ProvideTargetPath(); err != nil {
 		return err
 	}
@@ -93,14 +93,17 @@ func (lj *lockitFileJoiner) JoinFileParts() error {
 
 	var combinedBuffer bytes.Buffer
 
-	errChan := make(chan error, 1)
+	errChan := make(chan error, lj.partsList.GetLength())
+	defer close(errChan)
+
+	go notifications.ProcessError(errChan, lj.log)
 
 	combineFilesFunc := func(part parts.LockitFileParts) {
 		fileName := part.GetFileInfo().GetImportLocation().TargetFile
 
 		partData, err := os.ReadFile(fileName)
 		if err != nil {
-			errChan <- fmt.Errorf("error reading the separate %s: %v", fileName, err)
+			errChan <- fmt.Errorf("error when reading file part %s: %w", part.GetGameData().FullFilePath, err)
 			return
 		}
 
@@ -109,36 +112,19 @@ func (lj *lockitFileJoiner) JoinFileParts() error {
 
 	lj.partsList.ForEach(combineFilesFunc)
 
-	var err error
-	if err = <-errChan; err != nil {
-		return err
-	}
-
-	/* err = lj.worker.ForEach(lj.partsList, func(_ int, part parts.LockitFileParts) error {
-		fileName := part.GetFileInfo().GetImportLocation().TargetFile
-
-		partData, err := os.ReadFile(fileName)
-		if err != nil {
-			return fmt.Errorf("error reading the separate %s: %v", fileName, err)
-		}
-		combinedBuffer.Write(partData)
-
-		return nil
-	})
-
-	if err != nil {
-		return err
-	} */
-
+	
 	if err := importLocation.ProvideTargetPath(); err != nil {
 		return err
 	}
 
 	if err := os.WriteFile(importLocation.TargetFile, combinedBuffer.Bytes(), 0644); err != nil {
+		lj.log.Error().
+			Err(err).
+			Str("file", importLocation.TargetFile).
+			Msg("error when creating output file")
+
 		return fmt.Errorf("error when creating output file: %v", err)
 	}
-
-	lj.worker.Close()
 
 	return nil
 }

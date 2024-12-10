@@ -58,11 +58,11 @@ func NewLockitFile(dataInfo interactions.IGameDataInfo) interactions.IFileProces
 	}
 }
 
-func (l *LockitFile) Extract() {
+func (l *LockitFile) Extract() error {
 	l.log.Info().Msgf("Verifying lockit file parts in path: %s", l.GetExtractLocation().TargetPath)
 
 	l.log.Info().Msgf("Parts found: %d", l.parts.GetLength())
-	
+
 	if l.parts.GetLength() != l.options.PartsLength {
 		l.log.Info().Msg("Extracting lockit file parts...")
 
@@ -82,50 +82,38 @@ func (l *LockitFile) Extract() {
 
 	if err := l.fileVerifier.VerifyExtract(l.parts, l.GetExtractLocation(), l.options); err != nil {
 		l.log.Error().Err(err).Send()
-		return
+		return fmt.Errorf("failed to extract lockit file: %s", l.GetGameData().Name)
 	}
 
 	l.log.Info().Msgf("Lockit file extracted: %s", l.GetGameData().Name)
+
+	return nil
 }
 
-func (l *LockitFile) Compress() {
-	errChan := make(chan error, 1)
-
-	go func() {
-		defer func() {
-			l.log.Info().Msgf("Disposing target file: %s", l.GetFileInfo().GetImportLocation().TargetFile)
-
-			l.GetFileInfo().GetImportLocation().DisposeTargetFile()
-
-			close(errChan)
-		}()
-
-		for err := range errChan {
-			l.log.Error().Err(err).Msg("error when verifying monted lockit file")
-
-			return
-		}
-	}()
-
+func (l *LockitFile) Compress() error {
 	l.log.Info().Msg("Compressing lockit file parts...")
 	l.log.Info().Msgf("Verifying splited parts before compressing: %s", l.GetExtractLocation().TargetPath)
 
 	if err := l.fileVerifier.VerifyExtract(l.parts, l.GetExtractLocation(), l.options); err != nil {
-		l.log.Error().Err(err).Send()
-		return
+		l.log.Error().
+			Err(err).
+			Send()
+		return fmt.Errorf("failed to verify lockit file parts: %s", l.GetGameData().Name)
 	}
 
 	l.log.Info().Msgf("Finding translated text parts on: %s", l.GetTranslateLocation().TargetPath)
 
 	translatedParts, err := l.partsJoiner.FindTranslatedTextParts()
 	if err != nil {
-		errChan <- err
-		return
+		l.log.Error().
+			Err(err).
+			Msg("error when finding translated text parts")
+		return fmt.Errorf("failed to find translated text parts: %s", l.GetGameData().Name)
 	}
 
 	if translatedParts.GetLength() != l.options.PartsLength {
-		errChan <- fmt.Errorf("invalid number of translated parts")
-		return
+		l.log.Error().Msg("invalid number of translated parts")
+		return fmt.Errorf("invalid number of translated parts: %s", l.GetGameData().Name)
 	}
 
 	l.log.Info().Msgf("Parts found: %d", translatedParts.GetLength())
@@ -133,24 +121,32 @@ func (l *LockitFile) Compress() {
 	l.log.Info().Msgf("Encoding files parts to: %s", l.GetImportLocation().TargetPath)
 
 	if err := l.partsJoiner.EncodeFilesParts(); err != nil {
-		l.log.Error().Err(err).Interface("LockitFile", l.GetFileInfo()).Msg("error when encoding lockit file parts")
-		errChan <- err
-		return
+		l.log.Error().
+			Err(err).
+			Msg("error when encoding lockit file parts")
+		return fmt.Errorf("failed to encode lockit file parts: %s", l.GetGameData().Name)
 	}
 
 	l.log.Info().Msgf("Joining file parts to: %s", l.GetImportLocation().TargetFile)
 
 	if err := l.partsJoiner.JoinFileParts(); err != nil {
-		errChan <- err
-		return
+		l.log.Error().
+			Err(err).
+			Msg("error when joining lockit file parts")
+		return fmt.Errorf("failed to join lockit file parts: %s", l.GetGameData().Name)
 	}
 
 	l.log.Info().Msgf("Verifying monted lockit file: %s", l.GetImportLocation().TargetFile)
 
 	if err := l.fileVerifier.VerifyCompress(l.GetFileInfo(), l.options); err != nil {
-		errChan <- err
-		return
+		l.log.Error().
+			Err(err).
+			Msg("error when verifying monted lockit file")
+		return fmt.Errorf("failed to verify monted lockit file: %s", l.GetGameData().Name)
 	}
 
-	l.log.Info().Msgf("Lockit file monted: %s", l.GetGameData().Name)
+	l.log.Info().
+		Msgf("Lockit file monted: %s", l.GetGameData().Name)
+
+	return nil
 }

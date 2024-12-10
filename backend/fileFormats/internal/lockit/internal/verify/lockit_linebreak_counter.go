@@ -6,9 +6,9 @@ import (
 	"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
+	"ffxresources/backend/notifications"
 	"fmt"
 	"os"
-	"sync"
 )
 
 type ILineBreakCounter interface {
@@ -58,48 +58,29 @@ func (lc LineBreakCounter) CountTextParts(partsList components.IList[parts.Locki
 }
 
 func (lc LineBreakCounter) verify(pathList components.IList[string], ocorrencesCount []int, ocorrencesLength int, expectedLineBreaksCount int) error {
-    var wg sync.WaitGroup
-    errChan := make(chan error, pathList.GetLength())
-    
-    comparerOcorrencesFunc := func(index int, part string) {
-        defer wg.Done()
-        
-        ocorrencesExpected := lc.getOcorrencesExpected(ocorrencesCount, index, ocorrencesLength, expectedLineBreaksCount)
+	errChan := make(chan error, pathList.GetLength())
+	defer close(errChan)
 
-        data, err := lc.readFilePart(part)
-        if err != nil {
-            errChan <- fmt.Errorf("error when reading file part %s: %w", part, err)
-            return
-        }
+	go notifications.ProcessError(errChan, logger.Get().With().Str("module", "linebreak_counter").Logger())
 
-        if err := lc.compareOcorrrences(&data, ocorrencesExpected); err != nil {
-            errChan <- fmt.Errorf("error when comparing ocorrences on file %s: %w", part, err)
-            return
-        }
-    }
+	comparerOcorrencesFunc := func(index int, part string) {
+		ocorrencesExpected := lc.getOcorrencesExpected(ocorrencesCount, index, ocorrencesLength, expectedLineBreaksCount)
 
-    wg.Add(pathList.GetLength())
-    pathList.ForIndex(comparerOcorrencesFunc)
+		data, err := lc.readFilePart(part)
+		if err != nil {
+			errChan <- fmt.Errorf("error when reading file part %s: %w", part, err)
+			return
+		}
 
-    go func() {
-        wg.Wait()
-        close(errChan)
-    }()
+		if err := lc.compareOcorrrences(&data, ocorrencesExpected); err != nil {
+			errChan <- fmt.Errorf("error when comparing ocorrences on file %s: %w", part, err)
+			return
+		}
+	}
 
-    var errors []error
-    for err := range errChan {
-        errors = append(errors, err)
-    }
+	pathList.ForIndex(comparerOcorrencesFunc)
 
-    if len(errors) > 0 {
-        l := logger.Get().With().Str("module", "linebreak_counter").Logger()
-        for _, err := range errors {
-            l.Error().Err(err).Msg("error when counting line breaks")
-        }
-        return fmt.Errorf("found %d errors when counting line breaks", len(errors))
-    }
-
-    return nil
+	return nil
 }
 
 func (lc LineBreakCounter) readFilePart(path string) ([]byte, error) {

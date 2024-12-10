@@ -5,8 +5,12 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
+	"ffxresources/backend/logger"
+	"ffxresources/backend/notifications"
 	"fmt"
 	"os"
+
+	"github.com/rs/zerolog"
 )
 
 type IPartComparer interface {
@@ -37,17 +41,23 @@ type IPartComparer interface {
 
 type PartComparer struct {
 	worker common.IWorker[parts.LockitFileParts]
+	log    zerolog.Logger
 }
 
 func newPartComparer() IPartComparer {
 	worker := common.NewWorker[parts.LockitFileParts]()
 	return &PartComparer{
 		worker: worker,
+		log:    logger.Get().With().Str("module", "part_comparer").Logger(),
 	}
 }
 
 func (pc PartComparer) CompareGameDataBinaryParts(partsList components.IList[parts.LockitFileParts]) error {
-	errChan := make(chan error, 1)
+	errChan := make(chan error, partsList.GetLength())
+	defer close(errChan)
+
+	go notifications.ProcessError(errChan, pc.log)
+
 	compareBinaryParts := func(part parts.LockitFileParts) {
 		if err := pc.compare(part.GetGameData().FullFilePath, part.GetImportLocation().TargetFile); err != nil {
 			errChan <- err
@@ -57,20 +67,14 @@ func (pc PartComparer) CompareGameDataBinaryParts(partsList components.IList[par
 
 	partsList.ForEach(compareBinaryParts)
 
-	var err error
-	if err = <-errChan; err != nil {
-		return err
-	}
-
-	/* if err := pc.worker.ForEach(partsList, compareBinaryParts); err != nil {
-		return err
-	} */
-
 	return nil
 }
 
 func (pc PartComparer) CompareTranslatedTextParts(partsList components.IList[parts.LockitFileParts]) error {
-	errChan := make(chan error, 1)
+	errChan := make(chan error, partsList.GetLength())
+	defer close(errChan)
+
+	go notifications.ProcessError(errChan, pc.log)
 
 	compareTextParts := func(item parts.LockitFileParts) {
 		if err := pc.compare(item.GetTranslateLocation().TargetFile, item.GetExtractLocation().TargetFile); err != nil {
@@ -80,15 +84,6 @@ func (pc PartComparer) CompareTranslatedTextParts(partsList components.IList[par
 	}
 
 	partsList.ForEach(compareTextParts)
-
-	var err error
-	if err = <-errChan; err != nil {
-		return err
-	}
-
-	/* if err := pc.worker.ForEach(partsList, compareTextParts); err != nil {
-		return err
-	} */
 
 	return nil
 }
