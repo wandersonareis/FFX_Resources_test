@@ -6,6 +6,7 @@ import (
 	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
+	"ffxresources/backend/notifications"
 	"path/filepath"
 
 	"github.com/rs/zerolog"
@@ -39,15 +40,21 @@ func NewSpiraFolder(dataInfo interactions.IGameDataInfo, fileProcessor func(data
 	}
 }
 
-func (sf SpiraFolder) Extract() {
+func (sf SpiraFolder) Extract() error {
 	fileProcessors := sf.processFiles()
 
 	progress := common.NewProgress(sf.Ctx)
 	progress.SetMax(fileProcessors.GetLength())
 	progress.Start()
 
+	errChan := make(chan error, fileProcessors.GetLength())
+	defer close(errChan)
+
+	go notifications.ProcessError(errChan, sf.log)
+
 	fileProcessors.ForEach(func(extractor interactions.IFileProcessor) {
-		extractor.Extract()
+		err := extractor.Extract()
+		errChan <- err
 
 		progress.Step()
 	})
@@ -57,17 +64,25 @@ func (sf SpiraFolder) Extract() {
 	sf.Log.Info().
 		Str("folder", sf.GetGameData().FullFilePath).
 		Msg("Spira folder extracted")
+
+	return nil
 }
 
-func (sf SpiraFolder) Compress() {
+func (sf SpiraFolder) Compress() error {
 	fileProcessors := sf.processFiles()
 
 	progress := common.NewProgress(sf.Ctx)
 	progress.SetMax(fileProcessors.GetLength())
 	progress.Start()
 
+	errChan := make(chan error, fileProcessors.GetLength())
+	defer close(errChan)
+
+	go notifications.ProcessError(errChan, sf.log)
+
 	fileProcessors.ForEach(func(compressor interactions.IFileProcessor) {
-		compressor.Compress()
+		err := compressor.Compress()
+		errChan <- err
 
 		progress.Step()
 	})
@@ -77,6 +92,8 @@ func (sf SpiraFolder) Compress() {
 	sf.log.Info().
 		Str("folder", sf.GetGameData().FullFilePath).
 		Msg("Spira folder compressed")
+
+	return nil
 }
 
 func (sf SpiraFolder) processFiles() *components.List[interactions.IFileProcessor] {
