@@ -1,9 +1,6 @@
 package spira
 
-import (
-	"ffxresources/backend/core"
-	"ffxresources/backend/models"
-)
+import "ffxresources/backend/models"
 
 type treeNodeIcon struct {
 	Icon string
@@ -33,11 +30,11 @@ var icons = []treeNodeIcon{
 	},
 }
 
-func getTreeNodeIcon(source *core.SpiraFileInfo) string {
+func getTreeNodeIcon(nodeType models.NodeType) string {
 	nodeIcon := "pi pi-file"
 
 	for _, icon := range icons {
-		if icon.Type == source.Type {
+		if icon.Type == nodeType {
 			nodeIcon = icon.Icon
 			break
 		}

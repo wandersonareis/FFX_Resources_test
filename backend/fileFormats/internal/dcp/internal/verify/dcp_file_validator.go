@@ -2,9 +2,11 @@ package verify
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/splitter"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
 
@@ -32,9 +34,9 @@ func newFileValidator() IFileValidator {
 }
 
 func (fv *FileValidator) Validate(filePath string, options interactions.DcpFileOptions) error {
-	tmpInfo, tmpDir := fv.createTemporaryFileInfo(filePath)
+	source, destination, tmpDir := fv.createTemporaryFileInfo(filePath)
 
-	if err := fv.fileSplitter.Split(tmpInfo); err != nil {
+	if err := fv.fileSplitter.Split(source, destination); err != nil {
 		fv.log.Error().
 			Err(err).
 			Str("file", filePath).
@@ -55,13 +57,27 @@ func (fv *FileValidator) Validate(filePath string, options interactions.DcpFileO
 	return nil
 }
 
-func (fv *FileValidator) createTemporaryFileInfo(filePath string) (interactions.IGameDataInfo, string) {
+func (fv *FileValidator) createTemporaryFileInfo(filePath string) (interfaces.ISource, locations.IDestination, string) {
 	tmpDir := common.NewTempProviderDev("", "").TempFilePath
 
-	tmpInfo := interactions.NewGameDataInfo(filePath)
-	tmpInfo.InitializeLocations(formatters.NewTxtFormatter())
+	gamePart := interactions.NewInteraction().GamePart.GetGamePart()
 
-	tmpInfo.GetExtractLocation().TargetPath = tmpDir
+	//tmpInfo := interactions.NewGameDataInfo(filePath, gamePart)
+	source, err := locations.NewSource(filePath, gamePart)
+	if err != nil {
+		fv.log.Error().
+			Err(err).
+			Str("file", filePath).
+			Msg("error when creating source")
 
-	return tmpInfo, tmpDir
+		return nil, nil, ""
+	}
+
+	destination := locations.NewDestination()
+
+	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
+
+	destination.Extract().Get().SetTargetPath(tmpDir)
+
+	return source, destination, tmpDir
 }

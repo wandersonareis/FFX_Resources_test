@@ -2,7 +2,11 @@ package components
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/locations"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
+	"ffxresources/backend/logger"
+	"ffxresources/backend/notifications"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -72,7 +76,7 @@ func ListFilesByRegex(list IList[string], path, pattern string) error {
 	return nil
 }
 
-func GenerateGameFileParts[T any](parts IList[T], targetPath, pattern string, partsInstance func(info interactions.IGameDataInfo) *T) error {
+/* func GenerateGameFileParts[T any](parts IList[T], targetPath, pattern string, partsInstance func(source interfaces.ISource, destination interfaces.IDestination) *T) error {
 	common.EnsurePathExists(targetPath)
 
 	filesList := NewList[string](parts.GetLength())
@@ -88,7 +92,47 @@ func GenerateGameFileParts[T any](parts IList[T], targetPath, pattern string, pa
 			return
 		}
 
-		part := partsInstance(info)
+		part := partsInstance(sou)
+		if part == nil {
+			return
+		}
+
+		parts.Add(*part)
+	})
+
+	parts.Clip()
+
+	return nil
+} */
+
+func GenerateGameFilePartsDev[T any](parts IList[T], targetPath, pattern string, partsInstance func(source interfaces.ISource, destination locations.IDestination) *T) error {
+	common.EnsurePathExists(targetPath)
+
+	filesList := NewList[string](parts.GetLength())
+
+	err := ListFilesByRegex(filesList, targetPath, pattern)
+	if err != nil {
+		return err
+	}
+
+	errChan := make(chan error, filesList.GetLength())
+	defer close(errChan)
+
+	go notifications.ProcessError(errChan, logger.Get().With().Str("module", "generate_game_file_parts").Logger())
+
+	filesList.ForEach(func(item string) {
+		s, err := locations.NewSource(item, interactions.NewInteraction().GamePart.GetGamePart())
+		if err != nil {
+			return
+		}
+
+		if s.Get().Size == 0 {
+			return
+		}
+
+		t := locations.NewDestination()
+
+		part := partsInstance(s, t)
 		if part == nil {
 			return
 		}

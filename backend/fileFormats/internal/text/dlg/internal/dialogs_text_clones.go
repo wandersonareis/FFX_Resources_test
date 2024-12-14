@@ -1,8 +1,9 @@
 package internal
 
 import (
+	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/util"
-	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
 	"io"
@@ -17,32 +18,35 @@ type IDlgClones interface {
 }
 
 type dialogsClones struct {
-	dataInfo interactions.IGameDataInfo
+	source      interfaces.ISource
+	destination locations.IDestination
 
 	log zerolog.Logger
 }
 
-func NewDlgClones(dataInfo interactions.IGameDataInfo) *dialogsClones {
+func NewDlgClones(source interfaces.ISource, destination locations.IDestination) *dialogsClones {
 	return &dialogsClones{
-		dataInfo: dataInfo,
+		source:      source,
+		destination: destination,
 
 		log: logger.Get().With().Str("module", "dialogs_clones").Logger(),
 	}
 }
 
 func (dc *dialogsClones) Clone() {
+	importTargetFile := dc.destination.Import().Get().GetTargetFile()
 	dc.log.Info().
-		Str("Clones from: ", dc.dataInfo.GetImportLocation().TargetFile).
+		Str("Clones from: ", importTargetFile).
 		Msg("Creating duplicated files for")
 
-	if dc.dataInfo.GetGameData().ClonedItems != nil {
-		for _, clone := range dc.dataInfo.GetGameData().ClonedItems {
-			cloneReimportPath := filepath.Join(dc.dataInfo.GetImportLocation().TargetDirectory, clone)
+	if dc.source.Get().ClonedItems != nil {
+		for _, clone := range dc.source.Get().ClonedItems {
+			cloneReimportPath := filepath.Join(dc.destination.Import().Get().GetTargetDirectory(), clone)
 
-			if err := dc.duplicateFile(dc.dataInfo.GetImportLocation().TargetFile, cloneReimportPath); err != nil {
+			if err := dc.duplicateFile(importTargetFile, cloneReimportPath); err != nil {
 				dc.log.Error().
 					Err(err).
-					Str("Clone from: ", dc.dataInfo.GetImportLocation().TargetFile).
+					Str("Clone from: ", importTargetFile).
 					Str("Clone path: ", clone).
 					Msg("Error duplicating dialog file")
 
@@ -51,8 +55,8 @@ func (dc *dialogsClones) Clone() {
 		}
 
 		dc.log.Info().
-			Str("Clone from: ", dc.dataInfo.GetImportLocation().TargetFile).
-			Msgf("Create files clones for %s successfully", dc.dataInfo.GetGameData().Name)
+			Str("Clone from: ", importTargetFile).
+			Msgf("Create files clones for %s successfully", dc.source.Get().Name)
 	}
 }
 

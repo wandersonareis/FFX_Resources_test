@@ -2,15 +2,16 @@ package internal
 
 import (
 	"ffxresources/backend/core/encoding"
+	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/text/encoding"
-	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 
 	"github.com/rs/zerolog"
 )
 
 type IKrnlDecoder interface {
-	Decoder(fileInfo interactions.IGameDataInfo) error
+	Decoder(source interfaces.ISource, destination locations.IDestination) error
 }
 
 type krnlDecoder struct {
@@ -23,16 +24,16 @@ func NewKrnlDecoder() IKrnlDecoder {
 	}
 }
 
-func (d *krnlDecoder) Decoder(fileInfo interactions.IGameDataInfo) error {
+func (d *krnlDecoder) Decoder(source interfaces.ISource, destination locations.IDestination) error {
 	encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextKrnlEncoding()
 	defer encoding.Dispose()
 
-	extractLocation := fileInfo.GetExtractLocation()
+	extractLocation := destination.Extract().Get()
 
 	if err := extractLocation.ProvideTargetPath(); err != nil {
 		d.log.Error().
 			Err(err).
-			Str("path", extractLocation.TargetPath).
+			Str("path", extractLocation.GetTargetPath()).
 			Msg("Error providing extract path")
 
 		return err
@@ -40,9 +41,9 @@ func (d *krnlDecoder) Decoder(fileInfo interactions.IGameDataInfo) error {
 
 	decoder := textsEncoding.NewDecoder()
 
-	sourceFile := fileInfo.GetGameData().FullFilePath
+	sourceFile := source.Get().Path
 
-	if err := decoder.KnrlDecoder(sourceFile, extractLocation.TargetFile, encoding); err != nil {
+	if err := decoder.KnrlDecoder(sourceFile, extractLocation.GetTargetFile(), encoding); err != nil {
 		d.log.Error().
 			Err(err).
 			Str("file", sourceFile).

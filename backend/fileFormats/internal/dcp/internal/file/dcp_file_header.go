@@ -109,11 +109,11 @@ func (h *Header) Update(dcpParts components.IList[parts.DcpFileParts]) error {
 	items := dcpParts.GetItems()
 
 	for i, pointer := range h.Pointers {
-		partInfo, err := os.Stat(items[i].GetImportLocation().TargetFile)
+		partInfo, err := os.Stat(items[i].Destination().Import().Get().GetTargetFile())
 		if err != nil {
 			h.log.Error().
 				Err(err).
-				Str("file", items[i].GetImportLocation().TargetFile).
+				Str("file", items[i].Destination().Import().Get().GetTargetFile()).
 				Msg("error getting file info")
 
 			return err

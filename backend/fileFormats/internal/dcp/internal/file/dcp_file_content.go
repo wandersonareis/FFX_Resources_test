@@ -84,7 +84,7 @@ func (c Content) Read(file *os.File) error {
 }
 func (c Content) Write(header *Header, parts components.IList[parts.DcpFileParts]) error {
 	for _, part := range parts.GetItems() {
-		filePath := part.GetImportLocation().TargetFile
+		filePath := part.Destination().Import().Get().GetTargetFile()
 
 		file, err := os.Open(filePath)
 		if err != nil {

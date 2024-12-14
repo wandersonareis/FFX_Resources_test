@@ -5,8 +5,10 @@ import (
 	"bytes"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/encoding"
+	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,10 +16,10 @@ import (
 
 type IFileSplitter interface {
 	DecoderPartsFiles(partsList components.IList[parts.LockitFileParts])
-	FileSplitter(dataInfo interactions.IGameDataInfo, options interactions.LockitFileOptions) error
+	FileSplitter(source interfaces.ISource, extractLocation locations.IExtractLocation, options interactions.LockitFileOptions) error
 }
 
-type LockitFileSplitter struct {}
+type LockitFileSplitter struct{}
 
 func NewLockitFileSplitter() IFileSplitter {
 	return &LockitFileSplitter{}
@@ -28,7 +30,7 @@ func (ls *LockitFileSplitter) DecoderPartsFiles(partsList components.IList[parts
 	defer encoding.Dispose()
 
 	extractorFunc := func(index int, part parts.LockitFileParts) {
-		if index > 0 && index % 2 == 0 {
+		if index > 0 && index%2 == 0 {
 			part.Extract(parts.LocEnc, encoding)
 		} else {
 			part.Extract(parts.FfxEnc, encoding)
@@ -38,14 +40,14 @@ func (ls *LockitFileSplitter) DecoderPartsFiles(partsList components.IList[parts
 	partsList.ParallelForEach(extractorFunc)
 }
 
-func (ls *LockitFileSplitter) FileSplitter(dataInfo interactions.IGameDataInfo, options interactions.LockitFileOptions) error {
-	extractLocation := dataInfo.GetExtractLocation()
+func (ls *LockitFileSplitter) FileSplitter(source interfaces.ISource, extractLocation locations.IExtractLocation, options interactions.LockitFileOptions) error {
+	//extractLocation := destination.GetExtractLocation()
 
 	if err := extractLocation.ProvideTargetPath(); err != nil {
 		return fmt.Errorf("error when providing the target path: %w", err)
 	}
 
-	file, err := os.Open(dataInfo.GetGameData().FullFilePath)
+	file, err := os.Open(source.Get().Path)
 	if err != nil {
 		return fmt.Errorf("error when opening the file: %v", err)
 	}
@@ -60,7 +62,7 @@ func (ls *LockitFileSplitter) FileSplitter(dataInfo interactions.IGameDataInfo, 
 
 	reader := bufio.NewReader(file)
 
-	if err := splitFileByLineCount(reader, extractLocation.TargetPath, options); err != nil {
+	if err := splitFileByLineCount(reader, extractLocation.GetTargetPath(), options); err != nil {
 		return fmt.Errorf("error when dividing the file: %w", err)
 	}
 

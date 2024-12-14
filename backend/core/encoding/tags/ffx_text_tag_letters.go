@@ -5,7 +5,7 @@ import (
 	"slices"
 )
 
-type FFXTextTagLetters struct{
+type FFXTextTagLetters struct {
 	ffxTagsBase
 }
 

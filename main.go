@@ -53,7 +53,6 @@ func main() {
 
 	logToFile()
 	app := NewApp()
-	
 
 	// Create application with options
 	err := wails.Run(&options.App{

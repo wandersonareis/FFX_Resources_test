@@ -2,6 +2,7 @@ package lockit
 
 import (
 	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/joiner"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lib"
@@ -10,6 +11,7 @@ import (
 	"ffxresources/backend/fileFormats/internal/lockit/internal/verify"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
 
@@ -28,16 +30,16 @@ type LockitFile struct {
 	log zerolog.Logger
 }
 
-func NewLockitFile(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor {
+func NewLockitFile(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
 	partsList := components.NewEmptyList[parts.LockitFileParts]()
 
-	dataInfo.CreateRelativePath()
+	destination.CreateRelativePath(source, interactions.NewInteraction().GameLocation.GetTargetDirectory())
 
-	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
+	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
 
-	err := components.GenerateGameFileParts(
+	err := components.GenerateGameFilePartsDev(
 		partsList,
-		dataInfo.GetExtractLocation().TargetPath,
+		destination.Extract().Get().GetTargetPath(),
 		lib.LOCKIT_FILE_PARTS_PATTERN,
 		parts.NewLockitFileParts)
 
@@ -48,27 +50,27 @@ func NewLockitFile(dataInfo interactions.IGameDataInfo) interactions.IFileProces
 	}
 
 	return &LockitFile{
-		FormatsBase:  base.NewFormatsBase(dataInfo),
-		fileVerifier: verify.NewLockitFileVerifier(dataInfo),
+		FormatsBase:  base.NewFormatsBaseDev(source, destination),
+		fileVerifier: verify.NewLockitFileVerifier(source, destination),
 		fileSplitter: splitter.NewLockitFileSplitter(),
 		options:      interactions.NewInteraction().GamePartOptions.GetLockitFileOptions(),
-		partsJoiner:  joiner.NewLockitFileJoiner(dataInfo, partsList),
+		partsJoiner:  joiner.NewLockitFileJoiner(source, destination, partsList),
 		parts:        partsList,
 		log:          logger.Get().With().Str("module", "lockit_file").Logger(),
 	}
 }
 
 func (l *LockitFile) Extract() error {
-	l.log.Info().Msgf("Verifying lockit file parts in path: %s", l.GetExtractLocation().TargetPath)
+	l.log.Info().Msgf("Verifying lockit file parts in path: %s", l.Destination().Extract().Get().GetTargetPath())
 
 	l.log.Info().Msgf("Parts found: %d", l.parts.GetLength())
 
 	if l.parts.GetLength() != l.options.PartsLength {
 		l.log.Info().Msg("Extracting lockit file parts...")
 
-		l.fileSplitter.FileSplitter(l.GetFileInfo(), l.options)
+		l.fileSplitter.FileSplitter(l.Source(), l.Destination().Extract().Get(), l.options)
 
-		newLockitFile := NewLockitFile(l.GetFileInfo()).(*LockitFile)
+		newLockitFile := NewLockitFile(l.Source(), l.Destination()).(*LockitFile)
 
 		l.SetFileInfo(newLockitFile.GetFileInfo())
 		l.parts = newLockitFile.parts
@@ -78,75 +80,75 @@ func (l *LockitFile) Extract() error {
 
 	l.fileSplitter.DecoderPartsFiles(l.parts)
 
-	l.log.Info().Msgf("Verifying lockit file parts: %s", l.GetExtractLocation().TargetPath)
+	l.log.Info().Msgf("Verifying lockit file parts: %s", l.Destination().Extract().Get().GetTargetPath())
 
-	if err := l.fileVerifier.VerifyExtract(l.parts, l.GetExtractLocation(), l.options); err != nil {
+	if err := l.fileVerifier.VerifyExtract(l.parts, l.options); err != nil {
 		l.log.Error().Err(err).Send()
-		return fmt.Errorf("failed to extract lockit file: %s", l.GetGameData().Name)
+		return fmt.Errorf("failed to extract lockit file: %s", l.Source().Get().Name)
 	}
 
-	l.log.Info().Msgf("Lockit file extracted: %s", l.GetGameData().Name)
+	l.log.Info().Msgf("Lockit file extracted: %s", l.Source().Get().Name)
 
 	return nil
 }
 
 func (l *LockitFile) Compress() error {
 	l.log.Info().Msg("Compressing lockit file parts...")
-	l.log.Info().Msgf("Verifying splited parts before compressing: %s", l.GetExtractLocation().TargetPath)
+	l.log.Info().Msgf("Verifying splited parts before compressing: %s", l.Destination().Extract().Get().GetTargetPath())
 
-	if err := l.fileVerifier.VerifyExtract(l.parts, l.GetExtractLocation(), l.options); err != nil {
+	if err := l.fileVerifier.VerifyExtract(l.parts, l.options); err != nil {
 		l.log.Error().
 			Err(err).
 			Send()
-		return fmt.Errorf("failed to verify lockit file parts: %s", l.GetGameData().Name)
+		return fmt.Errorf("failed to verify lockit file parts: %s", l.Source().Get().Name)
 	}
 
-	l.log.Info().Msgf("Finding translated text parts on: %s", l.GetTranslateLocation().TargetPath)
+	l.log.Info().Msgf("Finding translated text parts on: %s", l.Destination().Translate().Get().GetTargetPath())
 
 	translatedParts, err := l.partsJoiner.FindTranslatedTextParts()
 	if err != nil {
 		l.log.Error().
 			Err(err).
 			Msg("error when finding translated text parts")
-		return fmt.Errorf("failed to find translated text parts: %s", l.GetGameData().Name)
+		return fmt.Errorf("failed to find translated text parts: %s", l.Source().Get().Name)
 	}
 
 	if translatedParts.GetLength() != l.options.PartsLength {
 		l.log.Error().Msg("invalid number of translated parts")
-		return fmt.Errorf("invalid number of translated parts: %s", l.GetGameData().Name)
+		return fmt.Errorf("invalid number of translated parts: %s", l.Source().Get().Name)
 	}
 
 	l.log.Info().Msgf("Parts found: %d", translatedParts.GetLength())
 
-	l.log.Info().Msgf("Encoding files parts to: %s", l.GetImportLocation().TargetPath)
+	l.log.Info().Msgf("Encoding files parts to: %s", l.Destination().Import().Get().GetTargetPath())
 
 	if err := l.partsJoiner.EncodeFilesParts(); err != nil {
 		l.log.Error().
 			Err(err).
 			Msg("error when encoding lockit file parts")
-		return fmt.Errorf("failed to encode lockit file parts: %s", l.GetGameData().Name)
+		return fmt.Errorf("failed to encode lockit file parts: %s", l.Source().Get().Name)
 	}
 
-	l.log.Info().Msgf("Joining file parts to: %s", l.GetImportLocation().TargetFile)
+	l.log.Info().Msgf("Joining file parts to: %s", l.Destination().Import().Get().GetTargetFile())
 
 	if err := l.partsJoiner.JoinFileParts(); err != nil {
 		l.log.Error().
 			Err(err).
 			Msg("error when joining lockit file parts")
-		return fmt.Errorf("failed to join lockit file parts: %s", l.GetGameData().Name)
+		return fmt.Errorf("failed to join lockit file parts: %s", l.Source().Get().Name)
 	}
 
-	l.log.Info().Msgf("Verifying monted lockit file: %s", l.GetImportLocation().TargetFile)
+	l.log.Info().Msgf("Verifying monted lockit file: %s", l.Destination().Import().Get().GetTargetFile())
 
-	if err := l.fileVerifier.VerifyCompress(l.GetFileInfo(), l.options); err != nil {
+	if err := l.fileVerifier.VerifyCompress(l.Destination(), l.options); err != nil {
 		l.log.Error().
 			Err(err).
 			Msg("error when verifying monted lockit file")
-		return fmt.Errorf("failed to verify monted lockit file: %s", l.GetGameData().Name)
+		return fmt.Errorf("failed to verify monted lockit file: %s", l.Source().Get().Name)
 	}
 
 	l.log.Info().
-		Msgf("Lockit file monted: %s", l.GetGameData().Name)
+		Msgf("Lockit file monted: %s", l.Source().Get().Name)
 
 	return nil
 }

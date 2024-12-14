@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import {Component, inject, signal, WritableSignal} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EditorModule } from 'primeng/editor';
@@ -8,6 +8,8 @@ import { WriteTextFile } from '../../../../wailsjs/go/main/App';
 import { extractedEditorText, selectedFile, showEditorModal } from '../signals/signals.signal';
 import { ButtonModule } from 'primeng/button';
 import { CompressService } from '../../../service/compress.service';
+import {spira} from "../../../../wailsjs/go/models";
+import {TreeNode} from "primeng/api";
 
 @Component({
   selector: 'app-editor-modal',
@@ -24,26 +26,26 @@ import { CompressService } from '../../../service/compress.service';
 })
 export class EditorModalComponent {
   private readonly _compressService: CompressService = inject(CompressService)
-  visible = showEditorModal
+  visible: WritableSignal<boolean> = showEditorModal
 
-  file = selectedFile
-  text = extractedEditorText;
+  file: WritableSignal<TreeNode | undefined> = selectedFile
+  text: WritableSignal<string> = extractedEditorText;
 
   showEditor() {
     this.visible.set(!this.visible());
   }
 
   async onTextChange(event: any) {
-    const data = extractFileInfo(this.file())
-    if (!data) return;
+    const fileInfo: spira.GameDataInfo | null = extractFileInfo(this.file())
+    if (!fileInfo) return;
 
-    await WriteTextFile(data, event.textValue);
+    await WriteTextFile(fileInfo.file_path, event.textValue);
   }
 
   async saveToSpiraFile() {
-    const data = extractFileInfo(this.file())
-    if (!data) return;
+    const fileInfo: spira.GameDataInfo | null = extractFileInfo(this.file())
+    if (!fileInfo) return;
 
-    await this._compressService.compress(data);
+    await this._compressService.compress(fileInfo);
   }
 }

@@ -39,17 +39,18 @@ func (sc *segmentCounter) CountBinaryParts(dcpFileParts components.IList[parts.D
 	}
 
 	for _, dcpFilePart := range dcpFileParts.GetItems() {
-		if dcpFilePart.GetGameData().Size == 0 {
-			if err := os.Remove(dcpFilePart.GetGameData().FullFilePath); err != nil {
+		sourceFile := dcpFilePart.Source().Get()
+		if sourceFile.Size == 0 {
+			if err := os.Remove(sourceFile.Path); err != nil {
 				sc.log.Error().
 					Err(err).
-					Str("file", dcpFilePart.GetGameData().FullFilePath).
+					Str("file", sourceFile.Path).
 					Msg("error when removing part")
 
 				return fmt.Errorf("error when removing part")
 			}
 
-			return fmt.Errorf("invalid size for part: %s", dcpFilePart.GetGameData().Name)
+			return fmt.Errorf("invalid size for part: %s", dcpFilePart.Source().Get().Name)
 		}
 	}
 
@@ -58,16 +59,17 @@ func (sc *segmentCounter) CountBinaryParts(dcpFileParts components.IList[parts.D
 
 func (sc *segmentCounter) CountTextParts(partsList components.IList[parts.DcpFileParts], options interactions.DcpFileOptions) error {
 	errChan := make(chan error, partsList.GetLength())
-	
+
 	go notifications.ProcessError(errChan, sc.log)
 
 	partsList.ForEach(func(part parts.DcpFileParts) {
-		if common.CountSegments(part.GetExtractLocation().TargetFile) <= 0 {
+		targetFile := part.Destination().Extract().Get().GetTargetFile()
+		if common.CountSegments(targetFile) <= 0 {
 			sc.log.Error().
-				Str("part", part.GetExtractLocation().TargetFile).
+				Str("part", targetFile).
 				Msg("error when counting segments in part")
 
-			errChan <- fmt.Errorf("error when counting segments in part: %s", part.GetExtractLocation().TargetFile)
+			errChan <- fmt.Errorf("error when counting segments in part: %s", targetFile)
 		}
 	})
 

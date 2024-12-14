@@ -2,6 +2,7 @@ package verify
 
 import (
 	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
@@ -17,7 +18,7 @@ type DcpFileVerify struct {
 	log zerolog.Logger
 }
 
-func NewDcpFileVerify(dataInfo interactions.IGameDataInfo) *DcpFileVerify {
+func NewDcpFileVerify() *DcpFileVerify {
 	return &DcpFileVerify{
 		fileValidator:  newFileValidator(),
 		segmentCounter: new(segmentCounter),
@@ -55,24 +56,25 @@ func (lv *DcpFileVerify) VerifyExtract(dcpFileParts components.IList[parts.DcpFi
 	return nil
 }
 
-func (lv *DcpFileVerify) VerifyCompress(dataInfo interactions.IGameDataInfo, options interactions.DcpFileOptions) error {
+func (lv *DcpFileVerify) VerifyCompress(destination locations.IDestination, options interactions.DcpFileOptions) error {
+	targetFile := destination.Import().Get().GetTargetFile()
 	lv.log.Info().
-		Str("file", dataInfo.GetImportLocation().TargetFile).
+		Str("file", targetFile).
 		Msg("Verifying reimported macrodic file")
 
-	if err := dataInfo.GetImportLocation().Validate(); err != nil {
+	if err := destination.Import().Get().Validate(); err != nil {
 		lv.log.Error().
 			Err(err).
-			Str("file", dataInfo.GetImportLocation().TargetFile).
+			Str("file", targetFile).
 			Msg("Error when validating reimported macrodic file")
 
 		return fmt.Errorf("reimport file not exists: %w", err)
 	}
 
-	if err := lv.fileValidator.Validate(dataInfo.GetImportLocation().TargetFile, options); err != nil {
+	if err := lv.fileValidator.Validate(targetFile, options); err != nil {
 		lv.log.Error().
 			Err(err).
-			Str("file", dataInfo.GetImportLocation().TargetFile).
+			Str("file", targetFile).
 			Msg("Error when validating reimported macrodic file")
 
 		return fmt.Errorf("error when validating reimported macrodic file: %w", err)

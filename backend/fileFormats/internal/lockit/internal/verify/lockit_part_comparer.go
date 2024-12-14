@@ -56,7 +56,7 @@ func (pc PartComparer) CompareGameDataBinaryParts(partsList components.IList[par
 	go notifications.ProcessError(errChan, pc.log)
 
 	compareBinaryParts := func(part parts.LockitFileParts) {
-		if err := pc.compare(part.GetGameData().FullFilePath, part.GetImportLocation().TargetFile); err != nil {
+		if err := pc.compare(part.Source().Get().Path, part.Destination().Import().Get().GetTargetFile()); err != nil {
 			errChan <- err
 			return
 		}
@@ -74,7 +74,7 @@ func (pc PartComparer) CompareTranslatedTextParts(partsList components.IList[par
 	go notifications.ProcessError(errChan, pc.log)
 
 	compareTextParts := func(item parts.LockitFileParts) {
-		if err := pc.compare(item.GetTranslateLocation().TargetFile, item.GetExtractLocation().TargetFile); err != nil {
+		if err := pc.compare(item.Destination().Translate().Get().GetTargetFile(), item.Destination().Extract().Get().GetTargetFile()); err != nil {
 			errChan <- err
 			return
 		}

@@ -33,7 +33,7 @@ func (lc LineBreakCounter) CountBinaryParts(partsList components.IList[parts.Loc
 	pathList := components.NewList[string](partsList.GetLength())
 
 	partsList.ForEach(func(part parts.LockitFileParts) {
-		pathList.Add(part.GetGameData().FullFilePath)
+		pathList.Add(part.Source().Get().Path)
 	})
 
 	if err := lc.verify(pathList, options.PartsSizes, len(options.PartsSizes), options.LineBreaksCount); err != nil {
@@ -47,7 +47,7 @@ func (lc LineBreakCounter) CountTextParts(partsList components.IList[parts.Locki
 	pathList := components.NewEmptyList[string]()
 
 	partsList.ForEach(func(part parts.LockitFileParts) {
-		pathList.Add(part.GetExtractLocation().TargetFile)
+		pathList.Add(part.Destination().Extract().Get().GetTargetFile())
 	})
 
 	if err := lc.verify(pathList, options.PartsSizes, len(options.PartsSizes), options.LineBreaksCount); err != nil {

@@ -2,30 +2,31 @@ package interactions
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
 	"os"
 	"path/filepath"
 )
 
-type IValidate interface {
+/* type IValidate interface {
 	Validate() error
-}
+} */
 
-type ILocationBase interface {
+/* type ILocationBase interface {
 	SetTargetDirectory(path string)
 	GetTargetDirectory() string
 	SetTargetFile(targetFile string)
 	SetTargetPath(targetPath string)
 	ProvideTargetDirectory() error
 	ProvideTargetPath() error
-	BuildTargetOutput(formatter ITextFormatter, fileInfo *GameDataInfo)
-}
+	BuildTargetOutput(formatter ITextFormatter, fileInfo interfaces.ISource)
+} */
 
-type ITextFormatter interface {
-	ReadFile(fileInfo *GameDataInfo, targetDirectory string) (string, string)
-	WriteFile(fileInfo *GameDataInfo, targetDirectory string) (string, string)
-}
+/* type ITextFormatter interface {
+	ReadFile(fileInfo interfaces.ISource, targetDirectory string) (string, string)
+	WriteFile(fileInfo interfaces.ISource, targetDirectory string) (string, string)
+} */
 
 type LocationBase struct {
 	IsExist             bool
@@ -57,9 +58,17 @@ func (lb *LocationBase) GetTargetDirectory() string {
 	return lb.TargetDirectory
 }
 
+func (lb *LocationBase) GetTargetFile() string {
+	return lb.TargetFile
+}
+
 func (lb *LocationBase) SetTargetFile(targetFile string) {
 	lb.TargetFile = targetFile
 	lb.IsExist = lb.isTargetFileAvailable()
+}
+
+func (lb *LocationBase) GetTargetPath() string {
+	return lb.TargetPath
 }
 
 func (lb *LocationBase) SetTargetPath(targetPath string) {
@@ -87,8 +96,8 @@ func (lb *LocationBase) ProvideTargetPath() error {
 	return fmt.Errorf("target path is empty")
 }
 
-func (lb *LocationBase) BuildTargetOutput(formatter ITextFormatter, fileInfo *GameDataInfo) {
-	lb.TargetFile, lb.TargetPath = formatter.ReadFile(fileInfo, lb.TargetDirectory)
+func (lb *LocationBase) BuildTargetOutput(source interfaces.ISource, formatter interfaces.ITextFormatterDev) {
+	lb.TargetFile, lb.TargetPath = formatter.ReadFile(source, lb.TargetDirectory)
 
 	lb.TargetFileName = filepath.Base(lb.TargetFile)
 }

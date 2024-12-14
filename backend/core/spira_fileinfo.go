@@ -9,19 +9,21 @@ import (
 )
 
 type SpiraFileInfo struct {
-	Path       string
-	Info       os.FileInfo
-	Name       string
-	NamePrefix string
-	Type       models.NodeType
-	Size       int64
-	Extension  string
-	EntryPath  string
-	Parent     string
-	IsDir      bool
+	//Info         os.FileInfo
+	Name         string          `json:"name"`
+	NamePrefix   string          `json:"name_prefix"`
+	Type         models.NodeType `json:"type"`
+	Size         int64           `json:"size"`
+	Extension    string          `json:"extension"`
+	EntryPath    string          `json:"entry_path"`
+	Parent       string          `json:"parent"`
+	IsDir        bool            `json:"is_dir"`
+	ClonedItems  []string        `json:"cloned_items"`
+	Path         string          `json:"path"`
+	RelativePath string          `json:"relative_path"`
 }
 
-func NewSpiraFileInfo(path string) (*SpiraFileInfo, error) {
+func NewSpiraFileInfo(path string, gamePart GamePart) (*SpiraFileInfo, error) {
 	cPath := filepath.Clean(path)
 	info, err := os.Stat(cPath)
 	if err != nil {
@@ -34,16 +36,17 @@ func NewSpiraFileInfo(path string) (*SpiraFileInfo, error) {
 	}
 
 	source := &SpiraFileInfo{
-		Path:       cPath,
-		Info:       info,
-		Size:       size,
-		Name:       common.RecursiveRemoveFileExtension(info.Name()),
-		NamePrefix: common.RemoveOneFileExtension(info.Name()),
-		Type:       guessFileType(cPath),
-		Extension:  filepath.Ext(cPath),
-		EntryPath:  filepath.Join(cPath, info.Name()),
-		Parent:     filepath.Dir(cPath),
-		IsDir:      info.IsDir(),
+		Path: cPath,
+		//Info:       info,
+		Size:         size,
+		Name:         common.RecursiveRemoveFileExtension(info.Name()),
+		NamePrefix:   common.RemoveOneFileExtension(info.Name()),
+		Type:         guessFileType(cPath),
+		Extension:    filepath.Ext(cPath),
+		EntryPath:    filepath.Join(cPath, info.Name()),
+		Parent:       filepath.Dir(cPath),
+		IsDir:        info.IsDir(),
+		RelativePath: common.GetRelativePathFromMarker(cPath),
 	}
 
 	return source, nil

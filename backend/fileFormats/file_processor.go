@@ -1,12 +1,13 @@
 package fileFormats
 
 import (
+	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/dcp"
 	"ffxresources/backend/fileFormats/internal/folder"
-	"ffxresources/backend/fileFormats/internal/lockit"
 	"ffxresources/backend/fileFormats/internal/text/dlg"
 	"ffxresources/backend/fileFormats/internal/text/mt2"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
 	"ffxresources/backend/models"
 	"ffxresources/backend/notifications"
 )
@@ -14,29 +15,29 @@ import (
 // formats is a map that associates models.NodeType values with functions that
 // create instances of interactions.IFileProcessor. Each entry in the map
 // corresponds to a specific type of node
-var formats = map[models.NodeType]func(interactions.IGameDataInfo) interactions.IFileProcessor{
+var formats = map[models.NodeType]func(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor{
 	models.Dialogs:        dlg.NewDialogs,
 	models.DialogsSpecial: dlg.NewDialogs,
 	models.Tutorial:       dlg.NewDialogs,
 	models.DcpParts:       dlg.NewDialogs,
 	models.Kernel:         mt2.NewKernel,
 	models.Dcp:            dcp.NewDcpFile,
-	models.Lockit:         lockit.NewLockitFile,
+	//models.Lockit:         lockit.NewLockitFile,
 }
 
-func NewFileExtractor(dataInfo interactions.IGameDataInfo) models.IExtractor {
-	return NewFileProcessor(dataInfo)
+func NewFileExtractor(source interfaces.ISource, destination locations.IDestination) models.IExtractor {
+	return NewFileProcessor(source, destination)
 }
 
-func NewFileCompressor(dataInfo interactions.IGameDataInfo) models.ICompressor {
-	return NewFileProcessor(dataInfo)
+func NewFileCompressor(source interfaces.ISource, destination locations.IDestination) models.ICompressor {
+	return NewFileProcessor(source, destination)
 }
 
-func NewFileProcessor(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor {
-	fileType := dataInfo.GetGameData().Type
+func NewFileProcessor(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
+	fileType := source.Get().Type
 
 	if fileType == models.Folder {
-		return folder.NewSpiraFolder(dataInfo, NewFileProcessor)
+		return folder.NewSpiraFolder(source, destination, NewFileProcessor)
 	}
 
 	if err := interactions.NewInteraction().ExtractLocation.ProvideTargetDirectory(); err != nil {
@@ -44,13 +45,13 @@ func NewFileProcessor(dataInfo interactions.IGameDataInfo) interactions.IFilePro
 		return nil
 	}
 
-	if err := interactions.NewInteraction().TranslateLocation.ProvideTargetDirectory(); err != nil {
+	if err := destination.Translate().Get().ProvideTargetDirectory(); err != nil {
 		notifications.NotifyError(err)
 		return nil
 	}
 
 	if value, ok := formats[fileType]; ok {
-		return value(dataInfo)
+		return value(source, destination)
 	}
 
 	return nil

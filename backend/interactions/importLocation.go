@@ -1,10 +1,13 @@
 package interactions
 
-import "fmt"
+import (
+	"ffxresources/backend/interfaces"
+	"fmt"
+)
 
 type IImportLocation interface {
-	ILocationBase
-	IValidate
+	interfaces.ILocationBase
+	interfaces.IValidate
 }
 
 type ImportLocation struct {
@@ -25,7 +28,7 @@ func NewImportLocation() *ImportLocation {
 	return importLocationInstance
 }
 
-func (i *ImportLocation) GenerateTargetOutput(formatter ITextFormatter, fileInfo *GameDataInfo) {
+func (i *ImportLocation) GenerateTargetOutput(formatter interfaces.ITextFormatterDev, fileInfo interfaces.ISource) {
 	i.TargetFile, i.TargetPath = formatter.WriteFile(fileInfo, i.TargetDirectory)
 }
 

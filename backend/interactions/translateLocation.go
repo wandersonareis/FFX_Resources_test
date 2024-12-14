@@ -1,10 +1,13 @@
 package interactions
 
-import "fmt"
+import (
+	"ffxresources/backend/interfaces"
+	"fmt"
+)
 
 type ITranslateLocation interface {
-	ILocationBase
-	IValidate
+	interfaces.ILocationBase
+	interfaces.IValidate
 }
 
 type TranslateLocation struct {

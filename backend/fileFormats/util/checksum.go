@@ -7,14 +7,14 @@ import (
 	"strings"
 )
 
-type Checksum struct {}
+type Checksum struct{}
 
 func (c *Checksum) VerifyChecksum(file, checksum string) bool {
 	data, err := c.readBytes(file)
 	if err != nil {
 		return false
 	}
-	
+
 	hash := sha256.Sum256(data)
 
 	return strings.ToLower(checksum) == hex.EncodeToString(hash[:])

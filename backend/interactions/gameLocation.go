@@ -3,7 +3,8 @@ package interactions
 import "ffxresources/backend/common"
 
 type IGameLocation interface {
-	ILocationBase
+	GetTargetDirectory() string
+	SetTargetDirectory(path string)
 	IsSpira() error
 }
 
@@ -13,7 +14,7 @@ type GameLocation struct {
 
 const defaultDirName = "data"
 
-func NewGameLocation() *GameLocation {
+func NewGameLocation() IGameLocation {
 	return &GameLocation{
 		LocationBase: NewLocationBase(defaultDirName),
 	}

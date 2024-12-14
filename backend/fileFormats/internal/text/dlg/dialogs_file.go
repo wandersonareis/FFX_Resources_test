@@ -1,10 +1,11 @@
 package dlg
 
 import (
+	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/text/dlg/internal"
-	verify "ffxresources/backend/fileFormats/internal/text/lib/dlg_krnl_verify"
+	"ffxresources/backend/fileFormats/internal/text/lib/dlg_krnl_verify"
 	"ffxresources/backend/formatters"
-	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
 	"slices"
@@ -17,81 +18,84 @@ type DialogsFile struct {
 	decoder       internal.IDlgDecoder
 	encoder       internal.IDlgEncoder
 	textVerifyer  verify.ITextsVerify
-	dataInfo      interactions.IGameDataInfo
+	source        interfaces.ISource
+	destination   locations.IDestination
 	log           zerolog.Logger
 }
 
-func NewDialogs(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor {
-	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
+func NewDialogs(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
+	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
 
 	return &DialogsFile{
-		dialogsClones: internal.NewDlgClones(dataInfo),
+		source:      source,
+		destination: destination,
+
+		dialogsClones: internal.NewDlgClones(source, destination),
 		decoder:       internal.NewDlgDecoder(),
 		encoder:       internal.NewDlgEncoder(),
 		textVerifyer:  verify.NewTextsVerify(),
 
-		dataInfo: dataInfo,
-		log:      logger.Get().With().Str("module", "dialogs_file").Logger(),
+		log: logger.Get().With().Str("module", "dialogs_file").Logger(),
 	}
 }
 
-func (d DialogsFile) GetFileInfo() interactions.IGameDataInfo {
-	return d.dataInfo
+func (d DialogsFile) Source() interfaces.ISource {
+	return d.source
 }
 
 func (d DialogsFile) Extract() error {
-	if slices.Contains(d.dataInfo.GetGameData().ClonedItems, d.dataInfo.GetGameData().RelativeGameDataPath) {
+	if slices.Contains(d.source.Get().ClonedItems, d.source.Get().RelativePath) {
 		return nil
 	}
 
-	if err := d.decoder.Decoder(d.GetFileInfo()); err != nil {
+	if err := d.decoder.Decoder(d.source, d.destination); err != nil {
 		d.log.Error().
 			Err(err).
-			Str("file", d.GetFileInfo().GetGameData().FullFilePath).
+			Str("file", d.source.Get().Path).
 			Msg("Error decoding dialog file")
 
-		return fmt.Errorf("failed to decode dialog file: %s", d.GetFileInfo().GetGameData().Name)
+		return fmt.Errorf("failed to decode dialog file: %s", d.source.Get().Name)
 	}
 
-	if err := d.textVerifyer.VerifyExtract(d.dataInfo.GetExtractLocation()); err != nil {
+	if err := d.textVerifyer.VerifyExtract(d.destination.Extract().Get()); err != nil {
 		d.log.Error().
 			Err(err).
-			Str("file", d.GetFileInfo().GetExtractLocation().TargetFile).
+			Str("file", d.destination.Extract().Get().GetTargetFile()).
 			Msg("Error verifying text file")
 
-		return fmt.Errorf("failed to verify text file: %s", d.GetFileInfo().GetExtractLocation().TargetFile)
+		return fmt.Errorf("failed to verify text file: %s", d.destination.Extract().Get().GetTargetFile())
 	}
 
 	d.log.Info().
-		Str("file", d.GetFileInfo().GetExtractLocation().TargetFile).
+		Str("file", d.destination.Extract().Get().GetTargetFile()).
 		Msg("Dialog file extracted successfully")
 
 	return nil
 }
 
 func (d DialogsFile) Compress() error {
-	if err := d.encoder.Encoder(d.GetFileInfo()); err != nil {
+	if err := d.encoder.Encoder(d.source, d.destination); err != nil {
 		d.log.Error().
 			Err(err).
-			Str("file", d.GetFileInfo().GetTranslateLocation().TargetFile).
+			Str("file", d.destination.Translate().Get().GetTargetFile()).
 			Msg("Error compressing dialog file")
 
-		return fmt.Errorf("failed to compress dialog file: %s", d.GetFileInfo().GetTranslateLocation().TargetFile)
+		return fmt.Errorf("failed to compress dialog file: %s", d.destination.Translate().Get().GetTargetFile())
 	}
 
-	if err := d.textVerifyer.VerifyCompress(d.GetFileInfo(), d.decoder.Decoder); err != nil {
+	if err := d.textVerifyer.VerifyCompress(d.source, d.destination, d.decoder.Decoder); err != nil {
 		d.log.Error().
 			Err(err).
-			Str("file", d.GetFileInfo().GetImportLocation().TargetFile).
+			Str("file", d.destination.Import().Get().GetTargetFile()).
 			Msg("Error verifying text file")
 
-		return fmt.Errorf("failed to verify text file: %s", d.GetFileInfo().GetImportLocation().TargetFile)
+		return fmt.Errorf("failed to verify text file: %s", d.destination.Import().Get().GetTargetFile())
 	}
 
 	d.dialogsClones.Clone()
 
 	d.log.Info().
-		Str("file", d.GetFileInfo().GetImportLocation().TargetFile).
+		Str("file", d.destination.Import().Get().GetTargetFile()).
 		Msg("Dialog file compressed")
 
 	return nil

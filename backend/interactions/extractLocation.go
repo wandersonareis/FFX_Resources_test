@@ -2,10 +2,10 @@ package interactions
 
 import "fmt"
 
-type IExtractLocation interface {
+/* type IExtractLocation interface {
 	ILocationBase
 	IValidate
-}
+} */
 
 type ExtractLocation struct {
 	LocationBase
@@ -27,7 +27,7 @@ func NewExtractLocation() *ExtractLocation {
 
 func (e *ExtractLocation) Validate() error {
 	e.IsExist = e.isTargetFileAvailable()
-	
+
 	if !e.IsExist {
 		return fmt.Errorf("extracted file does not exist")
 	}

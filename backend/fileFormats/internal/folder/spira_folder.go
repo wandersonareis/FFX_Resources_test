@@ -3,8 +3,10 @@ package folder
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"ffxresources/backend/notifications"
 	"path/filepath"
@@ -14,26 +16,26 @@ import (
 
 type SpiraFolder struct {
 	*base.FormatsBase
-	fileProcessor func(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor
+	fileProcessor func(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor
 
 	log zerolog.Logger
 }
 
-func NewSpiraFolder(dataInfo interactions.IGameDataInfo, fileProcessor func(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor) interactions.IFileProcessor {
+func NewSpiraFolder(source interfaces.ISource, destination locations.IDestination, fileProcessor func(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor) interfaces.IFileProcessor {
 	gameFilesPath := interactions.NewInteraction().GameLocation.GetTargetDirectory()
 
-	extractLocation := dataInfo.GetExtractLocation()
-	translateLocation := dataInfo.GetTranslateLocation()
+	extractLocation := destination.Extract().Get()
+	translateLocation := destination.Translate().Get()
 
-	relative := common.MakeRelativePath(dataInfo.GetGameData().FullFilePath, gameFilesPath)
+	relative := common.MakeRelativePath(source.Get().Path, gameFilesPath)
 
-	dataInfo.GetGameData().RelativeGameDataPath = relative
+	source.Get().RelativePath = relative
 
-	dataInfo.GetExtractLocation().TargetPath = filepath.Join(extractLocation.TargetDirectory, relative)
-	dataInfo.GetTranslateLocation().TargetPath = filepath.Join(translateLocation.TargetDirectory, relative)
+	destination.Extract().Get().SetTargetPath(filepath.Join(extractLocation.GetTargetDirectory(), relative))
+	destination.Translate().Get().SetTargetPath(filepath.Join(translateLocation.GetTargetDirectory(), relative))
 
 	return &SpiraFolder{
-		FormatsBase:   base.NewFormatsBase(dataInfo),
+		FormatsBase:   base.NewFormatsBaseDev(source, destination),
 		fileProcessor: fileProcessor,
 
 		log: logger.Get().With().Str("module", "spira_folder").Logger(),
@@ -41,28 +43,28 @@ func NewSpiraFolder(dataInfo interactions.IGameDataInfo, fileProcessor func(data
 }
 
 func (sf SpiraFolder) Extract() error {
+	errChan := make(chan error)
+	go notifications.ProcessError(errChan, sf.log)
+	go notifications.ProcessError(errChan, sf.log)
+	defer close(errChan)
+
 	fileProcessors := sf.processFiles()
 
 	progress := common.NewProgress(sf.Ctx)
 	progress.SetMax(fileProcessors.GetLength())
 	progress.Start()
 
-	errChan := make(chan error, fileProcessors.GetLength())
-	defer close(errChan)
-
-	go notifications.ProcessError(errChan, sf.log)
-
-	fileProcessors.ForEach(func(extractor interactions.IFileProcessor) {
+	fileProcessors.ForEach(func(extractor interfaces.IFileProcessor) {
 		err := extractor.Extract()
 		errChan <- err
 
-		progress.Step()
+		progress.StepFile(extractor.Source().Get().Name)
 	})
 
 	progress.Stop()
 
 	sf.Log.Info().
-		Str("folder", sf.GetGameData().FullFilePath).
+		Str("folder", sf.Source().Get().Path).
 		Msg("Spira folder extracted")
 
 	return nil
@@ -80,7 +82,7 @@ func (sf SpiraFolder) Compress() error {
 
 	go notifications.ProcessError(errChan, sf.log)
 
-	fileProcessors.ForEach(func(compressor interactions.IFileProcessor) {
+	fileProcessors.ForEach(func(compressor interfaces.IFileProcessor) {
 		err := compressor.Compress()
 		errChan <- err
 
@@ -90,34 +92,41 @@ func (sf SpiraFolder) Compress() error {
 	progress.Stop()
 
 	sf.log.Info().
-		Str("folder", sf.GetGameData().FullFilePath).
+		Str("folder", sf.Source().Get().Path).
 		Msg("Spira folder compressed")
 
 	return nil
 }
 
-func (sf SpiraFolder) processFiles() *components.List[interactions.IFileProcessor] {
-	//results, err := common.ListFilesInDirectoryDev(sf.GetFileInfo().GetGameData().FullFilePath)
+func (sf SpiraFolder) processFiles() *components.List[interfaces.IFileProcessor] {
 	filesList := components.NewEmptyList[string]()
-	err := components.ListFiles(filesList, sf.GetFileInfo().GetGameData().FullFilePath)
+	err := components.ListFiles(filesList, sf.Source().Get().Path)
 	if err != nil {
 		sf.log.Error().
 			Err(err).
-			Str("directory", sf.GetFileInfo().GetGameData().FullFilePath).
+			Str("directory", sf.Source().Get().Path).
 			Msg("error listing files in directory")
 
-		return components.NewEmptyList[interactions.IFileProcessor]()
+		return components.NewEmptyList[interfaces.IFileProcessor]()
 	}
 
-	filesProcessorList := components.NewList[interactions.IFileProcessor](filesList.GetLength())
+	filesProcessorList := components.NewList[interfaces.IFileProcessor](filesList.GetLength())
 
 	generateFilesProcessorListFunc := func(_ int, item string) {
-		dataInfo := interactions.NewGameDataInfo(item)
+		s, err := locations.NewSource(item, interactions.Get().GamePart.GetGamePart())
+		if err != nil {
+			sf.log.Error().
+				Err(err).
+				Str("file", item).
+				Msg("error creating source")
+		}
 
-		fileProcessor := sf.fileProcessor(dataInfo)
+		t := locations.NewDestination()
+
+		fileProcessor := sf.fileProcessor(s, t)
 		if fileProcessor == nil {
 			sf.Log.Error().
-				Str("file", dataInfo.GetGameData().Name).
+				Str("file", s.Get().Name).
 				Msg("invalid file type")
 
 			return

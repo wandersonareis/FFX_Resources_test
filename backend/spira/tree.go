@@ -1,50 +1,57 @@
 package spira
 
 import (
-	"ffxresources/backend/core"
+	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/locations"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
 	"path/filepath"
 )
 
-func BuildFileTree(result *[]interactions.TreeNode, source *core.SpiraFileInfo) error {
-	if !source.IsDir {
+func BuildFileTree(result components.IList[TreeNode], source interfaces.ISource) error {
+	if !source.Get().IsDir {
 		return nil
 	}
 
-	entries, err := source.ReadDir()
+	entries, err := source.Get().ReadDir()
 	if err != nil {
 		return err
 	}
 
+	gamePart := interactions.NewInteraction().GamePart.GetGamePart()
+
 	for _, entry := range entries {
-		entryPath := filepath.Join(source.Path, entry.Name())
+		entryPath := filepath.Join(source.Get().Path, entry.Name())
 		key := entry.Name()
 
-		entrySource, err := core.NewSpiraFileInfo(entryPath)
+		entrySource, err := locations.NewSource(entryPath, gamePart)
 		if err != nil {
 			return err
 		}
 
 		childrenCapacity := len(entries)
 
-		var children []interactions.TreeNode
+		var children = components.NewEmptyList[TreeNode]()
 		if childrenCapacity > 0 {
-			children = make([]interactions.TreeNode, 0, childrenCapacity)
+			children = components.NewList[TreeNode](childrenCapacity)
 		}
 
-		if entrySource.IsDir {
-			err = BuildFileTree(&children, entrySource)
+		if entrySource.Get().IsDir {
+			err = BuildFileTree(children, entrySource)
 			if err != nil {
 				return err
 			}
 		}
 
-		node, err := CreateTreeNode(key, entrySource, children)
+		destination := locations.NewDestination()
+
+		node, err := CreateTreeNode(key, entrySource, destination, children)
 		if err != nil {
 			return err
 		}
 
-		*result = append(*result, node)
+		result.Add(node)
+		//*result = append(*result, node)
 	}
 
 	return nil

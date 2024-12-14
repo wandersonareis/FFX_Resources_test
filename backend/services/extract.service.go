@@ -1,7 +1,10 @@
 package services
 
 import (
+	"ffxresources/backend/common"
+	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats"
+	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
 	"ffxresources/backend/notifications"
@@ -14,26 +17,35 @@ func NewExtractService() *ExtractService {
 	return &ExtractService{}
 }
 
-func (e *ExtractService) Extract(dataInfo *interactions.GameDataInfo) {
+func (e *ExtractService) Extract(file string) {
 	defer func() {
 		if r := recover(); r != nil {
 			l := logger.Get()
 			l.Error().
 				Interface("recover", r).
-				Str("file", dataInfo.GameData.Name).
+				Str("file", common.GetFileName(file)).
 				Msg("Panic occurred during extraction")
 
 			notifications.NotifyError(fmt.Errorf("panic occurred: %v", r))
 		}
 	}()
 
-	fileProcessor := fileFormats.NewFileProcessor(dataInfo)
+	source, err := locations.NewSource(file, interactions.NewInteraction().GamePart.GetGamePart())
+	if err != nil {
+		notifications.NotifyError(err)
+		return
+	}
+
+	destination := locations.NewDestination()
+	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
+
+	fileProcessor := fileFormats.NewFileProcessor(source, destination)
 	if fileProcessor == nil {
 		l := logger.Get()
 		l.Error().
-			Err(fmt.Errorf("invalid file type: %s", dataInfo.GameData.Name)).
+			Err(fmt.Errorf("invalid file type: %s", source.Get().Name)).
 			Msg("Error extracting file")
-			
+
 		return
 	}
 

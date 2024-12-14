@@ -1,6 +1,7 @@
 package verify
 
 import (
+	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lib"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
@@ -30,7 +31,7 @@ func newPartsVerifier() IPartsVerifier {
 func (pv *partsVerifier) Verify(path string, options interactions.LockitFileOptions) error {
 	partsList := components.NewEmptyList[parts.LockitFileParts]()
 
-	if err := components.GenerateGameFileParts(partsList, path, lib.LOCKIT_FILE_PARTS_PATTERN, parts.NewLockitFileParts); err != nil {
+	if err := components.GenerateGameFilePartsDev(partsList, path, lib.LOCKIT_FILE_PARTS_PATTERN, parts.NewLockitFileParts); err != nil {
 		return fmt.Errorf("error when finding lockit parts: %w", err)
 	}
 
@@ -65,10 +66,10 @@ func (pv *partsVerifier) createExtractTemporaryPartsList(partsList components.IL
 	tmpParts := components.NewList[parts.LockitFileParts](partsList.GetLength())
 
 	setTemporaryDirectoryForPart := func(part parts.LockitFileParts) {
-		newPartFile := filepath.Join(tmpDir, part.GetExtractLocation().TargetFileName)
+		newPartFile := filepath.Join(tmpDir, common.GetFileName(part.Destination().Extract().Get().GetTargetFile()))
 
-		part.GetExtractLocation().SetTargetFile(newPartFile)
-		part.GetExtractLocation().SetTargetPath(tmpDir)
+		part.Destination().Extract().Get().SetTargetFile(newPartFile)
+		part.Destination().Extract().Get().SetTargetPath(tmpDir)
 
 		tmpParts.Add(part)
 	}

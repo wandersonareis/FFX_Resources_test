@@ -11,7 +11,7 @@ type FFXTextTagText struct {
 
 func NewText() *FFXTextTagText {
 	return &FFXTextTagText{
-		ffxTagsBase:  ffxTagsBase{},
+		ffxTagsBase: ffxTagsBase{},
 	}
 }
 

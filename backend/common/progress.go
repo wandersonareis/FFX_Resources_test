@@ -12,15 +12,17 @@ type IProgress interface {
 	SetPercentage(percentage int)
 	SendProgress(progress Progress)
 	Step()
+	StepFile(file string)
 	Start()
 	Stop()
 }
 
 type Progress struct {
-	ctx        context.Context
-	Total      int `json:"total"`
-	Processed  int `json:"processed"`
-	Percentage int `json:"percentage"`
+	ctx         context.Context
+	Total       int    `json:"total"`
+	Processed   int    `json:"processed"`
+	Percentage  int    `json:"percentage"`
+	CurrentFile string `json:"file"`
 }
 
 func NewProgress(ctx context.Context) IProgress {
@@ -42,6 +44,14 @@ func (p *Progress) SetPercentage(percentage int) {
 }
 
 func (p *Progress) Step() {
+	p.Processed++
+	p.Percentage = (p.Processed * 100) / p.Total
+	p.sendProgress()
+}
+
+func (p *Progress) StepFile(file string) {
+	p.CurrentFile = file
+
 	p.Processed++
 	p.Percentage = (p.Processed * 100) / p.Total
 	p.sendProgress()

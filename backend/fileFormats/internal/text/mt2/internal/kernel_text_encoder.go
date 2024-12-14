@@ -2,15 +2,16 @@ package internal
 
 import (
 	"ffxresources/backend/core/encoding"
+	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/text/encoding"
-	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 
 	"github.com/rs/zerolog"
 )
 
 type IKrnlEncoder interface {
-	Encoder(fileInfo interactions.IGameDataInfo) error
+	Encoder(source interfaces.ISource, destination locations.IDestination) error
 }
 
 type krnlEncoder struct {
@@ -23,17 +24,17 @@ func NewKrnlEncoder() IKrnlEncoder {
 	}
 }
 
-func (e *krnlEncoder) Encoder(fileInfo interactions.IGameDataInfo) error {
+func (e *krnlEncoder) Encoder(source interfaces.ISource, destination locations.IDestination) error {
 	encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextKrnlEncoding()
 	defer encoding.Dispose()
 
-	translateLocation := fileInfo.GetTranslateLocation()
-	importLocation := fileInfo.GetImportLocation()
+	translateLocation := destination.Translate().Get()
+	importLocation := destination.Import().Get()
 
 	if err := translateLocation.Validate(); err != nil {
 		e.log.Error().
 			Err(err).
-			Str("path", translateLocation.TargetFile).
+			Str("path", translateLocation.GetTargetFile()).
 			Msg("Error validating translate file")
 
 		return err
@@ -42,17 +43,17 @@ func (e *krnlEncoder) Encoder(fileInfo interactions.IGameDataInfo) error {
 	if err := importLocation.ProvideTargetPath(); err != nil {
 		e.log.Error().
 			Err(err).
-			Str("path", importLocation.TargetPath).
+			Str("path", importLocation.GetTargetPath()).
 			Msg("Error providing import path")
 
 		return err
 	}
 
-	sourceFile := fileInfo.GetGameData().FullFilePath
+	sourceFile := source.Get().Path
 
 	encoder := textsEncoding.NewEncoder()
 
-	if err := encoder.KnrlEncoder(sourceFile, translateLocation.TargetFile, importLocation.TargetFile, encoding); err != nil {
+	if err := encoder.KnrlEncoder(sourceFile, translateLocation.GetTargetFile(), importLocation.GetTargetFile(), encoding); err != nil {
 		e.log.Error().
 			Err(err).
 			Str("file", sourceFile).

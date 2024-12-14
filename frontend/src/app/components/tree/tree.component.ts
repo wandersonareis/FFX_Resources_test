@@ -1,6 +1,6 @@
-import { ChangeDetectionStrategy, Component, effect, inject, OnInit, signal } from '@angular/core';
+import {ChangeDetectionStrategy, Component, effect, inject, OnInit, signal, WritableSignal} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { TreeNode } from 'primeng/api';
+import {MenuItem, TreeNode} from 'primeng/api';
 import { TreeModule } from 'primeng/tree';
 import { ContextMenuModule } from 'primeng/contextmenu';
 import { ToastModule } from 'primeng/toast';
@@ -14,6 +14,7 @@ import { findAndModifyNode } from '../../../utils/expandingIconChange';
 import { EditorModalComponent } from '../editor-modal/editor-modal.component';
 import { progress, showProgress } from '../progress-modal/progress-modal.signal';
 import { ProgressModalComponent } from '../progress-modal/progress-modal.component';
+import {spira} from "../../../../wailsjs/go/models";
 
 const imports = [
     CommonModule,
@@ -37,14 +38,14 @@ const imports = [
 export class FfxTreeComponent implements OnInit {
     private readonly _ffxContextMenuService: FfxContextMenuService = inject(FfxContextMenuService);
 
-    files = signal<TreeNode[]>([]);
-    value = signal<number>(0);
+    files: WritableSignal<TreeNode[]> = signal<TreeNode[]>([]);
+    value: WritableSignal<number> = signal<number>(0);
 
-    file = selectedFile
-    items = this._ffxContextMenuService.items();
+    file: WritableSignal<TreeNode | undefined> = selectedFile
+    items: MenuItem[] = this._ffxContextMenuService.items();
 
     async buildTree() {
-        const treeNodes = await BuildTree();
+        const treeNodes: Array<spira.TreeNode> = await BuildTree();
         this.files.set(treeNodes)
     }
 
@@ -52,9 +53,10 @@ export class FfxTreeComponent implements OnInit {
         await this.buildTree();
 
         EventsOn("Refresh_Tree", async () => await this.buildTree())
-        EventsOn("Progress", data => {
+        EventsOn("Progress", (data: any) => {
             progress.set(data)
             this.value.set(data.percentage)
+          console.log("Progress event", data);
         })
         EventsOn("ShowProgress", data => {
             showProgress.set(data)

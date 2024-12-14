@@ -5,7 +5,7 @@ type IProcessCodePage interface {
 	getMap() map[byte]string
 }
 
-type ffxTagsBase struct {}
+type ffxTagsBase struct{}
 
 func (t *ffxTagsBase) processCodePage(processCode IProcessCodePage) []string {
 	codePage := make([]string, 0, len(processCode.getMap()))

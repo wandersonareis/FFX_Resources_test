@@ -80,8 +80,8 @@ func (l *List[T]) ParallelForEach(f func(index int, item T)) {
 		wg.Add(1)
 		go func(i int, it T) {
 			defer wg.Done()
-			f(i,it)
-		}(i,v)
+			f(i, it)
+		}(i, v)
 	}
 
 	wg.Wait()

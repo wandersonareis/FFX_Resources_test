@@ -1,6 +1,7 @@
 package verify
 
 import (
+	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/lib"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
@@ -23,7 +24,7 @@ type partsVerifier struct {
 	PartsComparer IPartComparer
 	fileSplitter  splitter.IDcpFileSpliter
 
-	log    zerolog.Logger
+	log zerolog.Logger
 }
 
 func newPartsVerifier() IPartsVerifier {
@@ -31,7 +32,7 @@ func newPartsVerifier() IPartsVerifier {
 		PartsComparer: newPartComparer(),
 		fileSplitter:  new(splitter.DcpFileSpliter),
 
-		log:    logger.Get().With().Str("module", "dcp_parts_verify").Logger(),
+		log: logger.Get().With().Str("module", "dcp_parts_verify").Logger(),
 	}
 }
 
@@ -71,7 +72,7 @@ func (pv *partsVerifier) Verify(path string, options interactions.DcpFileOptions
 		if err := part.Validate(); err != nil {
 			pv.log.Error().
 				Err(err).
-				Str("part", part.GetGameData().FullFilePath).
+				Str("part", part.Source().Get().Path).
 				Msg("Error processing macrodic file part")
 
 			return
@@ -106,10 +107,10 @@ func (pv *partsVerifier) createExtractTemporaryPartsList(partsList components.IL
 
 	setTemporaryDirectoryForPart := func(part parts.DcpFileParts) {
 		tmpPart := &part
-		newPartFile := filepath.Join(tmpDir, part.GetExtractLocation().TargetFileName)
+		newPartFile := filepath.Join(tmpDir, common.GetFileName(part.Destination().Extract().Get().GetTargetFile()))
 
-		tmpPart.GetExtractLocation().SetTargetFile(newPartFile)
-		tmpPart.GetExtractLocation().SetTargetPath(tmpDir)
+		tmpPart.Destination().Extract().Get().SetTargetFile(newPartFile)
+		tmpPart.Destination().Extract().Get().SetTargetPath(tmpDir)
 
 		tmpPartsList.Add(*tmpPart)
 	}

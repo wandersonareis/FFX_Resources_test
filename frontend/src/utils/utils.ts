@@ -1,8 +1,8 @@
-import { interactions } from "../../wailsjs/go/models"
+import {spira} from "../../wailsjs/go/models";
 
-export function extractFileInfo(node: any): interactions.GameDataInfo | null {
+export function extractFileInfo(node: any): spira.GameDataInfo | null {
     if (node?.data) {
-        return node.data as interactions.GameDataInfo
+        return node.data as spira.GameDataInfo
     }
     return null
 }

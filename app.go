@@ -60,7 +60,7 @@ func (a *App) startup(ctx context.Context) {
 	}
 
 	interactions.NewInteraction().GamePart.SetGamePartNumber(a.appConfig.GamePart)
-		
+
 	a.initializeLocationsDirectory()
 }
 
@@ -77,14 +77,14 @@ func (a App) domReady(ctx context.Context) {
 	services.TestExtractFile(testPath, false, false)
 
 	testPath = `F:\ffxWails\FFX_Resources\build\bin\data\ffx_ps2\ffx2\master\new_uspc\menu\macrodic.dcp`
-	services.TestExtractFile(testPath, false, false)
+	services.TestExtractFile(testPath, true, false)
 
 	testPath = `F:\ffxWails\FFX_Resources\build\bin\data\ffx_ps2\ffx2\master\new_uspc\battle\btl\bika07_235\bika07_235.bin`
 	services.TestExtractFile(testPath, false, false)
-	
+
 	testPath = `build/bin/data/ffx_ps2/ffx2/master/new_uspc/event/obj_ps3/dn/dnfr0100/dnfr0100.bin`
 	services.TestExtractFile(testPath, false, false)
-	
+
 	testPath = `build\bin\data\ffx_ps2\ffx2\master\new_uspc\lastmiss\kernel\lm_accesary.bin`
 	services.TestExtractFile(testPath, false, false)
 
@@ -125,8 +125,8 @@ func (a *App) shutdown(ctx context.Context) {
 	// Perform your teardown here
 }
 
-func (a *App) ReadFileAsString(dataInfo interactions.GameDataInfo) string {
-	content, err := os.ReadFile(dataInfo.ExtractLocation.TargetFile)
+func (a *App) ReadFileAsString(file string) string {
+	content, err := os.ReadFile(file)
 	if err != nil {
 		return ""
 	}
@@ -134,8 +134,8 @@ func (a *App) ReadFileAsString(dataInfo interactions.GameDataInfo) string {
 	return string(content)
 }
 
-func (a *App) WriteTextFile(dataInfo interactions.GameDataInfo, text string) {
-	err := os.WriteFile(dataInfo.ExtractLocation.TargetFile, []byte(text), 0644)
+func (a *App) WriteTextFile(file string, text string) {
+	err := os.WriteFile(file, []byte(text), 0644)
 	if err != nil {
 		notifications.NotifyError(err)
 

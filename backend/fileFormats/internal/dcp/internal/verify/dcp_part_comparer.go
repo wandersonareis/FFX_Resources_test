@@ -39,12 +39,12 @@ type IPartComparer interface {
 }
 
 type PartComparer struct {
-	log    zerolog.Logger
+	log zerolog.Logger
 }
 
 func newPartComparer() IPartComparer {
 	return &PartComparer{
-		log:    logger.Get().With().Str("module", "dcp_parts_verify").Logger(),
+		log: logger.Get().With().Str("module", "dcp_parts_verify").Logger(),
 	}
 }
 
@@ -54,12 +54,12 @@ func (pc PartComparer) CompareGameDataBinaryParts(partsList components.IList[par
 	go notifications.ProcessError(errChan, pc.log)
 
 	compareBinaryParts := func(part parts.DcpFileParts) {
-		if err := pc.compare(part.GetGameData().FullFilePath, part.GetImportLocation().TargetFile); err != nil {
+		if err := pc.compare(part.Source().Get().Path, part.Destination().Import().Get().GetTargetFile()); err != nil {
 			pc.log.Error().
 				Err(err).
-				Str("part", part.GetImportLocation().TargetFile).
+				Str("part", part.Destination().Import().Get().GetTargetFile()).
 				Msg("Error when comparing gamedata binary parts")
-			
+
 			errChan <- err
 			return
 		}
@@ -79,10 +79,10 @@ func (pc PartComparer) CompareTranslatedTextParts(partsList components.IList[par
 	go notifications.ProcessError(errChan, pc.log)
 
 	compareTextParts := func(item parts.DcpFileParts) {
-		if err := pc.compare(item.GetTranslateLocation().TargetFile, item.GetExtractLocation().TargetFile); err != nil {
+		if err := pc.compare(item.Destination().Translate().Get().GetTargetFile(), item.Destination().Extract().Get().GetTargetFile()); err != nil {
 			pc.log.Error().
 				Err(err).
-				Str("part", item.GetImportLocation().TargetFile).
+				Str("part", item.Destination().Import().Get().GetTargetFile()).
 				Msg("Error when comparing translated text parts")
 
 			errChan <- err

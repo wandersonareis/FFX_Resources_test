@@ -1,7 +1,8 @@
 package interactions
 
-import (
+/* import (
 	"ffxresources/backend/core"
+	"ffxresources/backend/core/target"
 	"ffxresources/backend/logger"
 	"os"
 	"strings"
@@ -18,11 +19,21 @@ type IGameDataInfo interface {
 	GetImportLocation() *ImportLocation
 }
 
+type IGameDataInfoDev interface {
+	Source() core.Source
+	Destination() target.IDestination
+}
+
 type GameDataInfo struct {
 	GameData          core.Source       `json:"game_data"`
 	ExtractLocation   ExtractLocation   `json:"extract_location"`
 	TranslateLocation TranslateLocation `json:"translate_location"`
 	ImportLocation    ImportLocation    `json:"import_location"`
+}
+
+type GameDataInfoDev struct {
+	source      core.Source
+	destination target.IDestination
 }
 
 func NewGameDataInfo(path string) IGameDataInfo {
@@ -42,10 +53,35 @@ func NewGameDataInfo(path string) IGameDataInfo {
 	}
 }
 
+func NewGameDataInfoDev(path string) IGameDataInfoDev {
+	gamePart := NewInteraction().GamePart.GetGamePart()
+	source, err := core.NewSource(path, gamePart)
+	if err != nil {
+		l := logger.Get()
+		l.Error().Err(err).Str("Path", path).Msg("Error creating game data")
+		return nil
+	}
+
+	destination := target.NewDestination(source)
+
+	return &GameDataInfoDev{
+		source:      *source,
+		destination: destination,
+	}
+}
+
+func (g *GameDataInfoDev) Source() core.Source {
+	return g.source
+}
+
+func (g *GameDataInfoDev) Destination() target.IDestination {
+	return g.destination
+}
+
 func (g *GameDataInfo) InitializeLocations(formatter ITextFormatter) {
-	g.ExtractLocation.BuildTargetOutput(formatter, g)
-	g.TranslateLocation.BuildTargetOutput(formatter, g)
-	g.ImportLocation.GenerateTargetOutput(formatter, g)
+	g.ExtractLocation.BuildTargetOutput(formatter, g.GetGameData())
+	g.TranslateLocation.BuildTargetOutput(formatter, g.GetGalocations
+	g.ImportLocation.GenerateTargetOutput(formatter, g.GetGameData())
 }
 
 func (g *GameDataInfo) GetGameDataInfo() *GameDataInfo {
@@ -94,4 +130,4 @@ func (g *GameDataInfo) CreateRelativePath(target ...string) {
 	if strings.HasPrefix(g.GameData.FullFilePath, targetPath) {
 		g.GameData.RelativeGameDataPath = strings.TrimPrefix(g.GameData.FullFilePath, targetPath+string(os.PathSeparator))
 	}
-}
+} */

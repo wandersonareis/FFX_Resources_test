@@ -1,11 +1,13 @@
-import { inject, Injectable, signal } from '@angular/core';
-import { MenuItem } from 'primeng/api';
+import {inject, Injectable, signal, WritableSignal} from '@angular/core';
+import {MenuItem, TreeNode} from 'primeng/api';
 import { ReadFileAsString } from '../../wailsjs/go/main/App';
 import { extractedEditorText, selectedFile, showEditorModal } from '../app/components/signals/signals.signal';
 import { extractFileInfo } from '../utils/utils';
 import { ExtractService } from './extract.service';
 import { CompressService } from './compress.service';
-import { EventsEmit } from '../../wailsjs/runtime/runtime';
+import { EventsEmit } from '../../wailsjs/runtime';
+import {spira} from "../../wailsjs/go/models";
+import GameDataInfo = spira.GameDataInfo;
 
 @Injectable({
   providedIn: 'root'
@@ -14,9 +16,9 @@ export class FfxContextMenuService {
   private readonly _extractService: ExtractService = inject(ExtractService);
   private readonly _compressService: CompressService = inject(CompressService);
 
-  items = signal<MenuItem[]>([]);
-  file = selectedFile;
-  extractedText = extractedEditorText;
+  items: WritableSignal<MenuItem[]> = signal<MenuItem[]>([]);
+  file: WritableSignal<TreeNode | undefined> = selectedFile;
+  extractedText: WritableSignal<string> = extractedEditorText;
 
   constructor() {
     this.items.set([
@@ -26,33 +28,33 @@ export class FfxContextMenuService {
     ]);
   }
 
-  async view() {
+  async view(): Promise<void> {
     if (!this.file()) return;
 
-    const fileInfo = extractFileInfo(this.file());
+    const fileInfo: spira.GameDataInfo | null = extractFileInfo(this.file());
     if (!fileInfo) return;
 
     showEditorModal.set(true);
 
-    const textContent = await ReadFileAsString(fileInfo);
+    const textContent: string = await ReadFileAsString(fileInfo.file_path);
     this.extractedText.set(textContent.replace(/(\r\n|\n|\r)/g, '<br>'));
   }
 
 
-  async extract() {
+  async extract(): Promise<void> {
     //TODO: Review try catch
     try {
-      const data = extractFileInfo(this.file());
-      if (!data) return;
+      const fileInfo: GameDataInfo | null = extractFileInfo(this.file());
+      if (!fileInfo) return;
 
-      await this._extractService.extraction(data);
+      await this._extractService.extraction(fileInfo.file_path);
     } catch (error) {
       EventsEmit("Notify", error);
     }
   }
 
-  async compress() {
-    const data = extractFileInfo(this.file());
+  async compress(): Promise<void> {
+    const data: spira.GameDataInfo | null = extractFileInfo(this.file());
     if (!data) return;
 
     await this._compressService.compress(data);

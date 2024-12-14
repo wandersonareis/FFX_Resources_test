@@ -3,17 +3,18 @@ package joinner
 import (
 	"bytes"
 	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/file"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
-	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
 	"fmt"
 	"os"
 )
 
-func DcpFileJoiner(dataInfo interactions.IGameDataInfo, xplitedFiles components.IList[parts.DcpFileParts], targetReimportFile string) error {
-	originalDcpFile := dataInfo.GetGameData().FullFilePath
+func DcpFileJoiner(source interfaces.ISource, destination locations.IDestination, xplitedFiles components.IList[parts.DcpFileParts], targetReimportFile string) error {
+	originalDcpFile := source.Get().Path
 
-	importLocation := dataInfo.GetImportLocation()
+	importLocation := destination.Import().Get()
 
 	if err := importLocation.ProvideTargetPath(); err != nil {
 		return fmt.Errorf("error when providing target path: %w", err)

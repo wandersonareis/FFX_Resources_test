@@ -2,7 +2,8 @@ package verify
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/interactions"
+	"ffxresources/backend/core/locations"
+	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"os"
 
@@ -10,8 +11,8 @@ import (
 )
 
 type ITextsVerify interface {
-	VerifyExtract(extract *interactions.ExtractLocation) error
-	VerifyCompress(dataInfo interactions.IGameDataInfo, extractor func(dataInfo interactions.IGameDataInfo) error) error
+	VerifyExtract(extract locations.IExtractLocation) error
+	VerifyCompress(source interfaces.ISource, destination locations.IDestination, extractor func(source interfaces.ISource, destination locations.IDestination) error) error
 }
 
 type TextsVerify struct {
@@ -30,66 +31,71 @@ func NewTextsVerify() ITextsVerify {
 	}
 }
 
-func (dv *TextsVerify) VerifyExtract(extract *interactions.ExtractLocation) error {
-	if err := dv.segmentCounter.CountBinary(extract.TargetFile); err != nil {
+func (dv *TextsVerify) VerifyExtract(extract locations.IExtractLocation) error {
+	if err := dv.segmentCounter.CountBinary(extract.GetTargetFile()); err != nil {
 		dv.log.Error().
 			Err(err).
-			Str("file", extract.TargetFile).
+			Str("file", extract.GetTargetFile()).
 			Msg("Error on text file")
 
-		if err := os.Remove(extract.TargetFile); err != nil {
+		if err := os.Remove(extract.GetTargetFile()); err != nil {
 			dv.log.Error().
 				Err(err).
-				Msgf("Error removing the text file: %s", extract.TargetFile)
+				Msgf("Error removing the text file: %s", extract.GetTargetFile())
 		}
 
 		return err
 	}
 
-	if err := dv.segmentCounter.CountText(extract.TargetFile); err != nil {
+	if err := dv.segmentCounter.CountText(extract.GetTargetFile()); err != nil {
 		dv.log.Error().Err(err).Send()
 
-		if err := os.Remove(extract.TargetFile); err != nil {
-			dv.log.Error().Err(err).Msgf("Error removing the text file: %s", extract.TargetFile)
+		if err := os.Remove(extract.GetTargetFile()); err != nil {
+			dv.log.Error().Err(err).Msgf("Error removing the text file: %s", extract.GetTargetFile())
 		}
 
 		return err
 	}
 
-	dv.log.Info().Msgf("Text file verified successfully: %s", extract.TargetFile)
+	dv.log.Info().Msgf("Text file verified successfully: %s", extract.GetTargetFile())
 
 	return nil
 }
 
-func (dv *TextsVerify) VerifyCompress(dataInfo interactions.IGameDataInfo, extractor func(dataInfo interactions.IGameDataInfo) error) error {
-	if err := dataInfo.GetImportLocation().Validate(); err != nil {
-		dv.log.Error().Msgf("Reimport file not exists: %s", dataInfo.GetImportLocation().TargetFile)
+func (dv *TextsVerify) VerifyCompress(source interfaces.ISource, destination locations.IDestination, extractor func(source interfaces.ISource, destination locations.IDestination) error) error {
+	extractLocation := destination.Extract().Get()
+	translateLocation := destination.Translate().Get()
+	importLocation := destination.Import().Get()
+	if err := importLocation.Validate(); err != nil {
+		dv.log.Error().Msgf("Reimport file not exists: %s", importLocation.GetTargetFile())
 		return err
 	}
 
-	dv.createTemporaryFileInfo(dataInfo.GetGameDataInfo())
-	defer dataInfo.GetExtractLocation().DisposeTargetFile()
+	dv.createTemporaryFileInfo(source, destination)
+	defer extractLocation.DisposeTargetFile()
 
-	if err := extractor(dataInfo); err != nil {
+	if err := extractor(source, destination); err != nil {
 		dv.log.Error().Err(err).Msg("Error on reimported dialog file")
 		return err
 	}
 
-	if err := dv.filesComparer.CompareTranslatedTextParts(dataInfo.GetTranslateLocation().TargetFile, dataInfo.GetExtractLocation().TargetFile); err != nil {
+	if err := dv.filesComparer.CompareTranslatedTextParts(translateLocation.GetTargetFile(), extractLocation.GetTargetFile()); err != nil {
 		dv.log.Error().Err(err).Msg("Error os reimported text file")
 		return err
 	}
 
-	dv.log.Info().Msgf("Compressed text file verified successfully: %s", dataInfo.GetGameData().Name)
+	dv.log.Info().Msgf("Compressed text file verified successfully: %s", source.Get().Name)
 
 	return nil
 }
 
-func (dv *TextsVerify) createTemporaryFileInfo(dataInfo *interactions.GameDataInfo) {
+func (dv *TextsVerify) createTemporaryFileInfo(source interfaces.ISource, destination locations.IDestination) {
 	tmp := common.NewTempProviderDev("tmp", ".txt")
 
-	dataInfo.GetExtractLocation().TargetFile = tmp.TempFile
-	dataInfo.GetExtractLocation().TargetPath = tmp.TempFilePath
+	destination.Extract().Get().SetTargetFile(tmp.TempFile)
+	destination.Extract().Get().SetTargetPath(tmp.TempFilePath)
 
-	dataInfo.GetGameData().FullFilePath = dataInfo.GetImportLocation().TargetFile
+	s := source.Get()
+	s.Path = destination.Import().Get().GetTargetFile()
+	source.Set(s)
 }

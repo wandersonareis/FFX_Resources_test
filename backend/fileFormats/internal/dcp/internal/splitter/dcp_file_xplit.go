@@ -1,8 +1,9 @@
 package splitter
 
 import (
+	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/file"
-	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
 	"os"
@@ -11,7 +12,7 @@ import (
 )
 
 type IDcpFileSpliter interface {
-	Split(dataInfo interactions.IGameDataInfo) error
+	Split(source interfaces.ISource, destination locations.IDestination) error
 }
 
 type DcpFileSpliter struct {
@@ -24,21 +25,21 @@ func NewDcpFileSpliter() IDcpFileSpliter {
 	}
 }
 
-func (ds *DcpFileSpliter) Split(dataInfo interactions.IGameDataInfo) error {
-	targetFile := dataInfo.GetGameData().FullFilePath
+func (ds *DcpFileSpliter) Split(source interfaces.ISource, destination locations.IDestination) error {
+	targetFile := source.Get().Path
 
-	extractLocation := dataInfo.GetExtractLocation()
+	extractLocation := destination.Extract().Get()
 
 	if err := extractLocation.ProvideTargetPath(); err != nil {
 		ds.log.Error().
 			Err(err).
-			Str("path", extractLocation.TargetPath).
+			Str("path", extractLocation.GetTargetPath()).
 			Msg("error when providing the extraction directory")
 
 		return fmt.Errorf("error when creating the extraction directory")
 	}
 
-	if err := ds.dcpReader(targetFile, extractLocation.TargetPath); err != nil {
+	if err := ds.dcpReader(targetFile, extractLocation.GetTargetPath()); err != nil {
 		return err
 	}
 

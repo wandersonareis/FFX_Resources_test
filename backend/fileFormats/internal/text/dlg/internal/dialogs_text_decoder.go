@@ -2,15 +2,16 @@ package internal
 
 import (
 	"ffxresources/backend/core/encoding"
-	textsEncoding "ffxresources/backend/fileFormats/internal/text/encoding"
-	"ffxresources/backend/interactions"
+	"ffxresources/backend/core/locations"
+	"ffxresources/backend/fileFormats/internal/text/encoding"
+	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 
 	"github.com/rs/zerolog"
 )
 
 type IDlgDecoder interface {
-	Decoder(dialogsFileInfo interactions.IGameDataInfo) error
+	Decoder(source interfaces.ISource, destination locations.IDestination) error
 }
 
 type dlgDecoder struct {
@@ -23,18 +24,18 @@ func NewDlgDecoder() IDlgDecoder {
 	}
 }
 
-func (d *dlgDecoder) Decoder(dialogsFileInfo interactions.IGameDataInfo) error {
-	encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextDlgEncoding(dialogsFileInfo.GetGameData().Type)
+func (d *dlgDecoder) Decoder(source interfaces.ISource, destination locations.IDestination) error {
+	encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextDlgEncoding(source.Get().Type)
 	defer encoding.Dispose()
 
-	sourceFile := dialogsFileInfo.GetGameData().FullFilePath
+	sourceFile := source.Get().Path
 
-	extractLocation := dialogsFileInfo.GetExtractLocation()
+	extractLocation := destination.Extract().Get()
 
 	if err := extractLocation.ProvideTargetPath(); err != nil {
 		d.log.Error().
 			Err(err).
-			Str("path", extractLocation.TargetPath).
+			Str("path", extractLocation.GetTargetPath()).
 			Msg("Error providing extract path")
 
 		return err
@@ -42,7 +43,7 @@ func (d *dlgDecoder) Decoder(dialogsFileInfo interactions.IGameDataInfo) error {
 
 	decoder := textsEncoding.NewDecoder()
 
-	if err := decoder.DlgDecoder(sourceFile, extractLocation.TargetFile, encoding); err != nil {
+	if err := decoder.DlgDecoder(sourceFile, extractLocation.GetTargetFile(), encoding); err != nil {
 		d.log.Error().
 			Err(err).
 			Str("file", sourceFile).

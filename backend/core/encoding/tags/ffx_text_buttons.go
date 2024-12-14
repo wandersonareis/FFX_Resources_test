@@ -51,37 +51,37 @@ func (b *FFXTextTagButton) buttonCommand() string {
 }
 
 func (b *FFXTextTagButton) buildButtonUnknownSequence() []string {
-    fBytes := []byte{0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA}
-    
-    // Mapa que define qual unknownByte usar para cada índice
-    // -1 indica que deve usar generateButtonF ao invés de generateUnknownF
-    unknownByteMap := map[int]int{
-        0: 0,  // 0x10
-        4: 1,  // 0x08
-        5: 2,  // 0x0C
-        6: 3,  // 0x04
-        7: 2,  // 0x0C
-        9: 3,  // 0x04
-    }
+	fBytes := []byte{0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA}
 
-    unknownBytes := []byte{0x10, 0x08, 0x0C, 0x04}
-    buttons := make([]string, 0, len(fBytes))
+	// Mapa que define qual unknownByte usar para cada índice
+	// -1 indica que deve usar generateButtonF ao invés de generateUnknownF
+	unknownByteMap := map[int]int{
+		0: 0, // 0x10
+		4: 1, // 0x08
+		5: 2, // 0x0C
+		6: 3, // 0x04
+		7: 2, // 0x0C
+		9: 3, // 0x04
+	}
 
-    for i, fByte := range fBytes {
-        if unknownByte, exists := unknownByteMap[i]; exists {
-            // Usar generateUnknownF para índices específicos
-            left := fmt.Sprintf("\\x%02X\\x%02X\\c%02X", 
-                b.buttonByte, fByte, unknownBytes[unknownByte])
-            right := fmt.Sprintf("%s{x%02X%02X\\h%02X}", 
-                b.lineBreak, b.buttonByte, fByte, unknownBytes[unknownByte])
-            buttons = append(buttons, fmt.Sprintf("%s=%s", left, right))
-        } else {
-            // Usar generateButtonF para os demais casos
-            buttons = append(buttons, b.generateButtonUnknownFormat(fByte))
-        }
-    }
+	unknownBytes := []byte{0x10, 0x08, 0x0C, 0x04}
+	buttons := make([]string, 0, len(fBytes))
 
-    return buttons
+	for i, fByte := range fBytes {
+		if unknownByte, exists := unknownByteMap[i]; exists {
+			// Usar generateUnknownF para índices específicos
+			left := fmt.Sprintf("\\x%02X\\x%02X\\c%02X",
+				b.buttonByte, fByte, unknownBytes[unknownByte])
+			right := fmt.Sprintf("%s{x%02X%02X\\h%02X}",
+				b.lineBreak, b.buttonByte, fByte, unknownBytes[unknownByte])
+			buttons = append(buttons, fmt.Sprintf("%s=%s", left, right))
+		} else {
+			// Usar generateButtonF para os demais casos
+			buttons = append(buttons, b.generateButtonUnknownFormat(fByte))
+		}
+	}
+
+	return buttons
 }
 
 func (b *FFXTextTagButton) generateButtonUnknownFormat(fByte byte) string {

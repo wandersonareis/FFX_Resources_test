@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-type LockitEncoder struct {}
+type LockitEncoder struct{}
 
 func NewEncoder() *LockitEncoder {
 	return &LockitEncoder{}

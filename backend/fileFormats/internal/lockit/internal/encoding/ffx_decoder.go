@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-type LockitDecoder struct {}
+type LockitDecoder struct{}
 
 func NewDecoder() *LockitDecoder {
 	return &LockitDecoder{}
@@ -46,7 +46,7 @@ func (ld *LockitDecoder) LockitDecoderFfx(sourceFile, targetFile string, encodin
 func (d *LockitDecoder) decoder(executable, sourceFile, targetFile string, encoding string) error {
 	if !common.IsFileExists(sourceFile) {
 		return fmt.Errorf("source file does not exist")
-	}	
+	}
 
 	if !common.IsFileExists(encoding) {
 		return fmt.Errorf("encoding file does not exist")

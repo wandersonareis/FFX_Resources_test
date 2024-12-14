@@ -1,10 +1,11 @@
 package mt2
 
 import (
-	verify "ffxresources/backend/fileFormats/internal/text/lib/dlg_krnl_verify"
+	"ffxresources/backend/core/locations"
+	"ffxresources/backend/fileFormats/internal/text/lib/dlg_krnl_verify"
 	"ffxresources/backend/fileFormats/internal/text/mt2/internal"
 	"ffxresources/backend/formatters"
-	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
 
@@ -15,72 +16,75 @@ type kernelFile struct {
 	textVerifyer verify.ITextsVerify
 	decoder      internal.IKrnlDecoder
 	encoder      internal.IKrnlEncoder
-	dataInfo     interactions.IGameDataInfo
+	source       interfaces.ISource
+	destination  locations.IDestination
 
 	log zerolog.Logger
 }
 
-func NewKernel(dataInfo interactions.IGameDataInfo) interactions.IFileProcessor {
-	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
+func NewKernel(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
+	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
 
 	return &kernelFile{
 		textVerifyer: verify.NewTextsVerify(),
 		decoder:      internal.NewKrnlDecoder(),
 		encoder:      internal.NewKrnlEncoder(),
-		dataInfo:     dataInfo,
+		source:       source,
+		destination:  destination,
 		log:          logger.Get().With().Str("module", "kernel_file").Logger(),
 	}
 }
 
-func (k kernelFile) GetFileInfo() interactions.IGameDataInfo {
-	return k.dataInfo
+func (k kernelFile) Source() interfaces.ISource {
+	return k.source
 }
 
 func (k kernelFile) Extract() error {
-	if err := k.decoder.Decoder(k.GetFileInfo()); err != nil {
+	if err := k.decoder.Decoder(k.source, k.destination); err != nil {
 		k.log.Error().
 			Err(err).
-			Str("file", k.GetFileInfo().GetGameData().FullFilePath).
+			Str("file", k.source.Get().Path).
 			Msg("Error on decoding kernel file")
 
-		return fmt.Errorf("failed to decode kernel file: %s", k.GetFileInfo().GetGameData().Name)
+		return fmt.Errorf("failed to decode kernel file: %s", k.source.Get().Name)
 	}
 
-	if err := k.textVerifyer.VerifyExtract(k.dataInfo.GetExtractLocation()); err != nil {
+	if err := k.textVerifyer.VerifyExtract(k.destination.Extract().Get()); err != nil {
 		k.log.Error().
 			Err(err).
-			Str("file", k.GetFileInfo().GetExtractLocation().TargetFile).
+			Str("file", k.destination.Extract().Get().GetTargetFile()).
 			Msg("Error verifying kernel file")
 
-		return fmt.Errorf("failed to verify kernel file: %s", k.GetFileInfo().GetGameData().Name)
+		return fmt.Errorf("failed to verify kernel file: %s", k.source.Get().Name)
 	}
 
-	k.log.Info().Msgf("Kernel file decoded: %s", k.dataInfo.GetGameData().Name)
+	k.log.Info().Msgf("Kernel file decoded: %s", k.source.Get().Name)
 
 	return nil
 }
 
 func (k kernelFile) Compress() error {
-	if err := k.encoder.Encoder(k.GetFileInfo()); err != nil {
+	if err := k.encoder.Encoder(k.source, k.destination); err != nil {
 		k.log.Error().
 			Err(err).
-			Str("file", k.GetFileInfo().GetTranslateLocation().TargetFile).
+			Str("file", k.destination.Translate().Get().GetTargetFile()).
 			Msg("Error compressing kernel file")
 
-		return fmt.Errorf("failed to compress kernel file: %s", k.GetFileInfo().GetGameData().Name)
+		return fmt.Errorf("failed to compress kernel file: %s", k.source.Get().Name)
 	}
 
-	if err := k.textVerifyer.VerifyCompress(k.GetFileInfo(), k.decoder.Decoder); err != nil {
+	importTargetFile := k.destination.Import().Get().GetTargetFile()
+	if err := k.textVerifyer.VerifyCompress(k.source, k.destination, k.decoder.Decoder); err != nil {
 		k.log.Error().
 			Err(err).
-			Str("file", k.GetFileInfo().GetImportLocation().TargetFile).
+			Str("file", importTargetFile).
 			Msg("Error verifying compressed dialog file")
 
-		return fmt.Errorf("failed to verify compressed kernel file: %s", k.GetFileInfo().GetImportLocation().TargetFile)
+		return fmt.Errorf("failed to verify compressed kernel file: %s", importTargetFile)
 	}
 
 	k.log.Info().
-		Str("file", k.GetFileInfo().GetImportLocation().TargetFile).
+		Str("file", importTargetFile).
 		Msg("Kernel file compressed")
 
 	return nil

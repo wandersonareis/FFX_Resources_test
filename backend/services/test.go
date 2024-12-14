@@ -1,8 +1,8 @@
 package services
 
 import (
-	"ffxresources/backend/common"
-	"ffxresources/backend/core"
+	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/spira"
@@ -10,41 +10,87 @@ import (
 )
 
 func TestExtractDir(path string, testExtract, testCompress bool) {
-	source, err := core.NewSource(path)
+	source, err := locations.NewSource(path, interactions.NewInteraction().GamePart.GetGamePart())
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	tree := make([]interactions.TreeNode, 0, 1)
+	tree := components.NewEmptyList[spira.TreeNode]()
 
-	err = spira.BuildFileTree(&tree, source)
+	err = spira.BuildFileTree(tree, source)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	worker := common.NewWorker[interactions.TreeNode]()
-	worker.ParallelForEach(&tree, func(_ int, n interactions.TreeNode) {
-		dataInfo := &n.Data
+	destination := locations.NewDestination()
 
+	testRun := func(_ int, n spira.TreeNode) {
 		if testExtract {
 			extractService := NewExtractService()
-			extractService.Extract(dataInfo)
+			extractService.Extract(source.Get().Path)
+
+			/*fileProcessor := fileFormats.NewFileExtractor(source, destination)
+			if fileProcessor != nil {
+				if err := fileProcessor.Extract(); err != nil {
+					fmt.Println(err)
+				}
+			}*/
 		}
 
 		if testCompress {
 			compressService := NewCompressService()
-			compressService.Compress(dataInfo)
+			compressService.Compress(source, destination)
 		}
-	})
+	}
+
+	tree.ParallelForEach(testRun)
 }
 
 func TestExtractFile(path string, testExtract, testCompress bool) {
-	dataInfo := interactions.NewGameDataInfo(path)
+	source, err := locations.NewSource(path, interactions.NewInteraction().GamePart.GetGamePart())
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	destination := locations.NewDestination()
 
 	if testExtract {
-		fileProcessor := fileFormats.NewFileExtractor(dataInfo)
+		fileProcessor := fileFormats.NewFileExtractor(source, destination)
+		if fileProcessor == nil {
+			fmt.Println("invalid file type")
+			return
+		}
+		fileProcessor.Extract()
+	}
+
+	if testCompress {
+		fileProcessor := fileFormats.NewFileCompressor(source, destination)
+		if fileProcessor == nil {
+			fmt.Println("invalid file type")
+			return
+		}
+
+		fileProcessor.Compress()
+	}
+}
+
+/* func TestExtractFileDev(path string, testExtract, testCompress bool) {
+	dataInfo := interactions.NewGameDataInfo(path)
+	gamePart := interactions.NewInteraction().GamePart.GetGamePart()
+	source, err := core.NewSource(path, gamePart)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	destination := target.NewDestination(source)
+
+
+	if testExtract {
+		fileProcessor := fileFormats.NewFileProcessorDev(dataInfo, *source, destination)
 		if fileProcessor == nil {
 			fmt.Println("invalid file type")
 			return
@@ -61,4 +107,4 @@ func TestExtractFile(path string, testExtract, testCompress bool) {
 
 		fileProcessor.Compress()
 	}
-}
+} */

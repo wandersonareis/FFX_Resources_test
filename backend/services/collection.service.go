@@ -1,8 +1,11 @@
 package services
 
 import (
-	"ffxresources/backend/core"
+	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/locations"
+	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/logger"
 	"ffxresources/backend/notifications"
 	"ffxresources/backend/spira"
 	"fmt"
@@ -14,7 +17,11 @@ func NewCollectionService() *CollectionService {
 	return &CollectionService{}
 }
 
-func (c *CollectionService) BuildTree() []interactions.TreeNode {
+func (c *CollectionService) BuildTree() []spira.TreeNode {
+	errChan := make(chan error)
+	go notifications.PanicRecover(errChan, logger.Get().With().Str("service", "collection").Logger())
+	defer close(errChan)
+
 	path := interactions.NewInteraction().GameLocation.GetTargetDirectory()
 	if path == "" {
 		return nil
@@ -27,18 +34,21 @@ func (c *CollectionService) BuildTree() []interactions.TreeNode {
 		return nil
 	}
 
-	source, err := core.NewSpiraFileInfo(path)
+	source, err := locations.NewSource(path, interactions.NewInteraction().GamePart.GetGamePart())
 	if err != nil {
 		notifications.NotifyError(err)
 		return nil
 	}
 
-	tree := make([]interactions.TreeNode, 0, 1)
+	destination := locations.NewDestination()
+	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
 
-	if err := spira.BuildFileTree(&tree, source); err != nil {
+	tree := components.NewEmptyList[spira.TreeNode]()
+
+	if err := spira.BuildFileTree(tree, source); err != nil {
 		notifications.NotifyError(err)
 		return nil
 	}
 
-	return tree
+	return tree.GetItems()
 }

@@ -2,10 +2,12 @@ package verify
 
 import (
 	"bytes"
-	"ffxresources/backend/common"
+	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/splitter"
+	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
 	"fmt"
 	"os"
 )
@@ -38,9 +40,9 @@ func (fv *FileValidator) Validate(filePath string, options interactions.LockitFi
 		return fmt.Errorf("error when ensuring line breaks count: %w", err)
 	}
 
-	tmpInfo, tmpDir := fv.createTemporaryFileInfo(filePath)
+	source, destination, tmpDir := fv.createTemporaryFileInfo(filePath)
 
-	if err := fv.fileSplitter.FileSplitter(tmpInfo, options); err != nil {
+	if err := fv.fileSplitter.FileSplitter(source, destination.Extract().Get(), options); err != nil {
 		return fmt.Errorf("error when splitting file %s | %w", filePath, err)
 	}
 
@@ -59,13 +61,16 @@ func (fv *FileValidator) ensureLineBreaksCount(targetCount, expectedCount int) e
 	return nil
 }
 
-func (fv *FileValidator) createTemporaryFileInfo(filePath string) (interactions.IGameDataInfo, string) {
-	tmpProvider := common.NewTempProviderDev("", "")
+func (fv *FileValidator) createTemporaryFileInfo(filePath string) (interfaces.ISource, locations.IDestination, string) {
+	//tmpProvider := common.NewTempProviderDev("", "")
 
-	tmpInfo := interactions.NewGameDataInfo(filePath)
-	tmpInfo.InitializeLocations(formatters.NewTxtFormatter())
+	//tmpInfo := interactions.NewGameDataInfo(filePath)
 
-	tmpInfo.GetExtractLocation().TargetPath = tmpProvider.TempFilePath
+	source, destination, tmpDir := util.CreateTemporaryFileInfo(filePath, formatters.NewTxtFormatterDev())
 
-	return tmpInfo, tmpProvider.TempFilePath
+	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
+
+	destination.Extract().Get().SetTargetPath(tmpDir)
+
+	return source, destination, tmpDir
 }

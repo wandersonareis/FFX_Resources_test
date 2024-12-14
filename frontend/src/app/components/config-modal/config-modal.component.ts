@@ -1,11 +1,12 @@
-import { Component, OnInit, Signal, signal } from '@angular/core';
+import {Component, OnInit, Signal, signal, WritableSignal} from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectDirectory } from '../../../../wailsjs/go/main/App';
-import { EventsEmit, EventsOn } from '../../../../wailsjs/runtime/runtime';
+import { EventsEmit, EventsOn } from '../../../../wailsjs/runtime';
 import { gameDirectory } from '../signals/signals.signal';
+import {FloatLabel} from "primeng/floatlabel";
 
 @Component({
   selector: 'app-config-modal',
@@ -15,15 +16,16 @@ import { gameDirectory } from '../signals/signals.signal';
     DialogModule,
     InputTextModule,
     ReactiveFormsModule,
+    FloatLabel,
   ],
   templateUrl: './config-modal.component.html',
 })
 export class ConfigModalComponent implements OnInit {
-  visible = signal<boolean>(false);
+  visible: WritableSignal<boolean> = signal<boolean>(false);
 
-  extractedDirectory = signal<string>("");
-  translatedDirectory = signal<string>("");
-  importedDirectory = signal<string>("");
+  extractedDirectory: WritableSignal<string> = signal<string>("");
+  translatedDirectory: WritableSignal<string> = signal<string>("");
+  importedDirectory: WritableSignal<string> = signal<string>("");
 
   inputs: { eventName: string, label: string, dialogTitle: string, value: Signal<string> }[] = [];
 

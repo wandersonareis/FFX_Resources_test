@@ -2,11 +2,12 @@ package parts
 
 import (
 	"ffxresources/backend/core/encoding"
+	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/encoding"
 	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/formatters"
-	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
 	"ffxresources/backend/notifications"
 	"fmt"
 	"path/filepath"
@@ -23,15 +24,15 @@ const (
 	LocEnc
 )
 
-func NewLockitFileParts(dataInfo interactions.IGameDataInfo) *LockitFileParts {
-	gData := dataInfo.GetGameData()
-	gData.RelativeGameDataPath = filepath.Join(util.LOCKIT_TARGET_DIR_NAME, dataInfo.GetGameData().NamePrefix)
-	dataInfo.SetGameData(gData)
+func NewLockitFileParts(source interfaces.ISource, destination locations.IDestination) *LockitFileParts {
+	gData := source.Get()
+	gData.RelativePath = filepath.Join(util.LOCKIT_TARGET_DIR_NAME, gData.NamePrefix)
+	source.Set(gData)
 
-	dataInfo.InitializeLocations(formatters.NewTxtFormatter())
+	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
 
 	return &LockitFileParts{
-		FormatsBase: base.NewFormatsBase(dataInfo),
+		FormatsBase: base.NewFormatsBaseDev(source, destination),
 	}
 }
 
@@ -44,9 +45,9 @@ func (l *LockitFileParts) Extract(dec LockitPartEncodeType, encoding ffxencoding
 
 	switch dec {
 	case FfxEnc:
-		errChan <- decoder.LockitDecoderFfx(l.GetGameData().FullFilePath, l.GetExtractLocation().TargetFile, encoding)
+		errChan <- decoder.LockitDecoderFfx(l.Source().Get().Path, l.Destination().Extract().Get().GetTargetFile(), encoding)
 	case LocEnc:
-		errChan <- decoder.LockitDecoderLoc(l.GetGameData().FullFilePath, l.GetExtractLocation().TargetFile, encoding)
+		errChan <- decoder.LockitDecoderLoc(l.Source().Get().Path, l.Destination().Extract().Get().GetTargetFile(), encoding)
 	default:
 		errChan <- fmt.Errorf("invalid encode type: %d", dec)
 	}
@@ -62,13 +63,13 @@ func (l *LockitFileParts) Compress(enc LockitPartEncodeType, encoding ffxencodin
 
 	encoder := lockitencoding.NewEncoder()
 
-	l.GetImportLocation().ProvideTargetPath()
+	l.Destination().Import().Get().ProvideTargetPath()
 
 	switch enc {
 	case FfxEnc:
-		errChan <- encoder.LockitEncoderFfx(l.GetTranslateLocation().TargetFile, l.GetImportLocation().TargetFile, encoding)
+		errChan <- encoder.LockitEncoderFfx(l.Destination().Translate().Get().GetTargetFile(), l.Destination().Import().Get().GetTargetFile(), encoding)
 	case LocEnc:
-		errChan <- encoder.LockitEncoderLoc(l.GetTranslateLocation().TargetFile, l.GetImportLocation().TargetFile, encoding)
+		errChan <- encoder.LockitEncoderLoc(l.Destination().Translate().Get().GetTargetFile(), l.Destination().Import().Get().GetTargetFile(), encoding)
 	default:
 		errChan <- fmt.Errorf("invalid encode type: %d", enc)
 	}

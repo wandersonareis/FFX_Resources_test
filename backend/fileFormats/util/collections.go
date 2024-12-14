@@ -3,10 +3,15 @@ package util
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/locations"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
+	"ffxresources/backend/logger"
+	"ffxresources/backend/notifications"
+	"fmt"
 )
 
-func FindFileParts[T any](partsList components.IList[T], targetPath, pattern string, partsInstance func(info interactions.IGameDataInfo) *T) error {
+func FindFileParts[T any](partsList components.IList[T], targetPath, pattern string, partsInstance func(source interfaces.ISource, destination locations.IDestination) *T) error {
 	fileParts := components.NewList[string](partsList.GetLength())
 
 	common.EnsurePathExists(targetPath)
@@ -15,13 +20,24 @@ func FindFileParts[T any](partsList components.IList[T], targetPath, pattern str
 		return err
 	}
 
+	errChan := make(chan error, fileParts.GetLength())
+
+	go notifications.ProcessError(errChan, logger.Get().With().Str("module", "findFilePartss").Logger())
+
 	generatePartInstanceFunc := func(item string) {
-		info := interactions.NewGameDataInfo(item)
-		if info.GetGameData().Size == 0 {
+		source, err := locations.NewSource(item, interactions.Get().GamePart.GetGamePart())
+		if err != nil {
+			errChan <- fmt.Errorf("error creating source: %w", err)
 			return
 		}
 
-		part := partsInstance(info)
+		destination := locations.NewDestination()
+
+		if source.Get().Size == 0 {
+			return
+		}
+
+		part := partsInstance(source, destination)
 		if part == nil {
 			return
 		}

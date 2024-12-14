@@ -1,39 +1,4 @@
-export namespace core {
-	
-	export class GameFiles {
-	    name: string;
-	    name_prefix: string;
-	    size: number;
-	    type: number;
-	    extension: string;
-	    parent: string;
-	    is_dir: boolean;
-	    full_path: string;
-	    relative_path: string;
-	    cloned_items: string[];
-	
-	    static createFrom(source: any = {}) {
-	        return new GameFiles(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.name_prefix = source["name_prefix"];
-	        this.size = source["size"];
-	        this.type = source["type"];
-	        this.extension = source["extension"];
-	        this.parent = source["parent"];
-	        this.is_dir = source["is_dir"];
-	        this.full_path = source["full_path"];
-	        this.relative_path = source["relative_path"];
-	        this.cloned_items = source["cloned_items"];
-	    }
-	}
-
-}
-
-export namespace interactions {
+export namespace locations {
 	
 	export class ExtractLocation {
 	    IsExist: boolean;
@@ -101,11 +66,16 @@ export namespace interactions {
 	        this.TargetDirectoryName = source["TargetDirectoryName"];
 	    }
 	}
+
+}
+
+export namespace spira {
+	
 	export class GameDataInfo {
-	    game_data: core.GameFiles;
-	    extract_location: ExtractLocation;
-	    translate_location: TranslateLocation;
-	    import_location: ImportLocation;
+	    file_path: string;
+	    extract_location: locations.ExtractLocation;
+	    translate_location: locations.TranslateLocation;
+	    import_location: locations.ImportLocation;
 	
 	    static createFrom(source: any = {}) {
 	        return new GameDataInfo(source);
@@ -113,10 +83,10 @@ export namespace interactions {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.game_data = this.convertValues(source["game_data"], core.GameFiles);
-	        this.extract_location = this.convertValues(source["extract_location"], ExtractLocation);
-	        this.translate_location = this.convertValues(source["translate_location"], TranslateLocation);
-	        this.import_location = this.convertValues(source["import_location"], ImportLocation);
+	        this.file_path = source["file_path"];
+	        this.extract_location = this.convertValues(source["extract_location"], locations.ExtractLocation);
+	        this.translate_location = this.convertValues(source["translate_location"], locations.TranslateLocation);
+	        this.import_location = this.convertValues(source["import_location"], locations.ImportLocation);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -137,8 +107,6 @@ export namespace interactions {
 		    return a;
 		}
 	}
-	
-	
 	export class TreeNode {
 	    key: string;
 	    label: string;
