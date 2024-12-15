@@ -1,7 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { MessageService } from 'primeng/api';
-import { ButtonModule } from 'primeng/button';
-import { TreeTableModule } from 'primeng/treetable';
 import { CommonModule } from '@angular/common';
 import { FfxTreeComponent } from './components/tree/tree.component';
 import { ConfigModalComponent } from './components/config-modal/config-modal.component';
@@ -12,12 +10,11 @@ const imports = [
   FfxTreeComponent,
   ConfigModalComponent,]
 @Component({
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css'],
-  standalone: true,
-  imports: imports,
-  providers: [MessageService]
+    selector: 'app-root',
+    templateUrl: './app.component.html',
+    styleUrls: ['./app.component.css'],
+    imports: imports,
+    providers: [MessageService]
 })
 export class AppComponent implements OnInit {
   private readonly _messageService: MessageService = inject(MessageService)

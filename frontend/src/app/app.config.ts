@@ -1,4 +1,4 @@
-import { ApplicationConfig } from "@angular/core"
+import { ApplicationConfig, provideExperimentalZonelessChangeDetection } from "@angular/core"
 import { provideRouter } from "@angular/router"
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { providePrimeNG } from 'primeng/config';
@@ -10,10 +10,11 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
     provideAnimationsAsync(),
-    providePrimeNG({
+    provideExperimentalZonelessChangeDetection(),
+    providePrimeNG({ 
       theme: {
-        preset: Aura
+          preset: Aura
       }
-    })
+  })
   ]
 }

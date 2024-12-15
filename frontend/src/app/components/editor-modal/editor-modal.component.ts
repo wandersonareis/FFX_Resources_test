@@ -12,17 +12,16 @@ import {spira} from "../../../../wailsjs/go/models";
 import {TreeNode} from "primeng/api";
 
 @Component({
-  selector: 'app-editor-modal',
-  standalone: true,
-  imports: [
-    CommonModule,
-    ButtonModule,
-    FormsModule,
-    DialogModule,
-    EditorModule
-  ],
-  templateUrl: './editor-modal.component.html',
-  styleUrl: './editor-modal.component.css'
+    selector: 'app-editor-modal',
+    imports: [
+        CommonModule,
+        ButtonModule,
+        FormsModule,
+        DialogModule,
+        EditorModule
+    ],
+    templateUrl: './editor-modal.component.html',
+    styleUrl: './editor-modal.component.css'
 })
 export class EditorModalComponent {
   private readonly _compressService: CompressService = inject(CompressService)

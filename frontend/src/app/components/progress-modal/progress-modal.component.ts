@@ -20,16 +20,15 @@ const imports = [
 ];
 
 @Component({
-  selector: 'app-progress-modal',
-  standalone: true,
-  imports: imports,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './progress-modal.component.css',
-  template: `
+    selector: 'app-progress-modal',
+    imports: imports,
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    styleUrl: './progress-modal.component.css',
+    template: `
     <p-dialog [modal]="true" [(visible)]="visible" [style]="{ width: '20rem' }">
       <p-progressBar [value]="value()" />
     </p-dialog>
-  `,
+  `
 })
 
 export class ProgressModalComponent {

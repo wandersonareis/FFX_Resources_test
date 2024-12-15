@@ -6,19 +6,18 @@ import { InputTextModule } from 'primeng/inputtext';
 import { SelectDirectory } from '../../../../wailsjs/go/main/App';
 import { EventsEmit, EventsOn } from '../../../../wailsjs/runtime';
 import { gameDirectory } from '../signals/signals.signal';
-import {FloatLabel} from "primeng/floatlabel";
+import {FloatLabelModule} from "primeng/floatlabel";
 
 @Component({
-  selector: 'app-config-modal',
-  standalone: true,
-  imports: [
-    ButtonModule,
-    DialogModule,
-    InputTextModule,
-    ReactiveFormsModule,
-    FloatLabel,
-  ],
-  templateUrl: './config-modal.component.html',
+    selector: 'app-config-modal',
+    imports: [
+        ButtonModule,
+        DialogModule,
+        InputTextModule,
+        ReactiveFormsModule,
+        FloatLabelModule,
+    ],
+    templateUrl: './config-modal.component.html'
 })
 export class ConfigModalComponent implements OnInit {
   visible: WritableSignal<boolean> = signal<boolean>(false);

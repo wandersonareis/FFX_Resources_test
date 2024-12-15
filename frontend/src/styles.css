@@ -1,7 +1,5 @@
 /* You can add global styles to this file, and also import other style files */
 @import "primeicons/primeicons.css";
-@import "primeng/resources/themes/lara-light-blue/theme.css";
-@import "primeng/resources/primeng.css";
 @import "../node_modules/quill/dist/quill.core.css";
 @import "../node_modules/quill/dist/quill.snow.css";
 
@@ -14,14 +12,38 @@
     background: url("/assets/images/logo_us.png") no-repeat center fixed;
   }
 }
+
+.p-tree-root {
+  overflow: visible !important;
+}
+
+.p-dialog-header {
+  @apply p-4 !important;
+}
+
 .p-treenode-children {
   @apply m-0 ml-5;
 }
 
-.p-highlight {
-  @apply bg-slate-200/60 outline outline-1 outline-blue-400;
+.p-button {
+  @apply bg-transparent text-slate-600 border-none hover:bg-blue-200 !important;
 }
 
-.p-tree .p-tree-container .p-treenode .p-treenode-content {
-  @apply font-semibold  text-slate-600 capitalize p-0 hover:bg-blue-300/60 focus:bg-slate-600;
+.p-tree-node-content.p-tree-node-selected {
+  @apply bg-blue-300/60 text-blue-600 font-semibold outline outline-1 outline-blue-400 w-[80%] !important;
+  box-sizing: border-box;
+}
+
+.p-tree-node-icon.p-tree-node-selected {
+  @apply text-blue-600 !important;
+}
+
+.p-tree-node-content.p-tree-node-selectable:not(.p-tree-node-selected):hover {
+  @apply w-[80%] bg-blue-800 outline outline-1 outline-blue-400;
+  box-sizing: border-box;
+
+}
+
+.p-tree-node-toggle-button:hover {
+  @apply bg-blue-200/80 text-slate-600 !important;
 }

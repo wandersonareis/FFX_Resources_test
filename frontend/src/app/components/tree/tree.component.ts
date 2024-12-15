@@ -30,10 +30,9 @@ const imports = [
 @Component({
     selector: 'ffx-tree',
     exportAs: 'ffxTree',
-    standalone: true,
     imports: imports,
     changeDetection: ChangeDetectionStrategy.OnPush,
-    templateUrl: './tree.component.html',
+    templateUrl: './tree.component.html'
 })
 export class FfxTreeComponent implements OnInit {
     private readonly _ffxContextMenuService: FfxContextMenuService = inject(FfxContextMenuService);
