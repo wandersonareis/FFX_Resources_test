@@ -35,15 +35,11 @@ func CreateTreeNode(key string, source interfaces.ISource, destination locations
 }
 
 func generateNode(key string, source interfaces.ISource, destination locations.IDestination) (TreeNode, error) {
-	//fileInfo := interactions.NewGameDataInfo(source.Path)
-	//source := locations.NewSource(source.Path, interactions.NewInteraction().GamePart.GetGamePart())
-
 	fileProcessor := fileFormats.NewFileProcessor(source, destination)
 	if fileProcessor == nil {
 		return TreeNode{}, nil
 	}
 
-	//dataInfo := fileProcessor.GetFileInfo()
 	gameDataInfo := GameDataInfo{
 		FilePath:  source.Get().Path,
 		Extract:   *destination.Extract().Get(),
