@@ -71,16 +71,16 @@ func (sf SpiraFolder) Extract() error {
 }
 
 func (sf SpiraFolder) Compress() error {
+	errChan := make(chan error)
+	go notifications.ProcessError(errChan, sf.log)
+	go notifications.ProcessError(errChan, sf.log)
+	defer close(errChan)
+
 	fileProcessors := sf.processFiles()
 
 	progress := common.NewProgress(sf.Ctx)
 	progress.SetMax(fileProcessors.GetLength())
 	progress.Start()
-
-	errChan := make(chan error, fileProcessors.GetLength())
-	defer close(errChan)
-
-	go notifications.ProcessError(errChan, sf.log)
 
 	fileProcessors.ForEach(func(compressor interfaces.IFileProcessor) {
 		err := compressor.Compress()

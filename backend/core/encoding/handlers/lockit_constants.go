@@ -1,9 +1,5 @@
 package encodingHandler
 
-//const LOCKIT_NAME_BASE string = "loc_kit_ps3"
-const LOCKIT_FILE_PARTS_PATTERN string = `.*loc_kit_ps3.*\.part([0-9]{2})$`
-const LOCKIT_TXT_PARTS_PATTERN string = `.*loc_kit_ps3.*\.part([0-9]{2}).*\.txt$`
-
 const LOCKIT_HANDLER_APPLICATION string = "fcopy.exe"
 const LOCKIT_HANDLER_SHA256 string = "E408C4C669C066710515A4F3AE4B0D54044747E49417D0FFE153599700D10260"
 const UTF8BOM_NORMALIZER_APPLICATION string = "utf8bom.exe"

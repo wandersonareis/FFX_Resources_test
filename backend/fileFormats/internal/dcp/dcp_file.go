@@ -30,10 +30,7 @@ type DcpFile struct {
 }
 
 func NewDcpFile(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
-	interactions := interactions.NewInteraction()
-
 	dcpFileParts := components.NewEmptyList[parts.DcpFileParts]()
-	//dataInfo.CreateRelativePath()
 
 	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
 
@@ -53,7 +50,7 @@ func NewDcpFile(source interfaces.ISource, destination locations.IDestination) i
 		dcpFileVerify: verify.NewDcpFileVerify(),
 		PartsList:     dcpFileParts,
 		fileSplitter:  splitter.NewDcpFileSpliter(),
-		options:       interactions.GamePartOptions.GetDcpFileOptions(),
+		options:       interactions.NewInteraction().GamePartOptions.GetDcpFileOptions(),
 		log:           logger.Get().With().Str("module", "dcp_file").Logger(),
 	}
 }
@@ -127,23 +124,26 @@ func (d *DcpFile) Extract() error {
 	return nil
 }
 
-func (d DcpFile) Compress() error {
+func (d *DcpFile) Compress() error {
+	translateDestination := d.Destination().Translate().Get()
+	importDestination := d.Destination().Import().Get()
+
 	d.log.Info().
-		Str("file", d.Destination().Translate().Get().GetTargetFile()).
+		Str("file", translateDestination.GetTargetFile()).
 		Msgf("Compressing macrodic file")
 
 	expectedDcpPartsLength := d.options.PartsLength
 
 	if err := d.ensureDcpPartsLength(expectedDcpPartsLength); err != nil {
 		d.log.Error().
-			Str("file", d.Destination().Import().Get().GetTargetFile()).
+			Str("file", importDestination.GetTargetFile()).
 			Err(err).
 			Msg("Failed to packing DCP file")
 
 		return fmt.Errorf("failed to packing DCP file: %s", d.Source().Get().Name)
 	}
 
-	dcpTranslatedPartsTextPath := d.Destination().Translate().Get().GetTargetPath()
+	dcpTranslatedPartsTextPath := translateDestination.GetTargetPath()
 
 	if d.PartsList.GetLength() != expectedDcpPartsLength {
 		d.log.Error().
@@ -155,9 +155,9 @@ func (d DcpFile) Compress() error {
 			d.Source().Get().Name, expectedDcpPartsLength, d.PartsList.GetLength())
 	}
 
-	dcpXplitedTextFiles := components.NewList[string](expectedDcpPartsLength)
+	dcpSplitedTextFiles := components.NewList[string](expectedDcpPartsLength)
 
-	if err := components.ListFilesByRegex(dcpXplitedTextFiles, dcpTranslatedPartsTextPath, lib.DCP_TXT_PARTS_PATTERN); err != nil {
+	if err := components.ListFilesByRegex(dcpSplitedTextFiles, dcpTranslatedPartsTextPath, lib.DCP_TXT_PARTS_PATTERN); err != nil {
 		d.log.Error().
 			Err(err).
 			Str("Path", dcpTranslatedPartsTextPath).
@@ -166,48 +166,54 @@ func (d DcpFile) Compress() error {
 		return fmt.Errorf("error listing xplited text files: %s", dcpTranslatedPartsTextPath)
 	}
 
-	if dcpXplitedTextFiles.GetLength() != expectedDcpPartsLength {
+	if dcpSplitedTextFiles.GetLength() != expectedDcpPartsLength {
 		d.log.Error().
 			Int("expected", expectedDcpPartsLength).
 			Int("actual", d.PartsList.GetLength()).
 			Str("Path", dcpTranslatedPartsTextPath).
 			Msg("Invalid number of split text files")
 
-		return fmt.Errorf("invalid number of split text files for %s: Expected: %d, Get: %d", dcpTranslatedPartsTextPath, expectedDcpPartsLength, dcpXplitedTextFiles.GetLength())
+		return fmt.Errorf("invalid number of split text files for %s: Expected: %d, Get: %d",
+			dcpTranslatedPartsTextPath, expectedDcpPartsLength, dcpSplitedTextFiles.GetLength())
 	}
 
 	compressor := func(_ int, part parts.DcpFileParts) {
-		part.Compress()
+		if err := part.Compress(); err != nil {
+			d.log.Error().
+				Str("part_file", part.Source().Get().Name).
+				Err(err).
+				Msg("Failed to compress file part")
+		}
 	}
 
 	d.PartsList.ParallelForEach(compressor)
 
-	targetReimportFile := d.Destination().Import().Get().GetTargetFile()
+	outputFile := importDestination.GetTargetFile()
 
-	if err := joinner.DcpFileJoiner(d.Source(), d.Destination(), d.PartsList, targetReimportFile); err != nil {
+	if err := joinner.DcpFileJoiner(d.Source(), d.Destination(), d.PartsList, outputFile); err != nil {
 		d.log.Error().
 			Err(err).
-			Str("file", targetReimportFile).
+			Str("file", outputFile).
 			Msg("Error joining macrodic file")
 
-		return fmt.Errorf("error joining macrodic file: %s", targetReimportFile)
+		return fmt.Errorf("error joining macrodic file: %s", outputFile)
 	}
 
 	d.log.Info().
-		Str("file", d.Destination().Import().Get().GetTargetFile()).
+		Str("file", outputFile).
 		Msg("Verifying reimported macrodic file")
 
 	if err := d.dcpFileVerify.VerifyCompress(d.Destination(), d.options); err != nil {
 		d.log.Error().
 			Err(err).
-			Str("file", d.Destination().Import().Get().GetTargetFile()).
+			Str("file", outputFile).
 			Msg("Error verifying system macrodic file")
 
-		return fmt.Errorf("error verifying system macrodic file: %s", d.Destination().Import().Get().GetTargetFile())
+		return fmt.Errorf("error verifying system macrodic file: %s", outputFile)
 	}
 
 	d.log.Info().
-		Str("file", d.Destination().Import().Get().GetTargetFile()).
+		Str("file", outputFile).
 		Msgf("Macrodic file compressed")
 
 	return nil

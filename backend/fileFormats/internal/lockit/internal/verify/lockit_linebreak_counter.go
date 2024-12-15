@@ -12,10 +12,10 @@ import (
 )
 
 type ILineBreakCounter interface {
-	// LockitFile is line break based file for Final Fantasy X game.
-	//
 	// CountBinaryParts verifies the provided GameData LockitFileParts and counts the line breaks based on the given expected total line breaks for game version.
 	// It returns an error if the verification fails.
+	//
+	// LockitFile is line break based file for Final Fantasy X game.
 	//
 	// Parameters:
 	//   - partsList: A slice of LockitFileParts to be verified and counted.

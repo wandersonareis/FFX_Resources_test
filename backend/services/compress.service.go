@@ -4,7 +4,8 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats"
-	"ffxresources/backend/interfaces"
+	"ffxresources/backend/formatters"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
 	"ffxresources/backend/models"
 	"ffxresources/backend/notifications"
@@ -17,23 +18,32 @@ func NewCompressService() *CompressService {
 	return &CompressService{}
 }
 
-func (c *CompressService) Compress(source interfaces.ISource, destination locations.IDestination) {
+func (c *CompressService) Compress(file string) {
 	defer func() {
 		if r := recover(); r != nil {
 			l := logger.Get()
 			l.Error().
 				Interface("recover", r).
-				Str("file", source.Get().Name).
+				Str("file", common.GetFileName(file)).
 				Msg("Panic occurred during extraction")
 
 			notifications.NotifyError(fmt.Errorf("panic occurred: %v", r))
 		}
 	}()
 
-	if !common.IsFileExists(source.Get().Path) {
-		notifications.NotifyError(fmt.Errorf("game file %s not found", source.Get().Name))
+	if !common.IsFileExists(file) {
+		notifications.NotifyError(fmt.Errorf("game file %s not found", common.GetFileName(file)))
 		return
 	}
+
+	source, err := locations.NewSource(file, interactions.NewInteraction().GamePart.GetGamePart())
+	if err != nil {
+		notifications.NotifyError(err)
+		return
+	}
+
+	destination := locations.NewDestination()
+	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
 
 	translateLocation := destination.Translate().Get()
 

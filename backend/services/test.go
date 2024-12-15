@@ -24,8 +24,6 @@ func TestExtractDir(path string, testExtract, testCompress bool) {
 		return
 	}
 
-	destination := locations.NewDestination()
-
 	testRun := func(_ int, n spira.TreeNode) {
 		if testExtract {
 			extractService := NewExtractService()
@@ -41,7 +39,7 @@ func TestExtractDir(path string, testExtract, testCompress bool) {
 
 		if testCompress {
 			compressService := NewCompressService()
-			compressService.Compress(source, destination)
+			compressService.Compress(source.Get().Path)
 		}
 	}
 
@@ -63,7 +61,10 @@ func TestExtractFile(path string, testExtract, testCompress bool) {
 			fmt.Println("invalid file type")
 			return
 		}
-		fileProcessor.Extract()
+		if err := fileProcessor.Extract(); err != nil {
+			fmt.Println(err)
+			return
+		}
 	}
 
 	if testCompress {
@@ -73,7 +74,10 @@ func TestExtractFile(path string, testExtract, testCompress bool) {
 			return
 		}
 
-		fileProcessor.Compress()
+		if err := fileProcessor.Compress(); err != nil {
+			fmt.Println(err)
+			return
+		}
 	}
 }
 

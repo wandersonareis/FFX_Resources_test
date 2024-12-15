@@ -45,6 +45,6 @@ export class EditorModalComponent {
     const fileInfo: spira.GameDataInfo | null = extractFileInfo(this.file())
     if (!fileInfo) return;
 
-    await this._compressService.compress(fileInfo);
+    await this._compressService.compress(fileInfo.file_path);
   }
 }

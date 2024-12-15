@@ -54,9 +54,9 @@ export class FfxContextMenuService {
   }
 
   async compress(): Promise<void> {
-    const data: spira.GameDataInfo | null = extractFileInfo(this.file());
-    if (!data) return;
+    const fileInfo: spira.GameDataInfo | null = extractFileInfo(this.file());
+    if (!fileInfo) return;
 
-    await this._compressService.compress(data);
+    await this._compressService.compress(fileInfo.file_path);
   }
 }
