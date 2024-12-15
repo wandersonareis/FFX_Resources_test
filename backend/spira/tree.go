@@ -3,6 +3,7 @@ package spira
 import (
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/locations"
+	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"path/filepath"
@@ -44,6 +45,7 @@ func BuildFileTree(result components.IList[TreeNode], source interfaces.ISource)
 		}
 
 		destination := locations.NewDestination()
+		destination.InitializeLocations(entrySource, formatters.NewTxtFormatterDev())
 
 		node, err := CreateTreeNode(key, entrySource, destination, children)
 		if err != nil {
@@ -51,7 +53,6 @@ func BuildFileTree(result components.IList[TreeNode], source interfaces.ISource)
 		}
 
 		result.Add(node)
-		//*result = append(*result, node)
 	}
 
 	return nil

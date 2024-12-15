@@ -1,38 +1,14 @@
 package locations
 
 import (
+	"ffxresources/backend/bases"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"os"
 	"strings"
 )
 
-/* type ITargetExtractLocation interface {
-	GetExtractLocation() IExtractLocation
-}
-
-type ITargetTranslateLocation interface {
-	GetTranslateLocation() ITranslateLocation
-}
-
-type ITargetImportLocation interface {
-	GetImportLocation() IImportLocation
-} */
-
-/* type IDestination interface {
-	ITargetExtractLocation
-	ITargetTranslateLocation
-	ITargetImportLocation
-
-	InitializeLocations(formatter formatters.ITextFormatterDev)
-	CreateRelativePath(gameLocationPath string)
-} */
-
 type IDestination interface {
-	//ITargetExtractLocation
-	//ITargetTranslateLocation
-	//ITargetImportLocation
-	//IExtractLocationInfo
-
 	Extract() IExtractLocationInfo
 	Translate() ITranslateLocationInfo
 	Import() IImportLocationInfo
@@ -47,11 +23,16 @@ type Destination struct {
 }
 
 func NewDestination() IDestination {
-	return &Destination{
-		ExtractLocation:   NewExtractLocationInfo(),
-		TranslateLocation: NewTranslateLocationInfo(),
-		ImportLocation:    NewImportLocationInfo(),
+	extractPath := interactions.NewInteraction().ExtractLocation.GetTargetDirectory()
+	translatePath := interactions.NewInteraction().TranslateLocation.GetTargetDirectory()
+	importPath := interactions.NewInteraction().ImportLocation.GetTargetDirectory()
+
+	destination := &Destination{
+		ExtractLocation:   NewExtractLocationInfo(bases.WithDirectoryName("extracted"), bases.WithTargetDirectory(extractPath)),
+		TranslateLocation: NewTranslateLocationInfo(bases.WithDirectoryName("translated"), bases.WithTargetDirectory(translatePath)),
+		ImportLocation:    NewImportLocationInfo(bases.WithDirectoryName("reimported"), bases.WithTargetDirectory(importPath)),
 	}
+	return destination
 }
 
 func (g *Destination) InitializeLocations(source interfaces.ISource, formatter interfaces.ITextFormatterDev) {

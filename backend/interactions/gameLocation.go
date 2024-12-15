@@ -9,14 +9,14 @@ type IGameLocation interface {
 }
 
 type GameLocation struct {
-	LocationBase
+	InteractionBase
 }
 
 const defaultDirName = "data"
 
 func NewGameLocation() IGameLocation {
 	return &GameLocation{
-		LocationBase: NewLocationBase(defaultDirName),
+		InteractionBase: newInteractionBase(defaultDirName),
 	}
 }
 

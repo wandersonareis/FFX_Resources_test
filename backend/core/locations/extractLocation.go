@@ -1,6 +1,7 @@
 package locations
 
 import (
+	"ffxresources/backend/bases"
 	"ffxresources/backend/interfaces"
 	"fmt"
 )
@@ -16,22 +17,14 @@ type (
 	}
 )
 
-var extractLocationInstance *ExtractLocation
-
-func NewExtractLocation() *ExtractLocation {
-	rootDirectoryName := "extracted"
-
-	if extractLocationInstance == nil {
-		extractLocationInstance = &ExtractLocation{
-			LocationBase: NewLocationBase(rootDirectoryName),
-		}
+func NewExtractLocation(options *bases.LocationBaseOptions) *ExtractLocation {
+	return &ExtractLocation{
+		LocationBase: NewLocationBase(options),
 	}
-
-	return extractLocationInstance
 }
 
 func (e *ExtractLocation) Validate() error {
-	e.IsExist = e.isTargetFileAvailable()
+	e.IsExist = e.IsTargetFileAvailable()
 
 	if !e.IsExist {
 		return fmt.Errorf("extracted file does not exist")

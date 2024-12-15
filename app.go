@@ -5,6 +5,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/lib"
+	"ffxresources/backend/logger"
 	"ffxresources/backend/notifications"
 	"ffxresources/backend/services"
 	"log"
@@ -50,6 +51,9 @@ func (a *App) startup(ctx context.Context) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println("panic occurred:", err)
+
+			l := logger.Get()
+			l.Fatal().Caller(2).Err(err.(error)).Msg("panic occurred")
 		}
 	}()
 

@@ -1,18 +1,15 @@
 package interactions
 
-import (
-	"ffxresources/backend/interfaces"
-	"fmt"
+import "ffxresources/backend/interfaces"
+
+type (
+	TranslateLocation struct {
+		InteractionBase
+	}
+	ITranslateLocation interface {
+		interfaces.IInteractionBase
+	}
 )
-
-type ITranslateLocation interface {
-	interfaces.ILocationBase
-	interfaces.IValidate
-}
-
-type TranslateLocation struct {
-	LocationBase
-}
 
 var translateLocationInstance *TranslateLocation
 
@@ -21,19 +18,9 @@ func NewTranslateLocation() *TranslateLocation {
 
 	if translateLocationInstance == nil {
 		translateLocationInstance = &TranslateLocation{
-			LocationBase: NewLocationBase(rootDirectoryName),
+			InteractionBase: newInteractionBase(rootDirectoryName),
 		}
 	}
 
 	return translateLocationInstance
-}
-
-func (t *TranslateLocation) Validate() error {
-	t.IsExist = t.isTargetFileAvailable()
-
-	if !t.IsExist {
-		return fmt.Errorf("translated file does not exist")
-	}
-
-	return nil
 }

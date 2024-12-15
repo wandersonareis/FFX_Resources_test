@@ -1,15 +1,14 @@
 package interactions
 
-import "fmt"
-
-/* type IExtractLocation interface {
-	ILocationBase
-	IValidate
-} */
-
-type ExtractLocation struct {
-	LocationBase
-}
+type (
+	ExtractLocation struct {
+		InteractionBase
+	}
+	IExtractLocation interface {
+		GetTargetDirectory() string
+		SetTargetDirectory(path string)
+	}
+)
 
 var extractLocationInstance *ExtractLocation
 
@@ -18,19 +17,9 @@ func NewExtractLocation() *ExtractLocation {
 
 	if extractLocationInstance == nil {
 		extractLocationInstance = &ExtractLocation{
-			LocationBase: NewLocationBase(rootDirectoryName),
+			InteractionBase: newInteractionBase(rootDirectoryName),
 		}
 	}
 
 	return extractLocationInstance
-}
-
-func (e *ExtractLocation) Validate() error {
-	e.IsExist = e.isTargetFileAvailable()
-
-	if !e.IsExist {
-		return fmt.Errorf("extracted file does not exist")
-	}
-
-	return nil
 }

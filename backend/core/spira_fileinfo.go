@@ -9,7 +9,6 @@ import (
 )
 
 type SpiraFileInfo struct {
-	//Info         os.FileInfo
 	Name         string          `json:"name"`
 	NamePrefix   string          `json:"name_prefix"`
 	Type         models.NodeType `json:"type"`
@@ -37,7 +36,6 @@ func NewSpiraFileInfo(path string, gamePart GamePart) (*SpiraFileInfo, error) {
 
 	source := &SpiraFileInfo{
 		Path: cPath,
-		//Info:       info,
 		Size:         size,
 		Name:         common.RecursiveRemoveFileExtension(info.Name()),
 		NamePrefix:   common.RemoveOneFileExtension(info.Name()),

@@ -8,25 +8,22 @@ import (
 	"path/filepath"
 )
 
-/* type ITextFormatterDev interface {
-	ReadFile(source *core.Source, targetDirectory string) (string, string)
-	WriteFile(source *core.Source, targetDirectory string) (string, string)
-} */
-
-type TxtFormatterDev struct {
+type TxtFormatter struct {
 	targetExtension string
 }
 
-func NewTxtFormatterDev() *TxtFormatterDev {
-	return &TxtFormatterDev{
+func NewTxtFormatterDev() *TxtFormatter {
+	return &TxtFormatter{
 		targetExtension: ".txt",
 	}
 }
 
-func (t TxtFormatterDev) ReadFile(source interfaces.ISource, targetDirectory string) (string, string) {
+func (t TxtFormatter) ReadFile(source interfaces.ISource, targetDirectory string) (string, string) {
 	var outputFile, outputPath string
 
 	switch source.Get().Type {
+	case models.Folder:
+		outputPath = filepath.Join(targetDirectory, source.Get().RelativePath)
 	case models.Dcp:
 		outputFile, outputPath = t.provideDcpReadPath(targetDirectory, source.Get().Name)
 	case models.DcpParts:
@@ -42,11 +39,11 @@ func (t TxtFormatterDev) ReadFile(source interfaces.ISource, targetDirectory str
 	return outputFile, outputPath
 }
 
-func (t TxtFormatterDev) provideDefaulReadPath(targetDirectory, relativePath string) (string, string) {
+func (t TxtFormatter) provideDefaulReadPath(targetDirectory, relativePath string) (string, string) {
 	return provideBasePath(targetDirectory, common.ChangeExtension(relativePath, t.targetExtension))
 }
 
-func (t TxtFormatterDev) provideDcpReadPath(targetDirectory, fileName string) (string, string) {
+func (t TxtFormatter) provideDcpReadPath(targetDirectory, fileName string) (string, string) {
 	outputFile := filepath.Join(targetDirectory, util.DCP_PARTS_TARGET_DIR_NAME, fileName)
 
 	outputPath := filepath.Join(targetDirectory, util.DCP_PARTS_TARGET_DIR_NAME)
@@ -54,15 +51,15 @@ func (t TxtFormatterDev) provideDcpReadPath(targetDirectory, fileName string) (s
 	return outputFile, outputPath
 }
 
-func (t TxtFormatterDev) providePartsReadPath(targetDirectory, dirName, fileName string) (string, string) {
+func (t TxtFormatter) providePartsReadPath(targetDirectory, dirName, fileName string) (string, string) {
 	return provideBasePath(targetDirectory, dirName, common.AddExtension(fileName, t.targetExtension))
 }
 
-func (t TxtFormatterDev) provideLockitReadPath(targetDirectory, fileName string) (string, string) {
+func (t TxtFormatter) provideLockitReadPath(targetDirectory, fileName string) (string, string) {
 	return provideBasePath(targetDirectory, util.LOCKIT_TARGET_DIR_NAME, common.AddExtension(fileName, t.targetExtension))
 }
 
-func (t TxtFormatterDev) WriteFile(source interfaces.ISource, targetDirectory string) (string, string) {
+func (t TxtFormatter) WriteFile(source interfaces.ISource, targetDirectory string) (string, string) {
 
 	var outputFile, outputPath string
 
@@ -80,15 +77,15 @@ func (t TxtFormatterDev) WriteFile(source interfaces.ISource, targetDirectory st
 	return outputFile, outputPath
 }
 
-func (t TxtFormatterDev) provideDefaultWritePath(targetDirectory, relativePath, fileExt string) (string, string) {
+func (t TxtFormatter) provideDefaultWritePath(targetDirectory, relativePath, fileExt string) (string, string) {
 	return provideBasePath(targetDirectory, common.ChangeExtension(relativePath, fileExt))
 }
 
-func (t TxtFormatterDev) provideDcpWritePath(targetDirectory, relativePath string) (string, string) {
+func (t TxtFormatter) provideDcpWritePath(targetDirectory, relativePath string) (string, string) {
 	return provideBasePath(targetDirectory, relativePath)
 }
 
-func (t TxtFormatterDev) providePartsWritePath(targetDirectory, dirName, fileName string) (string, string) {
+func (t TxtFormatter) providePartsWritePath(targetDirectory, dirName, fileName string) (string, string) {
 	return provideBasePath(targetDirectory, dirName, fileName)
 }
 

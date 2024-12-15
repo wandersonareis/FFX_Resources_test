@@ -4,9 +4,9 @@ import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/dcp"
 	"ffxresources/backend/fileFormats/internal/folder"
+	"ffxresources/backend/fileFormats/internal/lockit"
 	"ffxresources/backend/fileFormats/internal/text/dlg"
 	"ffxresources/backend/fileFormats/internal/text/mt2"
-	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/models"
 	"ffxresources/backend/notifications"
@@ -22,7 +22,7 @@ var formats = map[models.NodeType]func(source interfaces.ISource, destination lo
 	models.DcpParts:       dlg.NewDialogs,
 	models.Kernel:         mt2.NewKernel,
 	models.Dcp:            dcp.NewDcpFile,
-	//models.Lockit:         lockit.NewLockitFile,
+	models.Lockit:         lockit.NewLockitFile,
 }
 
 func NewFileExtractor(source interfaces.ISource, destination locations.IDestination) models.IExtractor {
@@ -40,7 +40,7 @@ func NewFileProcessor(source interfaces.ISource, destination locations.IDestinat
 		return folder.NewSpiraFolder(source, destination, NewFileProcessor)
 	}
 
-	if err := interactions.NewInteraction().ExtractLocation.ProvideTargetDirectory(); err != nil {
+	if err := destination.Extract().Get().ProvideTargetDirectory(); err != nil {
 		notifications.NotifyError(err)
 		return nil
 	}

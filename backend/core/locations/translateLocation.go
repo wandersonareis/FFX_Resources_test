@@ -1,14 +1,10 @@
 package locations
 
 import (
+	"ffxresources/backend/bases"
 	"ffxresources/backend/interfaces"
 	"fmt"
 )
-
-/* type ITranslateLocation interface {
-	ILocationBase
-	IValidate
-} */
 
 type ITranslateLocation interface {
 	interfaces.ILocationBase
@@ -23,26 +19,14 @@ type TranslateLocation struct {
 	LocationBase
 }
 
-var translateLocationInstance *TranslateLocation
-
-func NewTranslateLocation() *TranslateLocation {
-	rootDirectoryName := "translated"
-
-	if translateLocationInstance == nil {
-		translateLocationInstance = &TranslateLocation{
-			LocationBase: NewLocationBase(rootDirectoryName),
-		}
+func NewTranslateLocation(options *bases.LocationBaseOptions) *TranslateLocation {
+	return &TranslateLocation{
+		LocationBase: NewLocationBase(options),
 	}
-
-	return translateLocationInstance
 }
 
-/* func (t *TranslateLocation) Get() *TranslateLocation {
-	return t
-} */
-
 func (t *TranslateLocation) Validate() error {
-	t.IsExist = t.isTargetFileAvailable()
+	t.IsExist = t.IsTargetFileAvailable()
 
 	if !t.IsExist {
 		return fmt.Errorf("translated file does not exist")

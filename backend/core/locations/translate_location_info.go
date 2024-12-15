@@ -1,5 +1,7 @@
 package locations
 
+import "ffxresources/backend/bases"
+
 type ITranslateLocationInfo interface {
 	Get() *TranslateLocation
 	Set(translateLocation TranslateLocation)
@@ -9,9 +11,10 @@ type TranslateLocationInfo struct {
 	TranslateLocation TranslateLocation `json:"translate_location"`
 }
 
-func NewTranslateLocationInfo() TranslateLocationInfo {
+func NewTranslateLocationInfo(opts ...bases.LocationBaseOption) TranslateLocationInfo {
+	options := bases.ProcessOpts(opts)
 	return TranslateLocationInfo{
-		TranslateLocation: *NewTranslateLocation(),
+		TranslateLocation: *NewTranslateLocation(options),
 	}
 }
 
