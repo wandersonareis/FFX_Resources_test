@@ -10,7 +10,7 @@ import (
 )
 
 func TestExtractDir(path string, testExtract, testCompress bool) {
-	source, err := locations.NewSource(path, interactions.NewInteraction().GamePart.GetGamePart())
+	source, err := locations.NewSource(path, interactions.NewInteraction().FFXGameVersion().GetGameVersion())
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -47,7 +47,7 @@ func TestExtractDir(path string, testExtract, testCompress bool) {
 }
 
 func TestExtractFile(path string, testExtract, testCompress bool) {
-	source, err := locations.NewSource(path, interactions.NewInteraction().GamePart.GetGamePart())
+	source, err := locations.NewSource(path, interactions.NewInteraction().FFXGameVersion().GetGameVersion())
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -83,7 +83,7 @@ func TestExtractFile(path string, testExtract, testCompress bool) {
 
 /* func TestExtractFileDev(path string, testExtract, testCompress bool) {
 	dataInfo := interactions.NewGameDataInfo(path)
-	gamePart := interactions.NewInteraction().GamePart.GetGamePart()
+	gamePart := interactions.NewInteraction().FFXGameVersion.FFXGameVersion()
 	source, err := core.NewSource(path, gamePart)
 	if err != nil {
 		fmt.Println(err)

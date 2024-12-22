@@ -30,7 +30,7 @@ func (e *ExtractService) Extract(file string) {
 		}
 	}()
 
-	source, err := locations.NewSource(file, interactions.NewInteraction().GamePart.GetGamePart())
+	source, err := locations.NewSource(file, interactions.NewInteraction().FFXGameVersion().GetGameVersion())
 	if err != nil {
 		notifications.NotifyError(err)
 		return

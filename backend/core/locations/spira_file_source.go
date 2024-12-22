@@ -10,7 +10,7 @@ type Source struct {
 	FileInfo *core.SpiraFileInfo `json:"file_info"`
 }
 
-func NewSource(path string, gamePart core.GamePart) (interfaces.ISource, error) {
+func NewSource(path string, gamePart core.GameVersion) (interfaces.ISource, error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func NewSource(path string, gamePart core.GamePart) (interfaces.ISource, error) 
 	}, nil
 }
 
-/* func (g *Source) updateGameDataFromSource(source *SpiraFileInfo, gamePart GamePart) {
+/* func (g *Source) updateGameDataFromSource(source *SpiraFileInfo, gamePart FFXGameVersion) {
 	source.ClonedItems = g.GetGamePartDuplicates(gamePart)
 } */
 
@@ -40,7 +40,7 @@ func (g *Source) Set(fileInfo *core.SpiraFileInfo) {
 	g.FileInfo = fileInfo
 }
 
-func (g *Source) GetGamePartDuplicates(namePrefix string, gamePart core.GamePart) []string {
+func (g *Source) GetGamePartDuplicates(namePrefix string, gamePart core.GameVersion) []string {
 	switch gamePart {
 	case core.FFX:
 		//TODO: return NewFfxDuplicate().AddFfxTextDuplicate()

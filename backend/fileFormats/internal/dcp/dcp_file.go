@@ -50,7 +50,7 @@ func NewDcpFile(source interfaces.ISource, destination locations.IDestination) i
 		dcpFileVerify: verify.NewDcpFileVerify(),
 		PartsList:     dcpFileParts,
 		fileSplitter:  splitter.NewDcpFileSpliter(),
-		options:       interactions.NewInteraction().GamePartOptions.GetDcpFileOptions(),
+		options:       interactions.NewInteraction().DcpAndLockitOptions.GetDcpFileOptions(),
 		log:           logger.Get().With().Str("module", "dcp_file").Logger(),
 	}
 }

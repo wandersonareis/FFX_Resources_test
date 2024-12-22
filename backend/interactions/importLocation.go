@@ -4,23 +4,40 @@ import "ffxresources/backend/interfaces"
 
 type (
 	ImportLocation struct {
-		InteractionBase
+		*interactionBase
 	}
 	IImportLocation interface {
 		interfaces.IInteractionBase
 	}
 )
 
-var importLocationInstance *ImportLocation
-
-func NewImportLocation() *ImportLocation {
+func newImportLocation(ffxAppConfig IFFXAppConfig) IImportLocation {
 	rootDirectoryName := "reimported"
 
-	if importLocationInstance == nil {
-		importLocationInstance = &ImportLocation{
-			InteractionBase: newInteractionBase(rootDirectoryName),
-		}
+	return &ImportLocation{
+		interactionBase: &interactionBase{
+			ffxAppConfig:      ffxAppConfig,
+			defaultDirName: rootDirectoryName,
+		},
+	}
+}
+
+func (i *ImportLocation) GetTargetDirectory() string {
+	path, _ := i.interactionBase.GetTargetDirectoryBase(ConfigImportLocation)
+	return path.(string)
+}
+
+func (i *ImportLocation) SetTargetDirectory(path string) {
+	i.interactionBase.SetTargetDirectoryBase(ConfigImportLocation, path)
+}
+
+func (i *ImportLocation) ProvideTargetDirectory() error {
+	path := i.GetTargetDirectory()
+
+	err := i.interactionBase.ProviderTargetDirectoryBase(ConfigImportLocation, path)
+	if err != nil {
+		return err
 	}
 
-	return importLocationInstance
+	return nil
 }

@@ -5,6 +5,39 @@ import (
 	"path/filepath"
 )
 
+type interactionBase struct {
+	ffxAppConfig   IFFXAppConfig
+	defaultDirName string
+}
+
+func (e *interactionBase) GetTargetDirectoryBase(field ConfigField) (interface{}, error) {
+	//v := NewInteraction().FFXGameVersion().GetGameVersionNumber()
+	return NewInteraction().FFXAppConfig().GetField(field)
+}
+
+func (e *interactionBase) SetTargetDirectoryBase(field ConfigField, path string) {
+	e.ffxAppConfig.UpdateField(field, path)
+}
+
+func (e *interactionBase) ProviderTargetDirectoryBase(field ConfigField, targetDirectory string) error {
+	if targetDirectory == "" {
+		targetDirectory = filepath.Join(common.GetExecDir(), e.defaultDirName)
+
+		e.SetTargetDirectoryBase(field, targetDirectory)
+	}
+
+	err := common.EnsurePathExists(targetDirectory)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+/* import (
+	"ffxresources/backend/common"
+	"path/filepath"
+)
+
 type InteractionBase struct {
 	TargetDirectory     string
 	TargetDirectoryName string
@@ -17,18 +50,6 @@ func newInteractionBase(targetDirectoryName string) InteractionBase {
 		TargetDirectoryName: targetDirectoryName,
 		TargetDirectory:     targetDirectory,
 	}
-}
-
-func (lb *InteractionBase) SetTargetDirectory(path string) {
-	if path == "" {
-		return
-	}
-
-	lb.TargetDirectory = path
-}
-
-func (lb *InteractionBase) GetTargetDirectory() string {
-	return lb.TargetDirectory
 }
 
 func (lb *InteractionBase) ProvideTargetDirectory() error {
@@ -55,3 +76,4 @@ func (t *InteractionBase) providerTargetDirectory(targetDirectory string) error 
 	}
 	return nil
 }
+*/

@@ -19,7 +19,7 @@ type ITextFormatterDev interface {
 type ISource interface {
 	Get() *core.SpiraFileInfo
 	Set(source *core.SpiraFileInfo)
-	GetGamePartDuplicates(namePrefix string, gamePart core.GamePart) []string
+	GetGamePartDuplicates(namePrefix string, gamePart core.GameVersion) []string
 }
 
 type IValidate interface {

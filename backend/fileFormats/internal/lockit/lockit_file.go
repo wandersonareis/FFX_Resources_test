@@ -53,7 +53,7 @@ func NewLockitFile(source interfaces.ISource, destination locations.IDestination
 		FormatsBase:  base.NewFormatsBaseDev(source, destination),
 		fileVerifier: verify.NewLockitFileVerifier(source, destination),
 		fileSplitter: splitter.NewLockitFileSplitter(),
-		options:      interactions.NewInteraction().GamePartOptions.GetLockitFileOptions(),
+		options:      interactions.NewInteraction().DcpAndLockitOptions.GetLockitFileOptions(),
 		partsJoiner:  joiner.NewLockitFileJoiner(source, destination, partsList),
 		parts:        partsList,
 		log:          logger.Get().With().Str("module", "lockit_file").Logger(),

@@ -1,43 +1,43 @@
 package interactions
 
 /* type IFfxGamePart interface {
-	GetGamePart() GamePart
-	GetGamePartNumber() int
-	SetGamePart(GamePart)
-	SetGamePartNumber(int)
+	FFXGameVersion() FFXGameVersion
+	GetGameVersionNumber() int
+	SetGameVersion(FFXGameVersion)
+	SetGameVersionNumber(int)
 }
 
-type GamePart int
+type FFXGameVersion int
 
 const (
-	Ffx GamePart = iota + 1
+	Ffx FFXGameVersion = iota + 1
 	Ffx2
 )
 
-type FfxGamePart struct {
-	gamePart GamePart
+type FFXGameVersion struct {
+	ffxGameVersion FFXGameVersion
 }
 
-func NewFfxGamePart() *FfxGamePart {
+func NewFfxGamePart() *FFXGameVersion {
 
-	return &FfxGamePart{
-		gamePart: Ffx,
+	return &FFXGameVersion{
+		ffxGameVersion: Ffx,
 	}
 }
 
-func (f *FfxGamePart) GetGamePart() GamePart {
-	return f.gamePart
+func (f *FFXGameVersion) FFXGameVersion() FFXGameVersion {
+	return f.ffxGameVersion
 }
 
-func (f *FfxGamePart) GetGamePartNumber() int {
-	return int(f.gamePart)
+func (f *FFXGameVersion) GetGameVersionNumber() int {
+	return int(f.ffxGameVersion)
 }
 
-func (f *FfxGamePart) SetGamePart(partName GamePart) {
-	f.gamePart = partName
+func (f *FFXGameVersion) SetGameVersion(partName FFXGameVersion) {
+	f.ffxGameVersion = partName
 }
 
-func (f *FfxGamePart) SetGamePartNumber(partNumber int) {
+func (f *FFXGameVersion) SetGameVersionNumber(partNumber int) {
 	if partNumber < 1 {
 		partNumber = 1
 	}
@@ -46,5 +46,5 @@ func (f *FfxGamePart) SetGamePartNumber(partNumber int) {
 		partNumber = 2
 	}
 
-	f.gamePart = GamePart(partNumber)
+	f.ffxGameVersion = FFXGameVersion(partNumber)
 } */

@@ -25,10 +25,6 @@
   @apply m-0 ml-5;
 }
 
-.p-button {
-  @apply bg-transparent text-slate-600 border-none hover:bg-blue-200 !important;
-}
-
 .p-tree-node-content.p-tree-node-selected {
   @apply bg-blue-300/60 text-blue-600 font-semibold outline outline-1 outline-blue-400 w-[80%] !important;
   box-sizing: border-box;

@@ -23,9 +23,11 @@ type Destination struct {
 }
 
 func NewDestination() IDestination {
-	extractPath := interactions.NewInteraction().ExtractLocation.GetTargetDirectory()
-	translatePath := interactions.NewInteraction().TranslateLocation.GetTargetDirectory()
-	importPath := interactions.NewInteraction().ImportLocation.GetTargetDirectory()
+	_interactions := interactions.NewInteraction()
+
+	extractPath := _interactions.ExtractLocation.GetTargetDirectory()
+	translatePath := _interactions.TranslateLocation.GetTargetDirectory()
+	importPath := _interactions.ImportLocation.GetTargetDirectory()
 
 	destination := &Destination{
 		ExtractLocation:   NewExtractLocationInfo(bases.WithDirectoryName("extracted"), bases.WithTargetDirectory(extractPath)),

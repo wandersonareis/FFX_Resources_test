@@ -18,7 +18,7 @@ type ffxTextKrnlEncoding struct {
 }
 
 func newFFXTextKrnlEncoding(encoding string) *ffxTextKrnlEncoding {
-	gamePart := interactions.NewInteraction().GamePart.GetGamePart()
+	gamePart := interactions.NewInteraction().FFXGameVersion().GetGameVersion()
 	return &ffxTextKrnlEncoding{
 		textsHandler: encodingHandler.NewKrnlTextsHandler(gamePart),
 		encoding:     encoding,

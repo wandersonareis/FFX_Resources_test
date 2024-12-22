@@ -15,10 +15,10 @@ type IKrnlEncodingHandler interface {
 type krnlEncodingHandler struct {
 	util.Checksum
 	handlerFile string
-	gamePart    core.GamePart
+	gamePart    core.GameVersion
 }
 
-func NewKrnlTextsHandler(gamePart core.GamePart) IKrnlEncodingHandler {
+func NewKrnlTextsHandler(gamePart core.GameVersion) IKrnlEncodingHandler {
 	return &krnlEncodingHandler{
 		Checksum: util.Checksum{},
 		gamePart: gamePart,

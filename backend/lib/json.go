@@ -1,11 +1,11 @@
 package lib
 
-import (
+/* import (
 	"encoding/json"
 	"os"
-)
+) */
 
-func SaveToJSONFile(data interface{}, filename string) error {
+/* func SaveToJSONFile(data interface{}, filename string) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		return err
@@ -20,9 +20,9 @@ func SaveToJSONFile(data interface{}, filename string) error {
 	}
 
 	return nil
-}
+} */
 
-func LoadFromJson(data interface{}, path string) error {
+/* func LoadFromJson(data interface{}, path string) error {
 	file, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -30,4 +30,4 @@ func LoadFromJson(data interface{}, path string) error {
 
 	err = json.Unmarshal(file, &data)
 	return err
-}
+} */

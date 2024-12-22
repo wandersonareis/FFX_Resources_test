@@ -1,23 +1,23 @@
-import {Component, OnInit, Signal, signal, WritableSignal} from '@angular/core';
+import { Component, OnInit, Signal, signal, WritableSignal } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectDirectory } from '../../../../wailsjs/go/main/App';
 import { EventsEmit, EventsOn } from '../../../../wailsjs/runtime';
+import { FloatLabelModule } from "primeng/floatlabel";
 import { gameDirectory } from '../signals/signals.signal';
-import {FloatLabelModule} from "primeng/floatlabel";
 
 @Component({
-    selector: 'app-config-modal',
-    imports: [
-        ButtonModule,
-        DialogModule,
-        InputTextModule,
-        ReactiveFormsModule,
-        FloatLabelModule,
-    ],
-    templateUrl: './config-modal.component.html'
+  selector: 'app-config-modal',
+  imports: [
+    ButtonModule,
+    DialogModule,
+    InputTextModule,
+    ReactiveFormsModule,
+    FloatLabelModule,
+  ],
+  templateUrl: './config-modal.component.html'
 })
 export class ConfigModalComponent implements OnInit {
   visible: WritableSignal<boolean> = signal<boolean>(false);
@@ -94,5 +94,4 @@ export class ConfigModalComponent implements OnInit {
     EventsEmit("Refresh_Tree")
     EventsEmit("SaveConfig")
   }
-
 }

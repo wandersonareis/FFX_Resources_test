@@ -113,7 +113,7 @@ func (sf SpiraFolder) processFiles() *components.List[interfaces.IFileProcessor]
 	filesProcessorList := components.NewList[interfaces.IFileProcessor](filesList.GetLength())
 
 	generateFilesProcessorListFunc := func(_ int, item string) {
-		s, err := locations.NewSource(item, interactions.Get().GamePart.GetGamePart())
+		s, err := locations.NewSource(item, interactions.NewInteraction().FFXGameVersion().GetGameVersion())
 		if err != nil {
 			sf.log.Error().
 				Err(err).

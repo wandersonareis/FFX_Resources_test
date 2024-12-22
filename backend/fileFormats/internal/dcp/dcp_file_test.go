@@ -20,7 +20,7 @@ func TestNewDcpFile(t *testing.T) {
 	reimportTempPath := filepath.Join(common.GetTempDir(), "reimport")
 	translatePath := filepath.Join(currentDir, "/testData/")
 
-	interactions.NewInteraction().GamePart.SetGamePartNumber(2)
+	interactions.NewInteraction().FFXGameVersion.SetGameVersionNumber(2)
 	interactions.NewInteraction().ExtractLocation.SetTargetDirectory(extractTempPath)
 	interactions.NewInteraction().ImportLocation.SetTargetDirectory(reimportTempPath)
 	interactions.NewInteraction().TranslateLocation.SetTargetDirectory(translatePath)

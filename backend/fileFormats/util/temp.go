@@ -10,7 +10,7 @@ import (
 func CreateTemporaryFileInfo(filePath string, formatter interfaces.ITextFormatterDev) (interfaces.ISource, locations.IDestination, string) {
 	tmpDir := common.NewTempProviderDev("", "").TempFilePath
 
-	gamePart := interactions.NewInteraction().GamePart.GetGamePart()
+	gamePart := interactions.NewInteraction().FFXGameVersion().GetGameVersion()
 
 	source, err := locations.NewSource(filePath, gamePart)
 	if err != nil {

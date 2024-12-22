@@ -34,7 +34,7 @@ func (c *CollectionService) BuildTree() []spira.TreeNode {
 		return nil
 	}
 
-	source, err := locations.NewSource(path, interactions.NewInteraction().GamePart.GetGamePart())
+	source, err := locations.NewSource(path, interactions.NewInteraction().FFXGameVersion().GetGameVersion())
 	if err != nil {
 		notifications.NotifyError(err)
 		return nil

@@ -4,17 +4,17 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { providePrimeNG } from 'primeng/config';
 import { routes } from "./app.routes"
 
-import Aura from '@primeng/themes/aura';
+import { FFXPreset } from "../theme/ffx.theme";
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
     provideAnimationsAsync(),
     provideExperimentalZonelessChangeDetection(),
-    providePrimeNG({ 
+    providePrimeNG({
       theme: {
-          preset: Aura
+        preset: FFXPreset
       }
-  })
+    })
   ]
 }

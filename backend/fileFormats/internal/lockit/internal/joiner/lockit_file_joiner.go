@@ -3,7 +3,7 @@ package joiner
 import (
 	"bytes"
 	"ffxresources/backend/core/components"
-	"ffxresources/backend/core/encoding"
+	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lib"
@@ -35,7 +35,7 @@ type lockitFileJoiner struct {
 func NewLockitFileJoiner(source interfaces.ISource, destination locations.IDestination, partsList components.IList[parts.LockitFileParts]) IPartsJoiner {
 	return &lockitFileJoiner{
 		FormatsBase: base.NewFormatsBaseDev(source, destination),
-		options:     interactions.NewInteraction().GamePartOptions.GetLockitFileOptions(),
+		options:     interactions.NewInteraction().DcpAndLockitOptions.GetLockitFileOptions(),
 		partsList:   partsList,
 
 		log: logger.Get().With().Str("module", "lockit_file_joiner").Logger(),

@@ -9,17 +9,28 @@ type IGameLocation interface {
 }
 
 type GameLocation struct {
-	InteractionBase
+	*interactionBase
 }
 
-const defaultDirName = "data"
-
-func NewGameLocation() IGameLocation {
+func newGameLocation(ffxAppConfig IFFXAppConfig) IGameLocation {
+	defaultDirName := "data"
 	return &GameLocation{
-		InteractionBase: newInteractionBase(defaultDirName),
+		interactionBase: &interactionBase{
+			ffxAppConfig:      ffxAppConfig,
+			defaultDirName: defaultDirName,
+		},
 	}
 }
 
-func (g GameLocation) IsSpira() error {
-	return common.ContainsNewUSPCPath(g.TargetDirectory)
+func (g *GameLocation) GetTargetDirectory() string {
+	path, _ := g.interactionBase.GetTargetDirectoryBase(ConfigGameFilesLocation)
+	return path.(string)
+}
+
+func (g *GameLocation) SetTargetDirectory(path string) {
+	g.interactionBase.SetTargetDirectoryBase(ConfigGameFilesLocation, path)
+}
+
+func (g *GameLocation) IsSpira() error {
+	return common.ContainsNewUSPCPath(g.GetTargetDirectory())
 }

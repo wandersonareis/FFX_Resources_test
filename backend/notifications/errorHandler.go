@@ -13,6 +13,12 @@ func PanicRecover(errChan chan error, logger zerolog.Logger) {
 	}
 }
 
+func PanicRecoverLogger(logger zerolog.Logger) {
+	if r := recover(); r != nil {
+		logger.Error().Interface("recover", r).Msg("Panic occurred")
+	}
+}
+
 func ProcessError(errChan chan error, logger zerolog.Logger) {
 	for {
 		select {

@@ -2,38 +2,56 @@ package interactions
 
 import (
 	"context"
+	"ffxresources/backend/common"
 	"ffxresources/backend/core"
+	"path/filepath"
 	"sync"
 )
 
 type Interaction struct {
-	Ctx               context.Context
-	activeCtx         context.Context
-	cancel            context.CancelFunc
-	mu                sync.Mutex
-	GameLocation      IGameLocation
-	GamePart          core.IFfxGamePart
-	GamePartOptions   IGamePartOptions
-	ExtractLocation   IExtractLocation
-	TranslateLocation ITranslateLocation
-	ImportLocation    IImportLocation
+	Ctx                 context.Context
+	activeCtx           context.Context
+	cancel              context.CancelFunc
+	mu                  sync.Mutex
+	ffxAppConfig        IFFXAppConfig
+	ffxGameVersion      core.IFfxGameVersion
+	GameLocation        IGameLocation
+	DcpAndLockitOptions IDcpAndLockitOptions
+	ExtractLocation     IExtractLocation
+	TranslateLocation   ITranslateLocation
+	ImportLocation      IImportLocation
 }
 
 var interactionInstance *Interaction
 
+var initOnce sync.Once
+
 func NewInteraction() *Interaction {
-	if interactionInstance == nil {
-		gamePart := core.NewFfxGamePart()
-		interactionInstance = &Interaction{
-			Ctx:               context.Background(),
-			GameLocation:      NewGameLocation(),
-			GamePart:          gamePart,
-			GamePartOptions:   NewGamePartOptions(gamePart),
-			ExtractLocation:   NewExtractLocation(),
-			TranslateLocation: NewTranslateLocation(),
-			ImportLocation:    NewImportLocation(),
+	initOnce.Do(func() {
+		filePath := filepath.Join(common.GetExecDir(), "config.json")
+
+		ffxAppConfig := newAppConfig(filePath)
+		if err := ffxAppConfig.FromJson(); err != nil {
+			panic(err)
 		}
-	}
+
+		gameVersion := core.NewFFXGameVersion()
+		gameVersion.SetGameVersionNumber(ffxAppConfig.FFXGameVersion)
+
+		ffxAppConfig.FFXGameVersion = gameVersion.GetGameVersionNumber()
+
+		interactionInstance = &Interaction{
+			Ctx:                 context.Background(),
+			ffxAppConfig:        ffxAppConfig,
+			ffxGameVersion:      gameVersion,
+			GameLocation:        newGameLocation(ffxAppConfig),
+			ExtractLocation:     newExtractLocation(ffxAppConfig),
+			TranslateLocation:   newTranslateLocation(ffxAppConfig),
+			ImportLocation:      newImportLocation(ffxAppConfig),
+			DcpAndLockitOptions: newDcpAndLockitOptions(gameVersion),
+		}
+	})
+
 	return interactionInstance
 }
 
@@ -52,8 +70,16 @@ func NewInteractionWithCtx(ctx context.Context) *Interaction {
 	return interactionInstance
 }
 
-func Get() *Interaction {
+/* func Get() *Interaction {
 	return interactionInstance
+} */
+
+func (i *Interaction) FFXAppConfig() IFFXAppConfig {
+	return i.ffxAppConfig
+}
+
+func (i *Interaction) FFXGameVersion() core.IFfxGameVersion {
+	return i.ffxGameVersion
 }
 
 func (i *Interaction) Start() context.Context {
