@@ -4,19 +4,17 @@ import (
 	"context"
 	"ffxresources/backend/common"
 	"ffxresources/backend/interactions"
-	"ffxresources/backend/lib"
 	"ffxresources/backend/logger"
 	"ffxresources/backend/notifications"
 	"ffxresources/backend/services"
+	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type AppConfig struct {
-	filePath          string
 	GameFilesLocation string `json:"gameFilesLocation"`
 	GamePart          int    `json:"gamePart"`
 	ExtractLocation   string `json:"extractLocation"`
@@ -26,7 +24,6 @@ type AppConfig struct {
 
 // App struct
 type App struct {
-	appConfig         *AppConfig
 	CollectionService *services.CollectionService
 	ExtractService    *services.ExtractService
 	CompressService   *services.CompressService
@@ -38,10 +35,6 @@ func NewApp() *App {
 		CollectionService: services.NewCollectionService(),
 		ExtractService:    services.NewExtractService(),
 		CompressService:   services.NewCompressService(),
-
-		appConfig: &AppConfig{
-			filePath: filepath.Join(common.GetExecDir(), "config.json"),
-		},
 	}
 }
 
@@ -58,30 +51,20 @@ func (a *App) startup(ctx context.Context) {
 	}()
 
 	interactions.NewInteractionWithCtx(ctx)
-
-	if err := lib.LoadFromJson(a.appConfig, a.appConfig.filePath); err != nil {
-		notifications.NotifyError(err)
-	}
-
-	interactions.NewInteraction().GamePart.SetGamePartNumber(a.appConfig.GamePart)
-
-	a.initializeLocationsDirectory()
 }
 
 // domReady is called after front-end resources have been loaded
 func (a App) domReady(ctx context.Context) {
 	// Add your action here
-	EventsOnLocations(ctx)
+	EventsOnStartup(ctx)
 
-	EmitLocationsEvents(ctx)
-
-	EventsOnSaveConfig(ctx, a.appConfig.filePath)
+	EventsOnSaveConfig(ctx)
 
 	testPath := "F:\\ffxWails\\FFX_Resources\\build\\bin\\data\\ffx-2_data\\gamedata\\ps3data\\lockit\\ffx2_loc_kit_ps3_us.bin"
 	services.TestExtractFile(testPath, false, false)
 
 	testPath = `F:\ffxWails\FFX_Resources\build\bin\data\ffx_ps2\ffx2\master\new_uspc\menu\macrodic.dcp`
-	services.TestExtractFile(testPath, true, false)
+	services.TestExtractFile(testPath, false, false)
 
 	testPath = `F:\ffxWails\FFX_Resources\build\bin\data\ffx_ps2\ffx2\master\new_uspc\battle\btl\bika07_235\bika07_235.bin`
 	services.TestExtractFile(testPath, false, false)
@@ -101,25 +84,18 @@ func (a App) domReady(ctx context.Context) {
 // either by clicking the window close button or calling runtime.Quit.
 // Returning true will cause the application to continue, false will continue shutdown as normal.
 func (a *App) beforeClose(ctx context.Context) (prevent bool) {
-	config := AppConfig{
-		GameFilesLocation: interactions.NewInteraction().GameLocation.GetTargetDirectory(),
-		GamePart:          interactions.NewInteraction().GamePart.GetGamePartNumber(),
-		ExtractLocation:   interactions.NewInteraction().ExtractLocation.GetTargetDirectory(),
-		TranslateLocation: interactions.NewInteraction().TranslateLocation.GetTargetDirectory(),
-		ReimportLocation:  interactions.NewInteraction().ImportLocation.GetTargetDirectory(),
-	}
+	interactions.NewInteraction().FFXAppConfig().ToJson()
 
-	if err := lib.SaveToJSONFile(config, a.appConfig.filePath); err != nil {
-		notifications.NotifyError(err)
-	}
-
-	if _, err := runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
+	answer, err := runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
 		Type:    runtime.QuestionDialog,
 		Title:   "Quit?",
 		Message: "Are you sure you want to quit?",
-	}); err != nil {
+	})
+	if err != nil {
 		return false
 	}
+
+	fmt.Println("Answer:", answer)
 
 	return false
 }
@@ -157,11 +133,4 @@ func (a *App) SelectDirectory(title string) string {
 		return ""
 	}
 	return selection
-}
-
-func (a *App) initializeLocationsDirectory() {
-	interactions.NewInteraction().GameLocation.SetTargetDirectory(a.appConfig.GameFilesLocation)
-	interactions.NewInteraction().ExtractLocation.SetTargetDirectory(a.appConfig.ExtractLocation)
-	interactions.NewInteraction().TranslateLocation.SetTargetDirectory(a.appConfig.TranslateLocation)
-	interactions.NewInteraction().ImportLocation.SetTargetDirectory(a.appConfig.ReimportLocation)
 }
