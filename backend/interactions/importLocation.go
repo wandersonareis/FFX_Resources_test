@@ -11,12 +11,11 @@ type (
 	}
 )
 
-func newImportLocation(ffxAppConfig IFFXAppConfig) IImportLocation {
+func newImportLocation() IImportLocation {
 	rootDirectoryName := "reimported"
 
 	return &ImportLocation{
 		interactionBase: &interactionBase{
-			ffxAppConfig:      ffxAppConfig,
 			defaultDirName: rootDirectoryName,
 		},
 	}

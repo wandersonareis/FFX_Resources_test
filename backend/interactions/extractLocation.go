@@ -1,22 +1,21 @@
 package interactions
 
+import "ffxresources/backend/interfaces"
+
 type (
 	ExtractLocation struct {
 		*interactionBase
 	}
 	IExtractLocation interface {
-		GetTargetDirectory() string
-		SetTargetDirectory(path string)
-		ProvideTargetDirectory() error
+		interfaces.IInteractionBase
 	}
 )
 
-func newExtractLocation(ffxAppConfig IFFXAppConfig) IExtractLocation {
+func newExtractLocation() IExtractLocation {
 	rootDirectoryName := "extracted"
 
 	return &ExtractLocation{
 		interactionBase: &interactionBase{
-			ffxAppConfig:   ffxAppConfig,
 			defaultDirName: rootDirectoryName,
 		},
 	}
@@ -41,17 +40,3 @@ func (e *ExtractLocation) ProvideTargetDirectory() error {
 
 	return nil
 }
-
-/* func (e *ExtractLocation) providerTargetDirectory(targetDirectory string) error {
-	if targetDirectory == "" {
-		targetDirectory = filepath.Join(common.GetExecDir(), e.defaultDirName)
-
-		e.SetTargetDirectory(targetDirectory)
-	}
-
-	err := common.EnsurePathExists(targetDirectory)
-	if err != nil {
-		return err
-	}
-	return nil
-} */

@@ -1,10 +1,13 @@
 package interactions
 
-import "ffxresources/backend/common"
+import (
+	"ffxresources/backend/common"
+	"ffxresources/backend/interfaces"
+)
 
 type IGameLocation interface {
-	GetTargetDirectory() string
-	SetTargetDirectory(path string)
+	interfaces.IInteractionBase
+
 	IsSpira() error
 }
 
@@ -12,11 +15,10 @@ type GameLocation struct {
 	*interactionBase
 }
 
-func newGameLocation(ffxAppConfig IFFXAppConfig) IGameLocation {
+func newGameLocation() IGameLocation {
 	defaultDirName := "data"
 	return &GameLocation{
 		interactionBase: &interactionBase{
-			ffxAppConfig:      ffxAppConfig,
 			defaultDirName: defaultDirName,
 		},
 	}
@@ -29,6 +31,17 @@ func (g *GameLocation) GetTargetDirectory() string {
 
 func (g *GameLocation) SetTargetDirectory(path string) {
 	g.interactionBase.SetTargetDirectoryBase(ConfigGameFilesLocation, path)
+}
+
+func (g *GameLocation) ProvideTargetDirectory() error {
+	path := g.GetTargetDirectory()
+
+	err := g.interactionBase.ProviderTargetDirectoryBase(ConfigGameFilesLocation, path)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (g *GameLocation) IsSpira() error {

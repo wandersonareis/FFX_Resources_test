@@ -44,10 +44,10 @@ func NewInteraction() *Interaction {
 			Ctx:                 context.Background(),
 			ffxAppConfig:        ffxAppConfig,
 			ffxGameVersion:      gameVersion,
-			GameLocation:        newGameLocation(ffxAppConfig),
-			ExtractLocation:     newExtractLocation(ffxAppConfig),
-			TranslateLocation:   newTranslateLocation(ffxAppConfig),
-			ImportLocation:      newImportLocation(ffxAppConfig),
+			GameLocation:        newGameLocation(),
+			ExtractLocation:     newExtractLocation(),
+			TranslateLocation:   newTranslateLocation(),
+			ImportLocation:      newImportLocation(),
 			DcpAndLockitOptions: newDcpAndLockitOptions(gameVersion),
 		}
 	})

@@ -11,12 +11,11 @@ type (
 	}
 )
 
-func newTranslateLocation(ffxAppConfig IFFXAppConfig) ITranslateLocation {
+func newTranslateLocation() ITranslateLocation {
 	rootDirectoryName := "translated"
 
 	return &TranslateLocation{
 		interactionBase: &interactionBase{
-			ffxAppConfig:      ffxAppConfig,
 			defaultDirName: rootDirectoryName,
 		},
 	}
