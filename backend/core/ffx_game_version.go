@@ -1,30 +1,25 @@
 package core
 
+import "ffxresources/backend/models"
+
 type IFfxGameVersion interface {
-	GetGameVersion() GameVersion
+	GetGameVersion() models.GameVersion
 	GetGameVersionNumber() int
-	SetGameVersion(GameVersion)
+	SetGameVersion(models.GameVersion)
 	SetGameVersionNumber(int)
 }
 
-type GameVersion int
-
-const (
-	FFX GameVersion = iota + 1
-	FFX2
-)
-
 type FFXGameVersion struct {
-	gameVersion GameVersion
+	gameVersion models.GameVersion
 }
 
 func NewFFXGameVersion() *FFXGameVersion {
 	return &FFXGameVersion{
-		gameVersion: FFX,
+		gameVersion: models.FFX,
 	}
 }
 
-func (f *FFXGameVersion) GetGameVersion() GameVersion {
+func (f *FFXGameVersion) GetGameVersion() models.GameVersion {
 	return f.gameVersion
 }
 
@@ -32,7 +27,7 @@ func (f *FFXGameVersion) GetGameVersionNumber() int {
 	return int(f.gameVersion)
 }
 
-func (f *FFXGameVersion) SetGameVersion(partName GameVersion) {
+func (f *FFXGameVersion) SetGameVersion(partName models.GameVersion) {
 	f.gameVersion = partName
 }
 
@@ -45,5 +40,5 @@ func (f *FFXGameVersion) SetGameVersionNumber(partNumber int) {
 		partNumber = 2
 	}
 
-	f.gameVersion = GameVersion(partNumber)
+	f.gameVersion = models.GameVersion(partNumber)
 }

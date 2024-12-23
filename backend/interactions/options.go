@@ -2,6 +2,7 @@ package interactions
 
 import (
 	"ffxresources/backend/core"
+	"ffxresources/backend/models"
 	"sync"
 )
 
@@ -44,9 +45,9 @@ func newDcpAndLockitOptions(gamePart *core.FFXGameVersion) IDcpAndLockitOptions 
 
 func (g *DcpAndLockitOptions) getDcpOrLockitOptions() DcpAndLockitOptions {
 	switch g.FFXGameVersion.GetGameVersion() {
-	case core.FFX:
+	case models.FFX:
 		return ffxOptions()
-	case core.FFX2:
+	case models.FFX2:
 		return ffx2Options()
 	}
 

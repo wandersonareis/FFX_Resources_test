@@ -22,7 +22,7 @@ type SpiraFileInfo struct {
 	RelativePath string          `json:"relative_path"`
 }
 
-func NewSpiraFileInfo(path string, gamePart GameVersion) (*SpiraFileInfo, error) {
+func NewSpiraFileInfo(path string, gamePart models.GameVersion) (*SpiraFileInfo, error) {
 	cPath := filepath.Clean(path)
 	info, err := os.Stat(cPath)
 	if err != nil {

@@ -3,6 +3,7 @@ package locations
 import (
 	"ffxresources/backend/core"
 	"ffxresources/backend/interfaces"
+	"ffxresources/backend/models"
 	"path/filepath"
 )
 
@@ -10,7 +11,7 @@ type Source struct {
 	FileInfo *core.SpiraFileInfo `json:"file_info"`
 }
 
-func NewSource(path string, gamePart core.GameVersion) (interfaces.ISource, error) {
+func NewSource(path string, gamePart models.GameVersion) (interfaces.ISource, error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
@@ -40,12 +41,12 @@ func (g *Source) Set(fileInfo *core.SpiraFileInfo) {
 	g.FileInfo = fileInfo
 }
 
-func (g *Source) GetGamePartDuplicates(namePrefix string, gamePart core.GameVersion) []string {
+func (g *Source) GetGamePartDuplicates(namePrefix string, gamePart models.GameVersion) []string {
 	switch gamePart {
-	case core.FFX:
+	case models.FFX:
 		//TODO: return NewFfxDuplicate().AddFfxTextDuplicate()
 		fallthrough
-	case core.FFX2:
+	case models.FFX2:
 		dupes := core.NewFfx2Duplicate()
 		dupes.AddFfx2TextDuplicate()
 		return dupes.TryFind(namePrefix)

@@ -1,8 +1,8 @@
 package encodingHandler
 
 import (
-	"ffxresources/backend/core"
 	"ffxresources/backend/fileFormats/util"
+	"ffxresources/backend/models"
 	"fmt"
 	"os"
 )
@@ -15,10 +15,10 @@ type IKrnlEncodingHandler interface {
 type krnlEncodingHandler struct {
 	util.Checksum
 	handlerFile string
-	gamePart    core.GameVersion
+	gamePart    models.GameVersion
 }
 
-func NewKrnlTextsHandler(gamePart core.GameVersion) IKrnlEncodingHandler {
+func NewKrnlTextsHandler(gamePart models.GameVersion) IKrnlEncodingHandler {
 	return &krnlEncodingHandler{
 		Checksum: util.Checksum{},
 		gamePart: gamePart,
@@ -27,9 +27,9 @@ func NewKrnlTextsHandler(gamePart core.GameVersion) IKrnlEncodingHandler {
 
 func (th *krnlEncodingHandler) FetchKrnlTextsHandler() (string, error) {
 	switch th.gamePart {
-	case core.FFX:
+	case models.FFX:
 		return th.fetchFFXKrnlTextsHandler()
-	case core.FFX2:
+	case models.FFX2:
 		return th.fetchFFX2KrnlTextsHandler()
 	default:
 		return "", fmt.Errorf("invalid game part")

@@ -3,6 +3,7 @@ package interfaces
 import (
 	"ffxresources/backend/bases"
 	"ffxresources/backend/core"
+	"ffxresources/backend/models"
 )
 
 type IFileProcessor interface {
@@ -19,7 +20,7 @@ type ITextFormatterDev interface {
 type ISource interface {
 	Get() *core.SpiraFileInfo
 	Set(source *core.SpiraFileInfo)
-	GetGamePartDuplicates(namePrefix string, gamePart core.GameVersion) []string
+	GetGamePartDuplicates(namePrefix string, gamePart models.GameVersion) []string
 }
 
 type IValidate interface {
