@@ -100,15 +100,31 @@ func GetRelativePathFromMarker(path string) string {
 // Returns:
 //
 //	A string representing the relative path from 'from' to 'to'.
-func MakeRelativePath(from, to string) string {
+func MakeRelativePath(fromPath, toPath string) string {
+	from := filepath.Clean(fromPath)
+	to := filepath.Clean(toPath)
+
+	// Remove volume name from the paths before comparison
+	vol1 := filepath.VolumeName(from)
+	vol2 := filepath.VolumeName(to)
+	from = strings.TrimPrefix(from, vol1)
+	to = strings.TrimPrefix(to, vol2)
+
+	// Change path values keeping the longest one in p1
+	if len(from) < len(to) {
+		from, to = to, from
+	}
+
 	if from == to {
 		return ""
 	}
 
-	if strings.HasPrefix(from, to) {
-		return strings.TrimPrefix(from, to+"\\")
+	if !strings.HasPrefix(from, to) {
+		return ""
 	}
-	return from
+
+	result := strings.TrimPrefix(from, to)
+	return strings.TrimPrefix(result, string(os.PathSeparator))
 }
 
 // ContainsNewUSPCPath checks if the provided path contains the required sequence
