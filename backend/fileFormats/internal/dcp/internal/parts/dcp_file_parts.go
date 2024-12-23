@@ -19,7 +19,7 @@ func NewDcpFileParts(source interfaces.ISource, destination locations.IDestinati
 	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
 
 	return &DcpFileParts{
-		FormatsBase: base.NewFormatsBaseDev(source, destination),
+		FormatsBase: base.NewFormatsBase(source, destination),
 	}
 }
 

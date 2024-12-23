@@ -46,7 +46,7 @@ func NewDcpFile(source interfaces.ISource, destination locations.IDestination) i
 	}
 
 	return &DcpFile{
-		FormatsBase:   base.NewFormatsBaseDev(source, destination),
+		FormatsBase:   base.NewFormatsBase(source, destination),
 		dcpFileVerify: verify.NewDcpFileVerify(),
 		PartsList:     dcpFileParts,
 		fileSplitter:  splitter.NewDcpFileSpliter(),

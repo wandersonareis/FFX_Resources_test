@@ -24,7 +24,7 @@ type LockitFileVerifier struct {
 
 func NewLockitFileVerifier(source interfaces.ISource, destination locations.IDestination) ILockitFileVerifier {
 	return &LockitFileVerifier{
-		FormatsBase:      base.NewFormatsBaseDev(source, destination),
+		FormatsBase:      base.NewFormatsBase(source, destination),
 		FileValidator:    newFileValidator(),
 		LineBreakCounter: new(LineBreakCounter),
 	}

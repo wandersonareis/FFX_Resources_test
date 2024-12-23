@@ -1,10 +1,10 @@
 package parts
 
 import (
-	"ffxresources/backend/core/encoding"
+	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/base"
-	"ffxresources/backend/fileFormats/internal/lockit/internal/encoding"
+	lockitencoding "ffxresources/backend/fileFormats/internal/lockit/internal/encoding"
 	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interfaces"
@@ -32,7 +32,7 @@ func NewLockitFileParts(source interfaces.ISource, destination locations.IDestin
 	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
 
 	return &LockitFileParts{
-		FormatsBase: base.NewFormatsBaseDev(source, destination),
+		FormatsBase: base.NewFormatsBase(source, destination),
 	}
 }
 

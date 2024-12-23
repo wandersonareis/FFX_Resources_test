@@ -17,7 +17,7 @@ type FormatsBase struct {
 	destination locations.IDestination
 }
 
-func NewFormatsBaseDev(source interfaces.ISource, destination locations.IDestination) *FormatsBase {
+func NewFormatsBase(source interfaces.ISource, destination locations.IDestination) *FormatsBase {
 	return &FormatsBase{
 		Ctx:         interactions.NewInteraction().Ctx,
 		Log:         logger.Get(),
@@ -45,15 +45,3 @@ func (f *FormatsBase) Source() interfaces.ISource {
 func (f *FormatsBase) Destination() locations.IDestination {
 	return f.destination
 }
-
-/* func (f *FormatsBase) GetExtractLocation() *interactions.ExtractLocation {
-	return f.destination.GetExtractLocation()
-}
-
-func (f *FormatsBase) GetTranslateLocation() *interactions.TranslateLocation {
-	return f.dataInfo.GetTranslateLocation()
-}
-
-func (f *FormatsBase) GetImportLocation() *interactions.ImportLocation {
-	return f.dataInfo.GetImportLocation()
-} */

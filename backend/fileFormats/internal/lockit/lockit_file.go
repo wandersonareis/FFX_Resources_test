@@ -50,7 +50,7 @@ func NewLockitFile(source interfaces.ISource, destination locations.IDestination
 	}
 
 	return &LockitFile{
-		FormatsBase:  base.NewFormatsBaseDev(source, destination),
+		FormatsBase:  base.NewFormatsBase(source, destination),
 		fileVerifier: verify.NewLockitFileVerifier(source, destination),
 		fileSplitter: splitter.NewLockitFileSplitter(),
 		options:      interactions.NewInteraction().DcpAndLockitOptions.GetLockitFileOptions(),
