@@ -3,6 +3,7 @@ package formatters
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/util"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/models"
 	"path/filepath"
@@ -23,7 +24,7 @@ func (t TxtFormatter) ReadFile(source interfaces.ISource, targetDirectory string
 
 	switch source.Get().Type {
 	case models.Folder:
-		outputPath = filepath.Join(targetDirectory, source.Get().RelativePath)
+		outputPath = t.provideFolderReadPath(source, targetDirectory)
 	case models.Dcp:
 		outputFile, outputPath = t.provideDcpReadPath(targetDirectory, source.Get().Name)
 	case models.DcpParts:
@@ -40,7 +41,21 @@ func (t TxtFormatter) ReadFile(source interfaces.ISource, targetDirectory string
 }
 
 func (t TxtFormatter) provideDefaulReadPath(targetDirectory, relativePath string) (string, string) {
-	return provideBasePath(targetDirectory, common.ChangeExtension(relativePath, t.targetExtension))
+	gameVersionDirBase := interactions.NewInteraction().FFXGameVersion().GetGameVersion().String()
+	return provideBasePath(targetDirectory, gameVersionDirBase, common.ChangeExtension(relativePath, t.targetExtension))
+}
+
+func (t *TxtFormatter) provideFolderReadPath(source interfaces.ISource, targetDirectory string) string {
+	gameFilesPath := interactions.NewInteraction().GameLocation.GetTargetDirectory()
+	relative := common.MakeRelativePath(gameFilesPath, source.Get().Parent)
+
+	source.Get().RelativePath = relative
+
+	gameVersionDirBase := interactions.NewInteraction().FFXGameVersion().GetGameVersion().String()
+
+	outputPath := filepath.Join(targetDirectory, gameVersionDirBase, relative)
+
+	return outputPath
 }
 
 func (t TxtFormatter) provideDcpReadPath(targetDirectory, fileName string) (string, string) {
@@ -60,7 +75,6 @@ func (t TxtFormatter) provideLockitReadPath(targetDirectory, fileName string) (s
 }
 
 func (t TxtFormatter) WriteFile(source interfaces.ISource, targetDirectory string) (string, string) {
-
 	var outputFile, outputPath string
 
 	switch source.Get().Type {
@@ -78,7 +92,8 @@ func (t TxtFormatter) WriteFile(source interfaces.ISource, targetDirectory strin
 }
 
 func (t TxtFormatter) provideDefaultWritePath(targetDirectory, relativePath, fileExt string) (string, string) {
-	return provideBasePath(targetDirectory, common.ChangeExtension(relativePath, fileExt))
+	gameVersionDirBase := interactions.NewInteraction().FFXGameVersion().GetGameVersion().String()
+	return provideBasePath(targetDirectory, gameVersionDirBase, common.ChangeExtension(relativePath, fileExt))
 }
 
 func (t TxtFormatter) provideDcpWritePath(targetDirectory, relativePath string) (string, string) {
