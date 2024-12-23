@@ -1,6 +1,7 @@
 package interactions
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -52,6 +53,10 @@ func (c *FFXAppConfig) createConfig() error {
 }
 
 func (c *FFXAppConfig) ToJson() error {
+	if c == nil {
+		return fmt.Errorf("%s", "configuração inválida")
+	}
+
 	file, err := os.Create(c.filePath)
 	if err != nil {
 		return err
@@ -80,6 +85,10 @@ func (c *FFXAppConfig) FromJson() error {
 			return c.createConfig()
 		}
 		return err
+	}
+
+	if len(bytes.TrimSpace(file)) == 0 {
+		return c.createConfig()
 	}
 
 	err = json.Unmarshal(file, c)
