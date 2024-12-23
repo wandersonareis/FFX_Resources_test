@@ -48,6 +48,14 @@ func emitGameVersion(ctx context.Context) {
 
 func emitGameLocation(ctx context.Context) {
 	gameLocation := interactions.NewInteraction().GameLocation.GetTargetDirectory()
+
+	if gameLocation == "" {
+		interactions.NewInteraction().GameLocation.ProvideTargetDirectory()
+
+		emitGameLocation(ctx)
+		return
+	}
+	
 	runtime.EventsEmit(ctx, "GameFilesLocation", gameLocation)
 }
 
@@ -88,11 +96,17 @@ func emitimportLocation(ctx context.Context) {
 }
 
 func eventOnSetGameVersion(ctx context.Context) {
+	updateGameVersionNumber := func(version int) {
+		interactions.NewInteraction().FFXGameVersion().SetGameVersionNumber(version)
+		interactions.NewInteraction().FFXAppConfig().UpdateField(interactions.ConfigGameVersion, version)
+		
+		interactions.NewInteraction().FFXAppConfig().ToJson()
+	}
+
 	runtime.EventsOn(ctx, "GameVersionChanged", func(data ...any) {
 		fmt.Println("GameVersionChanged", data[0])
-
-		interactions.NewInteraction().FFXGameVersion().SetGameVersionNumber(int(data[0].(float64)))
-		interactions.NewInteraction().FFXAppConfig().ToJson()
+		
+		updateGameVersionNumber(int(data[0].(float64)))
 
 		emitGameVersion(ctx)
 	})
