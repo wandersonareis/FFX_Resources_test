@@ -10,11 +10,11 @@ type interactionBase struct {
 }
 
 func (e *interactionBase) GetTargetDirectoryBase(field ConfigField) (interface{}, error) {
-	return NewInteraction().FFXAppConfig().GetField(field)
+	return NewInteractionService().FFXAppConfig().GetField(field)
 }
 
 func (e *interactionBase) SetTargetDirectoryBase(field ConfigField, path string) {
-	NewInteraction().FFXAppConfig().UpdateField(field, path)
+	NewInteractionService().FFXAppConfig().UpdateField(field, path)
 }
 
 func (e *interactionBase) ProviderTargetDirectoryBase(field ConfigField, targetDirectory string) error {

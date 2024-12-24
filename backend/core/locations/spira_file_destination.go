@@ -23,7 +23,7 @@ type Destination struct {
 }
 
 func NewDestination() IDestination {
-	_interactions := interactions.NewInteraction()
+	_interactions := interactions.NewInteractionService()
 
 	extractPath := _interactions.ExtractLocation.GetTargetDirectory()
 	translatePath := _interactions.TranslateLocation.GetTargetDirectory()

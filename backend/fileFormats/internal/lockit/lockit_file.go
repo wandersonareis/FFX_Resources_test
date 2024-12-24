@@ -33,7 +33,7 @@ type LockitFile struct {
 func NewLockitFile(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
 	partsList := components.NewEmptyList[parts.LockitFileParts]()
 
-	destination.CreateRelativePath(source, interactions.NewInteraction().GameLocation.GetTargetDirectory())
+	destination.CreateRelativePath(source, interactions.NewInteractionService().GameLocation.GetTargetDirectory())
 
 	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
 
@@ -53,7 +53,7 @@ func NewLockitFile(source interfaces.ISource, destination locations.IDestination
 		FormatsBase:  base.NewFormatsBase(source, destination),
 		fileVerifier: verify.NewLockitFileVerifier(source, destination),
 		fileSplitter: splitter.NewLockitFileSplitter(),
-		options:      interactions.NewInteraction().DcpAndLockitOptions.GetLockitFileOptions(),
+		options:      interactions.NewInteractionService().DcpAndLockitOptions.GetLockitFileOptions(),
 		partsJoiner:  joiner.NewLockitFileJoiner(source, destination, partsList),
 		parts:        partsList,
 		log:          logger.Get().With().Str("module", "lockit_file").Logger(),

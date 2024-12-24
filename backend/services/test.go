@@ -10,7 +10,7 @@ import (
 )
 
 func TestExtractDir(path string, testExtract, testCompress bool) {
-	source, err := locations.NewSource(path, interactions.NewInteraction().FFXGameVersion().GetGameVersion())
+	source, err := locations.NewSource(path, interactions.NewInteractionService().FFXGameVersion().GetGameVersion())
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -47,7 +47,7 @@ func TestExtractDir(path string, testExtract, testCompress bool) {
 }
 
 func TestExtractFile(path string, testExtract, testCompress bool) {
-	source, err := locations.NewSource(path, interactions.NewInteraction().FFXGameVersion().GetGameVersion())
+	source, err := locations.NewSource(path, interactions.NewInteractionService().FFXGameVersion().GetGameVersion())
 	if err != nil {
 		fmt.Println(err)
 		return

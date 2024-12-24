@@ -27,7 +27,7 @@ type Content struct {
 func NewContent(header *Header, outputDir string) *Content {
 	return &Content{
 		header:    header,
-		options:   interactions.NewInteraction().DcpAndLockitOptions.GetDcpFileOptions(),
+		options:   interactions.NewInteractionService().DcpAndLockitOptions.GetDcpFileOptions(),
 		outputDir: outputDir,
 
 		log: logger.Get().With().Str("module", "dcp_file_content").Logger(),

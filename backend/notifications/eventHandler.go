@@ -36,7 +36,7 @@ func (nt Severity) String() string {
 }
 
 func Notify(notification Severity, message string) {
-	context := interactions.NewInteraction().Ctx
+	context := interactions.NewInteractionService().Ctx
 	notify := Notification{
 		Message:  message,
 		Severity: notification.String(),

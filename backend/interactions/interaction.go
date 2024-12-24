@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-type Interaction struct {
+type InteractionService struct {
 	Ctx                 context.Context
 	activeCtx           context.Context
 	cancel              context.CancelFunc
@@ -22,11 +22,11 @@ type Interaction struct {
 	ImportLocation      IImportLocation
 }
 
-var interactionInstance *Interaction
+var interactionInstance *InteractionService
 
 var initOnce sync.Once
 
-func NewInteraction() *Interaction {
+func NewInteractionService() *InteractionService {
 	initOnce.Do(func() {
 		filePath := filepath.Join(common.GetExecDir(), "config.json")
 
@@ -40,7 +40,7 @@ func NewInteraction() *Interaction {
 
 		ffxAppConfig.FFXGameVersion = gameVersion.GetGameVersionNumber()
 
-		interactionInstance = &Interaction{
+		interactionInstance = &InteractionService{
 			Ctx:                 context.Background(),
 			ffxAppConfig:        ffxAppConfig,
 			ffxGameVersion:      gameVersion,
@@ -55,9 +55,9 @@ func NewInteraction() *Interaction {
 	return interactionInstance
 }
 
-func NewInteractionWithCtx(ctx context.Context) *Interaction {
+func NewInteractionWithCtx(ctx context.Context) *InteractionService {
 	if interactionInstance == nil {
-		interactionInstance = NewInteraction()
+		interactionInstance = NewInteractionService()
 	}
 
 	interactionInstance.Ctx = ctx
@@ -74,15 +74,15 @@ func NewInteractionWithCtx(ctx context.Context) *Interaction {
 	return interactionInstance
 } */
 
-func (i *Interaction) FFXAppConfig() IFFXAppConfig {
+func (i *InteractionService) FFXAppConfig() IFFXAppConfig {
 	return i.ffxAppConfig
 }
 
-func (i *Interaction) FFXGameVersion() core.IFfxGameVersion {
+func (i *InteractionService) FFXGameVersion() core.IFfxGameVersion {
 	return i.ffxGameVersion
 }
 
-func (i *Interaction) Start() context.Context {
+func (i *InteractionService) Start() context.Context {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
@@ -91,7 +91,7 @@ func (i *Interaction) Start() context.Context {
 	return i.activeCtx
 }
 
-func (i *Interaction) Stop() {
+func (i *InteractionService) Stop() {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
@@ -101,7 +101,7 @@ func (i *Interaction) Stop() {
 	}
 }
 
-func (i *Interaction) GetActiveCtx() context.Context {
+func (i *InteractionService) GetActiveCtx() context.Context {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 

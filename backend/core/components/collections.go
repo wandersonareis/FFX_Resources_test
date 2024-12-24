@@ -121,7 +121,7 @@ func GenerateGameFilePartsDev[T any](parts IList[T], targetPath, pattern string,
 	go notifications.ProcessError(errChan, logger.Get().With().Str("module", "generate_game_file_parts").Logger())
 
 	filesList.ForEach(func(item string) {
-		s, err := locations.NewSource(item, interactions.NewInteraction().FFXGameVersion().GetGameVersion())
+		s, err := locations.NewSource(item, interactions.NewInteractionService().FFXGameVersion().GetGameVersion())
 		if err != nil {
 			return
 		}

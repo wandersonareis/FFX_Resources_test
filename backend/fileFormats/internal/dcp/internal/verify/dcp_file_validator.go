@@ -60,7 +60,7 @@ func (fv *FileValidator) Validate(filePath string, options interactions.DcpFileO
 func (fv *FileValidator) createTemporaryFileInfo(filePath string) (interfaces.ISource, locations.IDestination, string) {
 	tmpDir := common.NewTempProviderDev("", "").TempFilePath
 
-	gamePart := interactions.NewInteraction().FFXGameVersion().GetGameVersion()
+	gamePart := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
 
 	//tmpInfo := interactions.NewGameDataInfo(filePath, gamePart)
 	source, err := locations.NewSource(filePath, gamePart)

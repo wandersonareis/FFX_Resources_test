@@ -41,17 +41,17 @@ func (t TxtFormatter) ReadFile(source interfaces.ISource, targetDirectory string
 }
 
 func (t TxtFormatter) provideDefaulReadPath(targetDirectory, relativePath string) (string, string) {
-	gameVersionDirBase := interactions.NewInteraction().FFXGameVersion().GetGameVersion().String()
+	gameVersionDirBase := interactions.NewInteractionService().FFXGameVersion().GetGameVersion().String()
 	return provideBasePath(targetDirectory, gameVersionDirBase, common.ChangeExtension(relativePath, t.targetExtension))
 }
 
 func (t *TxtFormatter) provideFolderReadPath(source interfaces.ISource, targetDirectory string) string {
-	gameFilesPath := interactions.NewInteraction().GameLocation.GetTargetDirectory()
+	gameFilesPath := interactions.NewInteractionService().GameLocation.GetTargetDirectory()
 	relative := common.MakeRelativePath(gameFilesPath, source.Get().Parent)
 
 	source.Get().RelativePath = relative
 
-	gameVersionDirBase := interactions.NewInteraction().FFXGameVersion().GetGameVersion().String()
+	gameVersionDirBase := interactions.NewInteractionService().FFXGameVersion().GetGameVersion().String()
 
 	outputPath := filepath.Join(targetDirectory, gameVersionDirBase, relative)
 
@@ -92,7 +92,7 @@ func (t TxtFormatter) WriteFile(source interfaces.ISource, targetDirectory strin
 }
 
 func (t TxtFormatter) provideDefaultWritePath(targetDirectory, relativePath, fileExt string) (string, string) {
-	gameVersionDirBase := interactions.NewInteraction().FFXGameVersion().GetGameVersion().String()
+	gameVersionDirBase := interactions.NewInteractionService().FFXGameVersion().GetGameVersion().String()
 	return provideBasePath(targetDirectory, gameVersionDirBase, common.ChangeExtension(relativePath, fileExt))
 }
 

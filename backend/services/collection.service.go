@@ -22,19 +22,19 @@ func (c *CollectionService) BuildTree() []spira.TreeNode {
 	go notifications.PanicRecover(errChan, logger.Get().With().Str("service", "collection").Logger())
 	defer close(errChan)
 
-	path := interactions.NewInteraction().GameLocation.GetTargetDirectory()
+	path := interactions.NewInteractionService().GameLocation.GetTargetDirectory()
 	if path == "" {
 		return nil
 	}
 
-	fmt.Println("Building tree for", interactions.NewInteraction().ImportLocation.GetTargetDirectory())
+	fmt.Println("Building tree for", interactions.NewInteractionService().ImportLocation.GetTargetDirectory())
 
-	if err := interactions.NewInteraction().GameLocation.IsSpira(); err != nil {
+	if err := interactions.NewInteractionService().GameLocation.IsSpira(); err != nil {
 		notifications.NotifyError(err)
 		return nil
 	}
 
-	source, err := locations.NewSource(path, interactions.NewInteraction().FFXGameVersion().GetGameVersion())
+	source, err := locations.NewSource(path, interactions.NewInteractionService().FFXGameVersion().GetGameVersion())
 	if err != nil {
 		notifications.NotifyError(err)
 		return nil

@@ -19,7 +19,7 @@ func BuildFileTree(result components.IList[TreeNode], source interfaces.ISource)
 		return err
 	}
 
-	gamePart := interactions.NewInteraction().FFXGameVersion().GetGameVersion()
+	gamePart := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
 
 	for _, entry := range entries {
 		entryPath := filepath.Join(source.Get().Path, entry.Name())

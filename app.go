@@ -84,7 +84,7 @@ func (a App) domReady(ctx context.Context) {
 // either by clicking the window close button or calling runtime.Quit.
 // Returning true will cause the application to continue, false will continue shutdown as normal.
 func (a *App) beforeClose(ctx context.Context) (prevent bool) {
-	interactions.NewInteraction().FFXAppConfig().ToJson()
+	interactions.NewInteractionService().FFXAppConfig().ToJson()
 
 	answer, err := runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
 		Type:    runtime.QuestionDialog,
@@ -119,12 +119,12 @@ func (a *App) WriteTextFile(file string, text string) {
 	if err != nil {
 		notifications.NotifyError(err)
 
-		runtime.EventsEmit(interactions.NewInteraction().Ctx, "Notify", err.Error())
+		runtime.EventsEmit(interactions.NewInteractionService().Ctx, "Notify", err.Error())
 	}
 }
 
 func (a *App) SelectDirectory(title string) string {
-	selection, err := runtime.OpenDirectoryDialog(interactions.NewInteraction().Ctx, runtime.OpenDialogOptions{
+	selection, err := runtime.OpenDirectoryDialog(interactions.NewInteractionService().Ctx, runtime.OpenDialogOptions{
 		Title:            title,
 		DefaultDirectory: common.GetExecDir(),
 	})

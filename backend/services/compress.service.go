@@ -36,7 +36,7 @@ func (c *CompressService) Compress(file string) {
 		return
 	}
 
-	source, err := locations.NewSource(file, interactions.NewInteraction().FFXGameVersion().GetGameVersion())
+	source, err := locations.NewSource(file, interactions.NewInteractionService().FFXGameVersion().GetGameVersion())
 	if err != nil {
 		notifications.NotifyError(err)
 		return

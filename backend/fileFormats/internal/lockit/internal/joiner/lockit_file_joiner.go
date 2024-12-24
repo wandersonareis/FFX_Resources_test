@@ -35,7 +35,7 @@ type lockitFileJoiner struct {
 func NewLockitFileJoiner(source interfaces.ISource, destination locations.IDestination, partsList components.IList[parts.LockitFileParts]) IPartsJoiner {
 	return &lockitFileJoiner{
 		FormatsBase: base.NewFormatsBase(source, destination),
-		options:     interactions.NewInteraction().DcpAndLockitOptions.GetLockitFileOptions(),
+		options:     interactions.NewInteractionService().DcpAndLockitOptions.GetLockitFileOptions(),
 		partsList:   partsList,
 
 		log: logger.Get().With().Str("module", "lockit_file_joiner").Logger(),

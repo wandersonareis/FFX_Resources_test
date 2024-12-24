@@ -25,7 +25,7 @@ func FindFileParts[T any](partsList components.IList[T], targetPath, pattern str
 	go notifications.ProcessError(errChan, logger.Get().With().Str("module", "findFilePartss").Logger())
 
 	generatePartInstanceFunc := func(item string) {
-		source, err := locations.NewSource(item, interactions.NewInteraction().FFXGameVersion().GetGameVersion())
+		source, err := locations.NewSource(item, interactions.NewInteractionService().FFXGameVersion().GetGameVersion())
 		if err != nil {
 			errChan <- fmt.Errorf("error creating source: %w", err)
 			return

@@ -37,20 +37,20 @@ func EventsOnSaveConfig(ctx context.Context) {
 	runtime.EventsOn(ctx, "SaveConfig", func(data ...any) {
 		fmt.Println("SaveConfig", data)
 		
-		interactions.NewInteraction().FFXAppConfig().ToJson()
+		interactions.NewInteractionService().FFXAppConfig().ToJson()
 	})
 }
 
 func emitGameVersion(ctx context.Context) {
-	gameVersion := interactions.NewInteraction().FFXGameVersion().GetGameVersionNumber()
+	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
 	runtime.EventsEmit(ctx, "GameVersion", gameVersion)
 }
 
 func emitGameLocation(ctx context.Context) {
-	gameLocation := interactions.NewInteraction().GameLocation.GetTargetDirectory()
+	gameLocation := interactions.NewInteractionService().GameLocation.GetTargetDirectory()
 
 	if gameLocation == "" {
-		interactions.NewInteraction().GameLocation.ProvideTargetDirectory()
+		interactions.NewInteractionService().GameLocation.ProvideTargetDirectory()
 
 		emitGameLocation(ctx)
 		return
@@ -60,10 +60,10 @@ func emitGameLocation(ctx context.Context) {
 }
 
 func emitExtractLocation(ctx context.Context) {
-	extractLocation := interactions.NewInteraction().ExtractLocation.GetTargetDirectory()
+	extractLocation := interactions.NewInteractionService().ExtractLocation.GetTargetDirectory()
 
 	if extractLocation == "" {
-		interactions.NewInteraction().ExtractLocation.ProvideTargetDirectory()
+		interactions.NewInteractionService().ExtractLocation.ProvideTargetDirectory()
 
 		emitExtractLocation(ctx)
 		return
@@ -72,10 +72,10 @@ func emitExtractLocation(ctx context.Context) {
 }
 
 func emitTranslateLocation(ctx context.Context) {
-	translateLocation := interactions.NewInteraction().TranslateLocation.GetTargetDirectory()
+	translateLocation := interactions.NewInteractionService().TranslateLocation.GetTargetDirectory()
 
 	if translateLocation == "" {
-		interactions.NewInteraction().TranslateLocation.ProvideTargetDirectory()
+		interactions.NewInteractionService().TranslateLocation.ProvideTargetDirectory()
 
 		emitTranslateLocation(ctx)
 		return
@@ -84,10 +84,10 @@ func emitTranslateLocation(ctx context.Context) {
 }
 
 func emitimportLocation(ctx context.Context) {
-	importLocation := interactions.NewInteraction().ImportLocation.GetTargetDirectory()
+	importLocation := interactions.NewInteractionService().ImportLocation.GetTargetDirectory()
 
 	if importLocation == "" {
-		interactions.NewInteraction().ImportLocation.ProvideTargetDirectory()
+		interactions.NewInteractionService().ImportLocation.ProvideTargetDirectory()
 
 		emitimportLocation(ctx)
 		return
@@ -97,10 +97,10 @@ func emitimportLocation(ctx context.Context) {
 
 func eventOnSetGameVersion(ctx context.Context) {
 	updateGameVersionNumber := func(version int) {
-		interactions.NewInteraction().FFXGameVersion().SetGameVersionNumber(version)
-		interactions.NewInteraction().FFXAppConfig().UpdateField(interactions.ConfigGameVersion, version)
+		interactions.NewInteractionService().FFXGameVersion().SetGameVersionNumber(version)
+		interactions.NewInteractionService().FFXAppConfig().UpdateField(interactions.ConfigGameVersion, version)
 		
-		interactions.NewInteraction().FFXAppConfig().ToJson()
+		interactions.NewInteractionService().FFXAppConfig().ToJson()
 	}
 
 	runtime.EventsOn(ctx, "GameVersionChanged", func(data ...any) {
@@ -116,7 +116,7 @@ func eventOnSetGameLocation(ctx context.Context) {
 	runtime.EventsOn(ctx, "GameLocationChanged", func(data ...any) {
 		fmt.Println("GameLocationChanged", data)
 
-		interactions.NewInteraction().GameLocation.SetTargetDirectory(data[0].(string))
+		interactions.NewInteractionService().GameLocation.SetTargetDirectory(data[0].(string))
 
 		emitGameLocation(ctx)
 	})
@@ -126,7 +126,7 @@ func eventOnSetExtractLocation(ctx context.Context) {
 	runtime.EventsOn(ctx, "ExtractLocationChanged", func(data ...any) {
 		fmt.Println("ExtractLocationChanged", data)
 
-		interactions.NewInteraction().ExtractLocation.SetTargetDirectory(data[0].(string))
+		interactions.NewInteractionService().ExtractLocation.SetTargetDirectory(data[0].(string))
 
 		emitExtractLocation(ctx)
 	})
@@ -136,7 +136,7 @@ func eventOnSetTranslateLocation(ctx context.Context) {
 	runtime.EventsOn(ctx, "TranslateLocationChanged", func(data ...any) {
 		fmt.Println("TranslateLocationChanged", data)
 
-		interactions.NewInteraction().TranslateLocation.SetTargetDirectory(data[0].(string))
+		interactions.NewInteractionService().TranslateLocation.SetTargetDirectory(data[0].(string))
 
 		emitTranslateLocation(ctx)
 	})
@@ -146,7 +146,7 @@ func eventOnSetImportLocation(ctx context.Context) {
 	runtime.EventsOn(ctx, "ReimportLocationChanged", func(data ...any) {
 		fmt.Println("ReimportLocationChanged", data)
 
-		interactions.NewInteraction().ImportLocation.SetTargetDirectory(data[0].(string))
+		interactions.NewInteractionService().ImportLocation.SetTargetDirectory(data[0].(string))
 
 		emitimportLocation(ctx)
 	})

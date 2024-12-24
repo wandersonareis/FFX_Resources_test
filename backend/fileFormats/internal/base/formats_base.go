@@ -19,7 +19,7 @@ type FormatsBase struct {
 
 func NewFormatsBase(source interfaces.ISource, destination locations.IDestination) *FormatsBase {
 	return &FormatsBase{
-		Ctx:         interactions.NewInteraction().Ctx,
+		Ctx:         interactions.NewInteractionService().Ctx,
 		Log:         logger.Get(),
 		source:      source,
 		destination: destination,
