@@ -3,10 +3,10 @@ package splitter
 import (
 	"bufio"
 	"bytes"
-	"ffxresources/backend/core/components"
-	"ffxresources/backend/core/encoding"
+	//"ffxresources/backend/core/components"
+	//"ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
+	//"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"fmt"
@@ -15,7 +15,7 @@ import (
 )
 
 type IFileSplitter interface {
-	DecoderPartsFiles(partsList components.IList[parts.LockitFileParts])
+	//DecoderPartsFiles(partsList components.IList[parts.LockitFileParts])
 	FileSplitter(source interfaces.ISource, extractLocation locations.IExtractLocation, options interactions.LockitFileOptions) error
 }
 
@@ -25,7 +25,7 @@ func NewLockitFileSplitter() IFileSplitter {
 	return &LockitFileSplitter{}
 }
 
-func (ls *LockitFileSplitter) DecoderPartsFiles(partsList components.IList[parts.LockitFileParts]) {
+/* func (ls *LockitFileSplitter) DecoderPartsFiles(partsList components.IList[parts.LockitFileParts]) {
 	encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextLocalizationEncoding()
 	defer encoding.Dispose()
 
@@ -38,11 +38,9 @@ func (ls *LockitFileSplitter) DecoderPartsFiles(partsList components.IList[parts
 	}
 
 	partsList.ParallelForEach(extractorFunc)
-}
+} */
 
 func (ls *LockitFileSplitter) FileSplitter(source interfaces.ISource, extractLocation locations.IExtractLocation, options interactions.LockitFileOptions) error {
-	//extractLocation := destination.GetExtractLocation()
-
 	if err := extractLocation.ProvideTargetPath(); err != nil {
 		return fmt.Errorf("error when providing the target path: %w", err)
 	}

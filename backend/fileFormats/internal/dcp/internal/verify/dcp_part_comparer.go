@@ -8,8 +8,6 @@ import (
 	"ffxresources/backend/notifications"
 	"fmt"
 	"os"
-
-	"github.com/rs/zerolog"
 )
 
 type IPartComparer interface {
@@ -39,26 +37,25 @@ type IPartComparer interface {
 }
 
 type PartComparer struct {
-	log zerolog.Logger
+	logger.ILoggerHandler
 }
 
 func newPartComparer() IPartComparer {
 	return &PartComparer{
-		log: logger.Get().With().Str("module", "dcp_parts_verify").Logger(),
+		ILoggerHandler: &logger.LogHandler{
+			Logger: logger.Get().With().Str("module", "part_comparer").Logger(),
+		},
 	}
 }
 
 func (pc PartComparer) CompareGameDataBinaryParts(partsList components.IList[parts.DcpFileParts]) error {
 	errChan := make(chan error, partsList.GetLength())
 
-	go notifications.ProcessError(errChan, pc.log)
+	go notifications.ProcessError(errChan, pc.GetLogger())
 
 	compareBinaryParts := func(part parts.DcpFileParts) {
 		if err := pc.compare(part.Source().Get().Path, part.Destination().Import().Get().GetTargetFile()); err != nil {
-			pc.log.Error().
-				Err(err).
-				Str("part", part.Destination().Import().Get().GetTargetFile()).
-				Msg("Error when comparing gamedata binary parts")
+			pc.LogError(err, "failed to compare gamedata binary parts: Part: %s", part.Destination().Import().Get().GetTargetFile())
 
 			errChan <- err
 			return
@@ -76,14 +73,11 @@ func (pc PartComparer) CompareGameDataBinaryParts(partsList components.IList[par
 func (pc PartComparer) CompareTranslatedTextParts(partsList components.IList[parts.DcpFileParts]) error {
 	errChan := make(chan error, partsList.GetLength())
 
-	go notifications.ProcessError(errChan, pc.log)
+	go notifications.ProcessError(errChan, pc.GetLogger())
 
 	compareTextParts := func(item parts.DcpFileParts) {
 		if err := pc.compare(item.Destination().Translate().Get().GetTargetFile(), item.Destination().Extract().Get().GetTargetFile()); err != nil {
-			pc.log.Error().
-				Err(err).
-				Str("part", item.Destination().Import().Get().GetTargetFile()).
-				Msg("Error when comparing translated text parts")
+			pc.LogError(err, "failed to compare translated text parts: Part: %s", item.Destination().Import().Get().GetTargetFile())
 
 			errChan <- err
 			return
@@ -100,31 +94,27 @@ func (pc PartComparer) CompareTranslatedTextParts(partsList components.IList[par
 func (pc PartComparer) compare(fromFile, toFile string) error {
 	newExtractedPartData, err := os.ReadFile(fromFile)
 	if err != nil {
-		pc.log.Error().
-			Err(err).
-			Str("file", fromFile).
-			Msg("Error when reading extracted part")
+		pc.LogError(err, "error when reading extracted part: %s", fromFile)
 
 		return fmt.Errorf("error when reading extracted part")
 	}
 
 	importedPartData, err := os.ReadFile(toFile)
 	if err != nil {
-		pc.log.Error().
-			Err(err).
-			Str("file", toFile).
-			Msg("Error when reading imported part")
+		pc.LogError(err, "error when reading imported part: %s", toFile)
 
 		return fmt.Errorf("error when reading imported part")
 	}
 
 	if !bytes.Equal(newExtractedPartData, importedPartData) {
-		pc.log.Error().
+	/* 	pc.log.Error().
 			Str("fromFile", fromFile).
 			Str("toFile", toFile).
 			Int("expectedLength", len(importedPartData)).
 			Int("gotLength", len(newExtractedPartData)).
-			Msg("Extracted part is different from imported part")
+			Msg("Extracted part is different from imported part") */
+
+		pc.LogError(nil, "extracted part is different from imported part: %s", fromFile)
 
 		return fmt.Errorf("extracted part is different from imported part")
 	}

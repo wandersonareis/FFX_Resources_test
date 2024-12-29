@@ -3,7 +3,7 @@ package dlg
 import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/text/dlg/internal"
-	"ffxresources/backend/fileFormats/internal/text/lib/dlg_krnl_verify"
+	verify "ffxresources/backend/fileFormats/internal/text/lib/dlg_krnl_verify"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
@@ -24,7 +24,7 @@ type DialogsFile struct {
 }
 
 func NewDialogs(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
-	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
+	destination.InitializeLocations(source, formatters.NewTxtFormatter())
 
 	return &DialogsFile{
 		source:      source,

@@ -1,37 +1,36 @@
-package locations
+package internal
 
 import (
-	"ffxresources/backend/bases"
 	"ffxresources/backend/common"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"os"
-	"path/filepath"
 )
 
-type LocationBase struct {
-	bases.TargetDirectoryBase
-	bases.TargetFileBase
-}
+type (
+	ILocationBase interface {
+		ITargetDirectoryBase
+		ITargetFileBase
 
-func NewLocationBase(options *bases.LocationBaseOptions) LocationBase {
+		BuildTargetReadOutput(source interfaces.ISource, formatter interfaces.ITextFormatterDev)
+		BuildTargetWriteOutput(source interfaces.ISource, formatter interfaces.ITextFormatterDev)
+		DisposeTargetFile()
+		DisposeTargetPath()
+	}
+	LocationBase struct {
+		TargetDirectoryBase
+		TargetFileBase
+	}
+)
+
+func NewLocationBase(options *LocationBaseOptions) LocationBase {
 	return LocationBase{
-		TargetDirectoryBase: bases.TargetDirectoryBase{
+		TargetDirectoryBase: TargetDirectoryBase{
 			TargetDirectory:     options.TargetDirectory,
 			TargetDirectoryName: options.TargetDirectoryName,
 		},
-		TargetFileBase:      *new(bases.TargetFileBase),
+		TargetFileBase: *new(TargetFileBase),
 	}
-}
-
-func (lb *LocationBase) BuildTargetOutput(source interfaces.ISource, formatter interfaces.ITextFormatterDev) {
-	lb.TargetFile, lb.TargetPath = formatter.ReadFile(source, lb.TargetDirectory)
-
-	if !source.Get().IsDir {
-		lb.TargetFileName = filepath.Base(lb.TargetFile)
-	}
-
-	lb.IsExist = lb.IsTargetFileAvailable()
 }
 
 func (lb *LocationBase) DisposeTargetFile() {

@@ -41,7 +41,7 @@ func (c *CollectionService) BuildTree() []spira.TreeNode {
 	}
 
 	destination := locations.NewDestination()
-	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
+	destination.InitializeLocations(source, formatters.NewTxtFormatter())
 
 	tree := components.NewEmptyList[spira.TreeNode]()
 

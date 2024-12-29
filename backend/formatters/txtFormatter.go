@@ -13,7 +13,7 @@ type TxtFormatter struct {
 	targetExtension string
 }
 
-func NewTxtFormatterDev() *TxtFormatter {
+func NewTxtFormatter() *TxtFormatter {
 	return &TxtFormatter{
 		targetExtension: ".txt",
 	}
@@ -41,8 +41,7 @@ func (t TxtFormatter) ReadFile(source interfaces.ISource, targetDirectory string
 }
 
 func (t TxtFormatter) provideDefaulReadPath(targetDirectory, relativePath string) (string, string) {
-	gameVersionDirBase := interactions.NewInteractionService().FFXGameVersion().GetGameVersion().String()
-	return provideBasePath(targetDirectory, gameVersionDirBase, common.ChangeExtension(relativePath, t.targetExtension))
+	return provideBasePath(targetDirectory, common.ChangeExtension(relativePath, t.targetExtension))
 }
 
 func (t *TxtFormatter) provideFolderReadPath(source interfaces.ISource, targetDirectory string) string {
@@ -92,8 +91,7 @@ func (t TxtFormatter) WriteFile(source interfaces.ISource, targetDirectory strin
 }
 
 func (t TxtFormatter) provideDefaultWritePath(targetDirectory, relativePath, fileExt string) (string, string) {
-	gameVersionDirBase := interactions.NewInteractionService().FFXGameVersion().GetGameVersion().String()
-	return provideBasePath(targetDirectory, gameVersionDirBase, common.ChangeExtension(relativePath, fileExt))
+	return provideBasePath(targetDirectory, common.ChangeExtension(relativePath, fileExt))
 }
 
 func (t TxtFormatter) provideDcpWritePath(targetDirectory, relativePath string) (string, string) {
@@ -106,7 +104,9 @@ func (t TxtFormatter) providePartsWritePath(targetDirectory, dirName, fileName s
 
 func provideBasePath(targetDirectory string, dirParts ...string) (string, string) {
 	dirPartsJoined := filepath.Join(dirParts...)
-	outputFile := filepath.Join(targetDirectory, dirPartsJoined)
+	gameVersionDirBase := interactions.NewInteractionService().FFXGameVersion().GetGameVersion().String()
+
+	outputFile := filepath.Join(targetDirectory, gameVersionDirBase, dirPartsJoined)
 	outputPath := common.GetDir(outputFile)
 
 	return outputFile, outputPath

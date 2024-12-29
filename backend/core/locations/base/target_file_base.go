@@ -1,4 +1,4 @@
-package bases
+package internal
 
 import (
 	"ffxresources/backend/common"

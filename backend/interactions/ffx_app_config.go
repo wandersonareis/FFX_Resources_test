@@ -68,6 +68,8 @@ func (c *FFXAppConfig) ToJson() error {
 		}
 	}(file)
 
+	c.FFXGameVersion = NewInteractionService().ffxGameVersion.GetGameVersionNumber()
+
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
 	err = encoder.Encode(c)

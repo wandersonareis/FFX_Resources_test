@@ -43,7 +43,7 @@ func (c *CompressService) Compress(file string) {
 	}
 
 	destination := locations.NewDestination()
-	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
+	destination.InitializeLocations(source, formatters.NewTxtFormatter())
 
 	translateLocation := destination.Translate().Get()
 
@@ -73,5 +73,8 @@ func (c *CompressService) Compress(file string) {
 
 	if err := fileProcessor.Compress(); err != nil {
 		notifications.NotifyError(err)
+		return
 	}
+
+	notifications.NotifySuccess(fmt.Sprintf("File %s compressed successfully", source.Get().Name))
 }

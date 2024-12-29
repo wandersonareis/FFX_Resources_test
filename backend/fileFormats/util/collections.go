@@ -22,7 +22,11 @@ func FindFileParts[T any](partsList components.IList[T], targetPath, pattern str
 
 	errChan := make(chan error, fileParts.GetLength())
 
-	go notifications.ProcessError(errChan, logger.Get().With().Str("module", "findFilePartss").Logger())
+	loggerHandler := &logger.LogHandler{
+		Logger: logger.Get().With().Str("module", "findFilePartss").Logger(),
+	}
+
+	go notifications.ProcessError(errChan, loggerHandler)
 
 	generatePartInstanceFunc := func(item string) {
 		source, err := locations.NewSource(item, interactions.NewInteractionService().FFXGameVersion().GetGameVersion())

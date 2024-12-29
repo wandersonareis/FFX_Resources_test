@@ -3,7 +3,7 @@ package verify
 import (
 	"bytes"
 	"ffxresources/backend/core/components"
-	"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
+	"ffxresources/backend/fileFormats/internal/lockit/internal/lockitFileParts"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
 	"ffxresources/backend/notifications"
@@ -23,16 +23,16 @@ type ILineBreakCounter interface {
 	//
 	// Returns:
 	//   - error: An error if the verification fails, otherwise nil.
-	CountBinaryParts(partsList components.IList[parts.LockitFileParts], options interactions.LockitFileOptions) error
-	CountTextParts(partsList components.IList[parts.LockitFileParts], options interactions.LockitFileOptions) error
+	CountBinaryParts(partsList components.IList[lockitFileParts.LockitFileParts], options interactions.LockitFileOptions) error
+	CountTextParts(partsList components.IList[lockitFileParts.LockitFileParts], options interactions.LockitFileOptions) error
 }
 
 type LineBreakCounter struct{}
 
-func (lc LineBreakCounter) CountBinaryParts(partsList components.IList[parts.LockitFileParts], options interactions.LockitFileOptions) error {
+func (lc LineBreakCounter) CountBinaryParts(partsList components.IList[lockitFileParts.LockitFileParts], options interactions.LockitFileOptions) error {
 	pathList := components.NewList[string](partsList.GetLength())
 
-	partsList.ForEach(func(part parts.LockitFileParts) {
+	partsList.ForEach(func(part lockitFileParts.LockitFileParts) {
 		pathList.Add(part.Source().Get().Path)
 	})
 
@@ -43,10 +43,10 @@ func (lc LineBreakCounter) CountBinaryParts(partsList components.IList[parts.Loc
 	return nil
 }
 
-func (lc LineBreakCounter) CountTextParts(partsList components.IList[parts.LockitFileParts], options interactions.LockitFileOptions) error {
+func (lc LineBreakCounter) CountTextParts(partsList components.IList[lockitFileParts.LockitFileParts], options interactions.LockitFileOptions) error {
 	pathList := components.NewEmptyList[string]()
 
-	partsList.ForEach(func(part parts.LockitFileParts) {
+	partsList.ForEach(func(part lockitFileParts.LockitFileParts) {
 		pathList.Add(part.Destination().Extract().Get().GetTargetFile())
 	})
 
@@ -61,7 +61,11 @@ func (lc LineBreakCounter) verify(pathList components.IList[string], ocorrencesC
 	errChan := make(chan error, pathList.GetLength())
 	defer close(errChan)
 
-	go notifications.ProcessError(errChan, logger.Get().With().Str("module", "linebreak_counter").Logger())
+	loggerHandler := &logger.LogHandler{
+		Logger: logger.Get().With().Str("module", "linebreak_counter").Logger(),
+	}
+
+	go notifications.ProcessError(errChan, loggerHandler)
 
 	comparerOcorrencesFunc := func(index int, part string) {
 		ocorrencesExpected := lc.getOcorrencesExpected(ocorrencesCount, index, ocorrencesLength, expectedLineBreaksCount)
@@ -79,6 +83,10 @@ func (lc LineBreakCounter) verify(pathList components.IList[string], ocorrencesC
 	}
 
 	pathList.ForIndex(comparerOcorrencesFunc)
+
+	if len(errChan) > 0 {
+		return <-errChan
+	}
 
 	return nil
 }

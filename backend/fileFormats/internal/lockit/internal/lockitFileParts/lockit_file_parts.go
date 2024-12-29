@@ -1,4 +1,4 @@
-package parts
+package lockitFileParts
 
 import (
 	ffxencoding "ffxresources/backend/core/encoding"
@@ -8,16 +8,19 @@ import (
 	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interfaces"
+	"ffxresources/backend/logger"
 	"ffxresources/backend/notifications"
 	"fmt"
 	"path/filepath"
 )
 
-type LockitFileParts struct {
-	*base.FormatsBase
-}
-
-type LockitPartEncodeType int
+type (
+	LockitFileParts struct {
+		*base.FormatsBase
+		logger.ILoggerHandler
+	}
+	LockitPartEncodeType int
+)
 
 const (
 	FfxEnc LockitPartEncodeType = iota
@@ -29,17 +32,20 @@ func NewLockitFileParts(source interfaces.ISource, destination locations.IDestin
 	gData.RelativePath = filepath.Join(util.LOCKIT_TARGET_DIR_NAME, gData.NamePrefix)
 	source.Set(gData)
 
-	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
+	destination.InitializeLocations(source, formatters.NewTxtFormatter())
 
 	return &LockitFileParts{
 		FormatsBase: base.NewFormatsBase(source, destination),
+		ILoggerHandler: &logger.LogHandler{
+			Logger: logger.Get().With().Str("module", "lockit_file_parts").Logger(),
+		},
 	}
 }
 
 func (l *LockitFileParts) Extract(dec LockitPartEncodeType, encoding ffxencoding.IFFXTextLockitEncoding) {
 	errChan := make(chan error, 1)
 
-	go notifications.ProcessError(errChan, l.Log)
+	go notifications.ProcessError(errChan, l.GetLogger())
 
 	decoder := lockitencoding.NewDecoder()
 
@@ -59,7 +65,7 @@ func (l *LockitFileParts) Compress(enc LockitPartEncodeType, encoding ffxencodin
 	errChan := make(chan error, 1)
 	defer close(errChan)
 
-	go notifications.ProcessError(errChan, l.Log)
+	go notifications.ProcessError(errChan, l.GetLogger())
 
 	encoder := lockitencoding.NewEncoder()
 

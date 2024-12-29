@@ -4,8 +4,6 @@ import (
 	"embed"
 	"fmt"
 	"log"
-	"os"
-	"time"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/logger"
@@ -20,30 +18,9 @@ var assets embed.FS
 
 //go:embed build/appicon.png
 var icon []byte
-var logFile *os.File
-
-func logToFile() {
-	currentTime := time.Now().Format("02-01-2006")
-	fileName := fmt.Sprintf("tracker-%s.log", currentTime)
-
-	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	logFile = file
-	log.SetOutput(file)
-	log.SetFlags(log.Ldate | log.LstdFlags | log.Lshortfile)
-}
 
 func main() {
 	// Create an instance of the app structure
-
-	defer func() {
-		if logFile != nil {
-			logFile.Close()
-		}
-	}()
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -51,7 +28,6 @@ func main() {
 		}
 	}()
 
-	logToFile()
 	app := NewApp()
 
 	// Create application with options

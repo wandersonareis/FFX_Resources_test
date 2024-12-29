@@ -1,13 +1,13 @@
 package locations
 
 import (
-	"ffxresources/backend/bases"
+	"ffxresources/backend/core/locations/base"
 	"ffxresources/backend/interfaces"
 	"fmt"
 )
 
 type IImportLocation interface {
-	interfaces.ILocationBase
+	internal.ILocationBase
 	interfaces.IValidate
 }
 
@@ -16,12 +16,12 @@ type ITargetImportLocation interface {
 }
 
 type ImportLocation struct {
-	LocationBase
+	internal.LocationBase
 }
 
-func NewImportLocation(options *bases.LocationBaseOptions) *ImportLocation {
+func NewImportLocation(options *internal.LocationBaseOptions) *ImportLocation {
 	return &ImportLocation{
-		LocationBase: NewLocationBase(options),
+		LocationBase: internal.NewLocationBase(options),
 	}
 }
 

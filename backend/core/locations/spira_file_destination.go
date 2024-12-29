@@ -1,7 +1,7 @@
 package locations
 
 import (
-	"ffxresources/backend/bases"
+	"ffxresources/backend/core/locations/base"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"os"
@@ -30,17 +30,17 @@ func NewDestination() IDestination {
 	importPath := _interactions.ImportLocation.GetTargetDirectory()
 
 	destination := &Destination{
-		ExtractLocation:   NewExtractLocationInfo(bases.WithDirectoryName("extracted"), bases.WithTargetDirectory(extractPath)),
-		TranslateLocation: NewTranslateLocationInfo(bases.WithDirectoryName("translated"), bases.WithTargetDirectory(translatePath)),
-		ImportLocation:    NewImportLocationInfo(bases.WithDirectoryName("reimported"), bases.WithTargetDirectory(importPath)),
+		ExtractLocation:   NewExtractLocationInfo(internal.WithDirectoryName("extracted"), internal.WithTargetDirectory(extractPath)),
+		TranslateLocation: NewTranslateLocationInfo(internal.WithDirectoryName("translated"), internal.WithTargetDirectory(translatePath)),
+		ImportLocation:    NewImportLocationInfo(internal.WithDirectoryName("reimported"), internal.WithTargetDirectory(importPath)),
 	}
 	return destination
 }
 
 func (g *Destination) InitializeLocations(source interfaces.ISource, formatter interfaces.ITextFormatterDev) {
-	g.ExtractLocation.Get().BuildTargetOutput(source, formatter)
-	g.TranslateLocation.Get().BuildTargetOutput(source, formatter)
-	g.ImportLocation.Get().BuildTargetOutput(source, formatter)
+	g.ExtractLocation.Get().BuildTargetReadOutput(source, formatter)
+	g.TranslateLocation.Get().BuildTargetReadOutput(source, formatter)
+	g.ImportLocation.Get().BuildTargetWriteOutput(source, formatter)
 }
 
 func (g *Destination) Extract() IExtractLocationInfo {

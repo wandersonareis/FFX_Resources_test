@@ -2,7 +2,7 @@ package mt2
 
 import (
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats/internal/text/lib/dlg_krnl_verify"
+	verify "ffxresources/backend/fileFormats/internal/text/lib/dlg_krnl_verify"
 	"ffxresources/backend/fileFormats/internal/text/mt2/internal"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interfaces"
@@ -23,7 +23,7 @@ type kernelFile struct {
 }
 
 func NewKernel(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
-	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
+	destination.InitializeLocations(source, formatters.NewTxtFormatter())
 
 	return &kernelFile{
 		textVerifyer: verify.NewTextsVerify(),

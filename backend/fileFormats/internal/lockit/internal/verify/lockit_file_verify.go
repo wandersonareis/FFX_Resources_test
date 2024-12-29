@@ -4,14 +4,14 @@ import (
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/base"
-	"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
+	"ffxresources/backend/fileFormats/internal/lockit/internal/lockitFileParts"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"fmt"
 )
 
 type ILockitFileVerifier interface {
-	VerifyExtract(partsList components.IList[parts.LockitFileParts], options interactions.LockitFileOptions) error
+	VerifyExtract(partsList components.IList[lockitFileParts.LockitFileParts], options interactions.LockitFileOptions) error
 	VerifyCompress(destination locations.IDestination, options interactions.LockitFileOptions) error
 }
 
@@ -30,7 +30,7 @@ func NewLockitFileVerifier(source interfaces.ISource, destination locations.IDes
 	}
 }
 
-func (lv *LockitFileVerifier) VerifyExtract(parts components.IList[parts.LockitFileParts], options interactions.LockitFileOptions) error {
+func (lv *LockitFileVerifier) VerifyExtract(parts components.IList[lockitFileParts.LockitFileParts], options interactions.LockitFileOptions) error {
 	if parts.GetLength() != options.PartsLength {
 		return fmt.Errorf("error when ensuring splited lockit parts: expected %d | got %d", options.PartsLength, parts.GetLength())
 	}

@@ -4,7 +4,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lib"
-	"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
+	"ffxresources/backend/fileFormats/internal/lockit/internal/lockitFileParts"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/splitter"
 	"ffxresources/backend/interactions"
 	"fmt"
@@ -17,21 +17,22 @@ type IPartsVerifier interface {
 }
 
 type partsVerifier struct {
-	PartsComparer IPartComparer
+	partsComparer IPartComparer
+	partsDecoder  lockitFileParts.ILockitFilePartsDecoder
 	fileSplitter  splitter.IFileSplitter
 }
 
 func newPartsVerifier() IPartsVerifier {
 	return &partsVerifier{
-		PartsComparer: newPartComparer(),
-		fileSplitter:  splitter.NewLockitFileSplitter(),
+		partsComparer: newPartComparer(),
+		fileSplitter: splitter.NewLockitFileSplitter(),
 	}
 }
 
 func (pv *partsVerifier) Verify(path string, options interactions.LockitFileOptions) error {
-	partsList := components.NewEmptyList[parts.LockitFileParts]()
+	partsList := components.NewEmptyList[lockitFileParts.LockitFileParts]()
 
-	if err := components.GenerateGameFilePartsDev(partsList, path, lib.LOCKIT_FILE_PARTS_PATTERN, parts.NewLockitFileParts); err != nil {
+	if err := components.GenerateGameFilePartsDev(partsList, path, lib.LOCKIT_FILE_PARTS_PATTERN, lockitFileParts.NewLockitFileParts); err != nil {
 		return fmt.Errorf("error when finding lockit parts: %w", err)
 	}
 
@@ -39,15 +40,18 @@ func (pv *partsVerifier) Verify(path string, options interactions.LockitFileOpti
 		return fmt.Errorf("error when ensuring lockit parts exist: %w", err)
 	}
 
-	if err := pv.PartsComparer.CompareGameDataBinaryParts(partsList); err != nil {
+	if err := pv.partsComparer.CompareGameDataBinaryParts(partsList); err != nil {
 		return fmt.Errorf("error when comparing binary parts: %w", err)
 	}
 
 	tmpParts := pv.createExtractTemporaryPartsList(partsList, path)
 
-	pv.fileSplitter.DecoderPartsFiles(tmpParts)
+	//pv.fileSplitter.DecoderPartsFiles(tmpParts)
 
-	if err := pv.PartsComparer.CompareTranslatedTextParts(tmpParts); err != nil {
+	pv.partsDecoder = lockitFileParts.NewLockitFilePartsDecoder(tmpParts)
+	pv.partsDecoder.DecodeFileParts()
+
+	if err := pv.partsComparer.CompareTranslatedTextParts(tmpParts); err != nil {
 		return fmt.Errorf("error when comparing text parts: %w", err)
 	}
 
@@ -62,10 +66,10 @@ func (lc *partsVerifier) EnsurePartsLength(partsLength, expectedLength int) erro
 	return nil
 }
 
-func (pv *partsVerifier) createExtractTemporaryPartsList(partsList components.IList[parts.LockitFileParts], tmpDir string) components.IList[parts.LockitFileParts] {
-	tmpParts := components.NewList[parts.LockitFileParts](partsList.GetLength())
+func (pv *partsVerifier) createExtractTemporaryPartsList(partsList components.IList[lockitFileParts.LockitFileParts], tmpDir string) components.IList[lockitFileParts.LockitFileParts] {
+	tmpParts := components.NewList[lockitFileParts.LockitFileParts](partsList.GetLength())
 
-	setTemporaryDirectoryForPart := func(part parts.LockitFileParts) {
+	setTemporaryDirectoryForPart := func(part lockitFileParts.LockitFileParts) {
 		newPartFile := filepath.Join(tmpDir, common.GetFileName(part.Destination().Extract().Get().GetTargetFile()))
 
 		part.Destination().Extract().Get().SetTargetFile(newPartFile)

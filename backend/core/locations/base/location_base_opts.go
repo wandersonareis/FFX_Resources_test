@@ -1,6 +1,6 @@
-package locations
+package internal
 
-/* import (
+import (
 	"ffxresources/backend/common"
 	"path/filepath"
 )
@@ -40,4 +40,4 @@ func ProcessOpts(opts []LocationBaseOption) *LocationBaseOptions {
 	}
 
 	return options
-} */
+}

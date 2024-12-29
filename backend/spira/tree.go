@@ -45,7 +45,7 @@ func BuildFileTree(result components.IList[TreeNode], source interfaces.ISource)
 		}
 
 		destination := locations.NewDestination()
-		destination.InitializeLocations(entrySource, formatters.NewTxtFormatterDev())
+		destination.InitializeLocations(entrySource, formatters.NewTxtFormatter())
 
 		node, err := CreateTreeNode(key, entrySource, destination, children)
 		if err != nil {

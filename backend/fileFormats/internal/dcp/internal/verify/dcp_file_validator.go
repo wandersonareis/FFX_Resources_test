@@ -75,7 +75,7 @@ func (fv *FileValidator) createTemporaryFileInfo(filePath string) (interfaces.IS
 
 	destination := locations.NewDestination()
 
-	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
+	destination.InitializeLocations(source, formatters.NewTxtFormatter())
 
 	destination.Extract().Get().SetTargetPath(tmpDir)
 

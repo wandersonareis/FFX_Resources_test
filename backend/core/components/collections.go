@@ -118,7 +118,11 @@ func GenerateGameFilePartsDev[T any](parts IList[T], targetPath, pattern string,
 	errChan := make(chan error, filesList.GetLength())
 	defer close(errChan)
 
-	go notifications.ProcessError(errChan, logger.Get().With().Str("module", "generate_game_file_parts").Logger())
+	loggerHandler := &logger.LogHandler{
+		Logger: logger.Get().With().Str("module", "generate_game_file_parts").Logger(),
+	}
+
+	go notifications.ProcessError(errChan, loggerHandler)
 
 	filesList.ForEach(func(item string) {
 		s, err := locations.NewSource(item, interactions.NewInteractionService().FFXGameVersion().GetGameVersion())

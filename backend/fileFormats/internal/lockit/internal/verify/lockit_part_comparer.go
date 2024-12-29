@@ -4,13 +4,11 @@ import (
 	"bytes"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
-	"ffxresources/backend/fileFormats/internal/lockit/internal/parts"
+	"ffxresources/backend/fileFormats/internal/lockit/internal/lockitFileParts"
 	"ffxresources/backend/logger"
 	"ffxresources/backend/notifications"
 	"fmt"
 	"os"
-
-	"github.com/rs/zerolog"
 )
 
 type IPartComparer interface {
@@ -23,7 +21,7 @@ type IPartComparer interface {
 	//
 	// Returns:
 	//   error - An error if any comparison fails, otherwise nil.
-	CompareGameDataBinaryParts(partsList components.IList[parts.LockitFileParts]) error
+	CompareGameDataBinaryParts(partsList components.IList[lockitFileParts.LockitFileParts]) error
 
 	// CompareTranslatedTextParts compares the translated text parts with extracted text parts of the given LockitFileParts.
 	// It iterates over each part and compares the target files of the translate
@@ -36,26 +34,28 @@ type IPartComparer interface {
 	// Returns:
 	//
 	//	error - An error if any comparison fails, otherwise nil.
-	CompareTranslatedTextParts(partsList components.IList[parts.LockitFileParts]) error
+	CompareTranslatedTextParts(partsList components.IList[lockitFileParts.LockitFileParts]) error
 }
 
 type PartComparer struct {
-	log zerolog.Logger
+	logger.ILoggerHandler
 }
 
 func newPartComparer() IPartComparer {
 	return &PartComparer{
-		log: logger.Get().With().Str("module", "part_comparer").Logger(),
+		ILoggerHandler: &logger.LogHandler{
+			Logger: logger.Get().With().Str("module", "part_comparer").Logger(),
+		},
 	}
 }
 
-func (pc PartComparer) CompareGameDataBinaryParts(partsList components.IList[parts.LockitFileParts]) error {
+func (pc PartComparer) CompareGameDataBinaryParts(partsList components.IList[lockitFileParts.LockitFileParts]) error {
 	errChan := make(chan error, partsList.GetLength())
 	defer close(errChan)
 
-	go notifications.ProcessError(errChan, pc.log)
+	go notifications.ProcessError(errChan, pc.GetLogger())
 
-	compareBinaryParts := func(part parts.LockitFileParts) {
+	compareBinaryParts := func(part lockitFileParts.LockitFileParts) {
 		if err := pc.compare(part.Source().Get().Path, part.Destination().Import().Get().GetTargetFile()); err != nil {
 			errChan <- err
 			return
@@ -67,13 +67,13 @@ func (pc PartComparer) CompareGameDataBinaryParts(partsList components.IList[par
 	return nil
 }
 
-func (pc PartComparer) CompareTranslatedTextParts(partsList components.IList[parts.LockitFileParts]) error {
+func (pc PartComparer) CompareTranslatedTextParts(partsList components.IList[lockitFileParts.LockitFileParts]) error {
 	errChan := make(chan error, partsList.GetLength())
 	defer close(errChan)
 
-	go notifications.ProcessError(errChan, pc.log)
+	go notifications.ProcessError(errChan, pc.GetLogger())
 
-	compareTextParts := func(item parts.LockitFileParts) {
+	compareTextParts := func(item lockitFileParts.LockitFileParts) {
 		if err := pc.compare(item.Destination().Translate().Get().GetTargetFile(), item.Destination().Extract().Get().GetTargetFile()); err != nil {
 			errChan <- err
 			return

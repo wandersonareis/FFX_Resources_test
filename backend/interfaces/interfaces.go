@@ -1,7 +1,6 @@
 package interfaces
 
 import (
-	"ffxresources/backend/bases"
 	"ffxresources/backend/core"
 	"ffxresources/backend/models"
 )
@@ -25,15 +24,6 @@ type ISource interface {
 
 type IValidate interface {
 	Validate() error
-}
-
-type ILocationBase interface {
-	bases.ITargetDirectoryBase
-	bases.ITargetFileBase
-
-	BuildTargetOutput(source ISource, formatter ITextFormatterDev)
-	DisposeTargetFile()
-	DisposeTargetPath()
 }
 
 type IInteractionBase interface {

@@ -37,7 +37,7 @@ func (e *ExtractService) Extract(file string) {
 	}
 
 	destination := locations.NewDestination()
-	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
+	destination.InitializeLocations(source, formatters.NewTxtFormatter())
 
 	fileProcessor := fileFormats.NewFileProcessor(source, destination)
 	if fileProcessor == nil {
@@ -51,5 +51,8 @@ func (e *ExtractService) Extract(file string) {
 
 	if err := fileProcessor.Extract(); err != nil {
 		notifications.NotifyError(err)
+		return
 	}
+
+	notifications.NotifySuccess(fmt.Sprintf("File %s extracted successfully", source.Get().Name))
 }

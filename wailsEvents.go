@@ -98,7 +98,6 @@ func emitimportLocation(ctx context.Context) {
 func eventOnSetGameVersion(ctx context.Context) {
 	updateGameVersionNumber := func(version int) {
 		interactions.NewInteractionService().FFXGameVersion().SetGameVersionNumber(version)
-		interactions.NewInteractionService().FFXAppConfig().UpdateField(interactions.ConfigGameVersion, version)
 		
 		interactions.NewInteractionService().FFXAppConfig().ToJson()
 	}

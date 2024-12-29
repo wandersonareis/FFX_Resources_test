@@ -9,8 +9,6 @@ import (
 	"ffxresources/backend/notifications"
 	"fmt"
 	"os"
-
-	"github.com/rs/zerolog"
 )
 
 type ISegmentCounter interface {
@@ -19,21 +17,20 @@ type ISegmentCounter interface {
 }
 
 type segmentCounter struct {
-	log zerolog.Logger
+	logger.ILoggerHandler
 }
 
 func NewSegmentCounter() ISegmentCounter {
 	return &segmentCounter{
-		log: logger.Get().With().Str("module", "dcp_segment_counter").Logger(),
+		ILoggerHandler: &logger.LogHandler{
+			Logger: logger.Get().With().Str("module", "dcp_segment_counter").Logger(),
+		},
 	}
 }
 
 func (sc *segmentCounter) CountBinaryParts(dcpFileParts components.IList[parts.DcpFileParts], options interactions.DcpFileOptions) error {
 	if dcpFileParts.GetLength() != options.PartsLength {
-		sc.log.Error().
-			Int("expected parts", options.PartsLength).
-			Int("current parts", dcpFileParts.GetLength()).
-			Msg("error when ensuring splited macrodic parts")
+		sc.LogError(nil, "error when ensuring splited macrodic parts", "expected parts", options.PartsLength, "current parts", dcpFileParts.GetLength())
 
 		return fmt.Errorf("error when ensuring splited macrodic parts")
 	}
@@ -42,10 +39,7 @@ func (sc *segmentCounter) CountBinaryParts(dcpFileParts components.IList[parts.D
 		sourceFile := dcpFilePart.Source().Get()
 		if sourceFile.Size == 0 {
 			if err := os.Remove(sourceFile.Path); err != nil {
-				sc.log.Error().
-					Err(err).
-					Str("file", sourceFile.Path).
-					Msg("error when removing part")
+				sc.LogError(err, "error when removing part", "file", sourceFile.Path)
 
 				return fmt.Errorf("error when removing part")
 			}
@@ -60,14 +54,12 @@ func (sc *segmentCounter) CountBinaryParts(dcpFileParts components.IList[parts.D
 func (sc *segmentCounter) CountTextParts(partsList components.IList[parts.DcpFileParts], options interactions.DcpFileOptions) error {
 	errChan := make(chan error, partsList.GetLength())
 
-	go notifications.ProcessError(errChan, sc.log)
+	go notifications.ProcessError(errChan, sc.GetLogger())
 
 	partsList.ForEach(func(part parts.DcpFileParts) {
 		targetFile := part.Destination().Extract().Get().GetTargetFile()
 		if common.CountSegments(targetFile) <= 0 {
-			sc.log.Error().
-				Str("part", targetFile).
-				Msg("error when counting segments in part")
+			sc.LogError(nil, "error when counting segments in part: %s", targetFile)
 
 			errChan <- fmt.Errorf("error when counting segments in part: %s", targetFile)
 		}

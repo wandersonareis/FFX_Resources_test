@@ -16,7 +16,7 @@ type DcpFileParts struct {
 
 func NewDcpFileParts(source interfaces.ISource, destination locations.IDestination) *DcpFileParts {
 	source.Get().RelativePath = filepath.Join("system", source.Get().Name)
-	destination.InitializeLocations(source, formatters.NewTxtFormatterDev())
+	destination.InitializeLocations(source, formatters.NewTxtFormatter())
 
 	return &DcpFileParts{
 		FormatsBase: base.NewFormatsBase(source, destination),

@@ -1,6 +1,6 @@
 package locations
 
-import "ffxresources/backend/bases"
+import internal "ffxresources/backend/core/locations/base"
 
 type IImportLocationInfo interface {
 	Get() *ImportLocation
@@ -11,8 +11,8 @@ type ImportLocationInfo struct {
 	ImportLocation ImportLocation `json:"import_location"`
 }
 
-func NewImportLocationInfo(opts ...bases.LocationBaseOption) ImportLocationInfo {
-	options := bases.ProcessOpts(opts)
+func NewImportLocationInfo(opts ...internal.LocationBaseOption) ImportLocationInfo {
+	options := internal.ProcessOpts(opts)
 	return ImportLocationInfo{
 		ImportLocation: *NewImportLocation(options),
 	}
