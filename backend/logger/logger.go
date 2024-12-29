@@ -29,9 +29,10 @@ func Get() zerolog.Logger {
 			logLevel = int(zerolog.DebugLevel) // default to INFO
 		}
 
-		var output io.Writer = zerolog.ConsoleWriter{
-			Out:        os.Stdout,
-			TimeFormat: time.RFC3339,
+		var consoleWriter io.Writer = zerolog.ConsoleWriter{
+			Out:          os.Stdout,
+			TimeFormat:   time.RFC822,
+			TimeLocation: time.UTC,
 			FormatLevel: func(i interface{}) string {
 				return strings.ToUpper(fmt.Sprintf("[%s]", i))
 			},
@@ -39,12 +40,17 @@ func Get() zerolog.Logger {
 				return fmt.Sprintf("| %s |", i)
 			},
 			FormatCaller: func(i interface{}) string {
+				if i == nil {
+					return ""
+				}
 				return filepath.Base(fmt.Sprintf("%s", i))
 			},
 			PartsExclude: []string{
 				zerolog.TimestampFieldName,
 			},
 		}
+
+		var output io.Writer = consoleWriter
 
 		if os.Getenv("APP_ENV") != "development" {
 			currentTime := time.Now().Format("02-01-2006")
@@ -58,7 +64,7 @@ func Get() zerolog.Logger {
 				Compress:   true,
 			}
 
-			output = zerolog.MultiLevelWriter(os.Stderr, fileLogger)
+			output = zerolog.MultiLevelWriter(consoleWriter, fileLogger)
 		}
 
 		log = zerolog.New(output).
