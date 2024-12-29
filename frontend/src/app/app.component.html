@@ -1,6 +1,6 @@
-<div class="bg-transparent">
-  <section class="flex absolute top-2 right-4 space-x-4">
-    <div class="flex space-x-2">
+<section class="grid grid-cols-1 bg-transparent">
+  <div class="flex justify-end space-x-2">
+    <aside class="flex">
       <p-togglebutton
         [(ngModel)]="versionFFX"
         onLabel="FFX"
@@ -19,9 +19,9 @@
         [class.pointer-events-none]="versionFFX2()"
         (onChange)="versionFFX2Change($event)"
       />
-    </div>
+    </aside>
 
     <app-config-modal />
-  </section>
+  </div>
   <ffx-tree />
-</div>
+</section>

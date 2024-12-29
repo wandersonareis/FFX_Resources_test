@@ -54,6 +54,22 @@ export const FFXPreset = definePreset(Aura, {
                     },
                 },
             }
-        }
+        },
+/*         tree: {
+            colorScheme: {
+                light: {
+                    root: {
+                        background: 'transparent',
+                        hoverBackground: '{zinc.400}',
+                        color: '{zinc.900}',
+                        borderColor: '{zinc.400}',
+                        node: {
+                            selectedBackground: 'rgba(125, 211, 252, 0.6)',
+                            hoverBackground: 'rgba(125, 211, 252, 0.8)',
+                        }
+                    },
+                },
+            },
+        } */
     },
 });
