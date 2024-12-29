@@ -4,6 +4,8 @@ import (
 	"ffxresources/backend/interactions"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type Notification struct {
@@ -36,9 +38,17 @@ func (nt Severity) String() string {
 }
 
 func Notify(notification Severity, message string) {
+	captalize := func(s string) string {
+		if len(s) == 0 {
+			return s
+		}
+
+		return cases.Upper(language.BrazilianPortuguese).String(s[:1]) + s[1:]
+	}
+
 	context := interactions.NewInteractionService().Ctx
 	notify := Notification{
-		Message:  message,
+		Message:  captalize(message),
 		Severity: notification.String(),
 	}
 
