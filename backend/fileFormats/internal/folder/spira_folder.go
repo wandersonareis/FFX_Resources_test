@@ -9,43 +9,29 @@ import (
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"ffxresources/backend/notifications"
-	"path/filepath"
-
-	"github.com/rs/zerolog"
 )
 
 type SpiraFolder struct {
 	*base.FormatsBase
-	fileProcessor func(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor
+	logger.ILoggerHandler
 
-	log zerolog.Logger
+	fileProcessor func(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor
 }
 
 func NewSpiraFolder(source interfaces.ISource, destination locations.IDestination, fileProcessor func(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor) interfaces.IFileProcessor {
-	gameFilesPath := interactions.NewInteraction().GameLocation.GetTargetDirectory()
-
-	extractLocation := destination.Extract().Get()
-	translateLocation := destination.Translate().Get()
-
-	relative := common.MakeRelativePath(source.Get().Path, gameFilesPath)
-
-	source.Get().RelativePath = relative
-
-	destination.Extract().Get().SetTargetPath(filepath.Join(extractLocation.GetTargetDirectory(), relative))
-	destination.Translate().Get().SetTargetPath(filepath.Join(translateLocation.GetTargetDirectory(), relative))
-
 	return &SpiraFolder{
-		FormatsBase:   base.NewFormatsBaseDev(source, destination),
+		FormatsBase:   base.NewFormatsBase(source, destination),
+		ILoggerHandler: &logger.LogHandler{
+			Logger: logger.Get().With().Str("module", "spira_folder").Logger(),
+		},
 		fileProcessor: fileProcessor,
-
-		log: logger.Get().With().Str("module", "spira_folder").Logger(),
 	}
 }
 
 func (sf SpiraFolder) Extract() error {
 	errChan := make(chan error)
-	go notifications.ProcessError(errChan, sf.log)
-	go notifications.ProcessError(errChan, sf.log)
+	go notifications.ProcessError(errChan, sf.GetLogger())
+	go notifications.ProcessError(errChan, sf.GetLogger())
 	defer close(errChan)
 
 	fileProcessors := sf.processFiles()
@@ -63,17 +49,14 @@ func (sf SpiraFolder) Extract() error {
 
 	progress.Stop()
 
-	sf.Log.Info().
-		Str("folder", sf.Source().Get().Path).
-		Msg("Spira folder extracted")
+	sf.LogInfo("Spira folder extracted", "folder", sf.Source().Get().Path)
 
 	return nil
 }
 
 func (sf SpiraFolder) Compress() error {
 	errChan := make(chan error)
-	go notifications.ProcessError(errChan, sf.log)
-	go notifications.ProcessError(errChan, sf.log)
+	go notifications.ProcessError(errChan, sf.GetLogger())
 	defer close(errChan)
 
 	fileProcessors := sf.processFiles()
@@ -91,9 +74,7 @@ func (sf SpiraFolder) Compress() error {
 
 	progress.Stop()
 
-	sf.log.Info().
-		Str("folder", sf.Source().Get().Path).
-		Msg("Spira folder compressed")
+	sf.LogInfo("Spira folder compressed", "folder", sf.Source().Get().Path)
 
 	return nil
 }
@@ -102,10 +83,7 @@ func (sf SpiraFolder) processFiles() *components.List[interfaces.IFileProcessor]
 	filesList := components.NewEmptyList[string]()
 	err := components.ListFiles(filesList, sf.Source().Get().Path)
 	if err != nil {
-		sf.log.Error().
-			Err(err).
-			Str("directory", sf.Source().Get().Path).
-			Msg("error listing files in directory")
+		sf.LogError(err, "error listing files in directory", "directory", sf.Source().Get().Path)
 
 		return components.NewEmptyList[interfaces.IFileProcessor]()
 	}
@@ -113,21 +91,16 @@ func (sf SpiraFolder) processFiles() *components.List[interfaces.IFileProcessor]
 	filesProcessorList := components.NewList[interfaces.IFileProcessor](filesList.GetLength())
 
 	generateFilesProcessorListFunc := func(_ int, item string) {
-		s, err := locations.NewSource(item, interactions.NewInteraction().FFXGameVersion().GetGameVersion())
+		s, err := locations.NewSource(item, interactions.NewInteractionService().FFXGameVersion().GetGameVersion())
 		if err != nil {
-			sf.log.Error().
-				Err(err).
-				Str("file", item).
-				Msg("error creating source")
+			sf.LogError(err, "error creating source", "file", item)
 		}
 
 		t := locations.NewDestination()
 
 		fileProcessor := sf.fileProcessor(s, t)
 		if fileProcessor == nil {
-			sf.Log.Error().
-				Str("file", s.Get().Name).
-				Msg("invalid file type")
+			sf.LogError(nil, "invalid file type", "file", s.Get().Name)
 
 			return
 		}
