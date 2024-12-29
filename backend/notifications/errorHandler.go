@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"ffxresources/backend/logger"
 	"fmt"
 
 	"github.com/rs/zerolog"
@@ -19,12 +20,12 @@ func PanicRecoverLogger(logger zerolog.Logger) {
 	}
 }
 
-func ProcessError(errChan chan error, logger zerolog.Logger) {
+func ProcessError(errChan chan error, logHandler logger.ILoggerHandler) {
 	for {
 		select {
 		case err := <-errChan:
 			if err != nil {
-				logger.Error().Err(err).Msg("Error occurred")
+				logHandler.LogError(err, "Error occurred")
 			}
 		}
 	}
