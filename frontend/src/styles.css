@@ -13,49 +13,14 @@
   }
 }
 
-.p-tree-root {
+/* .p-tree-root {
   overflow: visible !important;
-}
+} */
 
 .p-dialog-header {
   @apply p-4 !important;
 }
 
-/* .p-tree, .p-tree-node {
-  @apply bg-sky-400/50 rounded-sm;
-  &:hover {
-    @apply bg-sky-500;
-  }
-  &selected {
-    @apply bg-blue-400/60;
-  }
-} */
-
-/* .p-treenode-children {
-  @apply m-0 ml-5;
-}
-*/
-.p-tree, .p-tree-node-content {
-  @apply bg-transparent p-2 !important;
-}
-
-.p-tree-node-content:hover {
-  @apply bg-blue-100/60 !important;
-}
-.p-tree-node-content.p-tree-node-selected {
-  @apply bg-blue-300/60 text-blue-600 font-semibold outline outline-1 outline-blue-400 w-[80%] !important;
-  box-sizing: border-box;
-}
-
-.p-tree-node-icon.p-tree-node-selected {
-  @apply text-blue-600 !important;
-}
-
-.p-tree-node-content.p-tree-node-selectable:not(.p-tree-node-selected):hover {
-  @apply w-[80%] bg-blue-800 outline outline-1 outline-blue-400;
-  box-sizing: border-box;
-}
-
-.p-tree-node-toggle-button:hover {
+/* .p-tree-node-toggle-button:hover {
   @apply bg-blue-200/80 text-slate-600 !important;
-}
+} */

@@ -48,18 +48,13 @@ export class AppComponent implements OnInit {
     this.versionFFX2.set(false)
     console.log("versionFFXChange", event);
     EventsEmit("GameVersionChanged", 1);
+    EventsEmit("Refresh_Tree");
   }
 
   versionFFX2Change(event: ToggleButtonChangeEvent) {
     this.versionFFX.set(false)
     console.log("versionFFX2Change", event);
     EventsEmit("GameVersionChanged", 2);
+    EventsEmit("Refresh_Tree");
   }
-
-  amberSwitch = {
-    css: ({ dt }: { dt: (key: string) => string }) => `
-    .p-selectbutton {
-        background: ${dt('background-color-amber')};
-    }
-    `  };
 }

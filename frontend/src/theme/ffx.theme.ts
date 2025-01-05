@@ -53,23 +53,60 @@ export const FFXPreset = definePreset(Aura, {
                         checkedBackground: '{sky.300}'
                     },
                 },
-            }
+            },
         },
-/*         tree: {
+        tree: {
             colorScheme: {
                 light: {
                     root: {
                         background: 'transparent',
-                        hoverBackground: '{zinc.400}',
-                        color: '{zinc.900}',
+                        checkedBackground: '{sky.400}',
+                        hoverBackground: '{sky.300}',
                         borderColor: '{zinc.400}',
-                        node: {
-                            selectedBackground: 'rgba(125, 211, 252, 0.6)',
-                            hoverBackground: 'rgba(125, 211, 252, 0.8)',
-                        }
+                        color: '{sky.400}',
+                        hoverColor: '{sky.700}',
+                        checkedColor: '{zinc.900}',
+                        checkedBorderColor: '{sky.500}',
+                    },
+                    node: {
+                        hoverBackground: 'hsla(212,96%,88%,0.6)',
+                        selectedBackground: 'rgba(147, 197, 253, 0.6)',
+                        color: 'hsl(212,96%,58%)',
+                        hoverColor: 'hsl(212,96%,58%)',
+                        selectedColor: 'hsl(221,83%,53%)',
+                        toggle: {
+                            button: {
+                                hoverBackground: 'rgba(191, 219, 254, 0.8)',
+                                color: 'hsl(212,96%,58%)',
+                            },
+                        },
                     },
                 },
             },
-        } */
+            css: ({ dt }: { dt: any }) => `
+            .p-tree-root {
+                overflow: visible;
+            }
+
+            .p-tree-node-content {
+                padding: 0.5rem;
+            }
+
+            .p-tree-node-content.p-tree-node-selectable:not(.p-tree-node-selected):hover {
+                font-weight: 600;
+                outline-style: solid;
+                outline-width: 1px;
+                outline-color: hsl(212,96%,68%);
+
+            }
+
+            .p-tree-node-content.p-tree-node-selected {
+                font-weight: 600;
+                outline-style: solid;
+                outline-width: 1px;
+                outline-color: #60a5fa;
+            }
+`,
+        }
     },
 });
