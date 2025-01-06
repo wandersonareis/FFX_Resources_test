@@ -10,7 +10,6 @@ import (
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
-	"ffxresources/backend/notifications"
 	"fmt"
 	"os"
 
@@ -45,7 +44,7 @@ func NewLockitFileJoiner(source interfaces.ISource, destination locations.IDesti
 func (lj *lockitFileJoiner) FindTranslatedTextParts() (components.IList[lockitFileParts.LockitFileParts], error) {
 	partsList := components.NewEmptyList[lockitFileParts.LockitFileParts]()
 
-	err := components.GenerateGameFilePartsDev(
+	err := components.GenerateGameFileParts(
 		partsList,
 		lj.Destination().Translate().Get().GetTargetPath(),
 		lib.LOCKIT_TXT_PARTS_PATTERN,
@@ -72,9 +71,6 @@ func (lj *lockitFileJoiner) JoinFileParts() error {
 	var combinedBuffer bytes.Buffer
 
 	errChan := make(chan error, lj.partsList.GetLength())
-	defer close(errChan)
-
-	go notifications.ProcessError(errChan, lj.GetLogger())
 
 	combineFilesFunc := func(part lockitFileParts.LockitFileParts) {
 		fileName := part.Destination().Import().Get().GetTargetFile()
@@ -89,6 +85,11 @@ func (lj *lockitFileJoiner) JoinFileParts() error {
 	}
 
 	lj.partsList.ForEach(combineFilesFunc)
+
+	close(errChan)
+	if err := <-errChan; err != nil {
+		return err
+	}
 
 	if err := importLocation.ProvideTargetPath(); err != nil {
 		return err

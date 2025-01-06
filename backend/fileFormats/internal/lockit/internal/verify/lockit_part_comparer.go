@@ -6,7 +6,6 @@ import (
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lockitFileParts"
 	"ffxresources/backend/logger"
-	"ffxresources/backend/notifications"
 	"fmt"
 	"os"
 )
@@ -51,36 +50,54 @@ func newPartComparer() IPartComparer {
 
 func (pc PartComparer) CompareGameDataBinaryParts(partsList components.IList[lockitFileParts.LockitFileParts]) error {
 	errChan := make(chan error, partsList.GetLength())
-	defer close(errChan)
-
-	go notifications.ProcessError(errChan, pc.GetLogger())
+	successChan := make(chan string, partsList.GetLength())
 
 	compareBinaryParts := func(part lockitFileParts.LockitFileParts) {
 		if err := pc.compare(part.Source().Get().Path, part.Destination().Import().Get().GetTargetFile()); err != nil {
 			errChan <- err
 			return
 		}
+		successChan <- part.Source().Get().Name
 	}
 
 	partsList.ForEach(compareBinaryParts)
+
+	defer close(errChan)
+	defer close(successChan)
+
+	select {
+	case err := <-errChan:
+		pc.LogError(err, "error when comparing gamedata binary parts")
+	case <-successChan:
+		pc.LogInfo("comparison of gamedata binary parts successfully for %s", <-successChan)
+	}
 
 	return nil
 }
 
 func (pc PartComparer) CompareTranslatedTextParts(partsList components.IList[lockitFileParts.LockitFileParts]) error {
 	errChan := make(chan error, partsList.GetLength())
-	defer close(errChan)
-
-	go notifications.ProcessError(errChan, pc.GetLogger())
+	successChan := make(chan string, partsList.GetLength())
 
 	compareTextParts := func(item lockitFileParts.LockitFileParts) {
 		if err := pc.compare(item.Destination().Translate().Get().GetTargetFile(), item.Destination().Extract().Get().GetTargetFile()); err != nil {
 			errChan <- err
 			return
 		}
+		successChan <- item.Source().Get().Name
 	}
 
 	partsList.ForEach(compareTextParts)
+
+	defer close(errChan)
+	defer close(successChan)
+
+	select {
+	case err := <-errChan:
+		pc.LogError(err, "error when comparing translated text parts")
+	case <-successChan:
+		pc.LogInfo("comparison of translated text parts successfully for %s", <-successChan)
+	}
 
 	return nil
 }

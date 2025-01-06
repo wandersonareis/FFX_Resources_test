@@ -32,7 +32,7 @@ func newPartsVerifier() IPartsVerifier {
 func (pv *partsVerifier) Verify(path string, options interactions.LockitFileOptions) error {
 	partsList := components.NewEmptyList[lockitFileParts.LockitFileParts]()
 
-	if err := components.GenerateGameFilePartsDev(partsList, path, lib.LOCKIT_FILE_PARTS_PATTERN, lockitFileParts.NewLockitFileParts); err != nil {
+	if err := components.GenerateGameFileParts(partsList, path, lib.LOCKIT_FILE_PARTS_PATTERN, lockitFileParts.NewLockitFileParts); err != nil {
 		return fmt.Errorf("error when finding lockit parts: %w", err)
 	}
 

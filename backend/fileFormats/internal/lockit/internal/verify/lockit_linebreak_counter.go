@@ -6,7 +6,6 @@ import (
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lockitFileParts"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
-	"ffxresources/backend/notifications"
 	"fmt"
 	"os"
 )
@@ -59,13 +58,14 @@ func (lc LineBreakCounter) CountTextParts(partsList components.IList[lockitFileP
 
 func (lc LineBreakCounter) verify(pathList components.IList[string], ocorrencesCount []int, ocorrencesLength int, expectedLineBreaksCount int) error {
 	errChan := make(chan error, pathList.GetLength())
+	successChan := make(chan string, pathList.GetLength())
+
 	defer close(errChan)
+	defer close(successChan)
 
 	loggerHandler := &logger.LogHandler{
 		Logger: logger.Get().With().Str("module", "linebreak_counter").Logger(),
 	}
-
-	go notifications.ProcessError(errChan, loggerHandler)
 
 	comparerOcorrencesFunc := func(index int, part string) {
 		ocorrencesExpected := lc.getOcorrencesExpected(ocorrencesCount, index, ocorrencesLength, expectedLineBreaksCount)
@@ -80,12 +80,16 @@ func (lc LineBreakCounter) verify(pathList components.IList[string], ocorrencesC
 			errChan <- fmt.Errorf("error when comparing ocorrences on file %s: %w", part, err)
 			return
 		}
+		successChan <- part
 	}
 
 	pathList.ForIndex(comparerOcorrencesFunc)
 
-	if len(errChan) > 0 {
-		return <-errChan
+	select {
+	case err := <-errChan:
+		loggerHandler.LogError(err, "error when comparing line breaks")
+	case <-successChan:
+		loggerHandler.LogInfo("line breaks comparison successfully for: %s", <-successChan)
 	}
 
 	return nil

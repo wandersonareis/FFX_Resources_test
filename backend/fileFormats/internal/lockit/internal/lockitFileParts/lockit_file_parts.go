@@ -1,15 +1,14 @@
 package lockitFileParts
 
 import (
-	ffxencoding "ffxresources/backend/core/encoding"
+	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/base"
-	lockitencoding "ffxresources/backend/fileFormats/internal/lockit/internal/encoding"
+	"ffxresources/backend/fileFormats/internal/lockit/internal/encoding"
 	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
-	"ffxresources/backend/notifications"
 	"fmt"
 	"path/filepath"
 )
@@ -44,8 +43,7 @@ func NewLockitFileParts(source interfaces.ISource, destination locations.IDestin
 
 func (l *LockitFileParts) Extract(dec LockitPartEncodeType, encoding ffxencoding.IFFXTextLockitEncoding) {
 	errChan := make(chan error, 1)
-
-	go notifications.ProcessError(errChan, l.GetLogger())
+	defer close(errChan)
 
 	decoder := lockitencoding.NewDecoder()
 
@@ -58,14 +56,16 @@ func (l *LockitFileParts) Extract(dec LockitPartEncodeType, encoding ffxencoding
 		errChan <- fmt.Errorf("invalid encode type: %d", dec)
 	}
 
-	defer close(errChan)
+	select {
+	case err := <-errChan:
+		l.LogError(err, "error when extracting lockit file parts")
+	}
+
 }
 
 func (l *LockitFileParts) Compress(enc LockitPartEncodeType, encoding ffxencoding.IFFXTextLockitEncoding) {
 	errChan := make(chan error, 1)
 	defer close(errChan)
-
-	go notifications.ProcessError(errChan, l.GetLogger())
 
 	encoder := lockitencoding.NewEncoder()
 
@@ -78,5 +78,10 @@ func (l *LockitFileParts) Compress(enc LockitPartEncodeType, encoding ffxencodin
 		errChan <- encoder.LockitEncoderLoc(l.Destination().Translate().Get().GetTargetFile(), l.Destination().Import().Get().GetTargetFile(), encoding)
 	default:
 		errChan <- fmt.Errorf("invalid encode type: %d", enc)
+	}
+
+	select {
+	case err := <-errChan:
+		l.LogError(err, "error when compressing lockit file parts")
 	}
 }

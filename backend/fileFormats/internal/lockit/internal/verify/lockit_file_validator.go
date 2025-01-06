@@ -40,13 +40,13 @@ func (fv *FileValidator) Validate(filePath string, options interactions.LockitFi
 		return fmt.Errorf("error when ensuring line breaks count: %w", err)
 	}
 
-	source, destination, tmpDir := fv.createTemporaryFileInfo(filePath)
+	source, destination := fv.createTemporaryFileInfo(filePath)
 
 	if err := fv.fileSplitter.FileSplitter(source, destination.Extract().Get(), options); err != nil {
 		return fmt.Errorf("error when splitting file %s | %w", filePath, err)
 	}
 
-	if err := fv.partsVerifier.Verify(tmpDir, options); err != nil {
+	if err := fv.partsVerifier.Verify(destination.Extract().Get().TargetPath, options); err != nil {
 		return fmt.Errorf("error when verifying monted lockit file parts: %w", err)
 	}
 
@@ -61,16 +61,16 @@ func (fv *FileValidator) ensureLineBreaksCount(targetCount, expectedCount int) e
 	return nil
 }
 
-func (fv *FileValidator) createTemporaryFileInfo(filePath string) (interfaces.ISource, locations.IDestination, string) {
+func (fv *FileValidator) createTemporaryFileInfo(filePath string) (interfaces.ISource, locations.IDestination) {
 	//tmpProvider := common.NewTempProviderDev("", "")
 
 	//tmpInfo := interactions.NewGameDataInfo(filePath)
 
-	source, destination, tmpDir := util.CreateTemporaryFileInfo(filePath, formatters.NewTxtFormatter())
+	source, destination := util.CreateTemporaryFileInfo(filePath, formatters.NewTxtFormatter())
 
-	destination.InitializeLocations(source, formatters.NewTxtFormatter())
+	//destination.InitializeLocations(source, formatters.NewTxtFormatter())
 
-	destination.Extract().Get().SetTargetPath(tmpDir)
+	//destination.Extract().Get().SetTargetPath(tmpDir)
 
-	return source, destination, tmpDir
+	return source, destination
 }
