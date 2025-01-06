@@ -8,7 +8,6 @@ import (
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
-	"ffxresources/backend/notifications"
 )
 
 type SpiraFolder struct {
@@ -20,7 +19,7 @@ type SpiraFolder struct {
 
 func NewSpiraFolder(source interfaces.ISource, destination locations.IDestination, fileProcessor func(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor) interfaces.IFileProcessor {
 	return &SpiraFolder{
-		FormatsBase:   base.NewFormatsBase(source, destination),
+		FormatsBase: base.NewFormatsBase(source, destination),
 		ILoggerHandler: &logger.LogHandler{
 			Logger: logger.Get().With().Str("module", "spira_folder").Logger(),
 		},
@@ -30,8 +29,6 @@ func NewSpiraFolder(source interfaces.ISource, destination locations.IDestinatio
 
 func (sf SpiraFolder) Extract() error {
 	errChan := make(chan error)
-	go notifications.ProcessError(errChan, sf.GetLogger())
-	go notifications.ProcessError(errChan, sf.GetLogger())
 	defer close(errChan)
 
 	fileProcessors := sf.processFiles()
@@ -41,13 +38,19 @@ func (sf SpiraFolder) Extract() error {
 	progress.Start()
 
 	fileProcessors.ForEach(func(extractor interfaces.IFileProcessor) {
-		err := extractor.Extract()
-		errChan <- err
+		if err := extractor.Extract(); err != nil {
+			errChan <- err
+		}
 
 		progress.StepFile(extractor.Source().Get().Name)
 	})
 
 	progress.Stop()
+
+	select {
+	case err := <-errChan:
+		sf.LogError(err, "error extracting spira folder")
+	}
 
 	sf.LogInfo("Spira folder extracted", "folder", sf.Source().Get().Path)
 
@@ -56,7 +59,6 @@ func (sf SpiraFolder) Extract() error {
 
 func (sf SpiraFolder) Compress() error {
 	errChan := make(chan error)
-	go notifications.ProcessError(errChan, sf.GetLogger())
 	defer close(errChan)
 
 	fileProcessors := sf.processFiles()
@@ -66,13 +68,19 @@ func (sf SpiraFolder) Compress() error {
 	progress.Start()
 
 	fileProcessors.ForEach(func(compressor interfaces.IFileProcessor) {
-		err := compressor.Compress()
-		errChan <- err
+		if err := compressor.Compress(); err != nil {
+			errChan <- err
+		}
 
 		progress.Step()
 	})
 
 	progress.Stop()
+
+	select {
+	case err := <-errChan:
+		sf.LogError(err, "error compressing spira folder")
+	}
 
 	sf.LogInfo("Spira folder compressed", "folder", sf.Source().Get().Path)
 
