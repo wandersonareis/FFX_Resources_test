@@ -16,16 +16,7 @@ type TempProvider struct {
 	TempFilePath string
 }
 
-// NewTempProvider returns a new TempProvider with empty file prefix and extension.
-// The FilePath will be set to a new temporary file path in the OS temp directory.
-func NewTempProvider() *TempProvider {
-	tempPath := os.TempDir()
-	return &TempProvider{
-		TempFilePath: tempPath,
-	}
-}
-
-func NewTempProviderDev(fileName, ext string) *TempProvider {
+func NewTempProvider(fileName, ext string) *TempProvider {
 	prefix := "temp"
 	if fileName != "" {
 		prefix = fileName
@@ -38,7 +29,7 @@ func NewTempProviderDev(fileName, ext string) *TempProvider {
 		tmpExt = tempProvider.validExtension(ext)
 	}
 
-	tempPath := os.TempDir()
+	tempPath := filepath.Join(os.TempDir(), "ffxresources")
 
 	tempProvider.filePrefix = prefix
 	tempProvider.extension = tmpExt
@@ -46,10 +37,11 @@ func NewTempProviderDev(fileName, ext string) *TempProvider {
 
 	uuid := uuid.New().String()
 
-	tmpFileName := fmt.Sprintf("%s-%s.%s", prefix, uuid, tmpExt)
+	tmpFileName := fmt.Sprintf("%s_%s.%s", prefix, uuid, tmpExt)
 	file := filepath.Join(tempPath, tmpFileName)
 
 	tempProvider.TempFile = file
+	tempProvider.TempFilePath = tempPath
 
 	return tempProvider
 }
@@ -60,6 +52,14 @@ func (tp *TempProvider) Dispose() {
 	os.Remove(tp.TempFile)
 }
 
+func (tp *TempProvider) cleanExtension(extension string) string {
+    if !strings.HasPrefix(extension, ".") {
+        return extension
+    }
+    
+    return tp.cleanExtension(strings.TrimPrefix(extension, "."))
+}
+
 // validExtension takes a file extension and returns a valid file extension.
 // If the given extension already starts with a '.', it is returned as is.
 // Otherwise, a '.' is prepended to the extension and it is returned.
@@ -68,8 +68,7 @@ func (tp *TempProvider) validExtension(extension string) string {
 		return ""
 	}
 
-	if strings.HasPrefix(extension, ".") {
-		return extension
-	}
-	return "." + extension
+	extension = tp.cleanExtension(extension)
+	
+	return extension
 }
