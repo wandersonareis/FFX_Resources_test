@@ -2,7 +2,6 @@ package common
 
 import (
 	"bufio"
-	"ffxresources/backend/models"
 	"fmt"
 	"os"
 	"regexp"
@@ -20,11 +19,7 @@ func CountSegments(targetFile string) int {
 	return strings.Count(input, separator)
 }
 
-func EnsureWindowsLineBreaks(targetFile string, nodeType models.NodeType) error {
-	if nodeType == models.Dcp {
-		return nil
-	}
-
+func EnsureWindowsLineBreaks(targetFile string) error {
 	file, err := os.Open(targetFile)
 	if err != nil {
 		return fmt.Errorf("error when opening the file: %s", err)
