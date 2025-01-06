@@ -34,3 +34,4 @@ go.work.sum
 # env file
 .env
 cfn-tracker.log
+backend/fileFormats/internal/text/dlg/config.json
