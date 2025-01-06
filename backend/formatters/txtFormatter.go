@@ -58,11 +58,7 @@ func (t *TxtFormatter) provideFolderReadPath(source interfaces.ISource, targetDi
 }
 
 func (t TxtFormatter) provideDcpReadPath(targetDirectory, fileName string) (string, string) {
-	outputFile := filepath.Join(targetDirectory, util.DCP_PARTS_TARGET_DIR_NAME, fileName)
-
-	outputPath := filepath.Join(targetDirectory, util.DCP_PARTS_TARGET_DIR_NAME)
-
-	return outputFile, outputPath
+	return provideBasePath(targetDirectory, util.DCP_PARTS_TARGET_DIR_NAME, fileName)
 }
 
 func (t TxtFormatter) providePartsReadPath(targetDirectory, dirName, fileName string) (string, string) {
