@@ -5,7 +5,6 @@ import (
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"ffxresources/backend/logger"
-	"ffxresources/backend/notifications"
 	"fmt"
 	"os"
 )
@@ -50,8 +49,8 @@ func newPartComparer() IPartComparer {
 
 func (pc PartComparer) CompareGameDataBinaryParts(partsList components.IList[parts.DcpFileParts]) error {
 	errChan := make(chan error, partsList.GetLength())
-
-	go notifications.ProcessError(errChan, pc.GetLogger())
+	successChan := make(chan string, partsList.GetLength())
+	defer close(errChan)
 
 	compareBinaryParts := func(part parts.DcpFileParts) {
 		if err := pc.compare(part.Source().Get().Path, part.Destination().Import().Get().GetTargetFile()); err != nil {
@@ -60,20 +59,26 @@ func (pc PartComparer) CompareGameDataBinaryParts(partsList components.IList[par
 			errChan <- err
 			return
 		}
-		errChan <- nil
+		successChan <- part.Source().Get().Name
 	}
 
 	partsList.ForEach(compareBinaryParts)
 
-	defer close(errChan)
+	select {
+	case err := <-errChan:
+		pc.LogError(err, "failed to compare gamedata binary parts")
+	case <-successChan:
+		pc.LogInfo("gamedata binary parts are equal: %s", <-successChan)
+	}
 
 	return nil
 }
 
 func (pc PartComparer) CompareTranslatedTextParts(partsList components.IList[parts.DcpFileParts]) error {
 	errChan := make(chan error, partsList.GetLength())
-
-	go notifications.ProcessError(errChan, pc.GetLogger())
+	successChan := make(chan string, partsList.GetLength())
+	defer close(errChan)
+	defer close(successChan)
 
 	compareTextParts := func(item parts.DcpFileParts) {
 		if err := pc.compare(item.Destination().Translate().Get().GetTargetFile(), item.Destination().Extract().Get().GetTargetFile()); err != nil {
@@ -82,11 +87,17 @@ func (pc PartComparer) CompareTranslatedTextParts(partsList components.IList[par
 			errChan <- err
 			return
 		}
+		successChan <- item.Source().Get().Name
 	}
 
 	partsList.ForEach(compareTextParts)
 
-	defer close(errChan)
+	select {
+	case err := <-errChan:
+		pc.LogError(err, "failed to compare translated text parts")
+	case <-successChan:
+		pc.LogInfo("translated text parts are equal: %s", <-successChan)
+	}
 
 	return nil
 }

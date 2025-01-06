@@ -32,7 +32,7 @@ func NewDcpFile(source interfaces.ISource, destination locations.IDestination) i
 
 	destination.InitializeLocations(source, formatters.NewTxtFormatter())
 
-	err := components.GenerateGameFilePartsDev(
+	err := components.GenerateGameFileParts(
 		dcpFileParts,
 		destination.Extract().Get().GetTargetPath(),
 		lib.DCP_FILE_PARTS_PATTERN,
@@ -70,8 +70,7 @@ func (d *DcpFile) Extract() error {
 	}
 
 	errChan := make(chan error, d.PartsList.GetLength())
-
-	go notifications.ProcessError(errChan, d.GetLogger())
+	defer close(errChan)
 
 	extractParts := func(_ int, part parts.DcpFileParts) {
 		if err := part.Validate(); err != nil {
@@ -89,7 +88,11 @@ func (d *DcpFile) Extract() error {
 
 	d.PartsList.ParallelForEach(extractParts)
 
-	defer close(errChan)
+	
+	if err := <- errChan; err != nil {
+		d.LogError(err, "error extracting DCP file: %s", d.Source().Get().Name)
+		return fmt.Errorf("error extracting DCP file: %s", d.Source().Get().Name)
+	}
 
 	d.LogInfo("Verifying monted macrodic file: %s", d.Destination().Extract().Get().GetTargetFile())
 
