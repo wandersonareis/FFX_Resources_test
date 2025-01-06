@@ -90,7 +90,7 @@ func (dv *TextsVerify) VerifyCompress(source interfaces.ISource, destination loc
 }
 
 func (dv *TextsVerify) createTemporaryFileInfo(source interfaces.ISource, destination locations.IDestination) {
-	tmp := common.NewTempProviderDev("tmp", ".txt")
+	tmp := common.NewTempProvider("tmp", ".txt")
 
 	destination.Extract().Get().SetTargetFile(tmp.TempFile)
 	destination.Extract().Get().SetTargetPath(tmp.TempFilePath)
