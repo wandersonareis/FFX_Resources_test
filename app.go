@@ -96,8 +96,7 @@ func (a *App) beforeClose(ctx context.Context) (prevent bool) {
 	}
 
 	fmt.Println("Answer:", answer)
-
-	return false
+	return answer != "yes"
 }
 
 // shutdown is called at application termination
