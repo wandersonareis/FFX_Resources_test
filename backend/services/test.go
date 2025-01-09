@@ -4,25 +4,24 @@ import (
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats"
+	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/spira"
 	"fmt"
 )
 
 func TestExtractDir(path string, testExtract, testCompress bool) {
-	source, err := locations.NewSource(path, interactions.NewInteractionService().FFXGameVersion().GetGameVersion())
+	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
+	source, err := locations.NewSource(path, gameVersion)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	tree := components.NewEmptyList[spira.TreeNode]()
+	formatter := formatters.NewTxtFormatter()
 
-	err = spira.BuildFileTree(tree, source)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	nodeMap = spira.CreateFileTreeMap(gameVersion, formatter, path)
 
 	testRun := func(_ int, n spira.TreeNode) {
 		if testExtract {
