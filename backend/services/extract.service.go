@@ -2,10 +2,6 @@ package services
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats"
-	"ffxresources/backend/formatters"
-	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
 	"ffxresources/backend/notifications"
 	"fmt"
@@ -19,8 +15,8 @@ func NewExtractService() *ExtractService {
 
 func (e *ExtractService) Extract(file string) {
 	defer func() {
+		l := logger.Get()
 		if r := recover(); r != nil {
-			l := logger.Get()
 			l.Error().
 				Interface("recover", r).
 				Str("file", common.GetFileName(file)).
@@ -30,7 +26,19 @@ func (e *ExtractService) Extract(file string) {
 		}
 	}()
 
-	source, err := locations.NewSource(file, interactions.NewInteractionService().FFXGameVersion().GetGameVersion())
+	if node, ok := nodeMap[file]; ok {
+		fmt.Println(node)
+		processor := node.Data.FileProcessor
+		if processor != nil {
+			if err := processor.Extract(); err != nil {
+				notifications.NotifyError(err)
+				return
+			}
+			notifications.NotifySuccess(fmt.Sprintf("File %s extracted successfully!", node.Label))
+		}
+	}
+
+	/* source, err := locations.NewSource(file, interactions.NewInteractionService().FFXGameVersion().GetGameVersion())
 	if err != nil {
 		notifications.NotifyError(err)
 		return
@@ -39,7 +47,7 @@ func (e *ExtractService) Extract(file string) {
 	destination := locations.NewDestination()
 	destination.InitializeLocations(source, formatters.NewTxtFormatter())
 
-	fileProcessor := fileFormats.NewFileProcessor(source, destination)
+	fileProcessor := fileFormats.NewFileExtractor(source, destination)
 	if fileProcessor == nil {
 		l := logger.Get()
 		l.Error().
@@ -52,7 +60,7 @@ func (e *ExtractService) Extract(file string) {
 	if err := fileProcessor.Extract(); err != nil {
 		notifications.NotifyError(err)
 		return
-	}
+	} */
 
-	notifications.NotifySuccess(fmt.Sprintf("File %s extracted successfully", source.Get().Name))
+	//notifications.NotifySuccess(fmt.Sprintf("File %s extracted successfully!", source.Get().Name))
 }

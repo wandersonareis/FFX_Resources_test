@@ -2,12 +2,7 @@ package services
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats"
-	"ffxresources/backend/formatters"
-	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
-	"ffxresources/backend/models"
 	"ffxresources/backend/notifications"
 	"fmt"
 )
@@ -31,7 +26,19 @@ func (c *CompressService) Compress(file string) {
 		}
 	}()
 
-	if !common.IsFileExists(file) {
+	if node, ok := nodeMap[file]; ok {
+		fmt.Println(node)
+		processor := node.Data.FileProcessor
+		if processor != nil {
+			if err := processor.Compress(); err != nil {
+				notifications.NotifyError(err)
+				return
+			}
+			notifications.NotifySuccess(fmt.Sprintf("File %s compressed successfully!", node.Label))
+		}
+	}
+
+	/* if !common.IsFileExists(file) {
 		notifications.NotifyError(fmt.Errorf("game file %s not found", common.GetFileName(file)))
 		return
 	}
@@ -47,14 +54,14 @@ func (c *CompressService) Compress(file string) {
 
 	translateLocation := destination.Translate().Get()
 
-	if !source.Get().IsDir {
-		if err := translateLocation.Validate(); err != nil &&
-			source.Get().Type != models.Dcp {
+	sourceType := source.Get().Type
+	if !source.Get().IsDir && sourceType != models.Dcp && sourceType != models.Lockit {
+		if err := translateLocation.Validate(); err != nil {
 			notifications.NotifyError(err)
 			return
 		}
 
-		if err := common.EnsureWindowsLineBreaks(translateLocation.GetTargetFile(), source.Get().Type); err != nil {
+		if err := common.EnsureWindowsLineBreaks(translateLocation.GetTargetFile()); err != nil {
 			notifications.NotifyError(err)
 			return
 		}
@@ -76,5 +83,5 @@ func (c *CompressService) Compress(file string) {
 		return
 	}
 
-	notifications.NotifySuccess(fmt.Sprintf("File %s compressed successfully", source.Get().Name))
+	notifications.NotifySuccess(fmt.Sprintf("File %s compressed successfully!", source.Get().Name)) */
 }
