@@ -5,8 +5,6 @@ import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
-	"ffxresources/backend/notifications"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -76,7 +74,7 @@ func ListFilesByRegex(list IList[string], path, pattern string) error {
 	return nil
 }
 
-/* func GenerateGameFileParts[T any](parts IList[T], targetPath, pattern string, partsInstance func(source interfaces.ISource, destination interfaces.IDestination) *T) error {
+func GenerateGameFileParts[T any](parts IList[T], targetPath, pattern string, partsInstance func(source interfaces.ISource, destination locations.IDestination) *T) error {
 	common.EnsurePathExists(targetPath)
 
 	filesList := NewList[string](parts.GetLength())
@@ -85,44 +83,6 @@ func ListFilesByRegex(list IList[string], path, pattern string) error {
 	if err != nil {
 		return err
 	}
-
-	filesList.ForEach(func(item string) {
-		info := interactions.NewGameDataInfo(item)
-		if info.GetGameData().Size == 0 {
-			return
-		}
-
-		part := partsInstance(sou)
-		if part == nil {
-			return
-		}
-
-		parts.Add(*part)
-	})
-
-	parts.Clip()
-
-	return nil
-} */
-
-func GenerateGameFilePartsDev[T any](parts IList[T], targetPath, pattern string, partsInstance func(source interfaces.ISource, destination locations.IDestination) *T) error {
-	common.EnsurePathExists(targetPath)
-
-	filesList := NewList[string](parts.GetLength())
-
-	err := ListFilesByRegex(filesList, targetPath, pattern)
-	if err != nil {
-		return err
-	}
-
-	errChan := make(chan error, filesList.GetLength())
-	defer close(errChan)
-
-	loggerHandler := &logger.LogHandler{
-		Logger: logger.Get().With().Str("module", "generate_game_file_parts").Logger(),
-	}
-
-	go notifications.ProcessError(errChan, loggerHandler)
 
 	filesList.ForEach(func(item string) {
 		s, err := locations.NewSource(item, interactions.NewInteractionService().FFXGameVersion().GetGameVersion())
@@ -143,6 +103,7 @@ func GenerateGameFilePartsDev[T any](parts IList[T], targetPath, pattern string,
 
 		parts.Add(*part)
 	})
+
 
 	parts.Clip()
 

@@ -1,7 +1,7 @@
 package spira
 
 import (
-	"ffxresources/backend/core/components"
+	"ffxresources/backend/core"
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats"
 	"ffxresources/backend/interfaces"
@@ -9,9 +9,10 @@ import (
 
 type GameDataInfo struct {
 	FilePath  string                      `json:"file_path"`
+	Source    core.SpiraFileInfo          `json:"source"`
 	Extract   locations.ExtractLocation   `json:"extract_location"`
 	Translate locations.TranslateLocation `json:"translate_location"`
-	Import    locations.ImportLocation    `json:"import_location"`
+	FileProcessor interfaces.IFileProcessor
 }
 
 type TreeNode struct {
@@ -22,36 +23,29 @@ type TreeNode struct {
 	Children []TreeNode   `json:"children"`
 }
 
-func CreateTreeNode(key string, source interfaces.ISource, destination locations.IDestination, childrens components.IList[TreeNode]) (TreeNode, error) {
-	node, err := generateNode(key, source, destination)
-	if err != nil {
-		return TreeNode{}, err
-	}
+type TreeMapNode = map[string]*MapNode
+
+func CreateTreeNode(source interfaces.ISource, destination locations.IDestination) TreeNode {
+	var node TreeNode
+
+	node.Data = createTreeNodeData(source, destination)
 
 	node.Icon = getTreeNodeIcon(source.Get().Type)
-	node.Children = childrens.GetItems()
 
-	return node, nil
+	return node
 }
 
-func generateNode(key string, source interfaces.ISource, destination locations.IDestination) (TreeNode, error) {
+func createTreeNodeData(source interfaces.ISource, destination locations.IDestination) GameDataInfo {
 	fileProcessor := fileFormats.NewFileProcessor(source, destination)
-	if fileProcessor == nil {
-		return TreeNode{}, nil
-	}
 
 	gameDataInfo := GameDataInfo{
 		FilePath:  source.Get().Path,
+		Source:    *source.Get(),
 		Extract:   *destination.Extract().Get(),
 		Translate: *destination.Translate().Get(),
-		Import:    *destination.Import().Get(),
+
+		FileProcessor: fileProcessor,
 	}
 
-	var node = TreeNode{
-		Key:   key,
-		Label: source.Get().Name,
-		Data:  gameDataInfo,
-	}
-
-	return node, nil
+	return gameDataInfo
 }

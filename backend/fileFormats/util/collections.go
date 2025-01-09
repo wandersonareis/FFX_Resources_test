@@ -6,8 +6,6 @@ import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
-	"ffxresources/backend/notifications"
 	"fmt"
 )
 
@@ -21,12 +19,7 @@ func FindFileParts[T any](partsList components.IList[T], targetPath, pattern str
 	}
 
 	errChan := make(chan error, fileParts.GetLength())
-
-	loggerHandler := &logger.LogHandler{
-		Logger: logger.Get().With().Str("module", "findFilePartss").Logger(),
-	}
-
-	go notifications.ProcessError(errChan, loggerHandler)
+	defer close(errChan)
 
 	generatePartInstanceFunc := func(item string) {
 		source, err := locations.NewSource(item, interactions.NewInteractionService().FFXGameVersion().GetGameVersion())
@@ -50,6 +43,10 @@ func FindFileParts[T any](partsList components.IList[T], targetPath, pattern str
 	}
 
 	fileParts.ForEach(generatePartInstanceFunc)
+
+	if err := <-errChan; err != nil {
+		return err
+	}
 
 	return nil
 }
