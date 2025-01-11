@@ -25,11 +25,11 @@ var formats = map[models.NodeType]func(source interfaces.ISource, destination lo
 	models.Lockit:         lockit.NewLockitFile,
 }
 
-func NewFileExtractor(source interfaces.ISource, destination locations.IDestination) models.IExtractor {
+func NewFileExtractor(source interfaces.ISource, destination locations.IDestination) interfaces.IExtractor {
 	return NewFileProcessor(source, destination)
 }
 
-func NewFileCompressor(source interfaces.ISource, destination locations.IDestination) models.ICompressor {
+func NewFileCompressor(source interfaces.ISource, destination locations.IDestination) interfaces.ICompressor {
 	return NewFileProcessor(source, destination)
 }
 
