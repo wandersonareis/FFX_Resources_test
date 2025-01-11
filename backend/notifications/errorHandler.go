@@ -1,7 +1,6 @@
 package notifications
 
 import (
-	"ffxresources/backend/logger"
 	"fmt"
 
 	"github.com/rs/zerolog"
@@ -20,7 +19,7 @@ func PanicRecoverLogger(logger zerolog.Logger) {
 	}
 }
 
-func ProcessError(errChan chan error, logHandler logger.ILoggerHandler) {
+/* func ProcessError(errChan chan error, logHandler logger.ILoggerHandler) {
 	for {
 		select {
 		case err := <-errChan:
@@ -29,4 +28,4 @@ func ProcessError(errChan chan error, logHandler logger.ILoggerHandler) {
 			}
 		}
 	}
-}
+} */
