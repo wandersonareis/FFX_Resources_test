@@ -3,39 +3,61 @@ package services
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/logger"
+	"ffxresources/backend/models"
 	"ffxresources/backend/notifications"
 	"fmt"
+	"sync"
 )
 
-type CompressService struct{}
+type CompressService struct {
+	dirCompressServideOnce sync.Once
+	dirCompressService     IDirectoryCompressService
+}
 
 func NewCompressService() *CompressService {
 	return &CompressService{}
 }
 
-func (c *CompressService) Compress(file string) {
+func (c *CompressService) Compress(path string) {
 	defer func() {
 		if r := recover(); r != nil {
 			l := logger.Get()
 			l.Error().
 				Interface("recover", r).
-				Str("file", common.GetFileName(file)).
+				Str("file", common.GetFileName(path)).
 				Msg("Panic occurred during extraction")
 
 			notifications.NotifyError(fmt.Errorf("panic occurred: %v", r))
 		}
 	}()
 
-	if node, ok := nodeMap[file]; ok {
-		fmt.Println(node)
-		processor := node.Data.FileProcessor
-		if processor != nil {
-			if err := processor.Compress(); err != nil {
-				notifications.NotifyError(err)
-				return
-			}
-			notifications.NotifySuccess(fmt.Sprintf("File %s compressed successfully!", node.Label))
+	node, ok := NodeMap[path]
+	if !ok {
+		notifications.NotifyError(fmt.Errorf("node not found for path: %s", path))
+		return
+	}
+
+	if node.Data.Source.Type == models.Folder {
+		c.dirCompressServideOnce.Do(func() {
+			c.dirCompressService = &directoryCompressService{}
+		})
+
+		if err := c.dirCompressService.ProcessDirectory(path, NodeMap); err != nil {
+			notifications.NotifyError(err)
+			return
 		}
+
+		notifications.NotifySuccess(fmt.Sprintf("Directory %s compressed successfully!", node.Label))
+		return
+	}
+
+	processor := node.Data.FileProcessor
+	if processor != nil {
+		if err := processor.Compress(); err != nil {
+			notifications.NotifyError(err)
+			return
+		}
+		notifications.NotifySuccess(fmt.Sprintf("File %s compressed successfully!", node.Label))
 	}
 
 	/* if !common.IsFileExists(file) {
