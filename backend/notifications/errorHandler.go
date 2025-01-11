@@ -18,14 +18,3 @@ func PanicRecoverLogger(logger zerolog.Logger) {
 		logger.Error().Interface("recover", r).Msg("Panic occurred")
 	}
 }
-
-/* func ProcessError(errChan chan error, logHandler logger.ILoggerHandler) {
-	for {
-		select {
-		case err := <-errChan:
-			if err != nil {
-				logHandler.LogError(err, "Error occurred")
-			}
-		}
-	}
-} */
