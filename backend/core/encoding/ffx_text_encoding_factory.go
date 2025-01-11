@@ -22,7 +22,7 @@ func NewFFXTextEncodingFactory() *FFXTextEncodingFactory {
 func (e *FFXTextEncodingFactory) FFXTextEncodingCodePage() {
 	codePage := e.FFXTextEncoding.createFFXTextEncoding()
 
-	tmpProvider := common.NewTempProviderDev("ffx_text_encoding", ".tbs")
+	tmpProvider := common.NewTempProvider("ffx_text_encoding", "tbs")
 
 	e.EncodingFile = tmpProvider.TempFile
 
@@ -32,7 +32,7 @@ func (e *FFXTextEncodingFactory) FFXTextEncodingCodePage() {
 func (e *FFXTextEncodingFactory) CreateFFXTextDlgEncoding(dlgFileType models.NodeType) IFFXTextDlgEncoding {
 	codePage := e.FFXTextEncoding.createFFXTextEncoding()
 
-	tmpProvider := common.NewTempProviderDev("ffx_text_encoding", ".tbs")
+	tmpProvider := common.NewTempProvider("ffx_text_encoding", "tbs")
 
 	e.writeEncodingToFile(tmpProvider.TempFile, codePage)
 
@@ -42,7 +42,7 @@ func (e *FFXTextEncodingFactory) CreateFFXTextDlgEncoding(dlgFileType models.Nod
 func (e *FFXTextEncodingFactory) CreateFFXTextKrnlEncoding() IFFXTextKrnlEncoding {
 	codePage := e.FFXTextEncoding.createFFXTextEncoding()
 
-	tmpProvider := common.NewTempProviderDev("ffx_text_encoding", ".tbs")
+	tmpProvider := common.NewTempProvider("ffx_text_encoding", "tbs")
 
 	e.writeEncodingToFile(tmpProvider.TempFile, codePage)
 
@@ -53,9 +53,9 @@ func (e *FFXTextEncodingFactory) CreateFFXTextLocalizationEncoding() IFFXTextLoc
 	locCodePage := e.FFXTextEncoding.createFFXTextLocalizationEncoding()
 	ffxCodePage := e.FFXTextEncoding.createFFXTextSimpleEncoding()
 
-	locEncodingTemp := common.NewTempProviderDev("ffx_text_localization", ".tbs")
+	locEncodingTemp := common.NewTempProvider("ffx_text_localization", "tbs")
 
-	ffxEcodingTemp := common.NewTempProviderDev("ffx_text_simple_encoding", ".tbs")
+	ffxEcodingTemp := common.NewTempProvider("ffx_text_simple_encoding", "tbs")
 
 	e.writeEncodingToFile(locEncodingTemp.TempFile, locCodePage)
 	e.writeEncodingToFile(ffxEcodingTemp.TempFile, ffxCodePage)
