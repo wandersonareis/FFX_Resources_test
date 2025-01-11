@@ -1,51 +1,31 @@
 package spira
 
-import (
-	"ffxresources/backend/core"
-	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats"
-	"ffxresources/backend/interfaces"
-)
-
-type GameDataInfo struct {
-	FilePath  string                      `json:"file_path"`
-	Source    core.SpiraFileInfo          `json:"source"`
-	Extract   locations.ExtractLocation   `json:"extract_location"`
-	Translate locations.TranslateLocation `json:"translate_location"`
-	FileProcessor interfaces.IFileProcessor
-}
+import "ffxresources/backend/fileFormats"
 
 type TreeNode struct {
-	Key      string       `json:"key"`
-	Label    string       `json:"label"`
-	Data     GameDataInfo `json:"data"`
-	Icon     string       `json:"icon"`
-	Children []TreeNode   `json:"children"`
+	Key      string               `json:"key"`
+	Label    string               `json:"label"`
+	Data     fileFormats.DataInfo `json:"data"`
+	Icon     string               `json:"icon"`
+	Children []*TreeNode          `json:"children"`
 }
 
-type TreeMapNode = map[string]*MapNode
-
-func CreateTreeNode(source interfaces.ISource, destination locations.IDestination) TreeNode {
-	var node TreeNode
-
-	node.Data = createTreeNodeData(source, destination)
-
-	node.Icon = getTreeNodeIcon(source.Get().Type)
-
-	return node
+func (treeNode *TreeNode) SetNodeKey(key string) {
+	treeNode.Key = key
 }
 
-func createTreeNodeData(source interfaces.ISource, destination locations.IDestination) GameDataInfo {
-	fileProcessor := fileFormats.NewFileProcessor(source, destination)
+func (treeNode *TreeNode) SetNodeLabel(label string) {
+	treeNode.Label = label
+}
 
-	gameDataInfo := GameDataInfo{
-		FilePath:  source.Get().Path,
-		Source:    *source.Get(),
-		Extract:   *destination.Extract().Get(),
-		Translate: *destination.Translate().Get(),
+func (treeNode *TreeNode) SetNodeIcon(icon string) {
+	treeNode.Icon = icon
+}
 
-		FileProcessor: fileProcessor,
-	}
+func (treeNode *TreeNode) SetNodeData(data fileFormats.DataInfo) {
+	treeNode.Data = data
+}
 
-	return gameDataInfo
+func (treeNode *TreeNode) AddNodeChild(child *TreeNode) {
+	treeNode.Children = append(treeNode.Children, child)
 }
