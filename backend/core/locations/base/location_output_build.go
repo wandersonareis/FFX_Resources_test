@@ -14,7 +14,7 @@ const (
 
 func (lb *LocationBase) buildTargetOutput(
 	source interfaces.ISource,
-	formatter interfaces.ITextFormatterDev,
+	formatter interfaces.ITextFormatter,
 	op BuildOperationType,
 ) {
 	if op == opRead {
@@ -33,14 +33,14 @@ func (lb *LocationBase) buildTargetOutput(
 
 func (lb *LocationBase) BuildTargetReadOutput(
 	source interfaces.ISource,
-	formatter interfaces.ITextFormatterDev,
+	formatter interfaces.ITextFormatter,
 ) {
 	lb.buildTargetOutput(source, formatter, opRead)
 }
 
 func (lb *LocationBase) BuildTargetWriteOutput(
 	source interfaces.ISource,
-	formatter interfaces.ITextFormatterDev,
+	formatter interfaces.ITextFormatter,
 ) {
 	lb.buildTargetOutput(source, formatter, opWrite)
 }

@@ -11,7 +11,7 @@ type IFileProcessor interface {
 	Compress() error
 }
 
-type ITextFormatterDev interface {
+type ITextFormatter interface {
 	ReadFile(source ISource, targetDirectory string) (string, string)
 	WriteFile(source ISource, targetDirectory string) (string, string)
 }

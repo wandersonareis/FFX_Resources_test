@@ -1,7 +1,7 @@
 package locations
 
 import (
-	"ffxresources/backend/core/locations/base"
+	internal "ffxresources/backend/core/locations/base"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"os"
@@ -12,7 +12,7 @@ type IDestination interface {
 	Extract() IExtractLocationInfo
 	Translate() ITranslateLocationInfo
 	Import() IImportLocationInfo
-	InitializeLocations(source interfaces.ISource, formatter interfaces.ITextFormatterDev)
+	InitializeLocations(source interfaces.ISource, formatter interfaces.ITextFormatter)
 	CreateRelativePath(source interfaces.ISource, gameLocationPath string)
 }
 
@@ -37,7 +37,7 @@ func NewDestination() IDestination {
 	return destination
 }
 
-func (g *Destination) InitializeLocations(source interfaces.ISource, formatter interfaces.ITextFormatterDev) {
+func (g *Destination) InitializeLocations(source interfaces.ISource, formatter interfaces.ITextFormatter) {
 	g.ExtractLocation.Get().BuildTargetReadOutput(source, formatter)
 	g.TranslateLocation.Get().BuildTargetReadOutput(source, formatter)
 	g.ImportLocation.Get().BuildTargetWriteOutput(source, formatter)

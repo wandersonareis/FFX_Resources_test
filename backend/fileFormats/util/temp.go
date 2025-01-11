@@ -7,7 +7,7 @@ import (
 	"ffxresources/backend/interfaces"
 )
 
-func CreateTemporaryFileInfo(filePath string, formatter interfaces.ITextFormatterDev) (interfaces.ISource, locations.IDestination) {
+func CreateTemporaryFileInfo(filePath string, formatter interfaces.ITextFormatter) (interfaces.ISource, locations.IDestination) {
 	tmpDir := common.NewTempProvider("", "").TempFilePath
 
 	gamePart := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()

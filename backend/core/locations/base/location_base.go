@@ -12,8 +12,8 @@ type (
 		ITargetDirectoryBase
 		ITargetFileBase
 
-		BuildTargetReadOutput(source interfaces.ISource, formatter interfaces.ITextFormatterDev)
-		BuildTargetWriteOutput(source interfaces.ISource, formatter interfaces.ITextFormatterDev)
+		BuildTargetReadOutput(source interfaces.ISource, formatter interfaces.ITextFormatter)
+		BuildTargetWriteOutput(source interfaces.ISource, formatter interfaces.ITextFormatter)
 		DisposeTargetFile()
 		DisposeTargetPath()
 	}

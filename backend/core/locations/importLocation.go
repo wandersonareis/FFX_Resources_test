@@ -1,7 +1,7 @@
 package locations
 
 import (
-	"ffxresources/backend/core/locations/base"
+	internal "ffxresources/backend/core/locations/base"
 	"ffxresources/backend/interfaces"
 	"fmt"
 )
@@ -25,7 +25,7 @@ func NewImportLocation(options *internal.LocationBaseOptions) *ImportLocation {
 	}
 }
 
-func (i *ImportLocation) GenerateTargetOutput(formatter interfaces.ITextFormatterDev, source interfaces.ISource) {
+func (i *ImportLocation) GenerateTargetOutput(formatter interfaces.ITextFormatter, source interfaces.ISource) {
 	i.TargetFile, i.TargetPath = formatter.WriteFile(source, i.TargetDirectory)
 }
 
