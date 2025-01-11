@@ -10,19 +10,21 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type ITextsVerify interface {
-	VerifyExtract(extract locations.IExtractLocation) error
-	VerifyCompress(source interfaces.ISource, destination locations.IDestination, extractor func(source interfaces.ISource, destination locations.IDestination) error) error
-}
+type (
+	ITextsVerify interface {
+		VerifyExtract(extract locations.IExtractLocation) error
+		VerifyCompress(source interfaces.ISource, destination locations.IDestination, extractor func(source interfaces.ISource, destination locations.IDestination) error) error
+	}
 
-type TextsVerify struct {
-	segmentCounter ISegmentCounter
-	filesComparer  IComparer
+	TextsVerify struct {
+		segmentCounter ISegmentCounter
+		filesComparer  IComparer
 
-	log zerolog.Logger
-}
+		log zerolog.Logger
+	}
+)
 
-func NewTextsVerify() ITextsVerify {
+func NewTextsVerify() *TextsVerify {
 	return &TextsVerify{
 		segmentCounter: new(segmentCounter),
 		filesComparer:  newPartComparer(),
