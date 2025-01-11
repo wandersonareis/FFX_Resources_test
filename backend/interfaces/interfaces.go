@@ -5,21 +5,31 @@ import (
 	"ffxresources/backend/models"
 )
 
-type IFileProcessor interface {
-	Source() ISource
-	Extract() error
-	Compress() error
-}
+type (
+	IExtractor interface {
+		Extract() error
+	}
+
+	ICompressor interface {
+		Compress() error
+	}
+
+	ISource interface {
+		Get() *core.SpiraFileInfo
+		Set(source *core.SpiraFileInfo)
+		GetGamePartDuplicates(namePrefix string, gamePart models.GameVersion) []string
+	}
+
+	IFileProcessor interface {
+		ICompressor
+		IExtractor
+		Source() ISource
+	}
+)
 
 type ITextFormatter interface {
 	ReadFile(source ISource, targetDirectory string) (string, string)
 	WriteFile(source ISource, targetDirectory string) (string, string)
-}
-
-type ISource interface {
-	Get() *core.SpiraFileInfo
-	Set(source *core.SpiraFileInfo)
-	GetGamePartDuplicates(namePrefix string, gamePart models.GameVersion) []string
 }
 
 type IValidate interface {
