@@ -2,6 +2,7 @@ package interactions
 
 import (
 	"ffxresources/backend/common"
+	"fmt"
 	"path/filepath"
 )
 
@@ -14,7 +15,12 @@ func (e *interactionBase) GetTargetDirectoryBase(field ConfigField) (interface{}
 }
 
 func (e *interactionBase) SetTargetDirectoryBase(field ConfigField, path string) {
-	NewInteractionService().FFXAppConfig().UpdateField(field, path)
+	fullPath, err := filepath.Abs(path)
+	if err != nil {
+		panic(fmt.Errorf("erro ao obter o caminho absoluto: %v", err))
+	}
+
+	NewInteractionService().FFXAppConfig().UpdateField(field, fullPath)
 }
 
 func (e *interactionBase) ProviderTargetDirectoryBase(field ConfigField, targetDirectory string) error {
