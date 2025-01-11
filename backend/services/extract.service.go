@@ -2,18 +2,17 @@ package services
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/core/components"
-	"ffxresources/backend/interactions"
-	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"ffxresources/backend/models"
 	"ffxresources/backend/notifications"
 	"fmt"
-	"io/fs"
-	"path/filepath"
+	"sync"
 )
 
-type ExtractService struct{}
+type ExtractService struct {
+	dirExtractServideOnce sync.Once
+	dirExtractService     IDirectoryExtractService
+}
 
 func NewExtractService() *ExtractService {
 	return &ExtractService{}
@@ -39,7 +38,11 @@ func (e *ExtractService) Extract(path string) {
 	}
 
 	if node.Data.Source.Type == models.Folder {
-		if err := e.processDirectory(path); err != nil {
+		e.dirExtractServideOnce.Do(func() {
+			e.dirExtractService = &directoryExtractService{}
+		})
+
+		if err := e.dirExtractService.ProcessDirectory(path, NodeMap); err != nil {
 			notifications.NotifyError(err)
 			return
 		}
@@ -57,54 +60,4 @@ func (e *ExtractService) Extract(path string) {
 		notifications.NotifySuccess(fmt.Sprintf("File %s extracted successfully!", node.Label))
 	}
 
-}
-
-func (e *ExtractService) processDirectory(targetPath string) error {
-	filesProcessorList := components.NewEmptyList[interfaces.IFileProcessor]()
-
-	err := filepath.WalkDir(targetPath, func(path string, info fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if info.IsDir() {
-			return nil
-		}
-
-		if node, ok := NodeMap[path]; ok {
-			if node.Data.Source.IsDir {
-				return nil
-			}
-
-			processor := node.Data.FileProcessor
-			if processor != nil {
-				filesProcessorList.Add(processor)
-			}
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return err
-	}
-
-	context := interactions.NewInteractionService().Ctx
-
-	progress := common.NewProgress(context)
-	progress.SetMax(filesProcessorList.GetLength())
-	progress.Start()
-
-	filesProcessorList.ParallelForEach(func(_ int, processor interfaces.IFileProcessor) {
-		if err := processor.Extract(); err != nil {
-			notifications.NotifyError(err)
-			return
-		}
-
-		progress.StepFile(processor.Source().Get().Name)
-	})
-
-	//progress.Stop()
-
-	return nil
 }
