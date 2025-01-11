@@ -29,10 +29,6 @@ func NewSource(path string, gamePart models.GameVersion) (interfaces.ISource, er
 	}, nil
 }
 
-/* func (g *Source) updateGameDataFromSource(source *SpiraFileInfo, gamePart FFXGameVersion) {
-	source.ClonedItems = g.GetGamePartDuplicates(gamePart)
-} */
-
 func (g *Source) Get() *core.SpiraFileInfo {
 	return g.FileInfo
 }
@@ -47,9 +43,9 @@ func (g *Source) GetGamePartDuplicates(namePrefix string, gamePart models.GameVe
 		//TODO: return NewFfxDuplicate().AddFfxTextDuplicate()
 		fallthrough
 	case models.FFX2:
-		dupes := core.NewFfx2Duplicate()
-		dupes.AddFfx2TextDuplicate()
-		return dupes.TryFind(namePrefix)
+		duplicateHandler := core.NewFfx2Duplicate()
+		duplicateHandler.AddFfx2TextDuplicate()
+		return duplicateHandler.TryFind(namePrefix)
 	}
 
 	return nil
