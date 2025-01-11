@@ -46,11 +46,3 @@ type Pointer struct {
 	Offset int64
 	Value  uint32
 }
-
-type IExtractor interface {
-	Extract() error
-}
-
-type ICompressor interface {
-	Compress() error
-}
