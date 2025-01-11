@@ -83,4 +83,5 @@ func (p *Progress) restart() {
 	p.SetMax(0)
 	p.SetProcessed(0)
 	p.SetPercentage(0)
+	p.CurrentFile = ""
 }
