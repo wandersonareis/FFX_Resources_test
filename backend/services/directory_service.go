@@ -12,11 +12,12 @@ import (
 )
 
 type (
-	IDirectoryExtractService interface {
+    IDirectoryService interface {
 		ProcessDirectory(targetPath string, pathMap fileFormats.TreeMapNode) error
 	}
 
 	directoryExtractService struct{}
+    directoryCompressService struct{}
 )
 
 func (e *directoryExtractService) ProcessDirectory(targetPath string, pathMap fileFormats.TreeMapNode) error {
@@ -24,14 +25,6 @@ func (e *directoryExtractService) ProcessDirectory(targetPath string, pathMap fi
         return processor.Extract()
     })
 }
-
-type (
-	IDirectoryCompressService interface {
-		ProcessDirectory(targetPath string, pathMap fileFormats.TreeMapNode) error
-	}
-
-	directoryCompressService struct{}
-)
 
 func (e *directoryCompressService) ProcessDirectory(targetPath string, pathMap fileFormats.TreeMapNode) error {
     return ProcessDirectoryCommon(targetPath, pathMap, func(processor interfaces.IFileProcessor) error {
