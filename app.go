@@ -77,7 +77,6 @@ func (a App) domReady(ctx context.Context) {
 
 	testPath = `build\bin\data\ffx_ps2\ffx2\master\new_uspc\lastmiss\kernel`
 	services.TestExtractDir(testPath, false, false)
-
 }
 
 // beforeClose is called when the application is about to quit,

@@ -65,7 +65,6 @@ func CreateFileTreeMap(gameVersion models.GameVersion, formatter interfaces.ITex
 
 		parent := entrySource.Get().Parent
 		if parentNode, ok := nodeMap[parent]; ok {
-			//parentNode.ChildKeys = append(parentNode.ChildKeys, path)
 			parentNode.AddChildKey(path)
 		}
 

@@ -11,6 +11,10 @@ import (
 )
 
 func TestExtractDir(path string, testExtract, testCompress bool) {
+	if !testExtract && !testCompress {
+		return
+	}
+
 	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
 	source, err := locations.NewSource(path, gameVersion)
 	if err != nil {
@@ -21,7 +25,9 @@ func TestExtractDir(path string, testExtract, testCompress bool) {
 	tree := components.NewEmptyList[spira.TreeNode]()
 	formatter := formatters.NewTxtFormatter()
 
-	nodeMap = spira.CreateFileTreeMap(gameVersion, formatter, path)
+	interactions.NewInteractionService().GameLocation.SetTargetDirectory(path)
+
+	NodeMap = spira.CreateFileTreeMap(gameVersion, formatter)
 
 	testRun := func(_ int, n spira.TreeNode) {
 		if testExtract {
@@ -46,6 +52,10 @@ func TestExtractDir(path string, testExtract, testCompress bool) {
 }
 
 func TestExtractFile(path string, testExtract, testCompress bool) {
+	if !testExtract && !testCompress {
+		return
+	}
+	
 	source, err := locations.NewSource(path, interactions.NewInteractionService().FFXGameVersion().GetGameVersion())
 	if err != nil {
 		fmt.Println(err)
