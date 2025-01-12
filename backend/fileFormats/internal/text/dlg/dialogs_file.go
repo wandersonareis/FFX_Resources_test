@@ -19,8 +19,8 @@ type DialogsFile struct {
 	extractorOnce          sync.Once
 
 	compressor         IDlgCompressor
-	dialogTextVerifier textVerifier.ITextVerifier
 	extractor          IDlgExtractor
+	dialogTextVerifier textVerifier.ITextVerifier
 
 	log logger.ILoggerHandler
 }
@@ -116,9 +116,7 @@ func (d *DialogsFile) createTemp(source interfaces.ISource, destination location
 	tmpDestination.Extract().Get().SetTargetFile(tmp.TempFile)
 	tmpDestination.Extract().Get().SetTargetPath(tmp.TempFilePath)
 
-	//s := source.Get()
 	tmpSource.Get().Path = destination.Import().Get().GetTargetFile()
-	//tmpSource.Set(s)
 
 	return tmpSource, tmpDestination
 }

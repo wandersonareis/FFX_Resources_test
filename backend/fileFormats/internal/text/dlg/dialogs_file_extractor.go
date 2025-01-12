@@ -28,7 +28,7 @@ func NewDlgExtractor(source interfaces.ISource, destination locations.IDestinati
 	}
 }
 
-func (d DlgExtractor) Extract() error {
+func (d *DlgExtractor) Extract() error {
 	if slices.Contains(d.source.Get().ClonedItems, d.source.Get().RelativePath) {
 		return nil
 	}
