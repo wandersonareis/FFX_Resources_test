@@ -14,8 +14,7 @@ type (
 
 		BuildTargetReadOutput(source interfaces.ISource, formatter interfaces.ITextFormatter)
 		BuildTargetWriteOutput(source interfaces.ISource, formatter interfaces.ITextFormatter)
-		DisposeTargetFile()
-		DisposeTargetPath()
+		Dispose()
 	}
 	LocationBase struct {
 		TargetDirectoryBase
@@ -33,23 +32,12 @@ func NewLocationBase(options *LocationBaseOptions) LocationBase {
 	}
 }
 
-func (lb *LocationBase) DisposeTargetFile() {
+func (lb *LocationBase) Dispose() {
 	if common.IsFileExists(lb.GetTargetFile()) {
 		err := os.Remove(lb.TargetFile)
 		if err != nil {
 			l := logger.Get()
 			l.Error().Msgf("error when removing file: %s", err)
-		}
-	}
-}
-
-func (lb *LocationBase) DisposeTargetPath() {
-	if common.IsPathExists(lb.TargetPath) {
-		err := os.RemoveAll(lb.TargetPath)
-		if err != nil {
-			l := logger.Get()
-			l.Error().Msgf("error when removing path: %s", err)
-			return
 		}
 	}
 }
