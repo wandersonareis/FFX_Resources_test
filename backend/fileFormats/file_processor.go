@@ -23,6 +23,7 @@ var formats = map[models.NodeType]func(source interfaces.ISource, destination lo
 	models.Kernel:         mt2.NewKernel,
 	models.Dcp:            dcp.NewDcpFile,
 	models.Lockit:         lockit.NewLockitFile,
+	models.Folder:         folder.NewSpiraFolder,
 }
 
 func NewFileExtractor(source interfaces.ISource, destination locations.IDestination) interfaces.IExtractor {
@@ -35,10 +36,6 @@ func NewFileCompressor(source interfaces.ISource, destination locations.IDestina
 
 func NewFileProcessor(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
 	fileType := source.Get().Type
-
-	if fileType == models.Folder {
-		return folder.NewSpiraFolder(source, destination, NewFileProcessor)
-	}
 
 	if err := destination.Extract().Get().ProvideTargetDirectory(); err != nil {
 		notifications.NotifyError(err)
