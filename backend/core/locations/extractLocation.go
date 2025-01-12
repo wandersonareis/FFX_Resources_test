@@ -27,7 +27,7 @@ func (e *ExtractLocation) Validate() error {
 	e.IsExist = e.IsTargetFileAvailable()
 
 	if !e.IsExist {
-		return fmt.Errorf("extracted file does not exist")
+		return fmt.Errorf("extracted file does not exist: %s", e.GetTargetFile())
 	}
 
 	return nil
