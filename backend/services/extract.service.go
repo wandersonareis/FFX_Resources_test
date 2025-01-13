@@ -11,7 +11,7 @@ import (
 
 type ExtractService struct {
 	dirExtractServideOnce sync.Once
-	dirExtractService     IDirectoryExtractService
+	dirExtractService     IDirectoryService
 }
 
 func NewExtractService() *ExtractService {
@@ -31,7 +31,7 @@ func (e *ExtractService) Extract(path string) {
 		}
 	}()
 
-	node, ok := NodeMap["path"]
+	node, ok := NodeMap[path]
 	if !ok {
 		notifications.NotifyError(fmt.Errorf("node not found for path: %s", path))
 		return
@@ -59,5 +59,4 @@ func (e *ExtractService) Extract(path string) {
 		}
 		notifications.NotifySuccess(fmt.Sprintf("File %s extracted successfully!", node.Label))
 	}
-
 }
