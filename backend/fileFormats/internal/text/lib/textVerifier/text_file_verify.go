@@ -11,7 +11,6 @@ import (
 
 type TextIntegrityVerifyFunc func(source interfaces.ISource, destination locations.IDestination, segmentCounter ISegmentCounter, fileComparer IComparer, logger logger.ILoggerHandler) error
 
-// Atribuindo funções a variáveis como se fossem enums
 var (
 	ExtractIntegrityCheck  TextIntegrityVerifyFunc = extractIntegrityCheck
 	CompressIntegrityCheck TextIntegrityVerifyFunc = compressIntegrityCheck
@@ -61,8 +60,6 @@ func (dv *TextVerifier) Verify(source interfaces.ISource, destination locations.
 		return err
 	}
 
-	//dv.log.LogInfo("Text file verified successfully: %s", extractLocation.GetTargetFile())
-
 	return nil
 }
 
@@ -99,9 +96,6 @@ func compressIntegrityCheck(source interfaces.ISource, destination locations.IDe
 		return err
 	}
 
-	//createTemporaryFileInfo(source, destination)
-	//defer extractLocation.DisposeTargetFile()
-
 	if err := fileComparer.CompareTranslatedTextParts(translateLocation.GetTargetFile(), extractLocation.GetTargetFile()); err != nil {
 		if err := os.Remove(importLocation.GetTargetFile()); err != nil {
 			logger.LogError(err, "failed to remove broken text file: %s", importLocation.GetTargetFile())
@@ -115,42 +109,3 @@ func compressIntegrityCheck(source interfaces.ISource, destination locations.IDe
 
 	return nil
 }
-
-/* func (dv *TextVerifier) VerifyCompress(source interfaces.ISource, destination locations.IDestination, extractor func(source interfaces.ISource, destination locations.IDestination) error) error {
-	extractLocation := destination.Extract().Get()
-	translateLocation := destination.Translate().Get()
-	importLocation := destination.Import().Get()
-
-	if err := importLocation.Validate(); err != nil {
-		dv.log.LogInfo("Error on import location validation: %s", err)
-		return err
-	}
-
-	dv.createTemporaryFileInfo(source, destination)
-	defer extractLocation.DisposeTargetFile()
-
-	if err := extractor(source, destination); err != nil {
-		dv.log.LogError(err, "Error on reimported dialog file: %s", source.Get().Name)
-		return err
-	}
-
-	if err := dv.filesComparer.CompareTranslatedTextParts(translateLocation.GetTargetFile(), extractLocation.GetTargetFile()); err != nil {
-		dv.log.LogError(err, "Error on reimported text file: %s", source.Get().Name)
-		return err
-	}
-
-	dv.log.LogInfo("Compressed text file verified successfully: %s", source.Get().Name)
-
-	return nil
-} */
-
-/* func createTemporaryFileInfo(source interfaces.ISource, destination locations.IDestination) {
-	tmp := common.NewTempProvider("tmp", ".txt")
-
-	destination.Extract().Get().SetTargetFile(tmp.TempFile)
-	destination.Extract().Get().SetTargetPath(tmp.TempFilePath)
-
-	s := source.Get()
-	s.Path = destination.Import().Get().GetTargetFile()
-	source.Set(s)
-} */
