@@ -7,27 +7,16 @@ import (
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
-	"sync"
 )
 
 type kernelFile struct {
 	source      interfaces.ISource
 	destination locations.IDestination
 
-	compressorOnce   sync.Once
-	extractorOnce    sync.Once
-	textVerifierOnce sync.Once
-
-	compressor   IKrnlCompressor
-	extractor    IKrnlExtractor
-	textVerifier textVerifier.ITextVerifier
-
 	log logger.ILoggerHandler
 }
 
 func NewKernel(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
-	//destination.InitializeLocations(source, formatters.NewTxtFormatter())
-
 	return &kernelFile{
 		source:      source,
 		destination: destination,
@@ -42,14 +31,6 @@ func (k *kernelFile) Source() interfaces.ISource {
 }
 
 func (k *kernelFile) Extract() error {
-	k.extractorOnce.Do(func() {
-		k.extractor = newKrnlExtractor()
-	})
-
-	k.textVerifierOnce.Do(func() {
-		k.textVerifier = textVerifier.NewTextsVerify()
-	})
-
 	if !common.IsFileExists(k.source.Get().Path) {
 		k.log.LogError(nil, "Kernel file not found: %s", k.source.Get().Name)
 
@@ -58,7 +39,11 @@ func (k *kernelFile) Extract() error {
 
 	k.log.LogInfo("Extracting kernel file: %s", k.source.Get().Name)
 
-	if err := k.extractor.Extract(k.source, k.destination); err != nil {
+	extractorInstance := rentKrnlExtractor()
+	defer returnKrnlExtractor(extractorInstance)
+	fmt.Println("extractorInstance", extractorInstance)
+
+	if err := extractorInstance.Extract(k.source, k.destination); err != nil {
 		k.log.LogError(err, "Error extracting kernel file: %s", k.source.Get().Name)
 
 		return fmt.Errorf("failed to decode kernel file: %s", k.source.Get().Name)
@@ -66,7 +51,11 @@ func (k *kernelFile) Extract() error {
 
 	k.log.LogInfo("Verifying extracted kernel file: %s", k.destination.Extract().Get().GetTargetFile())
 
-	if err := k.textVerifier.Verify(k.source, k.destination, textVerifier.ExtractIntegrityCheck); err != nil {
+	verifierInstance := rentTextVerifier()
+	defer returnTextVerifier(verifierInstance)
+	fmt.Println("verifierInstance", verifierInstance)
+
+	if err := verifierInstance.Verify(k.source, k.destination, textVerifier.ExtractIntegrityCheck); err != nil {
 		k.log.LogError(err, "Error verifying kernel file: %s", k.source.Get().Name)
 
 		return fmt.Errorf("failed to verify kernel file: %s", k.source.Get().Name)
@@ -78,15 +67,10 @@ func (k *kernelFile) Extract() error {
 }
 
 func (k *kernelFile) Compress() error {
-	k.compressorOnce.Do(func() {
-		k.compressor = newKrnlCompressor()
-	})
+	compressorInstance := rentKrnlCompressor()
+	defer returnKrnlCompressor(compressorInstance)
 
-	k.textVerifierOnce.Do(func() {
-		k.textVerifier = textVerifier.NewTextsVerify()
-	})
-
-	if err := k.compressor.Compress(k.source, k.destination); err != nil {
+	if err := compressorInstance.Compress(k.source, k.destination); err != nil {
 		k.log.LogError(err, "Error compressing kernel file: %s", k.destination.Translate().Get().GetTargetFile())
 
 		return fmt.Errorf("failed to compress kernel file: %s", k.source.Get().Name)
@@ -103,7 +87,10 @@ func (k *kernelFile) Compress() error {
 		return fmt.Errorf("failed to decode kernel file: %s", k.destination.Import().Get().GetTargetFile())
 	}
 
-	if err := k.textVerifier.Verify(tmpSource, tmpDestination, textVerifier.CompressIntegrityCheck); err != nil {
+	textVerifierInstance := rentTextVerifier()
+	defer returnTextVerifier(textVerifierInstance)
+
+	if err := textVerifierInstance.Verify(tmpSource, tmpDestination, textVerifier.CompressIntegrityCheck); err != nil {
 		k.log.LogError(err, "Error verifying kernel file: %s", k.source.Get().Name)
 
 		return fmt.Errorf("failed to verify kernel file: %s", k.source.Get().Name)
