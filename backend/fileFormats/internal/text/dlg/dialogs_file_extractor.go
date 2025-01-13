@@ -10,31 +10,27 @@ import (
 
 type (
 	IDlgExtractor interface {
-		interfaces.IExtractor
+		Extract(source interfaces.ISource, destination locations.IDestination) error
 	}
 
 	DlgExtractor struct {
-		source      interfaces.ISource
-		destination locations.IDestination
 		decoder     internal.IDlgDecoder
 	}
 )
 
-func NewDlgExtractor(source interfaces.ISource, destination locations.IDestination) *DlgExtractor {
+func NewDlgExtractor() *DlgExtractor {
 	return &DlgExtractor{
-		source:      source,
-		destination: destination,
 		decoder:     internal.NewDlgDecoder(),
 	}
 }
 
-func (d *DlgExtractor) Extract() error {
-	if slices.Contains(d.source.Get().ClonedItems, d.source.Get().RelativePath) {
+func (d *DlgExtractor) Extract(source interfaces.ISource, destination locations.IDestination) error {
+	if slices.Contains(source.Get().ClonedItems, source.Get().RelativePath) {
 		return nil
 	}
 
-	if err := d.decoder.Decoder(d.source, d.destination); err != nil {
-		return fmt.Errorf("failed to decode dialog file: %s", d.source.Get().Name)
+	if err := d.decoder.Decoder(source, destination); err != nil {
+		return fmt.Errorf("failed to decode dialog file: %s", source.Get().Name)
 	}
 
 	return nil

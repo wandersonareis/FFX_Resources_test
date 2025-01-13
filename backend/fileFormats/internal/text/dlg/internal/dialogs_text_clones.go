@@ -14,34 +14,28 @@ import (
 )
 
 type IDlgClones interface {
-	Clone()
+	Clone(source interfaces.ISource, destination locations.IDestination)
 }
 
 type dialogsClones struct {
-	source      interfaces.ISource
-	destination locations.IDestination
-
 	log zerolog.Logger
 }
 
-func NewDlgClones(source interfaces.ISource, destination locations.IDestination) *dialogsClones {
+func NewDlgClones() *dialogsClones {
 	return &dialogsClones{
-		source:      source,
-		destination: destination,
-
 		log: logger.Get().With().Str("module", "dialogs_clones").Logger(),
 	}
 }
 
-func (dc *dialogsClones) Clone() {
-	importTargetFile := dc.destination.Import().Get().GetTargetFile()
+func (dc *dialogsClones) Clone(source interfaces.ISource, destination locations.IDestination) {
+	importTargetFile := destination.Import().Get().GetTargetFile()
 	dc.log.Info().
 		Str("Clones from: ", importTargetFile).
 		Msg("Creating duplicated files for")
 
-	if dc.source.Get().ClonedItems != nil {
-		for _, clone := range dc.source.Get().ClonedItems {
-			cloneReimportPath := filepath.Join(dc.destination.Import().Get().GetTargetDirectory(), clone)
+	if source.Get().ClonedItems != nil {
+		for _, clone := range source.Get().ClonedItems {
+			cloneReimportPath := filepath.Join(destination.Import().Get().GetTargetDirectory(), clone)
 
 			if err := dc.duplicateFile(importTargetFile, cloneReimportPath); err != nil {
 				dc.log.Error().
@@ -56,7 +50,7 @@ func (dc *dialogsClones) Clone() {
 
 		dc.log.Info().
 			Str("Clone from: ", importTargetFile).
-			Msgf("Create files clones for %s successfully", dc.source.Get().Name)
+			Msgf("Create files clones for %s successfully", source.Get().Name)
 	}
 }
 
