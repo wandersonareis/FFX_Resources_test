@@ -40,40 +40,37 @@ func getDirSize(path string) (int64, error) {
 	return size, err
 }
 
-func NewSpiraFileInfo(path string, gamePart models.GameVersion) (*SpiraFileInfo, error) {
-	cPath := filepath.Clean(path)
-	info, err := os.Stat(cPath)
+func NewSpiraFileInfo(path string) (*SpiraFileInfo, error) {
+	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var size int64
-	if info != nil {
-		if info.IsDir() {
-			size, err = getDirSize(cPath)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			size = info.Size()
+	size := info.Size()
+	if info.IsDir() {
+		size, err = getDirSize(path)
+		if err != nil {
+			return nil, err
 		}
 	}
 
 	source := &SpiraFileInfo{
-		Path:       cPath,
-		Size:       size,
-		Name:       common.RecursiveRemoveFileExtension(info.Name()),
-		NamePrefix: common.RemoveOneFileExtension(info.Name()),
-		Type:       guessFileType(cPath),
-		Extension:  filepath.Ext(cPath),
-		EntryPath:  cPath,
-		Parent:     filepath.Dir(cPath),
-		IsDir:      info.IsDir(),
+		Path:         path,
+		Size:         size,
+		Name:         common.RecursiveRemoveFileExtension(info.Name()),
+		NamePrefix:   common.RemoveOneFileExtension(info.Name()),
+		Type:         guessFileType(path),
+		Extension:    filepath.Ext(path),
+		EntryPath:    path,
+		Parent:       filepath.Dir(path),
+		IsDir:        info.IsDir(),
+		RelativePath: "",
 	}
 
-	if source.Type != models.Dcp && source.Type != models.Lockit {
-		source.RelativePath = common.GetRelativePathFromMarker(cPath)
+	if source.Type == models.Dcp || source.Type == models.Lockit {
+		source.RelativePath = common.GetRelativePathFromMarker(path)
 	}
+
 	return source, nil
 }
 
