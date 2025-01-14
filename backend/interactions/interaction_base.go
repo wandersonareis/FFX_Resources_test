@@ -20,7 +20,9 @@ func (e *interactionBase) SetTargetDirectoryBase(field ConfigField, path string)
 		panic(fmt.Errorf("erro ao obter o caminho absoluto: %v", err))
 	}
 
-	NewInteractionService().FFXAppConfig().UpdateField(field, fullPath)
+	if err := NewInteractionService().FFXAppConfig().UpdateField(field, fullPath); err != nil {
+		return
+	}
 }
 
 func (e *interactionBase) ProviderTargetDirectoryBase(field ConfigField, targetDirectory string) error {
