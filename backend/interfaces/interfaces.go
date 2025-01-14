@@ -17,7 +17,7 @@ type (
 	ISource interface {
 		Get() *core.SpiraFileInfo
 		Set(source *core.SpiraFileInfo)
-		GetGamePartDuplicates(namePrefix string, gamePart models.GameVersion) []string
+		PopulateDuplicatesFiles(gamePart models.GameVersion)
 	}
 
 	IFileProcessor interface {
