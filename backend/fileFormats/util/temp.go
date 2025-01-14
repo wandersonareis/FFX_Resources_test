@@ -3,16 +3,13 @@ package util
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 )
 
 func CreateTemporaryFileInfo(filePath string, formatter interfaces.ITextFormatter) (interfaces.ISource, locations.IDestination) {
 	tmpDir := common.NewTempProvider("", "").TempFilePath
 
-	gamePart := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
-
-	source, err := locations.NewSource(filePath, gamePart)
+	source, err := locations.NewSource(filePath)
 	if err != nil {
 		return nil, nil
 	}
