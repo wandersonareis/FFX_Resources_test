@@ -3,7 +3,6 @@ package components
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"os"
 	"path/filepath"
@@ -74,8 +73,11 @@ func ListFilesByRegex(list IList[string], path, pattern string) error {
 	return nil
 }
 
-func GenerateGameFileParts[T any](parts IList[T], targetPath, pattern string, partsInstance func(source interfaces.ISource, destination locations.IDestination) *T) error {
-	common.EnsurePathExists(targetPath)
+func GenerateGameFileParts[T any](parts IList[T], targetPath, pattern string,
+	partsInstance func(source interfaces.ISource, destination locations.IDestination) *T) error {
+	if err := common.EnsurePathExists(targetPath); err != nil {
+		return err
+	}
 
 	filesList := NewList[string](parts.GetLength())
 
@@ -85,7 +87,7 @@ func GenerateGameFileParts[T any](parts IList[T], targetPath, pattern string, pa
 	}
 
 	filesList.ForEach(func(item string) {
-		s, err := locations.NewSource(item, interactions.NewInteractionService().FFXGameVersion().GetGameVersion())
+		s, err := locations.NewSource(item)
 		if err != nil {
 			return
 		}
@@ -103,7 +105,6 @@ func GenerateGameFileParts[T any](parts IList[T], targetPath, pattern string, pa
 
 		parts.Add(*part)
 	})
-
 
 	parts.Clip()
 
