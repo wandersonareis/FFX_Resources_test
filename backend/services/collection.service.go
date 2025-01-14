@@ -17,10 +17,6 @@ func NewCollectionService() *CollectionService {
 }
 
 func (c *CollectionService) BuildTree() []spira.TreeNode {
-/* 	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	beforeAlloc := m.Alloc */
-
 	path := interactions.NewInteractionService().GameLocation.GetTargetDirectory()
 	if path == "" {
 		return nil
@@ -37,12 +33,6 @@ func (c *CollectionService) BuildTree() []spira.TreeNode {
 
 	NodeMap = spira.CreateFileTreeMap(gameVersion, formatter)
 	rootTreeNode := spira.BuildTreeFromMap(NodeMap, path)
-
-	/* runtime.ReadMemStats(&m)
-	afterAlloc := m.Alloc */
-
-	/* fmt.Printf("Memory allocated: %d bytes\n", afterAlloc-beforeAlloc)
-	fmt.Printf("Total allocations: %d\n", m.Mallocs-m.Frees) */
 
 	return []spira.TreeNode{*rootTreeNode}
 }
