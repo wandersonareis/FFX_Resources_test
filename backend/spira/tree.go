@@ -18,7 +18,7 @@ func CreateFileTreeMap(gameVersion models.GameVersion, formatter interfaces.ITex
 		return nil
 	}
 
-	entrySource, err := locations.NewSource(rootDir, gameVersion)
+	entrySource, err := locations.NewSource(rootDir)
 	if err != nil {
 		return nil
 	}
@@ -36,19 +36,21 @@ func CreateFileTreeMap(gameVersion models.GameVersion, formatter interfaces.ITex
 
 	nodeMap[rootDir] = rootMapNode
 
-	filepath.WalkDir(rootDir, func(path string, info fs.DirEntry, err error) error {
+	err = filepath.WalkDir(rootDir, func(path string, info fs.DirEntry, err error) error {
 		if err != nil || path == rootDir {
 			return err
 		}
 
-		entrySource, err := locations.NewSource(path, gameVersion)
+		entrySource, err := locations.NewSource(path)
 		if err != nil {
 			return err
 		}
 
 		if entrySource.Get().Size == 0 {
-			return filepath.SkipDir
+			return nil
 		}
+
+		entrySource.PopulateDuplicatesFiles(gameVersion)
 
 		destination := locations.NewDestination()
 		destination.InitializeLocations(entrySource, formatter)
@@ -70,6 +72,10 @@ func CreateFileTreeMap(gameVersion models.GameVersion, formatter interfaces.ITex
 
 		return nil
 	})
+
+	if err != nil {
+		return nil
+	}
 
 	return nodeMap
 }
