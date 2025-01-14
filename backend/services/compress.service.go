@@ -11,7 +11,7 @@ import (
 
 type CompressService struct {
 	dirCompressServideOnce sync.Once
-	dirCompressService     IDirectoryCompressService
+	dirCompressService     IDirectoryService
 }
 
 func NewCompressService() *CompressService {
