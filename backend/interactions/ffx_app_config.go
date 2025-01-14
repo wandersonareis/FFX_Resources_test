@@ -47,14 +47,40 @@ func newAppConfig(filePath string) *FFXAppConfig {
 	return ffxAppConfig
 }
 
-func (c *FFXAppConfig) createConfig() error {
-	c.FFXGameVersion = 1
-	return c.ToJson()
+func (c *FFXAppConfig) validateConfig() error {
+	changed := false
+
+	if c.FFXGameVersion <= 0 {
+		c.FFXGameVersion = 1
+		changed = true
+	}
+	if c.GameFilesLocation == "" {
+		c.GameFilesLocation = NewInteractionService().GameLocation.GetTargetDirectory()
+		changed = true
+	}
+	if c.ExtractLocation == "" {
+		c.ExtractLocation = NewInteractionService().ExtractLocation.GetTargetDirectory()
+		changed = true
+	}
+	if c.TranslateLocation == "" {
+		c.TranslateLocation = NewInteractionService().TranslateLocation.GetTargetDirectory()
+		changed = true
+	}
+	if c.ImportLocation == "" {
+		c.ImportLocation = NewInteractionService().ImportLocation.GetTargetDirectory()
+		changed = true
+	}
+
+	if changed {
+		return c.ToJson()
+	}
+
+	return nil
 }
 
 func (c *FFXAppConfig) ToJson() error {
 	if c == nil {
-		return fmt.Errorf("%s", "configuração inválida")
+		return fmt.Errorf("%s", "invalid configuration")
 	}
 
 	file, err := os.Create(c.filePath)
@@ -67,8 +93,6 @@ func (c *FFXAppConfig) ToJson() error {
 			panic(err)
 		}
 	}(file)
-
-	c.FFXGameVersion = NewInteractionService().ffxGameVersion.GetGameVersionNumber()
 
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
@@ -84,22 +108,23 @@ func (c *FFXAppConfig) FromJson() error {
 	file, err := os.ReadFile(c.filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return c.createConfig()
+			return c.validateConfig()
 		}
 		return err
 	}
+	defer func() { file = file[:0] }()
 
 	if len(bytes.TrimSpace(file)) == 0 {
-		return c.createConfig()
+		return c.validateConfig()
 	}
 
 	err = json.Unmarshal(file, c)
+
 	return err
 }
 
 func (c *FFXAppConfig) GetField(field ConfigField) (interface{}, error) {
-	err := c.FromJson()
-	if err != nil {
+	if err := c.validateConfig(); err != nil {
 		return nil, err
 	}
 
@@ -115,54 +140,58 @@ func (c *FFXAppConfig) GetField(field ConfigField) (interface{}, error) {
 	case ConfigImportLocation:
 		return c.ImportLocation, nil
 	default:
-		return nil, fmt.Errorf("%s", "campo inválido: "+string(field))
+		return nil, fmt.Errorf("%s", "invalid field: "+string(field))
 	}
 }
 
 func (c *FFXAppConfig) UpdateField(field ConfigField, value interface{}) error {
-	err := c.FromJson()
-	if err != nil {
-		return err
-	}
+	changed := false
 
 	switch field {
 	case ConfigGameVersion:
 		v, ok := value.(int)
 		if !ok {
-			return fmt.Errorf("tipo de valor incompatível para o campo GamePart")
+			return fmt.Errorf("incompatible value type for gamepart field")
 		}
 		c.FFXGameVersion = v
+		changed = true
 	case ConfigGameFilesLocation:
 		v, ok := value.(string)
 		if !ok {
-			return fmt.Errorf("tipo de valor incompatível para o campo GameFilesLocation")
+			return fmt.Errorf("incompatible value type for GameFilesLocation field")
 		}
 		c.GameFilesLocation = v
+		changed = true
 	case ConfigExtractLocation:
 		v, ok := value.(string)
 		if !ok {
-			return fmt.Errorf("tipo de valor incompatível para o campo ExtractLocation")
+			return fmt.Errorf("incompatible value type for Extractlocation field")
 		}
 		c.ExtractLocation = v
+		changed = true
 	case ConfigTranslateLocation:
 		v, ok := value.(string)
 		if !ok {
-			return fmt.Errorf("tipo de valor incompatível para o campo TranslateLocation")
+			return fmt.Errorf("incompatible value type for TranslateLocation field")
 		}
 		c.TranslateLocation = v
+		changed = true
 	case ConfigImportLocation:
 		v, ok := value.(string)
 		if !ok {
-			return fmt.Errorf("tipo de valor incompatível para o campo ReimportLocation")
+			return fmt.Errorf("incompatible value type for Importlocation field")
 		}
 		c.ImportLocation = v
+		changed = true
 	default:
-		return fmt.Errorf("%s", "campo inválido: "+string(field))
+		return fmt.Errorf("%s", "invalid field: "+string(field))
 	}
 
-	err = c.ToJson()
-	if err != nil {
-		return err
+	if changed {
+		if err := c.ToJson(); err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
