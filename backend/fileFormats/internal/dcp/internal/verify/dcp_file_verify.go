@@ -5,6 +5,7 @@ import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
 
@@ -56,7 +57,7 @@ func (lv *DcpFileVerify) VerifyExtract(dcpFileParts components.IList[parts.DcpFi
 	return nil
 }
 
-func (lv *DcpFileVerify) VerifyCompress(destination locations.IDestination, options interactions.DcpFileOptions) error {
+func (lv *DcpFileVerify) VerifyCompress(destination locations.IDestination, formatter interfaces.ITextFormatter, options interactions.DcpFileOptions) error {
 	targetFile := destination.Import().Get().GetTargetFile()
 	lv.log.Info().
 		Str("file", targetFile).
@@ -71,7 +72,7 @@ func (lv *DcpFileVerify) VerifyCompress(destination locations.IDestination, opti
 		return fmt.Errorf("reimport file not exists: %w", err)
 	}
 
-	if err := lv.fileValidator.Validate(targetFile, options); err != nil {
+	if err := lv.fileValidator.Validate(targetFile, formatter, options); err != nil {
 		lv.log.Error().
 			Err(err).
 			Str("file", targetFile).

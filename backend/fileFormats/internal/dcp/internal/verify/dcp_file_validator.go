@@ -14,7 +14,7 @@ import (
 )
 
 type IFileValidator interface {
-	Validate(filePath string, options interactions.DcpFileOptions) error
+	Validate(filePath string, formatter interfaces.ITextFormatter, options interactions.DcpFileOptions) error
 }
 
 type FileValidator struct {
@@ -33,7 +33,7 @@ func newFileValidator() IFileValidator {
 	}
 }
 
-func (fv *FileValidator) Validate(filePath string, options interactions.DcpFileOptions) error {
+func (fv *FileValidator) Validate(filePath string, formatter interfaces.ITextFormatter, options interactions.DcpFileOptions) error {
 	source, destination, tmpDir := fv.createTemporaryFileInfo(filePath)
 
 	if err := fv.fileSplitter.Split(source, destination); err != nil {
@@ -45,7 +45,7 @@ func (fv *FileValidator) Validate(filePath string, options interactions.DcpFileO
 		return fmt.Errorf("error when splitting file")
 	}
 
-	if err := fv.partsVerifier.Verify(tmpDir, options); err != nil {
+	if err := fv.partsVerifier.Verify(tmpDir, formatter, options); err != nil {
 		fv.log.Error().
 			Err(err).
 			Str("file", filePath).
@@ -60,10 +60,8 @@ func (fv *FileValidator) Validate(filePath string, options interactions.DcpFileO
 func (fv *FileValidator) createTemporaryFileInfo(filePath string) (interfaces.ISource, locations.IDestination, string) {
 	tmpDir := common.NewTempProvider("", "").TempFilePath
 
-	gamePart := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
-
 	//tmpInfo := interactions.NewGameDataInfo(filePath, gamePart)
-	source, err := locations.NewSource(filePath, gamePart)
+	source, err := locations.NewSource(filePath)
 	if err != nil {
 		fv.log.Error().
 			Err(err).

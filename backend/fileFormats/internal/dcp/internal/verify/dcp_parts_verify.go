@@ -8,6 +8,7 @@ import (
 	"ffxresources/backend/fileFormats/internal/dcp/internal/splitter"
 	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
 	"path/filepath"
@@ -16,7 +17,7 @@ import (
 )
 
 type IPartsVerifier interface {
-	Verify(path string, options interactions.DcpFileOptions) error
+	Verify(path string, formatter interfaces.ITextFormatter, options interactions.DcpFileOptions) error
 	EnsurePartsLength(partsLength, expectedLength int) error
 }
 
@@ -36,10 +37,10 @@ func newPartsVerifier() IPartsVerifier {
 	}
 }
 
-func (pv *partsVerifier) Verify(path string, options interactions.DcpFileOptions) error {
+func (pv *partsVerifier) Verify(path string, formatter interfaces.ITextFormatter, options interactions.DcpFileOptions) error {
 	partsList := components.NewEmptyList[parts.DcpFileParts]()
 
-	if err := util.FindFileParts(partsList, path, lib.DCP_FILE_PARTS_PATTERN, parts.NewDcpFileParts); err != nil {
+	if err := util.FindFileParts(partsList, path, lib.DCP_FILE_PARTS_PATTERN, formatter, parts.NewDcpFileParts); err != nil {
 		pv.log.Error().
 			Err(err).
 			Str("path", path).

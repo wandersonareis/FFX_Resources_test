@@ -88,8 +88,7 @@ func (d *DcpFile) Extract() error {
 
 	d.PartsList.ParallelForEach(extractParts)
 
-	
-	if err := <- errChan; err != nil {
+	if err := <-errChan; err != nil {
 		d.LogError(err, "error extracting DCP file: %s", d.Source().Get().Name)
 		return fmt.Errorf("error extracting DCP file: %s", d.Source().Get().Name)
 	}
@@ -163,7 +162,7 @@ func (d *DcpFile) Compress() error {
 
 	d.LogInfo("Verifying reimported macrodic file: %s", outputFile)
 
-	if err := d.dcpFileVerify.VerifyCompress(d.Destination(), d.options); err != nil {
+	if err := d.dcpFileVerify.VerifyCompress(d.Destination(), formatters.NewTxtFormatter(), d.options); err != nil {
 		d.LogError(err, "error verifying system macrodic file: %s", outputFile)
 
 		return fmt.Errorf("error verifying system macrodic file: %s", outputFile)
