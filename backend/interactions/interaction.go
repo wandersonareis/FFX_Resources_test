@@ -4,22 +4,23 @@ import (
 	"context"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core"
+	"ffxresources/backend/interfaces"
 	"path/filepath"
 	"sync"
 )
 
 type InteractionService struct {
-	Ctx                 context.Context
-	activeCtx           context.Context
-	cancel              context.CancelFunc
-	mu                  sync.Mutex
-	ffxAppConfig        IFFXAppConfig
-	ffxGameVersion      core.IFfxGameVersion
-	GameLocation        IGameLocation
-	DcpAndLockitOptions IDcpAndLockitOptions
-	ExtractLocation     IExtractLocation
-	TranslateLocation   ITranslateLocation
-	ImportLocation      IImportLocation
+	Ctx               context.Context
+	activeCtx         context.Context
+	cancel            context.CancelFunc
+	mu                sync.Mutex
+	ffxAppConfig      IFFXAppConfig
+	ffxGameVersion    core.IFfxGameVersion
+	ffxTextFormat     interfaces.ITextFormatter
+	GameLocation      IGameLocation
+	ExtractLocation   IExtractLocation
+	TranslateLocation ITranslateLocation
+	ImportLocation    IImportLocation
 }
 
 var interactionInstance *InteractionService
@@ -41,14 +42,13 @@ func NewInteractionService() *InteractionService {
 		ffxAppConfig.FFXGameVersion = gameVersion.GetGameVersionNumber()
 
 		interactionInstance = &InteractionService{
-			Ctx:                 context.Background(),
-			ffxAppConfig:        ffxAppConfig,
-			ffxGameVersion:      gameVersion,
-			GameLocation:        newGameLocation(),
-			ExtractLocation:     newExtractLocation(),
-			TranslateLocation:   newTranslateLocation(),
-			ImportLocation:      newImportLocation(),
-			DcpAndLockitOptions: newDcpAndLockitOptions(gameVersion),
+			Ctx:               context.Background(),
+			ffxAppConfig:      ffxAppConfig,
+			ffxGameVersion:    gameVersion,
+			GameLocation:      newGameLocation(),
+			ExtractLocation:   newExtractLocation(),
+			TranslateLocation: newTranslateLocation(),
+			ImportLocation:    newImportLocation(),
 		}
 	})
 
@@ -70,9 +70,15 @@ func NewInteractionWithCtx(ctx context.Context) *InteractionService {
 	return interactionInstance
 }
 
-/* func Get() *Interaction {
+func NewInteractionWithTextFormatter(formatter interfaces.ITextFormatter) *InteractionService {
+	if interactionInstance == nil {
+		interactionInstance = NewInteractionService()
+	}
+
+	interactionInstance.ffxTextFormat = formatter
+
 	return interactionInstance
-} */
+}
 
 func (i *InteractionService) FFXAppConfig() IFFXAppConfig {
 	return i.ffxAppConfig
@@ -80,6 +86,10 @@ func (i *InteractionService) FFXAppConfig() IFFXAppConfig {
 
 func (i *InteractionService) FFXGameVersion() core.IFfxGameVersion {
 	return i.ffxGameVersion
+}
+
+func (i *InteractionService) TextFormatter() interfaces.ITextFormatter {
+	return i.ffxTextFormat
 }
 
 func (i *InteractionService) Start() context.Context {
