@@ -57,13 +57,19 @@ func (l *List[T]) GetLength() int {
 	return len(l.Items)
 }
 
+func (l *List[T]) IsEmpty() bool {
+	return len(l.Items) == 0
+}
+
 func (l *List[T]) Clear() {
-	l.Items = l.Items[:0]
+	l.Items = nil
 }
 
 func (l *List[T]) ForIndex(f func(index int, item T)) {
 	for i, v := range l.Items {
-		f(i, v)
+		func(i int, it T) {
+			f(i, it)
+		}(i, v)
 	}
 }
 

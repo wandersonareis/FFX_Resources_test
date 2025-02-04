@@ -7,6 +7,7 @@ type IList[T any] interface {
 	Filter(f func(item T) bool) *List[T]
 	GetItems() []T
 	GetLength() int
+	IsEmpty() bool
 	Clear()
 	ForEach(f func(item T))
 	ForIndex(f func(index int, item T))
