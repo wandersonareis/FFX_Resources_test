@@ -19,6 +19,12 @@ var once sync.Once
 
 var log zerolog.Logger
 
+func NewLoggerHandler(moduleName string) ILoggerHandler {
+	return &LogHandler{
+		Logger: Get().With().Str("module", moduleName).Logger(),
+	}
+}
+
 func Get() zerolog.Logger {
 	once.Do(func() {
 		zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
