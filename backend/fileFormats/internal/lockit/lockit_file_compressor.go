@@ -1,82 +1,279 @@
 package lockit
 
 import (
+	"ffxresources/backend/core"
 	"ffxresources/backend/core/components"
+	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/base"
-	"ffxresources/backend/fileFormats/internal/lockit/internal/joiner"
-	"ffxresources/backend/fileFormats/internal/lockit/internal/lockitFileParts"
+	"ffxresources/backend/fileFormats/internal/lockit/internal"
+	"ffxresources/backend/fileFormats/internal/lockit/internal/lockitParts"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/verify"
-	"ffxresources/backend/interactions"
+	"ffxresources/backend/formatters"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
+	"os"
 )
 
-type lockitFileCompressor struct {
-	*base.FormatsBase
-	logger.ILoggerHandler
+type (
+	ILockitFileCompressor interface {
+		Compress() error
+		Dispose()
+	}
 
-	fileVerifier    verify.ILockitFileVerifier
-	lockitFileParts components.IList[lockitFileParts.LockitFileParts]
-	options         interactions.LockitFileOptions
-	partsEncoder    lockitFileParts.ILockitFilePartsEncoder
-	partsJoiner     joiner.IPartsJoiner
-}
+	lockitFileCompressor struct {
+		*base.FormatsBase
 
-func newLockitFileCompressor(source interfaces.ISource, destination locations.IDestination, lockitFilePartsList components.IList[lockitFileParts.LockitFileParts]) *lockitFileCompressor {
+		binaryExtractedFilePartsList  components.IList[lockitParts.LockitFileParts]
+		binaryTranslatedFilePartsList components.IList[lockitParts.LockitFileParts]
+		textTranslatedFilePartsList   components.IList[lockitParts.LockitFileParts]
+
+		filePartsEncoder   lockitParts.ILockitFilePartsEncoder
+		filePartsIntegrity verify.ILockitFilePartsIntegrity
+		filePartsJoiner    internal.IPartsJoiner
+		lockitEncoding     ffxencoding.IFFXTextLockitEncoding
+
+		formatter interfaces.ITextFormatter
+		options   core.ILockitFileOptions
+		logger    logger.ILoggerHandler
+	}
+)
+
+func newLockitFileCompressor(
+	source interfaces.ISource,
+	destination locations.IDestination,
+	lockitEncoding ffxencoding.IFFXTextLockitEncoding,
+	fileOptions core.ILockitFileOptions,
+	logger logger.ILoggerHandler,
+) *lockitFileCompressor {
 	return &lockitFileCompressor{
-		FormatsBase: base.NewFormatsBase(source, destination),
-		fileVerifier: verify.NewLockitFileVerifier(source, destination),
-		lockitFileParts: lockitFilePartsList,
-		options: interactions.NewInteractionService().DcpAndLockitOptions.GetLockitFileOptions(),
-		partsEncoder: lockitFileParts.NewLockitFilePartsEncoder(lockitFilePartsList),
-		partsJoiner: joiner.NewLockitFileJoiner(source, destination, lockitFilePartsList),
-		ILoggerHandler: &logger.LogHandler{
-			Logger: logger.Get().With().Str("module", "lockit_file_compressor").Logger(),
-		},
+		FormatsBase:      base.NewFormatsBase(source, destination),
+		filePartsEncoder: lockitParts.NewLockitFilePartsEncoder(logger),
+		lockitEncoding:   lockitEncoding,
+
+		formatter: formatters.NewTxtFormatter(),
+		options:   fileOptions,
+		logger:    logger,
 	}
 }
 
-func (l *lockitFileCompressor) Compress() error {
-	l.LogInfo("Compressing lockit file parts...")
-	l.LogInfo("Verifying splited parts before compressing: %s", l.Destination().Extract().Get().GetTargetPath())
+func (lfc *lockitFileCompressor) Compress() error {
+	partsLength := lfc.options.GetPartsLength()
 
-	if err := l.fileVerifier.VerifyExtract(l.lockitFileParts, l.options); err != nil {
-		l.LogError(err, "failed to verify lockit file parts: %s", l.Source().Get().Name)
-		return fmt.Errorf("failed to verify lockit file parts: %s", l.Source().Get().Name)
+	lfc.initializeFileCompressor(partsLength)
+
+	if err := lfc.populateLockitTranslatedTextFileParts(); err != nil {
+		return err
 	}
 
-	l.LogInfo("Finding translated text parts on: %s", l.Destination().Translate().Get().GetTargetPath())
-
-	translatedParts, err := l.partsJoiner.FindTranslatedTextParts()
-	if err != nil {
-		l.LogError(err, "error when finding translated text parts")
-		return fmt.Errorf("failed to find translated text parts: %s", l.Source().Get().Name)
+	if err := lfc.ensureAllLockitTranslatedTextFileParts(partsLength); err != nil {
+		return err
 	}
 
-	if translatedParts.GetLength() != l.options.PartsLength {
-		l.LogError(nil, "invalid number of translated parts")
-		return fmt.Errorf("invalid number of translated parts: %s", l.Source().Get().Name)
+	if err := lfc.populateLockitExtractedBinaryFilePartsList(); err != nil {
+		return err
 	}
 
-	l.LogInfo("Parts found: %d", translatedParts.GetLength())
-	l.LogInfo("Encoding files parts to: %s", l.Destination().Import().Get().GetTargetPath())
-
-	l.partsEncoder.EncodeFilesParts()
-
-	l.LogInfo("Joining file parts to: %s", l.Destination().Import().Get().GetTargetFile())
-	if err := l.partsJoiner.JoinFileParts(); err != nil {
-		l.LogError(err, "error when joining lockit file parts")
-		return fmt.Errorf("failed to join lockit file parts: %s", l.Source().Get().Name)
+	if err := lfc.ensureAllLockitExtractedBinaryFileParts(partsLength); err != nil {
+		return err
 	}
 
-	l.LogInfo("Verifying monted lockit file: %s", l.Destination().Import().Get().GetTargetFile())
-	if err := l.fileVerifier.VerifyCompress(l.Destination(), l.options); err != nil {
-		l.LogError(err, "error when verifying monted lockit file")
-		return fmt.Errorf("failed to verify monted lockit file: %s", l.Source().Get().Name)
+	lfc.encodingFilesParts()
+
+	if err := lfc.populateLockitTranslatedBinaryFileParts(); err != nil {
+		return err
 	}
 
-	l.LogInfo("Lockit file monted: %s", l.Source().Get().Name)
+	if err := lfc.ensureAllLockitTranslatedBinaryFileParts(partsLength); err != nil {
+		return err
+	}
+
+	if err := lfc.joiningLockitBinaryFileParts(); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (lfc *lockitFileCompressor) initializeFileCompressor(partsLength int) {
+	lfc.binaryExtractedFilePartsList = components.NewList[lockitParts.LockitFileParts](partsLength)
+	lfc.binaryTranslatedFilePartsList = components.NewList[lockitParts.LockitFileParts](partsLength)
+	lfc.textTranslatedFilePartsList = components.NewList[lockitParts.LockitFileParts](partsLength)
+}
+
+func (lfc *lockitFileCompressor) populateLockitExtractedBinaryFilePartsList() error {
+	lfc.binaryExtractedFilePartsList.Clear()
+
+	lfc.logger.LogInfo("Populating lockit extracted binary file parts...")
+
+	return lockitParts.PopulateLockitBinaryFileParts(
+		lfc.binaryExtractedFilePartsList,
+		lfc.Destination().Extract().Get().GetTargetPath(),
+	)
+}
+
+func (lfc *lockitFileCompressor) populateLockitTranslatedTextFileParts() error {
+	lfc.textTranslatedFilePartsList.Clear()
+
+	lfc.logger.LogInfo("Populating lockit translated text file parts...")
+
+	return lockitParts.PopulateLockitTextFileParts(
+		lfc.textTranslatedFilePartsList,
+		lfc.Destination().Translate().Get().GetTargetPath(),
+	)
+}
+
+func (lfc *lockitFileCompressor) populateLockitTranslatedBinaryFileParts() error {
+	lfc.binaryTranslatedFilePartsList.Clear()
+
+	lfc.logger.LogInfo("Populating lockit translated binary file parts...")
+
+	return lockitParts.PopulateLockitBinaryFileParts(
+		lfc.binaryTranslatedFilePartsList,
+		lfc.Destination().Translate().Get().GetTargetPath(),
+	)
+}
+
+func (lfc *lockitFileCompressor) ensureAllLockitTranslatedTextFileParts(partsLength int) error {
+	if lfc.textTranslatedFilePartsList.GetLength() != partsLength {
+		return fmt.Errorf("error ensuring translated lockit text parts: expected %d, got %d",
+			partsLength, lfc.textTranslatedFilePartsList.GetLength())
+	}
+
+	translatedTextList := components.NewList[string](partsLength)
+	defer translatedTextList.Clear()
+
+	lfc.textTranslatedFilePartsList.ForEach(func(part lockitParts.LockitFileParts) {
+		part.Destination().InitializeLocations(part.Source(), lfc.formatter)
+		translatedTextList.Add(
+			part.Source().Get().Path)
+	})
+
+	return lfc.validateLineBreaksCount(translatedTextList)
+}
+
+func (lfc *lockitFileCompressor) ensureAllLockitTranslatedBinaryFileParts(partsLength int) error {
+	if lfc.binaryTranslatedFilePartsList.GetLength() != partsLength {
+		return fmt.Errorf("error ensuring translated lockit binary parts: expected %d, got %d",
+			partsLength, lfc.binaryTranslatedFilePartsList.GetLength())
+	}
+
+	translatedBinaryList := components.NewList[string](partsLength)
+	defer translatedBinaryList.Clear()
+
+	lfc.binaryTranslatedFilePartsList.ForEach(func(part lockitParts.LockitFileParts) {
+		part.Destination().InitializeLocations(part.Source(), lfc.formatter)
+		translatedBinaryList.Add(
+			part.Source().Get().Path)
+	})
+
+	return lfc.validateLineBreaksCount(translatedBinaryList)
+}
+
+func (l *lockitFileCompressor) ensureAllLockitExtractedBinaryFileParts(partsLength int) error {
+	maxAttempts := 3
+	for i := 0; i < maxAttempts; i++ {
+		if l.binaryExtractedFilePartsList.GetLength() == partsLength {
+			break
+		}
+
+		if err := l.extractMissingLockitBinaryFileParts(); err != nil {
+			return err
+		}
+	
+		if err := l.populateLockitExtractedBinaryFilePartsList(); err != nil {
+			return err
+		}
+	}
+
+	if l.binaryExtractedFilePartsList.GetLength() != partsLength {
+		return fmt.Errorf("error ensuring extracted lockit binary parts: expected %d, got %d",
+			partsLength, l.binaryExtractedFilePartsList.GetLength())
+	}
+
+	extractedBinaryList := components.NewList[string](partsLength)
+	defer extractedBinaryList.Clear()
+
+	l.binaryExtractedFilePartsList.ForEach(func(part lockitParts.LockitFileParts) {
+		extractedBinaryList.Add(
+			part.Source().Get().Path)
+	})
+
+	if err := l.validateLineBreaksCount(extractedBinaryList); err != nil {
+		return err
+	}
+
+	/* if err := l.extractMissingLockitBinaryFileParts(); err != nil {
+		return err
+	} */
+
+	/* if err := l.populateLockitExtractedBinaryFilePartsList(); err != nil {
+		return err
+	} */
+
+	/* if l.binaryExtractedFilePartsList.GetLength() != l.options.PartsLength {
+		return fmt.Errorf("error ensuring splitted lockit parts: expected %d, got %d",
+			l.options.PartsLength, l.binaryExtractedFilePartsList.GetLength())
+	} */
+
+	return nil
+}
+
+func (l *lockitFileCompressor) extractMissingLockitBinaryFileParts() error {
+	l.logger.LogInfo("Missing lockit file parts detected. Attempting to extract...")
+
+	splitter := internal.NewLockitFileSplitter()
+	return splitter.FileSplitter(l.Source(), l.Destination().Extract().Get(), l.options)
+}
+
+func (lfc *lockitFileCompressor) encodingFilesParts() {
+	lfc.logger.LogInfo("Encoding files parts to: %s", lfc.Destination().Import().Get().GetTargetPath())
+
+	lfc.filePartsEncoder.EncodeFilesParts(lfc.binaryExtractedFilePartsList, lfc.lockitEncoding)
+}
+func (l *lockitFileCompressor) joiningLockitBinaryFileParts() error {
+	l.filePartsJoiner = internal.NewLockitFileJoiner(l.Source(), l.Destination(), l.binaryTranslatedFilePartsList)
+	defer func() {
+		l.filePartsJoiner = nil
+	}()
+
+	l.logger.LogInfo("Joining file parts inside file: %s", l.Destination().Import().Get().GetTargetFile())
+
+	if err := l.filePartsJoiner.JoinFileParts(); err != nil {
+		return fmt.Errorf("error when joining lockit binary file parts: %s", err.Error())
+	}
+
+	return nil
+}
+
+func (lfc *lockitFileCompressor) validateLineBreaksCount(filesList components.IList[string]) error {
+	if lfc.filePartsIntegrity == nil {
+		lfc.filePartsIntegrity = verify.NewLockitFilePartsIntegrity(lfc.logger)
+	}
+
+	err := lfc.filePartsIntegrity.ValidatePartsLineBreaksCount(
+		filesList,
+		lfc.options,
+	)
+
+	return err
+}
+
+func (lfc *lockitFileCompressor) Dispose() {
+	lfc.binaryTranslatedFilePartsList.ForEach(func(part lockitParts.LockitFileParts) {
+		os.Remove(part.Source().Get().Path)
+	})
+
+	lfc.binaryExtractedFilePartsList.Clear()
+	lfc.binaryTranslatedFilePartsList.Clear()
+	lfc.textTranslatedFilePartsList.Clear()
+
+	if lfc.filePartsIntegrity != nil {
+		lfc.filePartsIntegrity = nil
+	}
+
+	if lfc.filePartsEncoder != nil {
+		lfc.filePartsEncoder = nil
+	}
 }

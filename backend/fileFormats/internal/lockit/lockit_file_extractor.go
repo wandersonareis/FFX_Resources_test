@@ -1,71 +1,122 @@
 package lockit
 
 import (
+	"ffxresources/backend/core"
 	"ffxresources/backend/core/components"
+	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/base"
-	"ffxresources/backend/fileFormats/internal/lockit/internal/lockitFileParts"
-	"ffxresources/backend/fileFormats/internal/lockit/internal/splitter"
-	"ffxresources/backend/fileFormats/internal/lockit/internal/verify"
+	"ffxresources/backend/fileFormats/internal/lockit/internal"
+	"ffxresources/backend/fileFormats/internal/lockit/internal/lockitParts"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
 )
 
-type LockitFileExtractor struct {
-	*base.FormatsBase
-	logger.ILoggerHandler
+type (
+	ILockitFileExtractor interface {
+		Extract() error
+	}
 
-	filePartsVerifier verify.ILockitFileVerifier
-	filePartsSplitter splitter.IFileSplitter
-	filePartsList     components.IList[lockitFileParts.LockitFileParts]
-	filePartsDecoder  lockitFileParts.ILockitFilePartsDecoder
-	options           interactions.LockitFileOptions
-}
+	LockitFileExtractor struct {
+		*base.FormatsBase
 
-func newLockitFileExtractor(source interfaces.ISource, destination locations.IDestination, partsList components.IList[lockitFileParts.LockitFileParts], ) *LockitFileExtractor {
+		filePartsList    components.IList[lockitParts.LockitFileParts]
+		filePartsDecoder lockitParts.ILockitFilePartsDecoder
+		lockitEncoding   ffxencoding.IFFXTextLockitEncoding
+		options          core.ILockitFileOptions
+
+		log logger.ILoggerHandler
+	}
+)
+
+func newLockitFileExtractor(
+	source interfaces.ISource,
+	destination locations.IDestination,
+	lockitEncoding ffxencoding.IFFXTextLockitEncoding,
+	logger logger.ILoggerHandler) *LockitFileExtractor {
 	return &LockitFileExtractor{
-		FormatsBase:       base.NewFormatsBase(source, destination),
-		ILoggerHandler:    &logger.LogHandler{Logger: logger.Get().With().Str("module", "lockit_file_extractor").Logger()},
-		filePartsVerifier: verify.NewLockitFileVerifier(source, destination),
-		filePartsSplitter: splitter.NewLockitFileSplitter(),
-		filePartsList:     partsList,
-		options: interactions.NewInteractionService().DcpAndLockitOptions.GetLockitFileOptions(),
+		FormatsBase:      base.NewFormatsBase(source, destination),
+		filePartsDecoder: lockitParts.NewLockitFilePartsDecoder(),
+		lockitEncoding:   lockitEncoding,
+		options:          core.NewLockitFileOptions(interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()),
+
+		log: logger,
 	}
 }
 
 func (l *LockitFileExtractor) Extract() error {
-	l.LogInfo("Verifying lockit file parts in path: %s", l.Destination().Extract().Get().GetTargetPath())
+	partsLength := l.options.GetPartsLength()
 
-	if l.filePartsList.GetLength() != l.options.PartsLength {
-		l.LogInfo("Extracting lockit file parts...")
+	l.initializeFilePartsList(partsLength)
+	defer l.filePartsList.Clear()
 
-		l.filePartsSplitter.FileSplitter(l.Source(), l.Destination().Extract().Get(), l.options)
-
-		newLockitFile := NewLockitFile(l.Source(), l.Destination()).(*LockitFile)
-
-		l.SetFileInfo(newLockitFile.GetFileInfo())
-		l.filePartsList = newLockitFile.lockitFileParts
-		l.filePartsDecoder = lockitFileParts.NewLockitFilePartsDecoder(l.filePartsList)
+	if err := l.populateLockitBinaryFileParts(); err != nil {
+		return err
 	}
 
-	l.LogInfo("Decoding lockit file parts...")
+	if err := l.ensureAllLockitBinaryFileParts(partsLength); err != nil {
+		return err
+	}
 
-	if err := l.filePartsDecoder.DecodeFileParts(); err != nil {
-		l.LogError(err, "failed to decode lockit file parts: %s", l.Source().Get().Name)
+	l.log.LogInfo("Decoding lockit file parts...")
+
+	if err := l.filePartsDecoder.DecodeFileParts(l.filePartsList, l.lockitEncoding); err != nil {
 		return fmt.Errorf("failed to decode lockit file: %s", l.Source().Get().Name)
 	}
 
-	l.LogInfo("Verifying lockit file parts: %s", l.Destination().Extract().Get().GetTargetPath())
-
-	if err := l.filePartsVerifier.VerifyExtract(l.filePartsList, l.options); err != nil {
-		l.LogError(err, "failed to verify lockit file parts: %s", l.Source().Get().Name)
-		return fmt.Errorf("failed to extract lockit file: %s", l.Source().Get().Name)
-	}
-
-	l.LogInfo("Lockit file: %s", l.Source().Get().Name)
-	l.LogInfo("Lockit file extracted: %s", l.Destination().Extract().Get().GetTargetPath())
+	l.log.LogInfo("Lockit file extracted: %s", l.Destination().Extract().Get().GetTargetPath())
 
 	return nil
 }
+
+func (l *LockitFileExtractor) initializeFilePartsList(partsLength int) {
+	l.filePartsList = components.NewList[lockitParts.LockitFileParts](partsLength)
+}
+
+func (l *LockitFileExtractor) populateLockitBinaryFileParts() error {
+	return lockitParts.PopulateLockitBinaryFileParts(
+		l.filePartsList,
+		l.Destination().Extract().Get().GetTargetPath(),
+	)
+}
+
+func (l *LockitFileExtractor) ensureAllLockitBinaryFileParts(partsLength int) error {
+	if l.filePartsList.GetLength() == partsLength {
+		return nil
+	}
+
+	l.log.LogInfo("Missing lockit file parts detected. Attempting to extract...")
+
+	if err := l.extractMissingLockitFileParts(); err != nil {
+		return err
+	}
+
+	if err := l.populateLockitBinaryFileParts(); err != nil {
+		return err
+	}
+
+	if l.filePartsList.GetLength() != partsLength {
+		return fmt.Errorf("error ensuring splitted lockit parts: expected %d, got %d",
+			partsLength, l.filePartsList.GetLength())
+	}
+
+	return nil
+}
+
+func (l *LockitFileExtractor) extractMissingLockitFileParts() error {
+	splitter := internal.NewLockitFileSplitter()
+	return splitter.FileSplitter(l.Source(), l.Destination().Extract().Get(), l.options)
+}
+
+/* func (l *LockitFileExtractor) populateMissingLockitFileParts() error {
+	l.filePartsList.Clear()
+
+	l.log.LogInfo("Populating lockit extracted binary file parts...")
+
+	return lockitParts.PopulateLockitBinaryFileParts(
+		l.filePartsList,
+		l.Destination().Extract().Get().GetTargetPath(),
+	)
+} */

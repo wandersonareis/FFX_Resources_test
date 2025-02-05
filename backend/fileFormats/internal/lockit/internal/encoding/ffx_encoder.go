@@ -13,7 +13,7 @@ func NewEncoder() *LockitEncoder {
 	return &LockitEncoder{}
 }
 
-func (ld *LockitEncoder) LockitEncoderLoc(sourceFile, outputFile string, encoding ffxencoding.IFFXTextLockitEncoding) error {
+func (le *LockitEncoder) LockitEncoderLoc(sourceFile, outputFile string, encoding ffxencoding.IFFXTextLockitEncoding) error {
 	encodingFile := encoding.GetFFXTextLockitLocalizationEncoding()
 
 	lockitExecutable, err := encoding.GetLockitFileHandler().FetchLockitHandler()
@@ -21,7 +21,7 @@ func (ld *LockitEncoder) LockitEncoderLoc(sourceFile, outputFile string, encodin
 		return err
 	}
 
-	if err := ld.encoder(lockitExecutable, sourceFile, outputFile, encodingFile); err != nil {
+	if err := le.encoder(lockitExecutable, sourceFile, outputFile, encodingFile); err != nil {
 		return err
 	}
 
@@ -30,7 +30,7 @@ func (ld *LockitEncoder) LockitEncoderLoc(sourceFile, outputFile string, encodin
 		return err
 	}
 
-	return ensureUtf8Bom(utf8BomExecutable, outputFile)
+	return le.normalizeBom(utf8BomExecutable, outputFile)
 }
 
 func (ld *LockitEncoder) LockitEncoderFfx(sourceFile, outputFile string, encoding ffxencoding.IFFXTextLockitEncoding) error {
@@ -70,12 +70,8 @@ func (d *LockitEncoder) encoder(executable, sourceFile, outputFile string, encod
 	return nil
 }
 
-func ensureUtf8Bom(executable, target string) error {
+func (ld *LockitEncoder) normalizeBom(executable, target string) error {
 	args := []string{"-r", target}
 
-	if err := components.RunCommand(executable, args); err != nil {
-		return err
-	}
-
-	return nil
+	return components.RunCommand(executable, args)
 }
