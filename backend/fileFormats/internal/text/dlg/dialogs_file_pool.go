@@ -23,7 +23,6 @@ var (
 	}
 )
 
-// Funções para gerenciar o pool de extractors
 func rentDlgExtractor() IDlgExtractor {
 	return extractorPool.Get().(IDlgExtractor)
 }
@@ -32,7 +31,6 @@ func returnDlgExtractor(extractor IDlgExtractor) {
 	extractorPool.Put(extractor)
 }
 
-// Funções para gerenciar o pool de compressors
 func rentDlgCompressor() IDlgCompressor {
 	return compressorPool.Get().(IDlgCompressor)
 }
