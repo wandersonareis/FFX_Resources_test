@@ -2,22 +2,20 @@ package verify
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/core"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/lib"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/splitter"
 	"ffxresources/backend/fileFormats/util"
-	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
 	"path/filepath"
-
-	"github.com/rs/zerolog"
 )
 
 type IPartsVerifier interface {
-	Verify(path string, formatter interfaces.ITextFormatter, options interactions.DcpFileOptions) error
+	Verify(path string, formatter interfaces.ITextFormatter, options core.IDcpFileOptions) error
 	EnsurePartsLength(partsLength, expectedLength int) error
 }
 
@@ -25,44 +23,35 @@ type partsVerifier struct {
 	PartsComparer IPartComparer
 	fileSplitter  splitter.IDcpFileSpliter
 
-	log zerolog.Logger
+	log logger.ILoggerHandler
 }
 
-func newPartsVerifier() IPartsVerifier {
+func newPartsVerifier(logger logger.ILoggerHandler) IPartsVerifier {
 	return &partsVerifier{
 		PartsComparer: newPartComparer(),
 		fileSplitter:  new(splitter.DcpFileSpliter),
 
-		log: logger.Get().With().Str("module", "dcp_parts_verify").Logger(),
+		log: logger,
 	}
 }
 
-func (pv *partsVerifier) Verify(path string, formatter interfaces.ITextFormatter, options interactions.DcpFileOptions) error {
+func (pv *partsVerifier) Verify(path string, formatter interfaces.ITextFormatter, options core.IDcpFileOptions) error {
 	partsList := components.NewEmptyList[parts.DcpFileParts]()
 
 	if err := util.FindFileParts(partsList, path, lib.DCP_FILE_PARTS_PATTERN, formatter, parts.NewDcpFileParts); err != nil {
-		pv.log.Error().
-			Err(err).
-			Str("path", path).
-			Msg("Error when finding lockit parts")
+		pv.log.LogError(err, "error when finding lockit parts: %s", path)
 
 		return fmt.Errorf("error when finding lockit parts")
 	}
 
-	if err := pv.EnsurePartsLength(partsList.GetLength(), options.PartsLength); err != nil {
-		pv.log.Error().
-			Err(err).
-			Int("Expected parts", options.PartsLength).
-			Int("Found parts", partsList.GetLength()).
-			Msg("Error when ensuring lockit parts length")
+	if err := pv.EnsurePartsLength(partsList.GetLength(), options.GetPartsLength()); err != nil {
+		pv.log.LogError(err, "error when ensuring lockit parts length: Expected parts: %d, Found parts: %d", options.GetPartsLength(), partsList.GetLength())
 
 		return fmt.Errorf("error when ensuring lockit parts length")
 	}
 
 	if err := pv.PartsComparer.CompareGameDataBinaryParts(partsList); err != nil {
-		pv.log.Error().
-			Err(err).
-			Msg("Error when comparing binary parts")
+		pv.log.LogError(err, "error when comparing binary parts")
 
 		return fmt.Errorf("error when comparing binary parts")
 	}
@@ -71,10 +60,7 @@ func (pv *partsVerifier) Verify(path string, formatter interfaces.ITextFormatter
 
 	extractorFunc := func(index int, part parts.DcpFileParts) {
 		if err := part.Validate(); err != nil {
-			pv.log.Error().
-				Err(err).
-				Str("part", part.Source().Get().Path).
-				Msg("Error processing macrodic file part")
+			pv.log.LogError(err, "error when validating lockit part: %s", part.Source().Get().Path)
 
 			return
 		}
@@ -85,9 +71,7 @@ func (pv *partsVerifier) Verify(path string, formatter interfaces.ITextFormatter
 	partsList.ParallelForEach(extractorFunc)
 
 	if err := pv.PartsComparer.CompareTranslatedTextParts(tmpParts); err != nil {
-		pv.log.Error().
-			Err(err).
-			Msg("Error when comparing text parts")
+		pv.log.LogError(err, "error when comparing text parts")
 
 		return fmt.Errorf("error when comparing text parts")
 	}

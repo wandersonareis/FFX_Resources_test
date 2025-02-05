@@ -3,34 +3,32 @@ package file
 import (
 	"bytes"
 	"ffxresources/backend/common"
+	"ffxresources/backend/core"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
-	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-
-	"github.com/rs/zerolog"
 )
 
 type Content struct {
 	header    *Header
 	container *bytes.Buffer
-	options   interactions.DcpFileOptions
+	options   core.IDcpFileOptions
 	outputDir string
 
-	log zerolog.Logger
+	log logger.ILoggerHandler
 }
 
-func NewContent(header *Header, outputDir string) *Content {
+func NewContent(header *Header, outputDir string, fileOptions core.IDcpFileOptions, logger logger.ILoggerHandler) *Content {
 	return &Content{
 		header:    header,
-		options:   interactions.NewInteractionService().DcpAndLockitOptions.GetDcpFileOptions(),
 		outputDir: outputDir,
+		options:   fileOptions,
 
-		log: logger.Get().With().Str("module", "dcp_file_content").Logger(),
+		log: logger,
 	}
 }
 
@@ -38,7 +36,9 @@ func NewContentWithBuffer(container *bytes.Buffer) *Content {
 	return &Content{
 		container: container,
 
-		log: logger.Get().With().Str("module", "dcp_file_content").Logger(),
+		log: &logger.LogHandler{
+			Logger: logger.Get().With().Str("module", "dcp_file_content").Logger(),
+		},
 	}
 }
 
@@ -47,34 +47,23 @@ func (c Content) Read(file *os.File) error {
 		dataLentgh := dataRange.End - dataRange.Start
 
 		if _, err := file.Seek(dataRange.Start, io.SeekStart); err != nil {
-			c.log.Error().
-				Err(err).
-				Str("file", file.Name()).
-				Msg("error when positioning in the file")
-
+			c.log.LogError(err, "error when positioning in the file: %s", file.Name())
 			return err
 		}
 
 		data := make([]byte, dataLentgh)
 
-		outputFileName := fmt.Sprintf("%s.%03d", c.options.NameBase, i)
+		outputFileName := fmt.Sprintf("%s.%03d", c.options.GetNameBase(), i)
 
 		outputFilePartsPath := filepath.Join(c.outputDir, outputFileName)
 
 		if _, err := io.ReadFull(file, data); err != nil {
-			c.log.Error().
-				Err(err).
-				Str("file", file.Name()).
-				Msg("error reading data")
-
+			c.log.LogError(err, "error reading data")
 			return err
 		}
 
 		if err := common.WriteBytesToFile(outputFilePartsPath, data); err != nil {
-			c.log.Error().
-				Err(err).
-				Str("file", outputFilePartsPath).
-				Msg("error saving the file")
+			c.log.LogError(err, "error saving the file: %s", outputFilePartsPath)
 
 			return err
 		}
@@ -88,10 +77,7 @@ func (c Content) Write(header *Header, parts components.IList[parts.DcpFileParts
 
 		file, err := os.Open(filePath)
 		if err != nil {
-			c.log.Error().
-				Err(err).
-				Str("file", filePath).
-				Msg("error when opening the file")
+			c.log.LogError(err, "error when opening the file: %s", filePath)
 
 			return err
 		}
@@ -99,11 +85,7 @@ func (c Content) Write(header *Header, parts components.IList[parts.DcpFileParts
 		defer file.Close()
 
 		if _, err := io.Copy(c.container, file); err != nil {
-			c.log.Error().
-				Err(err).
-				Str("file", filePath).
-				Msg("error recording the data from the file")
-
+			c.log.LogError(err, "error recording the data from the file: %s", filePath)
 			return err
 		}
 	}

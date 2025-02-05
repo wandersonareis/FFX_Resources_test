@@ -1,58 +1,51 @@
 package splitter
 
 import (
+	"ffxresources/backend/core"
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/file"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
 	"os"
-
-	"github.com/rs/zerolog"
 )
 
 type IDcpFileSpliter interface {
-	Split(source interfaces.ISource, destination locations.IDestination) error
+	Split(source interfaces.ISource, destination locations.IDestination, fileOptions core.IDcpFileOptions) error
 }
 
 type DcpFileSpliter struct {
-	log zerolog.Logger
+	log logger.ILoggerHandler
 }
 
-func NewDcpFileSpliter() IDcpFileSpliter {
+func NewDcpFileSpliter(logger logger.ILoggerHandler) IDcpFileSpliter {
 	return &DcpFileSpliter{
-		log: logger.Get().With().Str("module", "dcp_file_splitter").Logger(),
+		log: logger,
 	}
 }
 
-func (ds *DcpFileSpliter) Split(source interfaces.ISource, destination locations.IDestination) error {
+func (ds *DcpFileSpliter) Split(source interfaces.ISource, destination locations.IDestination, fileOptions core.IDcpFileOptions) error {
 	targetFile := source.Get().Path
 
 	extractLocation := destination.Extract().Get()
 
 	if err := extractLocation.ProvideTargetPath(); err != nil {
-		ds.log.Error().
-			Err(err).
-			Str("path", extractLocation.GetTargetPath()).
-			Msg("error when providing the extraction directory")
+		ds.log.LogError(err, "error when providing the extraction directory: %s", extractLocation.GetTargetPath())
 
 		return fmt.Errorf("error when creating the extraction directory")
 	}
 
-	if err := ds.dcpReader(targetFile, extractLocation.GetTargetPath()); err != nil {
+	if err := ds.dcpReader(targetFile, extractLocation.GetTargetPath(), fileOptions); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (ds *DcpFileSpliter) dcpReader(dcpFilePath, outputDir string) error {
+func (ds *DcpFileSpliter) dcpReader(dcpFilePath, outputDir string, fileOptions core.IDcpFileOptions) error {
 	dcpFileStream, err := os.Open(dcpFilePath)
 	if err != nil {
-		ds.log.Error().
-			Err(err).
-			Str("file", dcpFilePath).
-			Msg("error when opening the file")
+		ds.log.LogError(err, "error when opening the file: %s", dcpFilePath)
 
 		return fmt.Errorf("error when opening the file %s", dcpFilePath)
 	}
@@ -63,19 +56,15 @@ func (ds *DcpFileSpliter) dcpReader(dcpFilePath, outputDir string) error {
 	header.FromFile(dcpFilePath)
 
 	if err := header.DataLengths(header, dcpFileStream); err != nil {
-		ds.log.Error().
-			Err(err).
-			Msg("error when calculating the data intervals")
+		ds.log.LogError(err, "error when calculating the data intervals")
 
 		return fmt.Errorf("error when calculating the data intervals")
 	}
 
-	content := file.NewContent(header, outputDir)
+	content := file.NewContent(header, outputDir, fileOptions, ds.log)
 
 	if err := content.Read(dcpFileStream); err != nil {
-		ds.log.Error().
-			Err(err).
-			Msg("error when reading the data")
+		ds.log.LogError(err, "error when reading the data")
 
 		return fmt.Errorf("error reading the data")
 	}

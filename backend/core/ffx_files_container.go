@@ -2,12 +2,13 @@ package core
 
 type (
 	IDcpFileOptions interface {
-		GetDcpFileOptions() DcpFileOptions
+		GetNameBase() string
+		GetPartsLength() int
 	}
 
-	DcpFileOptions struct {
-		NameBase    string
-		PartsLength int
+	dcpFileOptions struct {
+		nameBase    string
+		partsLength int
 	}
 	ILockitFileOptions interface {
 		GetLockitFileOptions() LockitFileOptions
@@ -36,22 +37,55 @@ func NewDcpFileOptions(gameVersion int) DcpFileOptions {
 			PartsLength: 7,
 		}
 	default:
-		return defaultValue
+type FFXDcpFile struct {
+	dcpFileOptions
+}
+
+func NewFFXDcpFile() *FFXDcpFile {
+	return &FFXDcpFile{
+		dcpFileOptions: dcpFileOptions{
+			nameBase:    "macrodic",
+			partsLength: 5,
+		},
 	}
 }
 
-func NewLockitFileOptions(gameVersion int) LockitFileOptions {
+func (ffxDcp *FFXDcpFile) GetNameBase() string {
+	return ffxDcp.nameBase
+}
+
+func (ffxDcp *FFXDcpFile) GetPartsLength() int {
+	return ffxDcp.partsLength
+}
+
+type FFX2DcpFile struct {
+	dcpFileOptions
+}
+
+func NewFFX2DcpFile() *FFX2DcpFile {
+	return &FFX2DcpFile{
+		dcpFileOptions: dcpFileOptions{
+			nameBase:    "macrodic",
+			partsLength: 7,
+		},
+	}
+}
+
+func (ffx2Dcp *FFX2DcpFile) GetNameBase() string {
+	return ffx2Dcp.nameBase
+}
+
+func (ffx2Dcp *FFX2DcpFile) GetPartsLength() int {
+	return ffx2Dcp.partsLength
+}
+
+func NewDcpFileOptions(gameVersion int) IDcpFileOptions {
 	switch gameVersion {
+	case 1:
+		return NewFFXDcpFile()
 	case 2:
-		sizes := []int{80, 88, 90, 93, 94, 95, 102, 1223, 1224, 1230, 1232, 1233, 1240, 1241, 1502, 1534}
-		return LockitFileOptions{
-			NameBase:        "loc_kit_ps3",
-			LineBreaksCount: 1696,
-			PartsLength:     len(sizes) + 1,
-			PartsSizes:      sizes,
-		}
+		return NewFFX2DcpFile()
 	default:
-		// FFX não usa Lockit
-		return LockitFileOptions{}
+		return NewFFXDcpFile()
 	}
 }
