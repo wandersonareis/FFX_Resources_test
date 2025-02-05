@@ -73,7 +73,7 @@ func ListFilesByRegex(list IList[string], path, pattern string) error {
 	return nil
 }
 
-func GenerateGameFileParts[T any](parts IList[T], targetPath, pattern string,
+func PopulateGameFilePartsList[T any](parts IList[T], targetPath, pattern string,
 	partsInstance func(source interfaces.ISource, destination locations.IDestination) *T) error {
 	if err := common.EnsurePathExists(targetPath); err != nil {
 		return err
