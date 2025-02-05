@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 )
 
-func CreateFileTreeMap(gameVersion models.GameVersion, formatter interfaces.ITextFormatter) fileFormats.TreeMapNode {
+func CreateNodeMap(gameVersion models.GameVersion, formatter interfaces.ITextFormatter) fileFormats.TreeMapNode {
 	nodeMap := make(fileFormats.TreeMapNode)
 
 	rootDir := interactions.NewInteractionService().GameLocation.GetTargetDirectory()

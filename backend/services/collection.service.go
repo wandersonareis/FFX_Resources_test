@@ -31,7 +31,7 @@ func (c *CollectionService) BuildTree() []spira.TreeNode {
 
 	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
 
-	NodeMap = spira.CreateFileTreeMap(gameVersion, formatter)
+	NodeMap = spira.CreateNodeMap(gameVersion, formatter)
 	rootTreeNode := spira.BuildTreeFromMap(NodeMap, path)
 
 	return []spira.TreeNode{*rootTreeNode}
