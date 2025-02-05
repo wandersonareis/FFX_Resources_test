@@ -23,11 +23,11 @@ type Destination struct {
 }
 
 func NewDestination() IDestination {
-	_interactions := interactions.NewInteractionService()
+	interactionService := interactions.NewInteractionService()
 
-	extractPath := _interactions.ExtractLocation.GetTargetDirectory()
-	translatePath := _interactions.TranslateLocation.GetTargetDirectory()
-	importPath := _interactions.ImportLocation.GetTargetDirectory()
+	extractPath := interactionService.ExtractLocation.GetTargetDirectory()
+	translatePath := interactionService.TranslateLocation.GetTargetDirectory()
+	importPath := interactionService.ImportLocation.GetTargetDirectory()
 
 	destination := &Destination{
 		ExtractLocation:   NewExtractLocationInfo(internal.WithDirectoryName("extracted"), internal.WithTargetDirectory(extractPath)),
