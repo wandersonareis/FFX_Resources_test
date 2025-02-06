@@ -17,7 +17,6 @@ type ILockitPartsJoiner interface {
 }
 
 type lockitFileJoiner struct {
-	partsList components.IList[lockitParts.LockitFileParts]
 	log       logger.ILoggerHandler
 }
 
@@ -28,13 +27,13 @@ func NewLockitFileJoiner(logger logger.ILoggerHandler) ILockitPartsJoiner {
 func (lj *lockitFileJoiner) JoinFileParts(destination locations.IDestination, lockitPartsList components.IList[lockitParts.LockitFileParts], fileOptions core.ILockitFileOptions) error {
 	importLocation := destination.Import().Get()
 
-	if lj.partsList.GetLength() != fileOptions.GetPartsLength() {
-		return fmt.Errorf("invalid number of parts: %d expected: %d", lj.partsList.GetLength(), fileOptions.GetPartsLength())
+	if lockitPartsList.GetLength() != fileOptions.GetPartsLength() {
+		return fmt.Errorf("invalid number of parts: %d expected: %d", lockitPartsList.GetLength(), fileOptions.GetPartsLength())
 	}
 
 	var combinedBuffer bytes.Buffer
 
-	errChan := make(chan error, lj.partsList.GetLength())
+	errChan := make(chan error, lockitPartsList.GetLength())
 
 	combineFilesFunc := func(part lockitParts.LockitFileParts) {
 		translatedTextFile := part.Destination().Translate().Get().GetTargetFile()
@@ -49,7 +48,7 @@ func (lj *lockitFileJoiner) JoinFileParts(destination locations.IDestination, lo
 		combinedBuffer.Write(partData)
 	}
 
-	lj.partsList.ForEach(combineFilesFunc)
+	lockitPartsList.ForEach(combineFilesFunc)
 
 	close(errChan)
 	if err := <-errChan; err != nil {
