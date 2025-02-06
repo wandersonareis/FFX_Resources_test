@@ -109,14 +109,3 @@ func (l *LockitFileExtractor) extractMissingLockitFileParts() error {
 	splitter := internal.NewLockitFileSplitter()
 	return splitter.FileSplitter(l.Source(), l.Destination().Extract().Get(), l.options)
 }
-
-/* func (l *LockitFileExtractor) populateMissingLockitFileParts() error {
-	l.filePartsList.Clear()
-
-	l.log.LogInfo("Populating lockit extracted binary file parts...")
-
-	return lockitParts.PopulateLockitBinaryFileParts(
-		l.filePartsList,
-		l.Destination().Extract().Get().GetTargetPath(),
-	)
-} */

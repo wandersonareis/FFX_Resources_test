@@ -12,17 +12,17 @@ import (
 	"path/filepath"
 )
 
-type IFileSplitter interface {
+type ILockitFileSplitter interface {
 	FileSplitter(source interfaces.ISource, extractLocation locations.IExtractLocation, options core.ILockitFileOptions) error
 }
 
-type LockitFileSplitter struct{}
+type lockitFileSplitter struct{}
 
-func NewLockitFileSplitter() IFileSplitter {
-	return &LockitFileSplitter{}
+func NewLockitFileSplitter() ILockitFileSplitter {
+	return &lockitFileSplitter{}
 }
 
-func (ls *LockitFileSplitter) FileSplitter(source interfaces.ISource, extractLocation locations.IExtractLocation, options core.ILockitFileOptions) error {
+func (ls *lockitFileSplitter) FileSplitter(source interfaces.ISource, extractLocation locations.IExtractLocation, options core.ILockitFileOptions) error {
 	if err := extractLocation.ProvideTargetPath(); err != nil {
 		return fmt.Errorf("error when providing the target path: %w", err)
 	}
@@ -36,7 +36,7 @@ func (ls *LockitFileSplitter) FileSplitter(source interfaces.ISource, extractLoc
 
 	reader := bufio.NewReader(file)
 
-	if err := splitFileByLineCountDev(
+	if err := ls.splitFileByLineCount(
 		reader,
 		extractLocation.GetTargetPath(),
 		options.GetNameBase(),
@@ -49,7 +49,7 @@ func (ls *LockitFileSplitter) FileSplitter(source interfaces.ISource, extractLoc
 	return nil
 }
 
-func splitFileByLineCountDev(reader *bufio.Reader, outputDir string, segmentPartsName string, segmentPartsSizes []int, segmentPartsLength, segmentMaxLineBreaks int) error {
+func (lfs *lockitFileSplitter) splitFileByLineCount(reader *bufio.Reader, outputDir string, segmentPartsName string, segmentPartsSizes []int, segmentPartsLength, segmentMaxLineBreaks int) error {
 	partIndex := 0
 	lineCount := 0
 
