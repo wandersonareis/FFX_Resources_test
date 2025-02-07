@@ -8,8 +8,8 @@ import (
 	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/lockit/internal"
+	"ffxresources/backend/fileFormats/internal/lockit/internal/integrity"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lockitParts"
-	"ffxresources/backend/fileFormats/internal/lockit/internal/verify"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
@@ -24,7 +24,7 @@ type (
 		VerifyFileIntegrity(file string, lockitEncoding ffxencoding.IFFXTextLockitEncoding, options core.ILockitFileOptions) error
 	}
 	LockitFileIntegrity struct {
-		filePartsIntegrity verify.ILockitFilePartsIntegrity
+		filePartsIntegrity integrity.ILockitFilePartsIntegrity
 
 		log logger.ILoggerHandler
 	}
@@ -157,17 +157,17 @@ func (lfi *LockitFileIntegrity) temporaryPartsComparer(partsList components.ILis
 		return fmt.Errorf("error when checking lockit file integrity")
 	}
 
-	compareFilesList := components.NewList[verify.FileComparisonEntry](partsList.GetLength())
+	compareFilesList := components.NewList[integrity.FileComparisonEntry](partsList.GetLength())
 	defer compareFilesList.Clear()
 
 	partsList.ForEach(func(part lockitParts.LockitFileParts) {
-		compareFilesList.Add(verify.FileComparisonEntry{
+		compareFilesList.Add(integrity.FileComparisonEntry{
 			FromFile: part.Destination().Translate().Get().GetTargetFile(),
 			ToFile:   part.Destination().Extract().Get().GetTargetFile(),
 		})
 	})
 
-	lfi.filePartsIntegrity = verify.NewLockitFilePartsIntegrity(lfi.log)
+	lfi.filePartsIntegrity = integrity.NewLockitFilePartsIntegrity(lfi.log)
 	defer lfi.dispose()
 
 	if err := lfi.filePartsIntegrity.ComparePartsContent(compareFilesList); err != nil {

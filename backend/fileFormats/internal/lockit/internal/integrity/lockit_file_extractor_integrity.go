@@ -1,4 +1,4 @@
-package lockit
+package integrity
 
 import (
 	"ffxresources/backend/core"
@@ -6,22 +6,18 @@ import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lib"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lockitParts"
-	"ffxresources/backend/fileFormats/internal/lockit/internal/verify"
 	"ffxresources/backend/logger"
 )
 
 type (
 	ILockitFileExtractorIntegrity interface {
 		VerifyFileIntegrity(destination locations.IDestination, fileOptions core.ILockitFileOptions) error
-		Dispose()
 	}
 
 	lockitFileExtractorIntegrity struct {
-		destination        locations.IDestination
-		fileOptions        core.ILockitFileOptions
-		filePartsIntegrity verify.ILockitFilePartsIntegrity
-
-		logger logger.ILoggerHandler
+		destination locations.IDestination
+		fileOptions core.ILockitFileOptions
+		logger      logger.ILoggerHandler
 	}
 )
 
@@ -79,15 +75,18 @@ func (lfei *lockitFileExtractorIntegrity) populateLockitExtractedTextFileParts(l
 func (lfei *lockitFileExtractorIntegrity) ensureAllLockitExtractedBinaryFileParts(lockitBinaryPartsList components.IList[lockitParts.LockitFileParts]) error {
 	partsLength := lfei.fileOptions.GetPartsLength()
 
-	if lockitBinaryPartsList.GetLength() != partsLength {
-		return lib.ErrLockitFilePartsCountMismatch(partsLength, lockitBinaryPartsList.GetLength())
+	if err := lfei.ensurePartsListCount(lockitBinaryPartsList, partsLength); err != nil {
+		return err
 	}
 
-	lockitBinaryPartsPathList := lfei.createPartsPathsList(lockitBinaryPartsList)
+	lockitBinaryPartsPathList, err := lfei.createPartsPathsList(lockitBinaryPartsList)
 	defer lockitBinaryPartsPathList.Clear()
+	if err != nil {
+		return err
+	}
 
-	if lockitBinaryPartsPathList.GetLength() != partsLength {
-		return lib.ErrLockitFilePartsCountMismatch(partsLength, lockitBinaryPartsPathList.GetLength())
+	if err := lfei.validateLineBreaksCount(lockitBinaryPartsPathList); err != nil {
+		return err
 	}
 
 	return lfei.validateLineBreaksCount(lockitBinaryPartsPathList)
@@ -96,21 +95,34 @@ func (lfei *lockitFileExtractorIntegrity) ensureAllLockitExtractedBinaryFilePart
 func (lfei *lockitFileExtractorIntegrity) ensureAllLockitExtractedTextFileParts(lockitTextPartsList components.IList[lockitParts.LockitFileParts]) error {
 	partsLength := lfei.fileOptions.GetPartsLength()
 
-	if lockitTextPartsList.GetLength() != partsLength {
-		err := lib.ErrLockitFilePartsCountMismatch(partsLength, lockitTextPartsList.GetLength())
-
+	if err := lfei.ensurePartsListCount(lockitTextPartsList, partsLength); err != nil {
 		lfei.logger.LogError(err, "error ensuring translated lockit text parts")
 
 		return err
 	}
 
-	translatedTextList := lfei.createPartsPathsList(lockitTextPartsList)
+	translatedTextList, err := lfei.createPartsPathsList(lockitTextPartsList)
 	defer translatedTextList.Clear()
+	if err != nil {
+		return err
+	}
 
 	return lfei.validateLineBreaksCount(translatedTextList)
 }
 
-func (lfei *lockitFileExtractorIntegrity) createPartsPathsList(lockitFilePartsList components.IList[lockitParts.LockitFileParts]) components.IList[string] {
+func (lfei *lockitFileExtractorIntegrity) ensurePartsListCount(partsList components.IList[lockitParts.LockitFileParts], partsLength int) error {
+	if partsList.GetLength() != partsLength {
+		return lib.ErrLockitFilePartsCountMismatch(partsLength, partsList.GetLength())
+	}
+
+	return nil
+}
+
+func (lfei *lockitFileExtractorIntegrity) createPartsPathsList(lockitFilePartsList components.IList[lockitParts.LockitFileParts]) (components.IList[string], error) {
+	if lockitFilePartsList.IsEmpty() {
+		return nil, lib.ErrLockitFilePartsListEmpty()
+	}
+
 	pathsList := components.NewList[string](lfei.fileOptions.GetPartsLength())
 	defer pathsList.Clear()
 
@@ -118,25 +130,16 @@ func (lfei *lockitFileExtractorIntegrity) createPartsPathsList(lockitFilePartsLi
 		pathsList.Add(part.Source().Get().Path)
 	})
 
-	return pathsList
+	return pathsList, nil
 }
 
 func (lfei *lockitFileExtractorIntegrity) validateLineBreaksCount(filePaths components.IList[string]) error {
-	if lfei.filePartsIntegrity == nil {
-		lfei.filePartsIntegrity = verify.NewLockitFilePartsIntegrity(lfei.logger)
-	}
+	filePartsIntegrity := NewLockitFilePartsIntegrity(lfei.logger)
 
-	err := lfei.filePartsIntegrity.ValidatePartsLineBreaksCount(
+	err := filePartsIntegrity.ValidatePartsLineBreaksCount(
 		filePaths,
 		lfei.fileOptions,
 	)
 
 	return err
-}
-
-func (lfei *lockitFileExtractorIntegrity) Dispose() {
-	if lfei.filePartsIntegrity != nil {
-		lfei.filePartsIntegrity.Dispose()
-		lfei.filePartsIntegrity = nil
-	}
 }

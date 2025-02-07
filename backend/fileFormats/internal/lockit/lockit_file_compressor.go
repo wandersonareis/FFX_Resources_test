@@ -7,9 +7,9 @@ import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/base"
 	"ffxresources/backend/fileFormats/internal/lockit/internal"
+	"ffxresources/backend/fileFormats/internal/lockit/internal/integrity"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lib"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lockitParts"
-	"ffxresources/backend/fileFormats/internal/lockit/internal/verify"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
@@ -30,13 +30,13 @@ type (
 		textTranslatedFilePartsList   components.IList[lockitParts.LockitFileParts]
 
 		filePartsEncoder   lockitParts.ILockitFilePartsEncoder
-		filePartsIntegrity verify.ILockitFilePartsIntegrity
+		filePartsIntegrity integrity.ILockitFilePartsIntegrity
 		filePartsJoiner    internal.ILockitPartsJoiner
 		lockitEncoding     ffxencoding.IFFXTextLockitEncoding
 
 		//formatter interfaces.ITextFormatter
-		options   core.ILockitFileOptions
-		logger    logger.ILoggerHandler
+		options core.ILockitFileOptions
+		logger  logger.ILoggerHandler
 	}
 )
 
@@ -53,8 +53,8 @@ func newLockitFileCompressor(
 		lockitEncoding:   lockitEncoding,
 
 		//formatter: formatters.NewTxtFormatter(),
-		options:   fileOptions,
-		logger:    logger,
+		options: fileOptions,
+		logger:  logger,
 	}
 }
 
@@ -245,7 +245,7 @@ func (lfc *lockitFileCompressor) joiningLockitBinaryFileParts() error {
 
 func (lfc *lockitFileCompressor) validateLineBreaksCount(filesList components.IList[string]) error {
 	if lfc.filePartsIntegrity == nil {
-		lfc.filePartsIntegrity = verify.NewLockitFilePartsIntegrity(lfc.logger)
+		lfc.filePartsIntegrity = integrity.NewLockitFilePartsIntegrity(lfc.logger)
 	}
 
 	err := lfc.filePartsIntegrity.ValidatePartsLineBreaksCount(

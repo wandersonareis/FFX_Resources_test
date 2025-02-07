@@ -64,7 +64,10 @@ func (lh *lockitEncodingHandler) Dispose() {
 	}
 
 	if lh.utf8BomFile != "" {
-		os.Remove(lh.utf8BomFile)
+		if err := os.Remove(lh.utf8BomFile); err != nil {
+			fmt.Println("error when removing lockit file utf8bom normalizer")
+		}
+		
 		lh.utf8BomFile = ""
 	}
 }

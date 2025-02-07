@@ -6,3 +6,7 @@ func ErrLockitFilePartsCountMismatch(expectedCount, currentFileCount int) error 
 	return fmt.Errorf("error ensuring lockit parts: expected %d, got %d",
 		expectedCount, currentFileCount)
 }
+
+func ErrLockitFilePartsListEmpty() error {
+	return fmt.Errorf("error ensuring lockit parts: list is empty")
+}

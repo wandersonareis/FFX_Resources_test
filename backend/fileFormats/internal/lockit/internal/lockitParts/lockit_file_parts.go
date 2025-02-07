@@ -5,7 +5,7 @@ import (
 	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/base"
-	lockitencoding "ffxresources/backend/fileFormats/internal/lockit/internal/encoding"
+	lockitFileEncoder "ffxresources/backend/fileFormats/internal/lockit/internal/encoder"
 	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interfaces"
@@ -17,8 +17,8 @@ import (
 type (
 	LockitFileParts struct {
 		*base.FormatsBase
-		decoder *lockitencoding.LockitDecoder
-		encoder *lockitencoding.LockitEncoder
+		decoder *lockitFileEncoder.LockitDecoder
+		encoder *lockitFileEncoder.LockitEncoder
 		logger  logger.ILoggerHandler
 	}
 
@@ -37,8 +37,8 @@ func NewLockitFileParts(source interfaces.ISource, destination locations.IDestin
 
 	return &LockitFileParts{
 		FormatsBase: base.NewFormatsBase(source, destination),
-		decoder:     lockitencoding.NewDecoder(),
-		encoder:     lockitencoding.NewEncoder(),
+		decoder:     lockitFileEncoder.NewDecoder(),
+		encoder:     lockitFileEncoder.NewEncoder(),
 		logger:      logger.NewLoggerHandler("lockit_file_parts"),
 	}
 }

@@ -1,4 +1,4 @@
-package verify
+package integrity
 
 import (
 	"bytes"
@@ -51,7 +51,7 @@ func (pc *comparerContent) CompareContent(filesList components.IList[FileCompari
 	if hasError {
 		return fmt.Errorf("errors occurred during comparison")
 	}
-	
+
 	return nil
 }
 

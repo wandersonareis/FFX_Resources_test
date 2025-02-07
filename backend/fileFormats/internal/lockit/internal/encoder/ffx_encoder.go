@@ -1,4 +1,4 @@
-package lockitencoding
+package lockitFileEncoder
 
 import (
 	"ffxresources/backend/common"
