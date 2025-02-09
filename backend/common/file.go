@@ -16,6 +16,13 @@ func IsFileExists(path string) bool {
 	return !os.IsNotExist(err)
 }
 
+func CheckPathExists(path string) error {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return fmt.Errorf("path does not exist: %s", path)
+	}
+	return nil
+}
+
 func ReadFile(path string) ([]byte, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

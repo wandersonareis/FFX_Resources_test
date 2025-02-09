@@ -60,7 +60,7 @@ func EnsurePathExists(path string) error {
 	}
 
 	if err := os.MkdirAll(cPath, os.ModePerm); err != nil {
-		return fmt.Errorf("error when creating the destination directory: %w", err)
+		return fmt.Errorf("error when creating the destination directory: %s", err.Error())
 	}
 
 	return nil
