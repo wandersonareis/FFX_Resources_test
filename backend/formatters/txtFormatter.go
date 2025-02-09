@@ -100,9 +100,8 @@ func (t TxtFormatter) providePartsWritePath(targetDirectory, dirName, fileName s
 
 func provideBasePath(targetDirectory string, dirParts ...string) (string, string) {
 	dirPartsJoined := filepath.Join(dirParts...)
-	gameVersionDirBase := interactions.NewInteractionService().FFXGameVersion().GetGameVersion().String()
 
-	outputFile := filepath.Join(targetDirectory, gameVersionDirBase, dirPartsJoined)
+	outputFile := filepath.Join(targetDirectory, /* gameVersionDirBase, */ dirPartsJoined)
 	outputPath := common.GetDir(outputFile)
 
 	return outputFile, outputPath
