@@ -91,7 +91,7 @@ type FFXDcpFile struct {
 	dcpFileOptions
 }
 
-func NewFFXDcpFile() *FFXDcpFile {
+func NewFFXDcpFile() IDcpFileOptions {
 	return &FFXDcpFile{
 		dcpFileOptions: dcpFileOptions{
 			nameBase:    "macrodic",
@@ -112,7 +112,7 @@ type FFX2DcpFile struct {
 	dcpFileOptions
 }
 
-func NewFFX2DcpFile() *FFX2DcpFile {
+func NewFFX2DcpFile() IDcpFileOptions {
 	return &FFX2DcpFile{
 		dcpFileOptions: dcpFileOptions{
 			nameBase:    "macrodic",
