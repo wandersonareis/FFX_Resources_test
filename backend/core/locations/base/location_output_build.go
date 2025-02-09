@@ -17,6 +17,10 @@ func (lb *LocationBase) buildTargetOutput(
 	formatter interfaces.ITextFormatter,
 	op BuildOperationType,
 ) {
+	if formatter == nil {
+		panic("formatter cannot be nil")
+	}
+
 	if op == opRead {
 		lb.TargetFile, lb.TargetPath = formatter.ReadFile(source, lb.TargetDirectory)
 	}
