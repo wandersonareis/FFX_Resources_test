@@ -12,6 +12,7 @@ import (
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
+	"ffxresources/backend/models"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -22,20 +23,20 @@ type (
 		ValidateFileLineBreaksCount(destination locations.IDestination, fileOptions core.ILockitFileOptions) error
 		VerifyFileIntegrity(file string, lockitEncoding ffxencoding.IFFXTextLockitEncoding, options core.ILockitFileOptions) error
 	}
-	LockitFileIntegrity struct {
-		filePartsIntegrity ILockitFilePartsIntegrity
-
-		log logger.ILoggerHandler
+	lockitFileIntegrity struct {
+		formatter interfaces.ITextFormatter
+		log       logger.ILoggerHandler
 	}
 )
 
-func NewLockitFileIntegrity(logger logger.ILoggerHandler) ILockitFileIntregrity {
-	return &LockitFileIntegrity{
-		log: logger,
+func newLockitFileIntegrity(logger logger.ILoggerHandler) ILockitFileIntregrity {
+	return &lockitFileIntegrity{
+		formatter: interactions.NewInteractionService().TextFormatter(),
+		log:       logger,
 	}
 }
 
-func (lfi *LockitFileIntegrity) ValidateFileLineBreaksCount(
+func (lfi *lockitFileIntegrity) ValidateFileLineBreaksCount(
 	destination locations.IDestination,
 	fileOptions core.ILockitFileOptions) error {
 	importTargetFile := destination.Import().Get().GetTargetFile()
@@ -49,7 +50,7 @@ func (lfi *LockitFileIntegrity) ValidateFileLineBreaksCount(
 	return nil
 }
 
-func (lfi *LockitFileIntegrity) VerifyFileIntegrity(file string, lockitEncoding ffxencoding.IFFXTextLockitEncoding, fileOptions core.ILockitFileOptions) error {
+func (lfi *lockitFileIntegrity) VerifyFileIntegrity(file string, lockitEncoding ffxencoding.IFFXTextLockitEncoding, fileOptions core.ILockitFileOptions) error {
 	source, destination := lfi.createTemporaryFile(file)
 
 	splitter := internal.NewLockitFileSplitter()
@@ -78,7 +79,7 @@ func (lfi *LockitFileIntegrity) VerifyFileIntegrity(file string, lockitEncoding 
 	return nil
 }
 
-func (lfi *LockitFileIntegrity) checkFileIntegrity(filePath string, options core.ILockitFileOptions) error {
+func (lfi *lockitFileIntegrity) checkFileIntegrity(filePath string, options core.ILockitFileOptions) error {
 	targetLineBreaksCount, err := lfi.getLineBreakCount(filePath)
 	if err != nil {
 		return err
@@ -91,7 +92,7 @@ func (lfi *LockitFileIntegrity) checkFileIntegrity(filePath string, options core
 	return nil
 }
 
-func (lfi *LockitFileIntegrity) getLineBreakCount(file string) (int, error) {
+func (lfi *lockitFileIntegrity) getLineBreakCount(file string) (int, error) {
 	lockitFileData, err := os.ReadFile(file)
 	if err != nil {
 		return 0, fmt.Errorf("error when reading imported lockit file %s", err.Error())
@@ -102,7 +103,7 @@ func (lfi *LockitFileIntegrity) getLineBreakCount(file string) (int, error) {
 	return targetLineBreaksCount, nil
 }
 
-func (fv *LockitFileIntegrity) ensureLineBreaksCount(targetCount, expectedCount int) error {
+func (fv *lockitFileIntegrity) ensureLineBreaksCount(targetCount, expectedCount int) error {
 	if targetCount != expectedCount {
 		return fmt.Errorf("error when ensuring line breaks count: parts length is %d, expected %d", targetCount, expectedCount)
 	}
@@ -110,7 +111,7 @@ func (fv *LockitFileIntegrity) ensureLineBreaksCount(targetCount, expectedCount 
 	return nil
 }
 
-func (lfi *LockitFileIntegrity) populateTemporaryBinaryPartsList(tempPartsList components.IList[lockitParts.LockitFileParts], tempDir string, fileOptions core.ILockitFileOptions) error {
+func (lfi *lockitFileIntegrity) populateTemporaryBinaryPartsList(tempPartsList components.IList[lockitParts.LockitFileParts], tempDir string, fileOptions core.ILockitFileOptions) error {
 	if err := lockitParts.PopulateLockitBinaryFileParts(tempPartsList, tempDir); err != nil {
 		return fmt.Errorf("error when checking lockit file integrity:: %w", err)
 	}
@@ -121,10 +122,10 @@ func (lfi *LockitFileIntegrity) populateTemporaryBinaryPartsList(tempPartsList c
 	}
 
 	setExtractTemporaryDirectory := func(part lockitParts.LockitFileParts) {
-		newPartFile := filepath.Join(tempDir, common.GetFileName(part.Destination().Extract().Get().GetTargetFile()))
+		newPartFile := filepath.Join(tempDir, common.GetFileName(part.GetDestination().Extract().Get().GetTargetFile()))
 
-		part.Destination().Extract().Get().SetTargetFile(newPartFile)
-		part.Destination().Extract().Get().SetTargetPath(tempDir)
+		part.GetDestination().Extract().Get().SetTargetFile(newPartFile)
+		part.GetDestination().Extract().Get().SetTargetPath(tempDir)
 	}
 
 	tempPartsList.ForEach(setExtractTemporaryDirectory)
@@ -132,7 +133,7 @@ func (lfi *LockitFileIntegrity) populateTemporaryBinaryPartsList(tempPartsList c
 	return nil
 }
 
-func (lfi *LockitFileIntegrity) temporaryPartsDecoder(tempPartsList components.IList[lockitParts.LockitFileParts], lockitEncoding ffxencoding.IFFXTextLockitEncoding) error {
+func (lfi *lockitFileIntegrity) temporaryPartsDecoder(tempPartsList components.IList[lockitParts.LockitFileParts], lockitEncoding ffxencoding.IFFXTextLockitEncoding) error {
 	defaultIntegrityError := fmt.Errorf("error when checking lockit file integrity")
 
 	if tempPartsList.IsEmpty() {
@@ -149,45 +150,43 @@ func (lfi *LockitFileIntegrity) temporaryPartsDecoder(tempPartsList components.I
 	return nil
 }
 
-func (lfi *LockitFileIntegrity) temporaryPartsComparer(partsList components.IList[lockitParts.LockitFileParts]) error {
+func (lfi *lockitFileIntegrity) temporaryPartsComparer(partsList components.IList[lockitParts.LockitFileParts]) error {
 	if partsList.IsEmpty() {
 		lfi.log.LogError(nil, "error when comparing temporary lockit file parts: parts list is empty")
 
 		return fmt.Errorf("error when checking lockit file integrity")
 	}
 
-	compareFilesList := components.NewList[FileComparisonEntry](partsList.GetLength())
+	compareFilesList := components.NewList[models.FileComparisonEntry](partsList.GetLength())
 	defer compareFilesList.Clear()
 
 	partsList.ForEach(func(part lockitParts.LockitFileParts) {
-		compareFilesList.Add(FileComparisonEntry{
-			FromFile: part.Destination().Translate().Get().GetTargetFile(),
-			ToFile:   part.Destination().Extract().Get().GetTargetFile(),
+		compareFilesList.Add(models.FileComparisonEntry{
+			FromFile: part.GetDestination().Translate().Get().GetTargetFile(),
+			ToFile:   part.GetDestination().Extract().Get().GetTargetFile(),
 		})
 	})
 
-	lfi.filePartsIntegrity = NewLockitFilePartsIntegrity(lfi.log)
-	defer lfi.dispose()
+	filePartsIntegrity := NewLockitFilePartsIntegrity(lfi.log)
 
-	if err := lfi.filePartsIntegrity.ComparePartsContent(compareFilesList); err != nil {
+	if err := filePartsIntegrity.ComparePartsContent(compareFilesList); err != nil {
 		return fmt.Errorf("error when comparing text parts: %s", err.Error())
 	}
 
 	return nil
 }
 
-func (lfi *LockitFileIntegrity) createTemporaryFile(file string) (source interfaces.ISource, destination locations.IDestination) {
+func (lfi *lockitFileIntegrity) createTemporaryFile(file string) (interfaces.ISource, locations.IDestination) {
 	source, err := locations.NewSource(file)
 	if err != nil {
 		return nil, nil
 	}
 
-	destination = locations.NewDestination()
-	formatter := interactions.NewInteractionService().TextFormatter()
-	gameFileLocation := interactions.NewInteractionService().GameLocation.GetTargetDirectory()
+	destination := locations.NewDestination()
+	//gameFileLocation := interactions.NewInteractionService().GameLocation.GetTargetDirectory()
 
-	destination.CreateRelativePath(source, gameFileLocation)
-	destination.InitializeLocations(source, formatter)
+	//destination.CreateRelativePath(source, gameFileLocation)
+	destination.InitializeLocations(source, lfi.formatter)
 
 	tmp := common.NewTempProvider("", "")
 	tmpDirectory := filepath.Join(tmp.TempFilePath, "tmpLockit")
@@ -196,10 +195,4 @@ func (lfi *LockitFileIntegrity) createTemporaryFile(file string) (source interfa
 	destination.Extract().Get().SetTargetFile(tmp.TempFile)
 
 	return source, destination
-}
-
-func (lfi *LockitFileIntegrity) dispose() {
-	if lfi.filePartsIntegrity != nil {
-		lfi.filePartsIntegrity = nil
-	}
 }

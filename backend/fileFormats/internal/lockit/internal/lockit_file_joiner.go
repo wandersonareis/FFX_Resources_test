@@ -17,7 +17,7 @@ type ILockitPartsJoiner interface {
 }
 
 type lockitFileJoiner struct {
-	log       logger.ILoggerHandler
+	log logger.ILoggerHandler
 }
 
 func NewLockitFileJoiner(logger logger.ILoggerHandler) ILockitPartsJoiner {
@@ -36,12 +36,12 @@ func (lj *lockitFileJoiner) JoinFileParts(destination locations.IDestination, lo
 	errChan := make(chan error, lockitPartsList.GetLength())
 
 	combineFilesFunc := func(part lockitParts.LockitFileParts) {
-		translatedTextFile := part.Destination().Translate().Get().GetTargetFile()
+		translatedTextFile := part.GetDestination().Translate().Get().GetTargetFile()
 		fileName := common.RemoveOneFileExtension(translatedTextFile) // remove .txt extension
 
 		partData, err := os.ReadFile(fileName)
 		if err != nil {
-			errChan <- fmt.Errorf("error when reading file part %s: %w", part.Source().Get().Path, err)
+			errChan <- fmt.Errorf("error when reading file part %s: %w", part.GetSource().Get().Path, err)
 			return
 		}
 

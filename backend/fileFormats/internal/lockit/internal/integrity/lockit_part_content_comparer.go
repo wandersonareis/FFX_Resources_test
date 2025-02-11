@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/logger"
+	"ffxresources/backend/models"
 	"fmt"
 	"io"
 	"os"
@@ -11,29 +12,25 @@ import (
 
 type (
 	IComparerContent interface {
-		CompareContent(filesList components.IList[FileComparisonEntry]) error
+		CompareContent(filesList components.IList[models.FileComparisonEntry]) error
 	}
 
 	comparerContent struct {
 		log logger.ILoggerHandler
 	}
-
-	FileComparisonEntry struct {
-		FromFile string
-		ToFile   string
-	}
 )
 
+// TODO: Review the implementation of this function
 func NewComparerContent(loggerHandler logger.ILoggerHandler) IComparerContent {
 	return &comparerContent{
 		log: loggerHandler,
 	}
 }
 
-func (pc *comparerContent) CompareContent(filesList components.IList[FileComparisonEntry]) error {
+func (pc *comparerContent) CompareContent(filesList components.IList[models.FileComparisonEntry]) error {
 	errChan := make(chan error, filesList.GetLength())
 
-	filesList.ParallelForEach(func(_ int, item FileComparisonEntry) {
+	filesList.ParallelForEach(func(item models.FileComparisonEntry) {
 		if err := pc.compare(item.FromFile, item.ToFile); err != nil {
 			errChan <- err
 			return

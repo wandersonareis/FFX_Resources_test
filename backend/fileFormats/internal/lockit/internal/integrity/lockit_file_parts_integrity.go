@@ -4,12 +4,13 @@ import (
 	"ffxresources/backend/core"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/logger"
+	"ffxresources/backend/models"
 )
 
 type (
 	ILockitFilePartsIntegrity interface {
 		ValidatePartsLineBreaksCount(fileList components.IList[string], lockitFileOptions core.ILockitFileOptions) error
-		ComparePartsContent(partsList components.IList[FileComparisonEntry]) error
+		ComparePartsContent(partsList components.IList[models.FileComparisonEntry]) error
 	}
 	LockitFilePartsIntegrity struct {
 		log logger.ILoggerHandler
@@ -26,7 +27,7 @@ func (lfpi *LockitFilePartsIntegrity) ValidatePartsLineBreaksCount(fileList comp
 	return filePartsLineBreakCounter.VerifyLineBreaks(fileList, lockitFileOptions)
 }
 
-func (lfpi *LockitFilePartsIntegrity) ComparePartsContent(partsList components.IList[FileComparisonEntry]) error {
+func (lfpi *LockitFilePartsIntegrity) ComparePartsContent(partsList components.IList[models.FileComparisonEntry]) error {
 	filePartsCompareContent := NewComparerContent(lfpi.log)
 
 	return filePartsCompareContent.CompareContent(partsList)

@@ -109,7 +109,7 @@ func (lfc *lockitFileCompressor) populateLockitExtractedBinaryFilePartsList() er
 
 	return lockitParts.PopulateLockitBinaryFileParts(
 		lfc.binaryExtractedFilePartsList,
-		lfc.Destination().Extract().Get().GetTargetPath(),
+		lfc.GetDestination().Extract().Get().GetTargetPath(),
 	)
 }
 
@@ -120,7 +120,7 @@ func (lfc *lockitFileCompressor) populateLockitTranslatedTextFileParts() error {
 
 	return lockitParts.PopulateLockitTextFileParts(
 		lfc.textTranslatedFilePartsList,
-		lfc.Destination().Translate().Get().GetTargetPath(),
+		lfc.GetDestination().Translate().Get().GetTargetPath(),
 	)
 }
 
@@ -131,7 +131,7 @@ func (lfc *lockitFileCompressor) populateLockitTranslatedBinaryFileParts() error
 
 	return lockitParts.PopulateLockitBinaryFileParts(
 		lfc.binaryTranslatedFilePartsList,
-		lfc.Destination().Translate().Get().GetTargetPath(),
+		lfc.GetDestination().Translate().Get().GetTargetPath(),
 	)
 }
 
@@ -148,9 +148,9 @@ func (lfc *lockitFileCompressor) ensureAllLockitTranslatedTextFileParts(partsLen
 	defer translatedTextList.Clear()
 
 	lfc.textTranslatedFilePartsList.ForEach(func(part lockitParts.LockitFileParts) {
-		//part.Destination().InitializeLocations(part.Source(), lfc.formatter)
+		//part.GetDestination().InitializeLocations(part.GetSource(), lfc.formatter)
 		translatedTextList.Add(
-			part.Source().Get().Path)
+			part.GetSource().Get().Path)
 	})
 
 	return lfc.validateLineBreaksCount(translatedTextList)
@@ -169,9 +169,9 @@ func (lfc *lockitFileCompressor) ensureAllLockitTranslatedBinaryFileParts(partsL
 	defer translatedBinaryList.Clear()
 
 	lfc.binaryTranslatedFilePartsList.ForEach(func(part lockitParts.LockitFileParts) {
-		//part.Destination().InitializeLocations(part.Source(), lfc.formatter)
+		//part.GetDestination().InitializeLocations(part.GetSource(), lfc.formatter)
 		translatedBinaryList.Add(
-			part.Source().Get().Path)
+			part.GetSource().Get().Path)
 	})
 
 	return lfc.validateLineBreaksCount(translatedBinaryList)
@@ -206,7 +206,7 @@ func (l *lockitFileCompressor) ensureAllLockitExtractedBinaryFileParts(partsLeng
 
 	l.binaryExtractedFilePartsList.ForEach(func(part lockitParts.LockitFileParts) {
 		extractedBinaryList.Add(
-			part.Source().Get().Path)
+			part.GetSource().Get().Path)
 	})
 
 	if err := l.validateLineBreaksCount(extractedBinaryList); err != nil {
@@ -220,11 +220,11 @@ func (l *lockitFileCompressor) extractMissingLockitBinaryFileParts() error {
 	l.logger.LogInfo("Missing lockit file parts detected. Attempting to extract...")
 
 	splitter := internal.NewLockitFileSplitter()
-	return splitter.FileSplitter(l.Source(), l.Destination().Extract().Get(), l.options)
+	return splitter.FileSplitter(l.GetSource(), l.GetDestination().Extract().Get(), l.options)
 }
 
 func (lfc *lockitFileCompressor) encodingFilesParts() {
-	lfc.logger.LogInfo("Encoding files parts to: %s", lfc.Destination().Import().Get().GetTargetPath())
+	lfc.logger.LogInfo("Encoding files parts to: %s", lfc.GetDestination().Import().Get().GetTargetPath())
 
 	lfc.filePartsEncoder.EncodeFilesParts(lfc.binaryExtractedFilePartsList, lfc.lockitEncoding)
 }
@@ -234,9 +234,9 @@ func (lfc *lockitFileCompressor) joiningLockitBinaryFileParts() error {
 		lfc.filePartsJoiner = nil
 	}()
 
-	lfc.logger.LogInfo("Joining file parts inside file: %s", lfc.Destination().Import().Get().GetTargetFile())
+	lfc.logger.LogInfo("Joining file parts inside file: %s", lfc.GetDestination().Import().Get().GetTargetFile())
 
-	if err := lfc.filePartsJoiner.JoinFileParts(lfc.Destination(), lfc.binaryTranslatedFilePartsList, lfc.options); err != nil {
+	if err := lfc.filePartsJoiner.JoinFileParts(lfc.GetDestination(), lfc.binaryTranslatedFilePartsList, lfc.options); err != nil {
 		return fmt.Errorf("error when joining lockit binary file parts: %s", err.Error())
 	}
 
@@ -258,7 +258,7 @@ func (lfc *lockitFileCompressor) validateLineBreaksCount(filesList components.IL
 
 func (lfc *lockitFileCompressor) Dispose() {
 	lfc.binaryTranslatedFilePartsList.ForEach(func(part lockitParts.LockitFileParts) {
-		os.Remove(part.Source().Get().Path)
+		os.Remove(part.GetSource().Get().Path)
 	})
 
 	lfc.binaryExtractedFilePartsList.Clear()

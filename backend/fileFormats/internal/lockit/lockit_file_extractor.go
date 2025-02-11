@@ -60,13 +60,11 @@ func (l *LockitFileExtractor) Extract() error {
 		return err
 	}
 
-	l.log.LogInfo("Decoding lockit file parts...")
-
-	if err := l.filePartsDecoder.DecodeFileParts(l.filePartsList, l.lockitEncoding); err != nil {
-		return fmt.Errorf("failed to decode lockit file: %s", l.Source().Get().Name)
+	if err := l.decodeFileParts(); err != nil {
+		return err
 	}
 
-	l.log.LogInfo("Lockit file extracted: %s", l.Destination().Extract().Get().GetTargetPath())
+	l.log.LogInfo("Lockit file extracted: %s", l.GetDestination().Extract().Get().GetTargetPath())
 
 	return nil
 }
@@ -78,7 +76,7 @@ func (l *LockitFileExtractor) initializeFilePartsList(partsLength int) {
 func (l *LockitFileExtractor) populateLockitBinaryFileParts() error {
 	return lockitParts.PopulateLockitBinaryFileParts(
 		l.filePartsList,
-		l.Destination().Extract().Get().GetTargetPath(),
+		l.GetDestination().Extract().Get().GetTargetPath(),
 	)
 }
 
@@ -107,5 +105,15 @@ func (l *LockitFileExtractor) ensureAllLockitBinaryFileParts(partsLength int) er
 
 func (l *LockitFileExtractor) extractMissingLockitFileParts() error {
 	splitter := internal.NewLockitFileSplitter()
-	return splitter.FileSplitter(l.Source(), l.Destination().Extract().Get(), l.options)
+	return splitter.FileSplitter(l.GetSource(), l.GetDestination().Extract().Get(), l.options)
+}
+
+func (l *LockitFileExtractor) decodeFileParts() error {
+	l.log.LogInfo("Decoding lockit file parts...")
+
+	if err := l.filePartsDecoder.DecodeFileParts(l.filePartsList, l.lockitEncoding); err != nil {
+		return fmt.Errorf("failed to decode lockit file: %s", l.GetSource().Get().Name)
+	}
+
+	return nil
 }

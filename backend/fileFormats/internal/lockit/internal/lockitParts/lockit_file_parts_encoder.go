@@ -38,7 +38,7 @@ func (le *LockitFilePartsEncoder) EncodeFilesParts(
 		}
 	}
 
-	binaryPartsList.ParallelForEach(compressorFunc)
+	binaryPartsList.ParallelForIndex(compressorFunc)
 
 	close(errChan)
 

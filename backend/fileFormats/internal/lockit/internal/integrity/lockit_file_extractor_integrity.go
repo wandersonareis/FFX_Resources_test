@@ -127,7 +127,7 @@ func (lfei *lockitFileExtractorIntegrity) createPartsPathsList(lockitFilePartsLi
 	defer pathsList.Clear()
 
 	lockitFilePartsList.ForEach(func(part lockitParts.LockitFileParts) {
-		pathsList.Add(part.Source().Get().Path)
+		pathsList.Add(part.GetSource().Get().Path)
 	})
 
 	return pathsList, nil

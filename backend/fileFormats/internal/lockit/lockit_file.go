@@ -72,7 +72,7 @@ func (lf *LockitFile) extractVerify() error {
 
 	extractVerifier := integrity.NewLockitFileExtractorIntegrity(lf.log)
 
-	return extractVerifier.VerifyFileIntegrity(lf.Destination(), lf.fileOptions)
+	return extractVerifier.VerifyFileIntegrity(lf.GetDestination(), lf.fileOptions)
 }
 
 func (lf *LockitFile) Compress() error {
@@ -108,5 +108,5 @@ func (lf *LockitFile) compressVerify(lockitEncoding ffxencoding.IFFXTextLockitEn
 
 	compressVerify := integrity.NewLockitFileCompressorIntegrity(lf.log)
 
-	return compressVerify.VerifyFileIntegrity(lf.Destination(), lockitEncoding, lf.fileOptions)
+	return compressVerify.VerifyFileIntegrity(lf.GetDestination(), lockitEncoding, lf.fileOptions)
 }

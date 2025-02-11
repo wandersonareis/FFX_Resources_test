@@ -34,7 +34,7 @@ func (ld *LockitFilePartsDecoder) DecodeFileParts(partsList components.IList[Loc
 		}
 	}
 
-	partsList.ParallelForEach(extractorFunc)
+	partsList.ParallelForIndex(extractorFunc)
 
 	return nil
 }
