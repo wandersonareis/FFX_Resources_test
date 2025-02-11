@@ -12,65 +12,90 @@ import (
 )
 
 type (
-    IDirectoryService interface {
+	IDirectoryService interface {
 		ProcessDirectory(targetPath string, pathMap fileFormats.TreeMapNode) error
 	}
 
-	directoryExtractService struct{}
-    directoryCompressService struct{}
+	directoryExtractService  struct{}
+	directoryCompressService struct{}
 )
 
+func NewDirectoryExtractService() IDirectoryService {
+	return &directoryExtractService{}
+}
+
+func NewDirectoryCompressService() IDirectoryService {
+	return &directoryCompressService{}
+}
+
 func (e *directoryExtractService) ProcessDirectory(targetPath string, pathMap fileFormats.TreeMapNode) error {
-    return ProcessDirectoryCommon(targetPath, pathMap, func(processor interfaces.IFileProcessor) error {
-        return processor.Extract()
-    })
+	return ProcessDirectoryCommon(targetPath, pathMap, func(processor interfaces.IFileProcessor) error {
+		return processor.Extract()
+	})
 }
 
 func (e *directoryCompressService) ProcessDirectory(targetPath string, pathMap fileFormats.TreeMapNode) error {
-    return ProcessDirectoryCommon(targetPath, pathMap, func(processor interfaces.IFileProcessor) error {
-        return processor.Compress()
-    })
+	return ProcessDirectoryCommon(targetPath, pathMap, func(processor interfaces.IFileProcessor) error {
+		return processor.Compress()
+	})
 }
 
 func ProcessDirectoryCommon(
-    targetPath string,
-    pathMap fileFormats.TreeMapNode,
-    operation func(interfaces.IFileProcessor) error,
+	targetPath string,
+	pathMap fileFormats.TreeMapNode,
+	operation func(interfaces.IFileProcessor) error,
 ) error {
-    filesProcessorList := components.NewEmptyList[interfaces.IFileProcessor]()
+	common.CheckArgumentNil(targetPath, "targetPath")
+	common.CheckArgumentNil(pathMap, "pathMap")
 
-    err := filepath.WalkDir(targetPath, func(path string, info fs.DirEntry, err error) error {
-        if err != nil {
-            return err
-        }
-        if info.IsDir() {
-            return nil
-        }
-        if node, ok := pathMap[path]; ok {
-            if node.Data.Source.IsDir {
-                return nil
-            }
-            if node.Data.FileProcessor != nil {
-                filesProcessorList.Add(node.Data.FileProcessor)
-            }
-        }
-        return nil
-    })
-    if err != nil {
-        return err
-    }
+	cb := func() error {
+		return processDirectory(targetPath, pathMap, operation)
+	}
 
-    ctx := interactions.NewInteractionService().Ctx
-    progress := common.NewProgress(ctx)
-    progress.SetMax(filesProcessorList.GetLength())
-    progress.Start()
+	if err := common.RecoverFn(cb); err != nil {
+		return err
+	}
 
-    filesProcessorList.ParallelForEach(func(_ int, processor interfaces.IFileProcessor) {
-        if e := operation(processor); e != nil {
-            notifications.NotifyError(e)
-            return
-        }
-        progress.StepFile(processor.Source().Get().Name)
-    })
-    return nil
+	return nil
+}
+
+func processDirectory(targetPath string, pathMap fileFormats.TreeMapNode, operation func(interfaces.IFileProcessor) error) error {
+	filesProcessorList := components.NewEmptyList[interfaces.IFileProcessor]()
+	defer filesProcessorList.Clear()
+
+	err := filepath.WalkDir(targetPath, func(path string, info fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if node, ok := pathMap[path]; ok {
+			if node.Data.Source.IsDir {
+				return nil
+			}
+			if node.Data.FileProcessor != nil {
+				filesProcessorList.Add(node.Data.FileProcessor)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	ctx := interactions.NewInteractionService().Ctx
+	progress := common.NewProgress(ctx)
+	progress.SetMax(filesProcessorList.GetLength())
+	progress.Start()
+
+	filesProcessorList.ParallelForEach(func(processor interfaces.IFileProcessor) {
+		if e := operation(processor); e != nil {
+			notifications.NotifyError(e)
+			return
+		}
+		progress.StepFile(processor.GetSource().Get().Name)
+	})
+
+	return nil
 }

@@ -2,16 +2,13 @@ package services
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/logger"
 	"ffxresources/backend/models"
 	"ffxresources/backend/notifications"
 	"fmt"
-	"sync"
 )
 
 type ExtractService struct {
-	dirExtractServideOnce sync.Once
-	dirExtractService     IDirectoryService
+	dirExtractService IDirectoryService
 }
 
 func NewExtractService() *ExtractService {
@@ -19,44 +16,46 @@ func NewExtractService() *ExtractService {
 }
 
 func (e *ExtractService) Extract(path string) {
-	defer func() {
-		l := logger.Get()
-		if r := recover(); r != nil {
-			l.Error().
-				Interface("recover", r).
-				Str("file", common.GetFileName(path)).
-				Msg("Panic occurred during extraction")
+	common.CheckArgumentNil(path, "path")
 
-			notifications.NotifyError(fmt.Errorf("panic occurred: %v", r))
-		}
-	}()
+	cb := func() error {
+		return e.extract(path)
+	}
+
+	if err := common.RecoverFn(cb); err != nil {
+		notifications.NotifyError(err)
+	}
+}
+
+func (e *ExtractService) extract(path string) error {
+	common.CheckArgumentNil(NodeMap, "NodeMap")
 
 	node, ok := NodeMap[path]
 	if !ok {
-		notifications.NotifyError(fmt.Errorf("node not found for path: %s", path))
-		return
+		return fmt.Errorf("node not found for path: %s", path)
 	}
 
 	if node.Data.Source.Type == models.Folder {
-		e.dirExtractServideOnce.Do(func() {
-			e.dirExtractService = &directoryExtractService{}
-		})
+		if e.dirExtractService == nil {
+			e.dirExtractService = NewDirectoryExtractService()
+		}
 
 		if err := e.dirExtractService.ProcessDirectory(path, NodeMap); err != nil {
-			notifications.NotifyError(err)
-			return
+			return err
 		}
 
 		notifications.NotifySuccess(fmt.Sprintf("Directory %s extracted successfully!", node.Label))
-		return
+		return nil
 	}
 
 	processor := node.Data.FileProcessor
 	if processor != nil {
 		if err := processor.Extract(); err != nil {
-			notifications.NotifyError(err)
-			return
+			return err
 		}
+
 		notifications.NotifySuccess(fmt.Sprintf("File %s extracted successfully!", node.Label))
 	}
+
+	return nil
 }
