@@ -2,6 +2,7 @@ package components
 
 import (
 	"bytes"
+	"ffxresources/backend/common"
 	"fmt"
 	"io"
 	"os"
@@ -18,7 +19,10 @@ type (
 	}
 )
 
-func (fc *FileComparisonEntry) CompareFiles() error {	
+func (fc *FileComparisonEntry) CompareFiles() error {
+	common.CheckArgumentNil(fc.FromFile, "compare fromFile")
+	common.CheckArgumentNil(fc.ToFile, "compare toFile")
+
 	return fc.compare(fc.FromFile, fc.ToFile)
 }
 
