@@ -79,7 +79,21 @@ func (l *List[T]) ForEach(f func(item T)) {
 	}
 }
 
-func (l *List[T]) ParallelForEach(f func(index int, item T)) {
+func (l *List[T]) ParallelForEach(f func(item T)) {
+	var wg sync.WaitGroup
+
+	for _, v := range l.Items {
+		wg.Add(1)
+		go func(it T) {
+			defer wg.Done()
+			f(it)
+		}(v)
+	}
+
+	wg.Wait()
+}
+
+func (l *List[T]) ParallelForIndex(f func(index int, item T)) {
 	var wg sync.WaitGroup
 
 	for i, v := range l.Items {

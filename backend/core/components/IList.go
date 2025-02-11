@@ -11,5 +11,6 @@ type IList[T any] interface {
 	Clear()
 	ForEach(f func(item T))
 	ForIndex(f func(index int, item T))
-	ParallelForEach(f func(index int, item T))
+	ParallelForEach(f func(item T))
+	ParallelForIndex(f func(index int, item T))
 }
