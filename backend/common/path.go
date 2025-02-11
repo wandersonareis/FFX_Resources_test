@@ -66,6 +66,11 @@ func EnsurePathExists(path string) error {
 	return nil
 }
 
+func RemoveDir(path string) error {
+	cPath := sanitizationPath(path)
+	return os.RemoveAll(cPath)
+}
+
 // GetRelativePathFromMarker takes a file path as input and returns the relative path
 // starting from a predefined marker. If the marker is not found in the path, it logs
 // an error message and returns an empty string.
