@@ -23,7 +23,7 @@ type (
 	IFileProcessor interface {
 		ICompressor
 		IExtractor
-		Source() ISource
+		GetSource() ISource
 	}
 )
 
