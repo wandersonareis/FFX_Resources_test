@@ -3,16 +3,12 @@ package main
 import (
 	"context"
 	"ffxresources/backend/interactions"
-	"ffxresources/backend/logger"
-	"ffxresources/backend/notifications"
 	"fmt"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 func EventsOnStartup(ctx context.Context) {
-	go notifications.PanicRecoverLogger(logger.Get().With().Str("module", "events").Logger())
-
 	emitLocationsEvents(ctx)
 	eventsOnLocations(ctx)
 }
