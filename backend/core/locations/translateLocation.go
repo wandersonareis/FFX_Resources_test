@@ -1,13 +1,13 @@
 package locations
 
 import (
-	"ffxresources/backend/core/locations/base"
+	"ffxresources/backend/core/locations/locationsBase"
 	"ffxresources/backend/interfaces"
 	"fmt"
 )
 
 type ITranslateLocation interface {
-	internal.ILocationBase
+	locationsBase.ILocationBase
 	interfaces.IValidate
 }
 
@@ -16,12 +16,12 @@ type ITargetTranslateLocation interface {
 }
 
 type TranslateLocation struct {
-	internal.LocationBase
+	locationsBase.LocationBase
 }
 
-func NewTranslateLocation(options *internal.LocationBaseOptions) *TranslateLocation {
+func NewTranslateLocation(options *locationsBase.LocationBaseOptions) *TranslateLocation {
 	return &TranslateLocation{
-		LocationBase: internal.NewLocationBase(options),
+		LocationBase: locationsBase.NewLocationBase(options),
 	}
 }
 

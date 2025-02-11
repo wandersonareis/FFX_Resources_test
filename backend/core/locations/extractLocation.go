@@ -1,25 +1,25 @@
 package locations
 
 import (
-	"ffxresources/backend/core/locations/base"
+	"ffxresources/backend/core/locations/locationsBase"
 	"ffxresources/backend/interfaces"
 	"fmt"
 )
 
 type (
 	ExtractLocation struct {
-		internal.LocationBase
+		locationsBase.LocationBase
 	}
 
 	IExtractLocation interface {
-		internal.ILocationBase
+		locationsBase.ILocationBase
 		interfaces.IValidate
 	}
 )
 
-func NewExtractLocation(options *internal.LocationBaseOptions) *ExtractLocation {
+func NewExtractLocation(options *locationsBase.LocationBaseOptions) *ExtractLocation {
 	return &ExtractLocation{
-		LocationBase: internal.NewLocationBase(options),
+		LocationBase: locationsBase.NewLocationBase(options),
 	}
 }
 

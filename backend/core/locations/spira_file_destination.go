@@ -1,7 +1,7 @@
 package locations
 
 import (
-	internal "ffxresources/backend/core/locations/base"
+	"ffxresources/backend/core/locations/locationsBase"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"os"
@@ -25,14 +25,16 @@ type Destination struct {
 func NewDestination() IDestination {
 	interactionService := interactions.NewInteractionService()
 
+	gameVersionDir := interactionService.FFXGameVersion().GetGameVersion().String()
+
 	extractPath := interactionService.ExtractLocation.GetTargetDirectory()
 	translatePath := interactionService.TranslateLocation.GetTargetDirectory()
 	importPath := interactionService.ImportLocation.GetTargetDirectory()
 
 	destination := &Destination{
-		ExtractLocation:   NewExtractLocationInfo(internal.WithDirectoryName("extracted"), internal.WithTargetDirectory(extractPath)),
-		TranslateLocation: NewTranslateLocationInfo(internal.WithDirectoryName("translated"), internal.WithTargetDirectory(translatePath)),
-		ImportLocation:    NewImportLocationInfo(internal.WithDirectoryName("reimported"), internal.WithTargetDirectory(importPath)),
+		ExtractLocation:   NewExtractLocationInfo(locationsBase.WithDirectoryName("extracted"), locationsBase.WithTargetDirectory(extractPath), locationsBase.WithGameVersionDir(gameVersionDir)),
+		TranslateLocation: NewTranslateLocationInfo(locationsBase.WithDirectoryName("translated"), locationsBase.WithTargetDirectory(translatePath), locationsBase.WithGameVersionDir(gameVersionDir)),
+		ImportLocation:    NewImportLocationInfo(locationsBase.WithDirectoryName("reimported"), locationsBase.WithTargetDirectory(importPath), locationsBase.WithGameVersionDir(gameVersionDir)),
 	}
 	return destination
 }

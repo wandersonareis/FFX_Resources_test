@@ -1,6 +1,6 @@
 package locations
 
-import internal "ffxresources/backend/core/locations/base"
+import "ffxresources/backend/core/locations/locationsBase"
 
 type (
 	ExtractLocationInfo struct {
@@ -12,8 +12,8 @@ type (
 	}
 )
 
-func NewExtractLocationInfo(opts ...internal.LocationBaseOption) ExtractLocationInfo {
-	options := internal.ProcessOpts(opts)
+func NewExtractLocationInfo(opts ...locationsBase.LocationBaseOption) ExtractLocationInfo {
+	options := locationsBase.ProcessOpts(opts)
 	return ExtractLocationInfo{
 		ExtractLocation: *NewExtractLocation(options),
 	}

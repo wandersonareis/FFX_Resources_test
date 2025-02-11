@@ -1,8 +1,7 @@
-package internal
+package locationsBase
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"os"
@@ -25,9 +24,7 @@ type (
 )
 
 func NewLocationBase(options *LocationBaseOptions) LocationBase {
-	gameVersionDirBase := interactions.NewInteractionService().FFXGameVersion().GetGameVersion().String()
-
-	targetDirectory := filepath.Join(options.TargetDirectory, gameVersionDirBase)
+	targetDirectory := filepath.Join(options.TargetDirectory, options.GameVersionDir)
 
 	return LocationBase{
 		TargetDirectoryBase: TargetDirectoryBase{

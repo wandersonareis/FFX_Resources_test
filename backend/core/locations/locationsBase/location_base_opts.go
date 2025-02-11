@@ -1,4 +1,4 @@
-package internal
+package locationsBase
 
 import (
 	"ffxresources/backend/common"
@@ -8,6 +8,7 @@ import (
 type LocationBaseOptions struct {
 	TargetDirectoryName string
 	TargetDirectory     string
+	GameVersionDir	  string
 }
 
 type LocationBaseOption func(*LocationBaseOptions)
@@ -24,6 +25,12 @@ func WithTargetDirectory(directory string) LocationBaseOption {
 	}
 }
 
+func WithGameVersionDir(gameVersionDir string) LocationBaseOption {
+	return func(opts *LocationBaseOptions) {
+		opts.GameVersionDir = gameVersionDir
+	}
+}
+
 func ProcessOpts(opts []LocationBaseOption) *LocationBaseOptions {
 	options := &LocationBaseOptions{}
 
@@ -34,9 +41,13 @@ func ProcessOpts(opts []LocationBaseOption) *LocationBaseOptions {
 	if options.TargetDirectoryName == "" {
 		panic("TargetDirectoryName is required")
 	}
-	
+
 	if options.TargetDirectory == "" {
 		options.TargetDirectory = filepath.Join(common.GetExecDir(), options.TargetDirectoryName)
+	}
+
+	if options.GameVersionDir == "" {
+		options.GameVersionDir = "FFX"
 	}
 
 	return options
