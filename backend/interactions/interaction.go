@@ -55,6 +55,25 @@ func NewInteractionService() *InteractionService {
 	return interactionInstance
 }
 
+func NewInteractionServiceWithConfig(config *FFXAppConfig) *InteractionService {
+	initOnce.Do(func() {
+		gameVersion := core.NewFFXGameVersion()
+		gameVersion.SetGameVersionNumber(config.FFXGameVersion)
+
+		interactionInstance = &InteractionService{
+			Ctx:               context.Background(),
+			ffxAppConfig:      config,
+			ffxGameVersion:    gameVersion,
+			GameLocation:      newGameLocation(),
+			ExtractLocation:   newExtractLocation(),
+			TranslateLocation: newTranslateLocation(),
+			ImportLocation:    newImportLocation(),
+		}
+	})
+
+	return interactionInstance
+}
+
 func NewInteractionWithCtx(ctx context.Context) *InteractionService {
 	if interactionInstance == nil {
 		interactionInstance = NewInteractionService()
