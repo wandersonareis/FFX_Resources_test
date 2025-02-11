@@ -45,11 +45,13 @@ func createHandlerFile(targetFile string, bytes []byte) error {
 }
 
 func GetFileFromResources(targetLocation []string, targetFile string) error {
-	EnsurePathExists(targetFile)
+	if err := EnsurePathExists(targetFile); err != nil {
+		return err
+	}
 
 	resourcesFile := getResourcesAsarFile()
-	if !IsFileExists(resourcesFile) {
-		return fmt.Errorf("resources.asar not found")
+	if err := CheckPathExists(resourcesFile); err != nil {
+		return fmt.Errorf("resources.asar not found: %w", err)
 	}
 
 	bytes, err := readFileFromAsar(resourcesFile, targetLocation)
