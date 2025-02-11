@@ -1,7 +1,6 @@
 package services
 
 import (
-	"ffxresources/backend/fileFormats"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/notifications"
@@ -9,8 +8,6 @@ import (
 )
 
 type CollectionService struct{}
-
-var NodeMap fileFormats.TreeMapNode
 
 func NewCollectionService() *CollectionService {
 	return &CollectionService{}
