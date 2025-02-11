@@ -1,4 +1,4 @@
-package parts
+package dcpParts
 
 import (
 	"ffxresources/backend/core/locations"
@@ -13,8 +13,10 @@ type DcpFileParts struct {
 	*base.FormatsBase
 }
 
-func NewDcpFileParts(source interfaces.ISource, destination locations.IDestination) *DcpFileParts {
+func NewDcpFileParts(source interfaces.ISource, destination locations.IDestination, formatter interfaces.ITextFormatter) *DcpFileParts {
 	source.Get().RelativePath = filepath.Join("system", source.Get().Name)
+
+	destination.InitializeLocations(source, formatter)
 
 	return &DcpFileParts{
 		FormatsBase: base.NewFormatsBase(source, destination),
@@ -22,28 +24,28 @@ func NewDcpFileParts(source interfaces.ISource, destination locations.IDestinati
 }
 
 func (d DcpFileParts) Extract() error {
-	dlgFile := dlg.NewDialogs(d.Source(), d.Destination())
+	dlgFile := dlg.NewDialogs(d.GetSource(), d.GetDestination())
 
 	if err := dlgFile.Extract(); err != nil {
-		return fmt.Errorf("failed to extract dialog file: %s", d.Source().Get().Name)
+		return fmt.Errorf("failed to extract dialog file: %s", d.GetSource().Get().Name)
 	}
 
 	return nil
 }
 
 func (d DcpFileParts) Compress() error {
-	dlgFile := dlg.NewDialogs(d.Source(), d.Destination())
+	dlgFile := dlg.NewDialogs(d.GetSource(), d.GetDestination())
 
 	if err := dlgFile.Compress(); err != nil {
-		return fmt.Errorf("failed to compress dialog file: %s", d.Source().Get().Name)
+		return fmt.Errorf("failed to compress dialog file: %s", d.GetSource().Get().Name)
 	}
 
 	return nil
 }
 
 func (d DcpFileParts) Validate() error {
-	if err := d.Destination().Translate().Get().Validate(); err != nil {
-		return fmt.Errorf("translated dcp parts file not found: %s", d.Source().Get().Name)
+	if err := d.GetDestination().Translate().Get().Validate(); err != nil {
+		return fmt.Errorf("translated dcp parts file not found: %s", d.GetSource().Get().Name)
 	}
 
 	return nil

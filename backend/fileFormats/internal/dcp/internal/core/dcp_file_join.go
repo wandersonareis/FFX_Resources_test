@@ -1,17 +1,29 @@
-package joinner
+package dcpCore
 
 import (
 	"bytes"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats/internal/dcp/internal/file"
-	"ffxresources/backend/fileFormats/internal/dcp/internal/parts"
+	"ffxresources/backend/fileFormats/internal/dcp/internal/dcpParts"
 	"ffxresources/backend/interfaces"
 	"fmt"
 	"os"
 )
 
-func DcpFileJoiner(source interfaces.ISource, destination locations.IDestination, xplitedFiles components.IList[parts.DcpFileParts], targetReimportFile string) error {
+type (
+	IDcpFileJoiner interface {
+		DcpFileJoiner(source interfaces.ISource, destination locations.IDestination, xplitedFiles components.IList[dcpParts.DcpFileParts], targetReimportFile string) error
+	}
+
+	dcpFileJoiner struct {
+	}
+)
+
+func NewDcpFileJoiner() IDcpFileJoiner {
+	return &dcpFileJoiner{}
+}
+
+func (dfj *dcpFileJoiner) DcpFileJoiner(source interfaces.ISource, destination locations.IDestination, xplitedFiles components.IList[dcpParts.DcpFileParts], targetReimportFile string) error {
 	originalDcpFile := source.Get().Path
 
 	importLocation := destination.Import().Get()
@@ -20,15 +32,14 @@ func DcpFileJoiner(source interfaces.ISource, destination locations.IDestination
 		return fmt.Errorf("error when providing target path: %w", err)
 	}
 
-	err := dcpWriter(originalDcpFile, xplitedFiles, targetReimportFile)
-	if err != nil {
+	if err := dcpWriter(originalDcpFile, xplitedFiles, targetReimportFile); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func dcpWriter(inputFilePath string, parts components.IList[parts.DcpFileParts], newContainerPath string) error {
+func dcpWriter(inputFilePath string, parts components.IList[dcpParts.DcpFileParts], newContainerPath string) error {
 	inputFile, err := os.Open(inputFilePath)
 	if err != nil {
 		return fmt.Errorf("error when opening the original file: %w", err)
@@ -36,9 +47,14 @@ func dcpWriter(inputFilePath string, parts components.IList[parts.DcpFileParts],
 
 	defer inputFile.Close()
 
-	header := file.NewHeader()
-	header.FromFile(inputFilePath)
-	header.Update(parts)
+	header := newHeader()
+	if err := header.FromFile(inputFilePath); err != nil {
+		return fmt.Errorf("error when reading the header: %w", err)
+	}
+
+	if err := header.Update(parts); err != nil {
+		return err
+	}
 
 	var buffer bytes.Buffer
 
@@ -46,7 +62,7 @@ func dcpWriter(inputFilePath string, parts components.IList[parts.DcpFileParts],
 		return fmt.Errorf("error when writing the header: %w", err)
 	}
 
-	content := file.NewContentWithBuffer(&buffer)
+	content := NewContentWithBuffer(&buffer)
 	if err := content.Write(header, parts); err != nil {
 		return fmt.Errorf("error when writing the content: %w", err)
 	}
