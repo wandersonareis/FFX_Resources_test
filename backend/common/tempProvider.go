@@ -5,13 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/google/uuid"
 )
 
 type TempProvider struct {
-	filePrefix   string
-	extension    string
 	TempFile     string
 	TempFilePath string
 }
@@ -30,14 +26,13 @@ func NewTempProvider(fileName, ext string) *TempProvider {
 	}
 
 	tempPath := filepath.Join(os.TempDir(), "ffxresources")
+	if err := EnsurePathExists(tempPath); err != nil {
+		panic(fmt.Sprintf("Error creating temp directory: %s", err))
+	}
 
-	tempProvider.filePrefix = prefix
-	tempProvider.extension = tmpExt
 	tempProvider.TempFilePath = tempPath
 
-	uuid := uuid.New().String()
-
-	tmpFileName := fmt.Sprintf("%s_%s.%s", prefix, uuid, tmpExt)
+	tmpFileName := fmt.Sprintf("%s_%s.%s", prefix, GetUUID(), tmpExt)
 	file := filepath.Join(tempPath, tmpFileName)
 
 	tempProvider.TempFile = file
@@ -50,6 +45,9 @@ func NewTempProvider(fileName, ext string) *TempProvider {
 // It calls os.Remove on the file path stored in the tp.File field.
 func (tp *TempProvider) Dispose() {
 	os.Remove(tp.TempFile)
+	RemoveDir(tp.TempFilePath)
+	tp.TempFile = ""
+	tp.TempFilePath = ""
 }
 
 func (tp *TempProvider) cleanExtension(extension string) string {
