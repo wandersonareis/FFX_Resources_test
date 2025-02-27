@@ -9,7 +9,7 @@ import (
 )
 
 func getResourcesAsarFile() string {
-	return filepath.Join(GetExecDir(), "resources.asar")
+	return filepath.Join(GetBasePath(), "resources.asar")
 }
 
 func readFileFromAsar(asarPackage string, asarIndexString []string) ([]byte, error) {

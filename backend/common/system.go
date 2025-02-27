@@ -26,6 +26,26 @@ func GetExecDir() string {
 	return currentDirectory
 }
 
+func GetBasePath() string {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		panic("Error when obtaining source code path")
+	}
+	
+	srcPath := filepath.Dir(filename)
+
+	if base := os.Getenv("APP_BASE_PATH"); base != "" {
+		return base
+	}
+
+	exePath, err := os.Executable()
+	if err == nil {
+		return filepath.Dir(exePath)
+	}
+
+	return srcPath
+}
+
 func GetTempDir() string {
 	return os.TempDir()
 }
