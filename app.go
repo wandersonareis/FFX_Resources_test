@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"ffxresources/backend/common"
+	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
 	"ffxresources/backend/notifications"
@@ -51,11 +52,21 @@ func (a *App) startup(ctx context.Context) {
 	}()
 
 	interactions.NewInteractionWithCtx(ctx)
+	interactions.NewInteractionWithTextFormatter(formatters.NewTxtFormatter())
 }
 
 // domReady is called after front-end resources have been loaded
 func (a App) domReady(ctx context.Context) {
 	// Add your action here
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("panic occurred:", err)
+
+			l := logger.Get()
+			l.Fatal().Caller(2).Err(err.(error)).Msg("panic occurred")
+		}
+	}()
+	
 	EventsOnStartup(ctx)
 
 	EventsOnSaveConfig(ctx)
