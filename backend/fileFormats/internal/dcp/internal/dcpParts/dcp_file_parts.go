@@ -2,7 +2,7 @@ package dcpParts
 
 import (
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats/internal/base"
+	"ffxresources/backend/fileFormats/internal/baseFormats"
 	"ffxresources/backend/fileFormats/internal/text/dlg"
 	"ffxresources/backend/interfaces"
 	"fmt"
@@ -10,7 +10,7 @@ import (
 )
 
 type DcpFileParts struct {
-	*base.FormatsBase
+	baseFormats.IBaseFileFormat
 }
 
 func NewDcpFileParts(source interfaces.ISource, destination locations.IDestination, formatter interfaces.ITextFormatter) *DcpFileParts {
@@ -19,7 +19,7 @@ func NewDcpFileParts(source interfaces.ISource, destination locations.IDestinati
 	destination.InitializeLocations(source, formatter)
 
 	return &DcpFileParts{
-		FormatsBase: base.NewFormatsBase(source, destination),
+		IBaseFileFormat: baseFormats.NewFormatsBase(source, destination),
 	}
 }
 

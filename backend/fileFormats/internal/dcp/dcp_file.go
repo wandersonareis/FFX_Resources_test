@@ -4,7 +4,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core"
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats/internal/base"
+	"ffxresources/backend/fileFormats/internal/baseFormats"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/integrity"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
@@ -14,7 +14,7 @@ import (
 )
 
 type DcpFile struct {
-	*base.FormatsBase
+	baseFormats.IBaseFileFormat
 
 	formatter   interfaces.ITextFormatter
 	fileOptions core.IDcpFileOptions
@@ -27,9 +27,9 @@ func NewDcpFile(source interfaces.ISource, destination locations.IDestination) i
 	common.CheckArgumentNil(destination, "destination")
 
 	return &DcpFile{
-		FormatsBase: base.NewFormatsBase(source, destination),
-		formatter:   interactions.NewInteractionService().TextFormatter(),
-		log:         logger.NewLoggerHandler("dcp_file"),
+		IBaseFileFormat: baseFormats.NewFormatsBase(source, destination),
+		formatter:       interactions.NewInteractionService().TextFormatter(),
+		log:             logger.NewLoggerHandler("dcp_file"),
 	}
 }
 
