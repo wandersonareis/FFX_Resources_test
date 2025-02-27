@@ -37,12 +37,14 @@ func (lc *lineBreakCounter) verify(pathList components.IList[string], partsSizes
 
 		data, err := lc.readFilePart(part)
 		if err != nil {
-			errChan <- fmt.Errorf("error when reading file part %s: %w", part, err)
+			lc.log.LogError(err, "error when reading file part %s", part)
+			errChan <- err
 			return
 		}
 
 		if err := lc.compareOcorrrences(&data, ocorrencesExpected); err != nil {
-			errChan <- fmt.Errorf("error when comparing ocorrences on file part %s: %s", part, err.Error())
+			lc.log.LogError(err, "error when comparing ocorrences on file part %s", part)
+			errChan <- err
 			return
 		}
 	}
@@ -51,15 +53,10 @@ func (lc *lineBreakCounter) verify(pathList components.IList[string], partsSizes
 
 	close(errChan)
 
-	var hasError bool
-
 	for e := range errChan {
-		lc.log.LogError(e, "error when comparing line breaks")
-		hasError = true
-	}
-
-	if hasError {
-		return fmt.Errorf("error when comparing line breaks")
+		if e != nil {
+			return fmt.Errorf("error when comparing line breaks: %w", e)
+		}
 	}
 	
 	return nil

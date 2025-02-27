@@ -1,6 +1,7 @@
 package encodingHandler
 
 import (
+	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/util"
 	"fmt"
 	"os"
@@ -30,6 +31,10 @@ func (lh *lockitEncodingHandler) FetchLockitHandler() (string, error) {
 		return "", err
 	}
 
+	if common.IsFileExists(targetFile) && lh.VerifyChecksum(targetFile, LOCKIT_HANDLER_SHA256) {
+		return targetFile, nil
+	}
+
 	if !lh.VerifyChecksum(targetFile, LOCKIT_HANDLER_SHA256) {
 		return "", fmt.Errorf("invalid checksum for lockit file handler")
 	}
@@ -43,6 +48,10 @@ func (lh *lockitEncodingHandler) FetchLockitUtf8BomNormalizer() (string, error) 
 	targetFile, err := util.GetFromResources(LOCKIT_RESOURCES_DIR, UTF8BOM_NORMALIZER_APPLICATION, util.DEFAULT_APPLICATION_FILE_EXTENSION)
 	if err != nil {
 		return "", err
+	}
+
+	if common.IsFileExists(targetFile) && lh.VerifyChecksum(targetFile, UTF8BOM_NORMALIZER_SHA256) {
+		return targetFile, nil
 	}
 
 	if !lh.VerifyChecksum(targetFile, UTF8BOM_NORMALIZER_SHA256) {

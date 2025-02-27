@@ -4,7 +4,7 @@ import (
 	"ffxresources/backend/core"
 	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats/internal/base"
+	"ffxresources/backend/fileFormats/internal/baseFormats"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/integrity"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
@@ -13,7 +13,7 @@ import (
 )
 
 type LockitFile struct {
-	*base.FormatsBase
+	baseFormats.IBaseFileFormat
 
 	source      interfaces.ISource
 	destination locations.IDestination
@@ -27,7 +27,7 @@ func NewLockitFile(source interfaces.ISource, destination locations.IDestination
 	destination.InitializeLocations(source, formatters.NewTxtFormatter())
 
 	return &LockitFile{
-		FormatsBase: base.NewFormatsBase(source, destination),
+		IBaseFileFormat: baseFormats.NewFormatsBase(source, destination),
 		log:         logger.NewLoggerHandler("lockit_file"),
 		source:      source,
 		destination: destination,

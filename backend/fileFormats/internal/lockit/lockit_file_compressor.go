@@ -5,7 +5,7 @@ import (
 	"ffxresources/backend/core/components"
 	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats/internal/base"
+	"ffxresources/backend/fileFormats/internal/baseFormats"
 	"ffxresources/backend/fileFormats/internal/lockit/internal"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/integrity"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lib"
@@ -23,7 +23,7 @@ type (
 	}
 
 	lockitFileCompressor struct {
-		*base.FormatsBase
+		baseFormats.IBaseFileFormat
 
 		binaryExtractedFilePartsList  components.IList[lockitParts.LockitFileParts]
 		binaryTranslatedFilePartsList components.IList[lockitParts.LockitFileParts]
@@ -34,7 +34,6 @@ type (
 		filePartsJoiner    internal.ILockitPartsJoiner
 		lockitEncoding     ffxencoding.IFFXTextLockitEncoding
 
-		//formatter interfaces.ITextFormatter
 		options core.ILockitFileOptions
 		logger  logger.ILoggerHandler
 	}
@@ -48,11 +47,10 @@ func newLockitFileCompressor(
 	logger logger.ILoggerHandler,
 ) *lockitFileCompressor {
 	return &lockitFileCompressor{
-		FormatsBase:      base.NewFormatsBase(source, destination),
+		IBaseFileFormat:      baseFormats.NewFormatsBase(source, destination),
 		filePartsEncoder: lockitParts.NewLockitFilePartsEncoder(logger),
 		lockitEncoding:   lockitEncoding,
 
-		//formatter: formatters.NewTxtFormatter(),
 		options: fileOptions,
 		logger:  logger,
 	}
@@ -148,7 +146,6 @@ func (lfc *lockitFileCompressor) ensureAllLockitTranslatedTextFileParts(partsLen
 	defer translatedTextList.Clear()
 
 	lfc.textTranslatedFilePartsList.ForEach(func(part lockitParts.LockitFileParts) {
-		//part.GetDestination().InitializeLocations(part.GetSource(), lfc.formatter)
 		translatedTextList.Add(
 			part.GetSource().Get().Path)
 	})
@@ -169,7 +166,6 @@ func (lfc *lockitFileCompressor) ensureAllLockitTranslatedBinaryFileParts(partsL
 	defer translatedBinaryList.Clear()
 
 	lfc.binaryTranslatedFilePartsList.ForEach(func(part lockitParts.LockitFileParts) {
-		//part.GetDestination().InitializeLocations(part.GetSource(), lfc.formatter)
 		translatedBinaryList.Add(
 			part.GetSource().Get().Path)
 	})

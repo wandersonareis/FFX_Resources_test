@@ -4,7 +4,7 @@ import (
 	"ffxresources/backend/common"
 	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats/internal/base"
+	"ffxresources/backend/fileFormats/internal/baseFormats"
 	lockitFileEncoder "ffxresources/backend/fileFormats/internal/lockit/internal/encoder"
 	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/formatters"
@@ -16,7 +16,7 @@ import (
 
 type (
 	LockitFileParts struct {
-		*base.FormatsBase
+		baseFormats.IBaseFileFormat
 		decoder *lockitFileEncoder.LockitDecoder
 		encoder *lockitFileEncoder.LockitEncoder
 		logger  logger.ILoggerHandler
@@ -36,14 +36,14 @@ func NewLockitFileParts(source interfaces.ISource, destination locations.IDestin
 	destination.InitializeLocations(source, formatters.NewTxtFormatter())
 
 	return &LockitFileParts{
-		FormatsBase: base.NewFormatsBase(source, destination),
-		decoder:     lockitFileEncoder.NewDecoder(),
-		encoder:     lockitFileEncoder.NewEncoder(),
-		logger:      logger.NewLoggerHandler("lockit_file_parts"),
+		IBaseFileFormat: baseFormats.NewFormatsBase(source, destination),
+		decoder:         lockitFileEncoder.NewDecoder(),
+		encoder:         lockitFileEncoder.NewEncoder(),
+		logger:          logger.NewLoggerHandler("lockit_file_parts"),
 	}
 }
 
-func (l *LockitFileParts) Extract(dec LockitEncodingType, encoding ffxencoding.IFFXTextLockitEncoding) {
+func (l *LockitFileParts) Extract(dec LockitEncodingType, encoding ffxencoding.IFFXTextLockitEncoding) error {
 	errChan := make(chan error, 1)
 	defer close(errChan)
 
@@ -57,9 +57,9 @@ func (l *LockitFileParts) Extract(dec LockitEncodingType, encoding ffxencoding.I
 	}
 
 	if err := <-errChan; err != nil {
-		l.logger.LogError(err, "error when extracting lockit file parts")
+		return fmt.Errorf("error when extracting lockit file parts: %w", err)
 	}
-
+	return nil
 }
 
 func (l *LockitFileParts) Compress(enc LockitEncodingType, encoding ffxencoding.IFFXTextLockitEncoding, errChan chan error) {

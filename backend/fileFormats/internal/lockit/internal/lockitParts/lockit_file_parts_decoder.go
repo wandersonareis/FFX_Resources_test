@@ -23,18 +23,27 @@ func (ld *LockitFilePartsDecoder) DecodeFileParts(partsList components.IList[Loc
 		return fmt.Errorf("lockit file parts list is empty")
 	}
 
+	errChan := make(chan error, partsList.GetLength())
+
 	// extractorFunc applies different encodings based on the part’s index.
 	// Even parts (greater than zero) are processed using UTF-8 encoding,
 	// while index zero and odd parts use a custom FFX codepage.
 	extractorFunc := func(index int, part LockitFileParts) {
 		if index > 0 && index%2 == 0 {
-			part.Extract(UTF8Encoding, lockitEncoding)
+			errChan <- part.Extract(UTF8Encoding, lockitEncoding)
 		} else {
-			part.Extract(FFXEncoding, lockitEncoding)
+			errChan <- part.Extract(FFXEncoding, lockitEncoding)
 		}
 	}
 
-	partsList.ParallelForIndex(extractorFunc)
+	partsList.ForIndex(extractorFunc)
+	close(errChan)
+
+	for err := range errChan {
+		if err != nil {
+			return fmt.Errorf("error when extracting lockit file parts: %w", err)
+		}
+	}
 
 	return nil
 }
