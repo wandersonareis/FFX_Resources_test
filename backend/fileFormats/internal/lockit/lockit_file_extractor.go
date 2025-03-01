@@ -30,7 +30,7 @@ type (
 	}
 )
 
-func newLockitFileExtractor(
+func NewLockitFileExtractor(
 	source interfaces.ISource,
 	destination locations.IDestination,
 	lockitEncoding ffxencoding.IFFXTextLockitEncoding,

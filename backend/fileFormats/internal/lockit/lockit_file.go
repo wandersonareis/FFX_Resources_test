@@ -62,7 +62,7 @@ func (lf *LockitFile) extract() error {
 
 	lf.ensureFileOptions()
 
-	fileExtractor := newLockitFileExtractor(lf.source, lf.destination, lockitEncoding, lf.log)
+	fileExtractor := NewLockitFileExtractor(lf.source, lf.destination, lockitEncoding, lf.log)
 
 	return fileExtractor.Extract()
 }
