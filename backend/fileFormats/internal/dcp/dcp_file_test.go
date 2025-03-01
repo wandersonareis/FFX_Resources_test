@@ -1,118 +1,207 @@
-package dcp
+package dcp_test
 
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core"
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/core/locations/locationsBase"
-	"ffxresources/backend/fileFormats/internal/baseFormats"
+	"ffxresources/backend/fileFormats/internal/dcp"
+	"ffxresources/backend/fileFormats/internal/dcp/internal/integrity"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/lib"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
+	"fmt"
+
 	"os"
 	"path/filepath"
-	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 )
 
-func TestNewDcpFile(t *testing.T) {
-	assert := assert.New(t)
+var _ = ginkgo.Describe("DcpFile", func() {
+	var (
+		interactionService *interactions.InteractionService
+		extractTempPath    string
+		reimportTempPath   string
+		translatePath      string
+		config             *interactions.FFXAppConfig
+		formatter          interfaces.ITextFormatter
+		fileOptions        core.IDcpFileOptions
+		source             interfaces.ISource
+		destination        locations.IDestination
+		dcpFile            interfaces.IFileProcessor
+		temp               *common.TempProvider
+		gameVersionDir     string
+		err                error
+	)
 
-	var interactionService *interactions.InteractionService
+	ginkgo.BeforeEach(func() {
+		gomega.Expect(os.Setenv("APP_BASE_PATH", `F:\ffxWails\FFX_Resources\build\bin`)).To(gomega.Succeed())
 
-	t.Run("Set APP_BASE_PATH", func(t *testing.T) {
-		err := os.Setenv("APP_BASE_PATH", `F:\ffxWails\FFX_Resources\build\bin`)
-		assert.Nil(err)
-	})
+		testPath := `F:\ffxWails\FFX_Resources\build\bin\data\ffx_ps2\ffx2\master\new_uspc\menu\macrodic.dcp`
+		currentDir, err := filepath.Abs(".")
+		gomega.Expect(err).To(gomega.BeNil())
 
-	testPath := `F:\ffxWails\FFX_Resources\build\bin\data\ffx_ps2\ffx2\master\new_uspc\menu\macrodic.dcp`
-	currentDir, err := filepath.Abs(".")
-	assert.Nil(err)
+		temp = common.NewTempProvider("", "")
 
-	temp := common.NewTempProvider("", "")
+		extractTempPath = filepath.Join(temp.TempFilePath, "extract")
+		reimportTempPath = filepath.Join(temp.TempFilePath, "reimport")
+		translatePath = filepath.Join(currentDir, "/testData/")
 
-	extractTempPath := filepath.Join(temp.TempFilePath, "extract")
-	defer func() {
-		err = common.RemoveDir(extractTempPath)
-		assert.Nil(err)
-	}()
+		gameVersionDir = "FFX-2"
 
-	reimportTempPath := filepath.Join(temp.TempFilePath, "reimport")
-	translatePath := filepath.Join(currentDir, "/testData/")
+		// Setup config
+		config = &interactions.FFXAppConfig{
+			FFXGameVersion:    2,
+			GameFilesLocation: translatePath,
+			ExtractLocation:   extractTempPath,
+			TranslateLocation: translatePath,
+			ImportLocation:    reimportTempPath,
+		}
 
-	config := &interactions.FFXAppConfig{
-		FFXGameVersion:    2,
-		GameFilesLocation: translatePath,
-		ExtractLocation:   extractTempPath,
-		TranslateLocation: translatePath,
-		ImportLocation:    reimportTempPath,
-	}
-	t.Run("Config is not nil", func(t *testing.T) {
-		assert.NotNil(config)
-	})
+		// Initialize formatter
+		formatter = &formatters.TxtFormatter{
+			TargetExtension: ".txt",
+			GameVersionDir:  gameVersionDir,
+			GameFilesPath:   translatePath,
+		}
 
-	t.Run("Initialize Interaction Service", func(t *testing.T) {
+		// Initialize file options
+		fileOptions = core.NewDcpFileOptions(2)
+
+		// Setup interaction service
 		interactionService = interactions.NewInteractionServiceWithConfig(config)
-		assert.NotNil(interactionService)
-		assert.NotNil(interactionService.FFXAppConfig())
+		interactionService = interactions.NewInteractionWithTextFormatter(formatter)
+
+		// Setup source and destination
+		source, err = locations.NewSource(testPath)
+		gomega.Expect(err).To(gomega.BeNil())
+
+		destination = &locations.Destination{
+			ExtractLocation:   locations.NewExtractLocationInfo(locationsBase.WithDirectoryName("extracted"), locationsBase.WithTargetDirectory(extractTempPath), locationsBase.WithGameVersionDir(gameVersionDir)),
+			TranslateLocation: locations.NewTranslateLocationInfo(locationsBase.WithDirectoryName("translated"), locationsBase.WithTargetDirectory(translatePath), locationsBase.WithGameVersionDir(gameVersionDir)),
+			ImportLocation:    locations.NewImportLocationInfo(locationsBase.WithDirectoryName("reimported"), locationsBase.WithTargetDirectory(reimportTempPath), locationsBase.WithGameVersionDir(gameVersionDir)),
+		}
+
+		destination.InitializeLocations(source, formatter)
+
+		dcpFile = dcp.NewDcpFile(source, destination)
 	})
 
-	gameVersionDir := "FFX-2"
-
-	formatter := &formatters.TxtFormatter{
-		TargetExtension: ".txt",
-		GameVersionDir:  gameVersionDir,
-		GameFilesPath:   translatePath,
-	}
-	t.Run("Formatter is not nil", func(t *testing.T) {
-		assert.NotNil(formatter)
+	ginkgo.AfterEach(func() {
+		err = common.RemoveDir(extractTempPath)
+		gomega.Expect(err).To(gomega.BeNil())
 	})
 
-	interactionService = interactions.NewInteractionWithTextFormatter(formatter)
-
-	t.Run("Interaction service formatter is not nil", func(t *testing.T) {
-		assert.NotNil(interactionService.TextFormatter())
+	ginkgo.It("should have valid configuration", func() {
+		gomega.Expect(config).NotTo(gomega.BeNil())
 	})
 
-	source, err := locations.NewSource(testPath)
-	assert.Nil(err)
-
-	destination := &locations.Destination{
-		ExtractLocation:   locations.NewExtractLocationInfo(locationsBase.WithDirectoryName("extracted"), locationsBase.WithTargetDirectory(extractTempPath), locationsBase.WithGameVersionDir(gameVersionDir)),
-		TranslateLocation: locations.NewTranslateLocationInfo(locationsBase.WithDirectoryName("translated"), locationsBase.WithTargetDirectory(translatePath), locationsBase.WithGameVersionDir(gameVersionDir)),
-		ImportLocation:    locations.NewImportLocationInfo(locationsBase.WithDirectoryName("reimported"), locationsBase.WithTargetDirectory(reimportTempPath), locationsBase.WithGameVersionDir(gameVersionDir)),
-	}
-	
-	t.Run("Destination is not nil", func(t *testing.T) {
-		assert.NotNil(destination)
+	ginkgo.It("should have initialized interaction service", func() {
+		gomega.Expect(interactionService).NotTo(gomega.BeNil())
+		gomega.Expect(interactionService.FFXAppConfig()).NotTo(gomega.BeNil())
 	})
-	
-	destination.InitializeLocations(source, formatter)
 
-	t.Run("Destination extract location path is temporary path", func(t *testing.T) {
+	ginkgo.It("should have valid formatter", func() {
+		gomega.Expect(formatter).NotTo(gomega.BeNil())
+	})
+
+	ginkgo.It("should have interaction service with text formatter", func() {
+		gomega.Expect(interactionService.TextFormatter()).NotTo(gomega.BeNil())
+	})
+
+	ginkgo.It("should have valid destination", func() {
+		gomega.Expect(destination).NotTo(gomega.BeNil())
+	})
+
+	ginkgo.It("should have correct extract location path", func() {
 		expected := filepath.Join(extractTempPath, gameVersionDir, lib.DCP_PARTS_TARGET_DIR_NAME)
 		expected = filepath.ToSlash(expected)
 
 		actual := destination.Extract().Get().GetTargetPath()
 		actual = filepath.ToSlash(actual)
 
-		assert.Equal(expected, actual)
+		gomega.Expect(actual).To(gomega.Equal(expected))
 	})
 
+	ginkgo.It("should extract the DCP file successfully", func() {
+		gomega.Expect(dcpFile).NotTo(gomega.BeNil())
+		gomega.Expect(dcpFile.Extract()).To(gomega.Succeed())
+	})
 
-	dcpFile := &DcpFile{
-		IBaseFileFormat: &baseFormats.BaseFileFormat{
-			Source:      source,
-			Destination: destination,
-		},
-		formatter:   formatter,
-		fileOptions: core.NewDcpFileOptions(2),
-		log:         logger.NewLoggerHandler("dcp_file_testing"),
-	}
-	assert.NotNil(dcpFile)
+	ginkgo.It("should have integrity text check fail", func() {
+		gomega.Expect(dcpFile).NotTo(gomega.BeNil())
+		gomega.Expect(dcpFile.Extract()).To(gomega.Succeed())
 
-	err = dcpFile.Extract()
-	assert.Nil(err)
-}
+		dcpIntegrity := integrity.NewDcpFileExtractorIntegrity(logger.NewLoggerHandler("dcp_file_integrity_testing"))
+		gomega.Expect(dcpIntegrity).NotTo(gomega.BeNil())
+
+		targetPath := destination.Extract().Get().GetTargetPath()
+		gomega.Expect(targetPath).NotTo(gomega.BeEmpty())
+
+		gomega.Expect(fileOptions).NotTo(gomega.BeNil())
+
+		matchingFiles, err := filepath.Glob(filepath.Join(targetPath, "*.txt"))
+		gomega.Expect(err).To(gomega.BeNil())
+		gomega.Expect(matchingFiles).NotTo(gomega.BeEmpty())
+
+		if len(matchingFiles) > 0 {
+			randomFile := matchingFiles[1]
+			fmt.Println(randomFile)
+			err = os.Remove(randomFile)
+			gomega.Expect(err).To(gomega.Succeed())
+		}
+
+		err = dcpIntegrity.Verify(targetPath, formatter, fileOptions)
+
+		gomega.Expect(err).ToNot(gomega.Succeed())
+		gomega.Expect(err.Error()).To(gomega.ContainSubstring("dcp file parts count mismatch: expected 6, got 7"))
+	})
+
+	ginkgo.It("should have integrity binary check fail", func() {
+		gomega.Expect(dcpFile).NotTo(gomega.BeNil())
+		gomega.Expect(dcpFile.Extract()).To(gomega.Succeed())
+
+		dcpIntegrity := integrity.NewDcpFileExtractorIntegrity(logger.NewLoggerHandler("dcp_file_integrity_testing"))
+		gomega.Expect(dcpIntegrity).NotTo(gomega.BeNil())
+
+		targetPath := destination.Extract().Get().GetTargetPath()
+		gomega.Expect(targetPath).NotTo(gomega.BeEmpty())
+
+		gomega.Expect(fileOptions).NotTo(gomega.BeNil())
+
+		matchingFiles, err := filepath.Glob(filepath.Join(targetPath, "*.00?"))
+		gomega.Expect(err).To(gomega.BeNil())
+		gomega.Expect(matchingFiles).NotTo(gomega.BeEmpty())
+
+		if len(matchingFiles) > 0 {
+			randomFile := matchingFiles[1]
+			fmt.Println(randomFile)
+			err = os.Remove(randomFile)
+			gomega.Expect(err).To(gomega.Succeed())
+		}
+
+		err = dcpIntegrity.Verify(targetPath, formatter, fileOptions)
+
+		gomega.Expect(err).ToNot(gomega.Succeed())
+		gomega.Expect(err.Error()).To(gomega.ContainSubstring("failed to ensure all DCP file binary parts"))
+	})
+
+	ginkgo.It("shoult have integrity check", func() {
+		gomega.Expect(dcpFile).NotTo(gomega.BeNil())
+		gomega.Expect(dcpFile.Extract()).To(gomega.Succeed())
+
+		dcpIntegrity := integrity.NewDcpFileExtractorIntegrity(logger.NewLoggerHandler("dcp_file_integrity_testing"))
+		gomega.Expect(dcpIntegrity).NotTo(gomega.BeNil())
+
+		targetPath := destination.Extract().Get().GetTargetPath()
+		gomega.Expect(targetPath).NotTo(gomega.BeEmpty())
+
+		gomega.Expect(fileOptions).NotTo(gomega.BeNil())
+
+		gomega.Expect(dcpIntegrity.Verify(targetPath, formatter, fileOptions)).To(gomega.Succeed())
+	})
+})

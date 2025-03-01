@@ -31,6 +31,7 @@ func NewDcpFileExtractorIntegrity(logger logger.ILoggerHandler) IDcpFileExtracto
 
 func (dfei *dcpFileExtractorIntegrity) Verify(targetPath string, formatter interfaces.ITextFormatter, fileOptions core.IDcpFileOptions) error {
 	common.CheckArgumentNil(targetPath, "targetPath")
+	common.CheckArgumentNil(formatter, "formatter")
 	common.CheckArgumentNil(fileOptions, "fileOptions")
 
 	if err := common.CheckPathExists(targetPath); err != nil {
