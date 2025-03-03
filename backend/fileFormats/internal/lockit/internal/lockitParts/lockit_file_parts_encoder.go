@@ -32,13 +32,13 @@ func (le *LockitFilePartsEncoder) EncodeFilesParts(
 
 	compressorFunc := func(index int, part LockitFileParts) {
 		if index > 0 && index%2 == 0 {
-			part.Compress(UTF8Encoding, lockitEncoding, errChan)
+			errChan <- part.Compress(UTF8Encoding, lockitEncoding)
 		} else {
-			part.Compress(FFXEncoding, lockitEncoding, errChan)
+			errChan <- part.Compress(FFXEncoding, lockitEncoding)
 		}
 	}
 
-	binaryPartsList.ParallelForIndex(compressorFunc)
+	binaryPartsList.ForIndex(compressorFunc)
 
 	close(errChan)
 

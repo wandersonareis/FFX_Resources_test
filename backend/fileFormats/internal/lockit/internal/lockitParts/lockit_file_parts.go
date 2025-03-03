@@ -62,16 +62,26 @@ func (l *LockitFileParts) Extract(dec LockitEncodingType, encoding ffxencoding.I
 	return nil
 }
 
-func (l *LockitFileParts) Compress(enc LockitEncodingType, encoding ffxencoding.IFFXTextLockitEncoding, errChan chan error) {
+func (l *LockitFileParts) Compress(enc LockitEncodingType, encoding ffxencoding.IFFXTextLockitEncoding) error {
 	translatedTextFile := l.GetDestination().Translate().Get().GetTargetFile()
 	outputTranslatedBinary := common.RemoveOneFileExtension(translatedTextFile)
 
+	if err := common.CheckPathExists(translatedTextFile); err != nil {
+		return err
+	}
+
 	switch enc {
 	case FFXEncoding:
-		errChan <- l.encoder.LockitEncoderFfx(translatedTextFile, outputTranslatedBinary, encoding)
+		if err := l.encoder.LockitEncoderFfx(translatedTextFile, outputTranslatedBinary, encoding); err != nil {
+			return err
+		}
 	case UTF8Encoding:
-		errChan <- l.encoder.LockitEncoderLoc(translatedTextFile, outputTranslatedBinary, encoding)
+		if err := l.encoder.LockitEncoderLoc(translatedTextFile, outputTranslatedBinary, encoding); err != nil {
+			return err
+		}
 	default:
-		errChan <- fmt.Errorf("invalid encode type: %d", enc)
+		return fmt.Errorf("invalid encode type: %d", enc)
 	}
+
+	return nil
 }

@@ -8,7 +8,6 @@ import (
 	"ffxresources/backend/fileFormats/internal/baseFormats"
 	"ffxresources/backend/fileFormats/internal/lockit/internal"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lockitParts"
-	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
@@ -34,14 +33,15 @@ func NewLockitFileExtractor(
 	source interfaces.ISource,
 	destination locations.IDestination,
 	lockitEncoding ffxencoding.IFFXTextLockitEncoding,
+	fileOptions core.ILockitFileOptions,
 	logger logger.ILoggerHandler) *LockitFileExtractor {
 	return &LockitFileExtractor{
 		IBaseFileFormat:  baseFormats.NewFormatsBase(source, destination),
 		filePartsDecoder: lockitParts.NewLockitFilePartsDecoder(),
 		lockitEncoding:   lockitEncoding,
-		options:          core.NewLockitFileOptions(interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()),
 
-		log: logger,
+		options: fileOptions,
+		log:     logger,
 	}
 }
 

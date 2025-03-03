@@ -55,7 +55,7 @@ func (lc *lineBreakCounter) verify(pathList components.IList[string], partsSizes
 
 	for e := range errChan {
 		if e != nil {
-			return fmt.Errorf("error when comparing line breaks: %w", e)
+			return e
 		}
 	}
 	
