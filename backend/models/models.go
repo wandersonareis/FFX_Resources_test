@@ -35,14 +35,21 @@ func (gv GameVersion) String() string {
 	}
 }
 
-type GameDataInfo struct {
-	FilePath       string `json:"file_path"`
-	ExtractedFile  string `json:"extracted_file"`
-	TranslatedFile string `json:"translated_file"`
-	ImportedFile   string `json:"imported_file"`
-}
+type (
+	GameDataInfo struct {
+		FilePath       string `json:"file_path"`
+		ExtractedFile  string `json:"extracted_file"`
+		TranslatedFile string `json:"translated_file"`
+		ImportedFile   string `json:"imported_file"`
+	}
 
-type Pointer struct {
-	Offset int64
-	Value  uint32
-}
+	Pointer struct {
+		Offset int64
+		Value  uint32
+	}
+
+	FileComparisonEntry struct {
+		FromFile string
+		ToFile   string
+	}
+)
