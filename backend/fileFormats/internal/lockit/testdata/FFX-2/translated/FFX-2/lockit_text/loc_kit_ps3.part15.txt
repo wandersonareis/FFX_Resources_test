@@ -1,0 +1,32 @@
+
+Invincible
+On
+Off
+Encounter Override
+Normal
+No Encounters
+Frequently
+Get 50000 Gils
+Get 2000 Gils
+Full Restoration
+Free Camera
+On
+Off
+Hide HUD
+On
+Off
+Time Stop 
+On
+Off
+Auto Battle
+On
+Off
+Game Speed
+Normal
+2X
+4X
+
+: Skip
+Press {Button L2} to quit Auto Battle.
+Auto Battle
+Auto battle.

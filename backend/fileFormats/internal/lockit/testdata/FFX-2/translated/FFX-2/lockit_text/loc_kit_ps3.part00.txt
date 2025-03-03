@@ -1,0 +1,80 @@
+
+
+FINAL FANTASY X-2 HD Remaster
+Inicialização do troféu falhou.{NEWLINE}Por favor, saia do jogo.
+Carregando dados do troféu...
+Saindo do jogo devido a espaço livre insuficiente no armazenamento do sistema.{NEWLINE}Pelo menos mais {VAR05:30} MB de espaço livre são necessários.
+FINAL FANTASY X-2 Conclusão
+Obtenha todos os troféus disponíveis de FINAL FANTASY X-2.
+Vestida para a Ocasião
+Mude os dresspheres de Yuna, Rikku e Paine em uma única batalha.
+Specialty
+Obtain one special dress
+Good Listener
+Listen to all of Maechen's stories
+Tricky Trapper
+Help Clasko catch a chocobo by the end of Chapter 3
+Zeroed Out
+Defeat YSLS-Zero
+Defeating an Old Friend
+Defeat Bahamut
+Dousing the Fire
+Defeat Zalamander
+Sphere Breaker
+Win 10 times at Sphere Break
+Alchemist
+Use Mix 30 times
+Learner
+Learn 5 Blue Bullet skills
+Millionaire
+Pay off O'aka's debt
+Teamwork in FINAL FANTASY X-2 !
+Win a blitzball match in FINAL FANTASY X-2
+Excellent Negotiator
+Use Bribe 30 times
+Complete Ability
+Complete the ability set for one dress
+Gambler's Dream
+Roll the same number on all the Gambler's Dice
+Lifetime Support
+View one complete fiend tale
+Complete Episode 
+Complete an episode in Chapter 5
+Treasure Hunter
+Open the chest that includes the Ribbon in the Bevelle Underground
+The Gunner
+Reach the highest level (LVMAX) in Gunner's Gauntlet
+Full Chain
+Achieve a 99 chain attack
+Overkill
+Deal 99999 damage with one attack
+Chocobo Whisperer
+Catch the Amazing Chocobo
+Sphere Hunter
+Obtain all Spheres
+Sphere Hunter
+Obtain all dresspheres
+Dancing Queen
+Obtain Magical Dances, Vol. II
+Monster Master
+Complete Shinra's Bestiary
+Founder
+Defeat Trema
+Machine of War
+Defeat Vegnagun
+Sweet Perfection
+Complete 100% of the main story
+Just Starting
+Reach the 10th floor of Iutycyr Tower
+Still a Ways 
+Reach the 20th floor of Iutycyr Tower and defeat the boss
+Midway Through
+Reach the 40th floor of Iutycyr Tower and defeat the boss
+Almost There
+Reach the 60th floor of Iutycyr Tower and defeat the boss
+Tonberry's Treasure
+Obtain treasure in the Tonberry area
+Giant Tower
+Reach the 80th floor of Iutycyr Tower and defeat the boss
+
+FINAL FANTASY X/X-2 HD Remaster

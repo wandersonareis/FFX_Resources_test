@@ -1,0 +1,261 @@
+Overwrite existing file?
+Yes
+No
+The file is corrupted. Unable to load save data.
+OK
+Data is corrupt.
+The characters' name will be reset to default because save data from a different language has been loaded.
+OK
+No Saved Data, please return to the Main Menu.
+Saving…Do not quit the game
+Loading…Do not quit the game
+Select save data
+Select save area
+Autosave
+New Save Data
+Play Time:
+Overwrite existing file?
+Yes
+No
+The file is corrupted. Unable to load save data.
+OK
+Data is corrupt.
+No Saved Data, please return to the Main Menu.
+
+HELP
+Default
+Back to default setting
+Reset to default? 
+Yes
+No
+OK
+Save changes and go back to previous page
+Cancel
+Cancel changes and go back to previous page
+Resume
+Resume game
+System settings
+Change system settings
+Special features
+Use special features
+Change parameters
+Change game parameters
+Quit
+Quit the game
+Audio
+Change audio settings
+Video
+Change video settings
+Key bindings
+Set up custom key bindings for both keyboard and controller
+Cancel
+Back to previous page
+Voice volume
+Set voice volume
+Music volume
+Set music volume
+SFX volume
+Set SFX volume
+Master volume
+Set master volume
+Resolution
+Set game resolution
+Screen Mode
+Set game screen mode
+Windowed Mode
+Full Screen Mode
+Borderless Mode
+Brightness
+Set brightness
+Vsync
+Set Vsync
+On
+Off
+Anisotropic Filtering
+Set Anisotropic Filtering
+Fog
+Set Fog
+On
+Off
+Shadows
+Set shadow quality
+Low (1024x1024)
+Medium (2048x2048)
+High (4096x4096)
+Texture Quality
+Set texture quality
+Low
+Medium
+High
+Anti-Aliasing
+Set Anti-Aliasing
+Off
+MSAA 2x
+MSAA 4x
+MSAA 8x
+Color Correction
+Set color correction
+On
+Off
+Anti-Aliasing (Post Filter)
+Set Anti-Aliasing (Post Filter)
+Off
+FXAA
+SMAA Low
+SMAA Medium
+SMAA High
+SMAA ULTRA 
+Unsharp Mask
+Set Unsharp Mask
+On
+Off
+Ambient Occlusion
+Set ambient occlusion
+Off
+HDAO Low
+HDAO Medium
+HDAO High
+30FPS
+Swith to 30FPS
+60FPS
+Swith to 60FPS
+Keyboard
+Adjust Keyboard settings
+Controller
+Adjust Controller settings
+Cancel
+Back to previous page
+Keyboard 1
+Keyboard 2
+Click the buttons to change keybinding
+Press required button to confirm keybinding
+Move up
+Move down
+Move left
+Move right
+Talk/Examine/Confirm
+Jump/Climb/Cancel (when pressed at certains locations)
+Open menu (Field Screen)/Return to title menu (when game is paused)/Pass character turn (Battle Screen)
+Skip movie/cut-scene (While paused during a movie/cut-scene. Certain scenes cannot be skipped.)
+Change character (Menu screen)/Spherechange (Battle screen)
+Change character (Menu screen)/Trigger Happy (Gunner) rapid fire (Battle screen)
+Scroll back (in item list, etc.)
+Scroll forward (in item list, etc.)
+Pause Menu
+Creature morale down (when a creature is in the party)
+Creature morale up (when a creature is in the party)
+Hold to Walk
+Turbo
+Auto Battle
+Free Camera
+Hide HUD
+Time Stop
+Supercharge
+Enemy Encounter Overide
+Get 50000 Gile
+Esc Menu (Cannot be customed)
+Move up
+Move down
+Move left
+Move right
+Talk/Examine/Confirm/Normal attack
+Cancel
+Open menu
+Skip movie/cut-scene (While paused during a movie/cut-scene. Certain scenes cannot be skipped.)/Auto-sort (when viewing items)/Select target in range
+Rotate character left
+Rotate character Right
+Switch page left (Menu)
+Switch page right (Menu)
+Rotate camera left
+Rotate camera right
+Zoom camera in
+Zoom camera out
+Pause (cannot be performed under certain circumstances)
+Rotate character (with additional button)
+Pass turn (with additional button)
+Turbo
+Free Camera
+Hide HUD
+Time Stop
+Supercharge
+Full Restoration
+Get 2000 Gile
+Esc Menu (Cannot be customed)
+Special features
+Press $key$ to activate
+Turbo
+Use this function to speed up the game to x2 or x4.@el@It won't affect player input in menus and cut-scenes/FMV.
+Change game speed.
+Supercharge
+Characters will be supercharged.
+The characters will be supercharged in certain battles if this is set to On.
+Enemy Encounter Override
+Increase or decrease enemy encounter rate.
+Set enemy encounter frequency. It is not affected by character equipment.
+Auto Battle
+Characters will fight using AI.
+Let characters fight automatically.
+Free camera
+Use mouse to rotate camera.@el@Use directional buttons to move camera.
+Player can control game camera.
+Time Stop
+Use to freeze the images.
+Freeze the screen.
+Hide HUD
+Use to hide the user interface.
+Hide the user interface.
+Cancel
+Back to previous page
+Invincible
+The chatacters will be invincible in certain battles if the set is On. Press F6 to active.(Default Button)
+On
+Off
+Enemy encounter override
+Player can set game encounter fruquence, and it won't be effected by character's equipments. Press F7 to active.(Default Button)
+Normal
+No Encounters
+Fruquently
+Get 50000 Gils
+Get 50000 gils.
+Get
+You get 50000 Gils!
+Get all items
+Get 99 of all common items, not including key items. 
+Get all common items with 99, not including key items. (It's an irreversible operation if player gets all items.)
+Get
+Do you want to get all items?
+Yes
+No
+Unlock all skills
+Unlock all the character's skills.
+Unlock all the character's skills. (It's an irreversible operation if player gets all items.)
+Unlock
+Do you want to unlock all skills?
+Yes
+No
+MAX gil
+Get max gil.
+Status MAX
+Get max status.
+Invincible
+The chatacters will be invincible in certain battles if the set is On. Press F6 to active.(Default Button)
+On
+Off
+Full Restoration
+Restore all the HP, MP and buff status. Press F7 to active.(Default Button)
+Get
+Do you want to restore character's status?
+Yes
+No
+Get 2000 Gils
+Get 2000 gils
+Get
+You get 2000 Gils!
+MAX gil
+Get max gil.
+Status MAX
+Get max status.
+Get
+This operation is irreversible.@el@Do you want to use this function?
+Yes
+No

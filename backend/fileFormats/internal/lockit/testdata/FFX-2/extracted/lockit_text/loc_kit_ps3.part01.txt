@@ -1,0 +1,8 @@
+
+{Button L1}{u07}-: Quit
+{u0B:3B}{u07}-: Resume
+Quit playing and exit to the title menu?
+All unsaved progress will be lost upon exiting.{NEWLINE}If you wish to continue playing, select "No."
+Yes
+No
+

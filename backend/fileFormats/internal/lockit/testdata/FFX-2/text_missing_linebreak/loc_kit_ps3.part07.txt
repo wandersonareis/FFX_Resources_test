@@ -1,0 +1,1117 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Cross-Save
+Share save data between the PlayStation{Registered}4 system and PlayStation{Registered}Vita system.
+Cross-Save
+Share save data between the PlayStation{Registered}4 system and PlayStation{Registered}Vita system.{NEWLINE}To share data, both systems must be signed into the same Sony Entertainment{NEWLINE}Network account.
+Syncing Save Data
+Send save data to sync to the cloud server using {Button R1} (when there are{NEWLINE}open slots). From now on, when you connect to the cloud server, the synced data{NEWLINE}will be updated to the data with the longest playing time, unless the sync is{NEWLINE}deactivated with {Button R2} (all older data will be overwritten).
+*Synced save data can be identified with the {Direcional Left+Right} icon.
+Warning
+If there is save data on the cloud server that is not synced to a system when it connects,{NEWLINE}all such data will be automatically copied and synced to the system as{NEWLINE}new data. Please keep this in mind when managing the system’s local save capacity.
+Connecting to cloud server to sync save data.
+All synced save data will be updated to the data with{NEWLINE}the longest playing time (all older data will be overwritten).
+Proceed?
+{Button R1} Yes (proceed to Cross-Save screen)
+{Button L2} No (return to title screen)
+{Button R1} Send/Sync save data
+{Button R2} Delete cloud save/Deactivate sync
+{Button L2} Cancel/Quit
+Sending Save Data {VAR05:30} to cloud server for sync.
+From now on, when you connect to the cloud server,{NEWLINE}the synced data will be updated to the data with{NEWLINE}the longest playing time, unless the sync is deactivated{NEWLINE}with {Button R2} (all older data will be overwritten).
+Proceed?
+{Button R1} Yes
+{Button L2} No
+Quit Cross-Save?
+The next time you connect to the cloud server, {NEWLINE}any save data on the cloud server that is not synced{NEWLINE}to your system will be automatically copied and synced{NEWLINE}to the system as new data.{NEWLINE}Please keep this in mind when managing the system's{NEWLINE}local save capacity.
+Please keep this in mind when managing the system's local save capacity.
+{Button R1} Yes
+{Button L2} No
+
+A network error has occurred. Please try again later.{NEWLINE}If you are signed in to PSN{xF1}  from{NEWLINE}another system, please sign out before trying again.
+Trophy Information
+Share game trophy information between PlayStation{Registered}3 and PlayStation{Registered}Vita.{NEWLINE}To share trophy information, both systems must be  signed into the same PlayStation{Registered}Network account.
+Loading
+{Button L2} Cancel
+Data transfer error!
+{Button R1} Confirm
+Local Saves
+Cloud Server
+Save Data {VAR05:30}
+Play Time: {VAR05:31}
+Chapter {VAR05:30}
+SYNCED
+Cloud Save {VAR05:30}
+Sync save data
+Delete cloud save
+Delete Cloud Save {VAR05:30} and deactivate sync?
+YES
+NO
+Deleting cloud save...
+Failed to delete selected cloud save.
+Sync Save Data {VAR05:30}?
+YES
+NO
+Syncing with cloud server...
+Failed to sync to cloud server.
+Connect to PlayStation{Registered}Network.
+A network error has occurred.
+Internet connection has been lost. {NEWLINE}Aborting Cross-Save.
+Reconnecting.
+The maximum limit for cloud saves has{NEWLINE}been reached.
+Cross-save has been aborted due to insufficient free space in local storage.{NEWLINE}At least {VAR05:30} MB more free space is needed to perform a cross-save.  
+Cross-Save has been aborted because the maximum{NEWLINE}limit for local saves has been reached.{NEWLINE}At least {VAR05:30} FFX-2 local save(s) must be{NEWLINE}deleted to perform a Cross-Save.
+Cross-Save has been aborted because the maximum{NEWLINE}limit for local saves has been reached.{NEWLINE}At least {VAR05:30} FFX-2 LM local save(s) must be{NEWLINE}deleted to perform a Cross-Save.
+Cross-Save is not available due to parental{NEWLINE}control restrictions on the Sony Entertainment Network{NEWLINE}account.
+{VAR05:30} cloud save(s) from another region exist on{NEWLINE}the cloud server. These saves cannot be used with{NEWLINE}the current game version. Please use versions{NEWLINE}that correctly correspond to each region.
+You have signed out of PSN{xF1}.{NEWLINE}You must be signed in to use the Cross-Save function.{NEWLINE}Aborting Cross-Save.
+Load complete
+Proceed
+An error has occurred while accessing the Internet. {NEWLINE}Aborting Cross-Save.
+Iutycyr Tower Floor {VAR05:30}
+Data is corrupt.
+Data belongs to another user.
+Unable to load save data.
+Cancel Cross-Save?
+YES
+NO
+
+
+
+
+Items
+White Magic
+Equip
+Garment Grids
+Abilities
+Accessories
+Dresspheres
+Creature   
+Party Members
+Config
+Alchemist
+Yuna
+Rikku
+Paine
+Accessories
+Dressphere
+Commands
+Garment Grids
+Auto-Abilities
+Information
+Items
+Items List
+Party Members
+Location
+MAIN
+RETRY
+COMPLETED
+CHAPTER
+Mission Time!
+Mission Complete!
+
+
+Lv.
+Size
+NEXT
+EXP
+Master
+
+Spherechange
+Special Dressphere
+SUB COMMANDS
+Active Mode
+Wait Mode
+MAIN COMMANDS
+Mode
+MISS
+Lv.
+Chain x 'number'!
+MP
+LEVEL UP!
+COMMAND
+GUARD
+MAIN
+SUB
+COD
+FANTASY
+FINAL FANTASY X-2
+ITEMS
+NEXT
+PLAY TIME
+EXP
+gil
+Lv.
+G. Grid
+Plate
+HP
+MP
+Status
+Information
+L1
+L2
+R1
+R2
+TOUCH PAD BUTTON
+OPTIONS
+HELP
+PAUSE
+Lv.
+EXP
+BAR
+
+L1
+L2
+R1
+R2
+SELECT
+START
+Help
+PAUSE
+Lv.
+Next
+ad
+MisonwgL
+Loading Mission...
+FINAL FANTASY
+INTERNATIONAL
+LAST MISSION
+FINAL FANTASY
+Commands
+Dress
+Config
+Items
+Status
+Auto-Abilities
+EXP
+Equipped Dresspheres
+Dress
+ERESEB
+EA
+ES
+EB
+{VAR05:30}F
+LEVEL DOWN
+HP
+MP
+gil
+gil
+HP
+MP
+AP
+MISS
+Characters
+All-Abilities
+Information
+Command-Abilities
+GUARD
+Yuna
+Rikku
+Paine
+HIT
+
+Help
+Menu
+Standard Cup
+Grand Cup
+Standard Cup: Hard
+Grand Cup: Hard
+Youth League Tournament
+Cactuar Cup
+Chocobo Cup
+Aeon Cup
+Fiend portal
+Farplane Cup
+Almighty Shinra Cup
+Fiend World Cup
+Info
+1ST
+2ND
+FINAL
+SEMI
+ROUND
+FIGHT
+VS.
+WINNER!
+LOSER...
+
+Help
+Besaid Island
+Kilika Island
+Bikanel Desert
+Bevelle
+Calm Lands
+Mt. Gagazet
+Zanarkand Ruins
+Luca
+Mi'ihen Highroad
+Mushroom Rock Road
+Djose Temple
+Moonflow
+Guadosalam
+Thunder Plains
+Macalania Woods
+Hotspot
+CHAPTER
+COMPLETED
+Go!
+Cancel
+Mission
+Cancel
+Go!
+Mission 1
+Mission 2
+Cancel
+Location
+EASY
+HARD
+Mission
+Hotspot!
+Deck
+Cabin
+Engine Room
+Cancel
+Celsius: Deck
+Celsius: Engine Room
+Celsius: Cabin
+Celsius: Bridge
+Deck
+Engine Room
+Cabin
+Bridge
+Cancel
+Celsius: Deck
+Celsius: Engine Room
+Celsius: Cabin
+Celsius: Bridge
+Deck
+Cabin
+Cabin
+Bridge
+Cancel
+Celsius: Deck
+Celsius: Engine Room
+Celsius: Cabin
+Celsius: Bridge
+Deck
+Cabin
+Engine Room
+Cancel
+Celsius: Deck
+Celsius: Engine Room
+Celsius: Cabin
+Celsius: Bridge
+Deck
+Cabin
+Engine Room
+Cancel
+Celsius: Deck
+Celsius: Engine Room
+Celsius: Cabin
+Celsius: Bridge
+
+Help
+Besaid Island
+Kilika Island
+Bikanel Desert
+Bevelle
+Calm Lands
+Mt. Gagazet
+Zanarkand Ruins
+Luca
+Mi'ihen Highroad
+Mushroom Rock Road
+Djose Temple
+Moonflow
+Guadosalam
+Thunder Plains
+Macalania Woods
+SET TRAPS!
+ROUND UP!
+R1 ROUND UP!
+CHAPTER
+Creatures Completed
+Target Creature Selection
+Return to Menu
+to
+Menu
+Help
+Creatures
+L1, R1 to change page
+UNKNOWN
+Creature
+Story Level
+Sallet
+Bicocette
+Barbuta
+Armet
+Bascinet
+Heavy Sallet
+Divebeak
+Peregrine
+Aquila
+Flan Azul
+Flan Amarillo
+Flan Palido
+Flan Blanco
+Flan Rojo
+Flan Azabache
+Purpurea
+Leucophylla
+Cephalotus
+Yellow Elemental
+White Elemental
+Red Elemental
+Gold Elemental
+Blue Elemental
+Dark Elemental
+Black Elemental
+Boris
+Aranea
+Coyote
+Wild Wolf
+Killer Hound
+White Fang
+Canis Major
+Lupus
+Tindalos
+Coeurl
+Queen Coeurl
+Gecko
+Agama
+Skink
+Anole
+Archaeothyris
+Lacerta
+Shantak
+Zu
+Rukh
+Death Dauber
+Assassin Bee
+Aculeate
+Vespa
+Wasp Queen
+Ahriman
+Fly Eye
+Vertigo
+Grim Gaze
+Nashorn
+Quadricorn
+Balivarha
+Lesser Drake
+Spine Drake
+Bolt Drake
+Greater Drake
+Elder Drake
+Iron Giant
+Bomb
+Detonator
+Volcano
+Gigas
+Gug
+Hrimthurs
+Takouba
+Barong
+King Takouba
+Bully Cap
+Mycotoxin
+Mushroom Cloud
+Big Bully Cap
+Protochimera
+Rhyos
+Kukulcan
+Gucumatz
+Chac
+Recoil
+Flak Python
+Viper Sniper
+Battlesnake
+Tonberry
+Mega Tonberry
+Ochu
+Flailing Ochu
+Drowsy Ochu
+Creeper
+Hug Bug
+Hexapod
+King VERMIN!
+Insect Matriarch
+Critical Bug
+Flame Dragon
+Zalamander
+Claret Dragon
+Sahagin
+Sahagin Prince
+Sahagin Chief
+Haizhe
+Deep Haizhe
+Xiphactinus
+Dinictus
+Amorphous Gel
+Protean Gel
+Zurvan
+Varan
+Arast
+Elder Zurvan
+Haunt
+Lich
+Tomb
+Dolmen
+Monolith
+Daeva
+Aka Manah
+Aeshma
+Jahi
+Cactuar
+Jumbo Cactuar
+Chocobo Eater
+Anything Eater
+Stalwart
+Ironside
+Behemoth
+Humbaba
+Tentacles
+Malboro
+Great Malboro
+Adamantoise
+Adamantortoise
+Machina Ranger
+Machina Hunter
+Machina Soldier
+Machina Leader
+Scout Machina
+Guard Machina
+Assault Machina
+Killer Machina
+YAC-13
+YAC-62
+YAU-28
+YAU-71
+YSLS-99
+YSLS-Zero
+Pop Fry
+Machina Striker
+Machina Panzer
+Shell Shocker
+Concherer
+Guardian Beast
+Azi Dahaka
+Ultima Weapon
+Omega Weapon
+Paragon
+Goon
+Mr. Goon
+Dr. Goon
+She-Goon
+Ms. Goon
+Fem-Goon
+Ormi
+Logos
+Leblanc
+Yaibal
+Lucil
+Elma
+Baralai
+Gippal
+Nooj
+Garik Ronso
+Trema
+Seymour
+Brother
+Buddy
+Almighty Shinra
+Auron
+Kimahri
+Lulu
+????
+Chocobo
+Shinra
+
+HELP
+Bestiary
+Dossiers
+Description
+Status
+Help
+Story Level
+Menu
+Team
+Display
+Creatures
+Creature
+Story Level
+
+Help
+Besaid Island
+Kilika Island
+Bikanel Desert
+Bevelle
+Calm Lands
+Mt. Gagazet
+Zanarkand Ruins
+Luca
+Mi'ihen Highroad
+Mushroom Rock Road
+Djose Temple
+Moonflow
+Guadosalam
+Thunder Plains
+Macalania Woods
+CHAPTER
+COMPLETED
+connect
+cancel
+Location
+Besaid Island
+Kilika Island
+Bikanel Desert
+Bevelle
+Calm Lands
+Mt. Gagazet
+Zanarkand Ruins
+Luca
+Mi'ihen Highroad
+Mushroom Rock Road
+Djose Temple
+Moonflow
+Guadosalam
+Thunder Plains
+Macalania Woods
+Help
+Besaid Island
+Kilika Island
+Bikanel Desert
+Bevelle
+Calm Lands
+Mt. Gagazet
+Zanarkand Ruins
+Luca
+Mi'ihen Highroad
+Mushroom Rock Road
+Djose Temple
+Moonflow
+Guadosalam
+Thunder Plains
+Macalania Woods
+CHAPTER
+COMPLETED
+connect
+cancel
+Location
+
+OPTIONS
+HD Remaster
+New Game
+Load
+Press the RESET button to return to the main menu.
+THANKS FOR PLAYING!
+New Game
+Load
+FINAL FANTASY X-2
+FINAL FANTASY X-2
+HD Remaster
+New Game
+Load
+Data Transfer
+Manage FFX-2 Save Data
+Manage FFX-2 LM Save Data
+presents
+New Game Plus
+Load Original Version
+SQUARE
+ENIX
+OPTIONS
+Bonus Footage
+
+Help
+Active Mode
+MAIN COMMANDS
+
+Spherechange
+Config
+Spherechange
+Normal
+Short
+OFF
+ATB Mode
+Active
+Wait
+ATB Speed
+Slow
+Normal
+Fast
+Cursor
+Memory
+Default
+Battle Help
+ON
+OFF
+Vibration
+Subtitles
+Subtitle Names
+Guide Map
+Sound
+Mono
+Stereo
+Screen Position
+Default
+Adjust
+G. Grid
+Spherechange
+Dresspheres
+Dressphere
+Abilities
+Wait Mode
+Dresspheres
+Dresspheres
+Information
+Set Dressphere
+Remove Dressphere
+Back
+Garment Grids
+Garment Grids
+Dresspheres
+- Auto -
+- Remove All -
+- Rearrange -
+Information
+TRIGGER
+Special Dressphere
+Help
+Active Mode
+MAIN COMMANDS
+
+Spherechange
+KO
+Shell
+Luck Up
+Petrification
+Protect
+Doom
+Sleep
+Reflect
+Null Physical
+Silence
+Regen
+Null Magic
+Darkness
+Haste
+Invincible
+Poison
+Slow
+Strength Down
+Confusion
+Stop
+Magic Down
+Berserk
+Strength Up
+Defense Down
+Curse
+Magic Up
+Magic Def. Down
+Eject
+Defense Up
+Accuracy Down
+Pointless
+Magic Def. Up
+Evasion Down
+Itchy
+Accuracy Up
+Luck Down
+Auto-Life
+Evasion Up
+G. Grid
+MAIN COMMANDS
+Information
+Help
+Active Mode
+MAIN COMMANDS
+
+Spherechange
+
+gil
+Current gil
+Dress HP
+Current MP
+Current floor
+Dress Layers Status
+Character level
+Base dress HP
+Minimap
+Show range
+Text window
+Help
+Commands
+Items
+Status
+Lv.
+Equipped Dresspheres
+EXP
+Config
+Item type
+Layers window
+Current dress layers
+Status window
+Currently selected dress
+Items window
+Select dress (dressphere) to layer
+Abilities window
+1/3 Auto-abilities from layering
+2/3 Usable command abilities
+3/3 Abilities of selected dress
+Layers
+Dress
+Command Abilities
+Abilities
+Help
+Commands
+Status
+Abilities
+gil
+Lv.
+LEVEL UP
+Commands
+Items
+Commands when checking by your feet.
+Elevator
+Items
+Traps
+Item type
+Dresspheres
+Medicine
+Folios
+Accessories
+Learned Flee
+Trigger Happy
+Learned Blue Bullet Blaster
+Oversoul!
+Thunder
+Learned Aqua Breath
+Looking good!
+Sealed elevator.
+
+THE END
+STORY COMPLETED: {VAR05:30}%
+CREATURE COMPLETED: {VAR05:30}%
+TIMES PLAYED: {VAR05:31}
+Yuna
+Rikku
+Paine
+Lv.
+THANKS FOR PLAYING!
+
+Do
+Re
+Mi
+Fa
+So
+La
+Ti
+Do{xEC}
+Re{xEC}
+Mi{xEC}
+Do
+Re
+Mi
+Fa
+So
+La
+Ti
+Do{xEC}
+Re{xEC}
+Mi{xEC}
+
+Helm
+Purpurea
+Ogre
+Kukulcan
+Fungus
+Haizhe
+Gel
+Yuna
+Ten of coins
+Zurvan
+Zu
+Elemental
+Adamantoise
+Pairika
+Dinictus
+Azi Dahaka
+Rikku
+Worm
+Defender
+Phantom
+Ruminant
+Drake
+Malboro
+Blade
+Behemoth
+Coyote
+Chimera
+Coeurl
+Tomb
+Iron Giant
+Deva
+Ochu
+Bomb
+Magic Urn
+Flan
+Cactuar
+Stalwart
+Tonberry
+Dragon
+Creeper
+Arachnid
+Piranha
+Sahagin
+Reptile
+Tentacles
+Ultima Weapon
+Omega Weapon
+Eater
+Hermit
+Evrae
+Bird
+Chocobo
+Jumbo Cactuar
+Precepts Guard
+Georapella
+Angra Mainyu
+Paine
+Auron
+Wasp
+Lulu
+Wakka
+Kimahri
+Seymour
+Ahriman
+Help
+Loading...
+Begin Match!
+Core Break!
+Echo Bonus!
+You Win!
+You Lose...
+Time's Up!
+Complete!
+Turn
+st
+nd
+rd
+th
+Helm
+Zarvan
+Worm
+Defender
+Phantom
+Ruminant
+Drake
+Malboro
+Ogre
+Elemental
+Blade
+Behemoth
+Coyote
+Chimera
+Coeurl
+Tomb
+Iron Giant
+Kukulcan
+Adamantoise
+Deva
+Ochu
+Bomb
+Magic Urn
+Flan
+Cactuar
+Stalwart
+Fungus
+Pairika
+Tonberry
+Dragon
+Creeper
+Arachnid
+Piranha
+Sahagin
+Reptile
+Haizhe
+Dinictus
+Tentacles
+Ultima Weapon
+Omega Weapon
+Eater
+Hermit
+Evrae
+Gel
+Azi Dahaka
+Bird
+Chocobo
+Jumbo Cactuar
+Precepts Guard
+Georapella
+Angra Mainyu
+Yuna
+Rikku
+Paine
+Auron
+Wasp
+Lulu
+Wakka
+Kimahri
+Seymour
+Base Coin
+Ahriman
+Purpurea
+Zu
+Sum:
+Choose an entry coin.
+Choose another coin.
+Break Multiples:
+Echo
+
+FINISH!
+START!
+
+END
+ATK
+PAS
+SHT
+BLK
+CAT
+SPD
+REC
+RCH
+RNG
+OUT
+CNT
+MOR
+MOT
+FTG
+GIL
+BA
+LG
+RF
+GG
+AP
+KB
+GW
+ZA
+TIME
+SCORE
+
+DUAL SHOT
+VOLLEY
+AMMO
+YUNA HP
+TARGET 1
+TARGET 2
+CHAIN
+QUICKSHOT
+DEATH
+TIME
+SCORE
+
+PRODUCER
+YOSHINORI KITASE
+DIRECTOR
+MOTOMU TORIYAMA
+MAIN PROGRAMMERS
+MASAKI KOBAYASHI(BATTLE)
+YUKIO ISHII(FIELD)
+MAIN CHARACTER DESIGNER
+TETSUYA NOMURA
+ART DIRECTOR
+SHINTARO TAKAI
+REAL-TIME GRAPHICS & 3D MAP DIRECTOR
+YOICHI KUBO
+SCENARIO
+KAZUSHIGE NOJIMA
+DAISUKE WATANABE
+IMAGE ILLUSTRATOR
+YOSHITAKA AMANO
+MUSIC
+NORIKO MATSUEDA
+TAKAHITO EGUCHI
+FIELD PLANNING DIRECTOR
+TAKAYOSHI NAKAZATO
+BATTLE PLANNING DIRECTOR
+TAKATSUGU NAKAZAWA
+CHIEF VFX PROGRAMMER
+YASUNARI OHNISHI
+MENU PROGRAMMER
+TOMONARI OHNISHI
+REAL-TIME PROGRAMMER
+KOJI SUGIMOTO
+Jade form sweetbox
+ALTERNATE COSTUME DESIGNER
+TETSU TSUKAMOTO
+CONCEPTUAL ART DIRECTOR
+TOSHITAKA MATSUDA
+MODELING DIRECTOR
+HIDEO KUBOTA
+MOTION DIRECTOR
+YOSHIYUKI SOMA
+CHIEF MENU DESIGNER
+YOICHI MACHIDA
+CHIHO MIURA
+“OMATSURISHI”
+COSTUME DESIGNER
+THEME SONGS
+MOVIE DIRECTOR
+KAZUYUKI IKUMORI
+SOUND PROGRAMMER
+MINORU AKAO
+SUPERVISING DIALOGUE EDITOR
+TERUAKI SUGAWARA
+SUPERVISING SOUND EDITOR
+CHIHARU MINEKAWA
+ASSOCIATE PRODUCER
+HIDEKI IMAIZUMI
+PUBLICITY PRODUCER
+KATSUMI MIYAZAKI
+Yuna
+HEDY BURRESS
+Rikku
+TARA STRONG
+Paine
+GWENDOKINE YEO
+EXECUTIVE PRODUCER
+HIRONOBU SAKAGUCHI
+
+Description
+Resistances
+Status
+WIN!
+TRIGGER
+Treasure Spheres
+Mission Time!
+Mission Complete!
+Tower
+{VAR05:30}F
