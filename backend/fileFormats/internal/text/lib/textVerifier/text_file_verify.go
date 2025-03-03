@@ -69,7 +69,7 @@ func extractIntegrityCheck(source interfaces.ISource, destination locations.IDes
 	if err := segmentCounter.CountBinary(extractLocation.GetTargetFile()); err != nil {
 		if err := os.Remove(extractLocation.GetTargetFile()); err != nil {
 			logger.LogError(err, "failed to remove broken text file: %s", extractLocation.GetTargetFile())
-			return fmt.Errorf("failed to verify text file: %s", extractLocation.GetTargetFile())
+			return fmt.Errorf("failed to integrity text file: %s", extractLocation.GetTargetFile())
 		}
 
 		return err
@@ -78,7 +78,7 @@ func extractIntegrityCheck(source interfaces.ISource, destination locations.IDes
 	if err := segmentCounter.CountText(extractLocation.GetTargetFile()); err != nil {
 		if err := os.Remove(extractLocation.GetTargetFile()); err != nil {
 			logger.LogError(err, "failed to remove broken text file: %s", extractLocation.GetTargetFile())
-			return fmt.Errorf("failed to verify text file: %s", extractLocation.GetTargetFile())
+			return fmt.Errorf("failed to integrity text file: %s", extractLocation.GetTargetFile())
 		}
 
 		return err
@@ -99,7 +99,7 @@ func compressIntegrityCheck(source interfaces.ISource, destination locations.IDe
 	if err := fileComparer.CompareTranslatedTextParts(translateLocation.GetTargetFile(), extractLocation.GetTargetFile()); err != nil {
 		if err := os.Remove(importLocation.GetTargetFile()); err != nil {
 			logger.LogError(err, "failed to remove broken text file: %s", importLocation.GetTargetFile())
-			return fmt.Errorf("failed to verify text file: %s", importLocation.GetTargetFile())
+			return fmt.Errorf("failed to integrity text file: %s", importLocation.GetTargetFile())
 		}
 
 		return err

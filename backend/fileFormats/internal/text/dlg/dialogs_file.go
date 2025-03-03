@@ -27,7 +27,7 @@ func NewDialogs(source interfaces.ISource, destination locations.IDestination) i
 	}
 }
 
-func (d *DialogsFile) Source() interfaces.ISource {
+func (d *DialogsFile) GetSource() interfaces.ISource {
 	return d.source
 }
 
@@ -36,7 +36,7 @@ func (d *DialogsFile) Extract() error {
 	defer returnDlgExtractor(extractorInstance)
 
 	d.log.LogInfo("Extracting dialog file: %s", d.source.Get().Name)
-	
+
 	if err := extractorInstance.Extract(d.source, d.destination); err != nil {
 		d.log.LogError(err, "Error decoding dialog file: %s", d.source.Get().Name)
 		return err
@@ -50,7 +50,7 @@ func (d *DialogsFile) Extract() error {
 	if err := verifierInstance.Verify(d.source, d.destination, textVerifier.ExtractIntegrityCheck); err != nil {
 		d.log.LogError(err, "Error verifying dialog file: %s", d.source.Get().Name)
 
-		return fmt.Errorf("failed to verify dialog file: %s", d.source.Get().Name)
+		return fmt.Errorf("failed to integrity dialog file: %s", d.source.Get().Name)
 	}
 
 	d.log.LogInfo("Dialog file extracted: %s", d.source.Get().Name)
@@ -86,7 +86,7 @@ func (d *DialogsFile) Compress() error {
 	if err := verifierInstance.Verify(tmpSource, tmpDestination, textVerifier.CompressIntegrityCheck); err != nil {
 		d.log.LogError(err, "Error verifying dialog file: %s", d.source.Get().Name)
 
-		return fmt.Errorf("failed to verify dialog file: %s", d.source.Get().Name)
+		return fmt.Errorf("failed to integrity dialog file: %s", d.source.Get().Name)
 	}
 
 	d.log.LogInfo("Dialog file compressed: %s", d.destination.Import().Get().GetTargetFile())

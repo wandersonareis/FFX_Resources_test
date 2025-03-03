@@ -2,20 +2,20 @@ package folder
 
 import (
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats/internal/base"
+	"ffxresources/backend/fileFormats/internal/baseFormats"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
 )
 
 type SpiraFolder struct {
-	*base.FormatsBase
+	baseFormats.IBaseFileFormat
 	logger.ILoggerHandler
 }
 
 func NewSpiraFolder(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
 	return &SpiraFolder{
-		FormatsBase: base.NewFormatsBase(source, destination),
+		IBaseFileFormat: baseFormats.NewFormatsBase(source, destination),
 
 		ILoggerHandler: &logger.LogHandler{
 			Logger: logger.Get().With().Str("module", "spira_folder").Logger(),
@@ -31,7 +31,7 @@ func (sf *SpiraFolder) Compress() error {
 	return fmt.Errorf("use DirectoryCompressService instead")
 }
 
-/* func (sf SpiraFolder) Extract() error {              
+/* func (sf SpiraFolder) Extract() error {
 	errChan := make(chan error)
 	defer close(errChan)
 
@@ -46,7 +46,7 @@ func (sf *SpiraFolder) Compress() error {
 			errChan <- err
 		}
 
-		progress.StepFile(extractor.Source().Get().Name)
+		progress.StepFile(extractor.GetSource().Get().Name)
 	})
 
 	progress.Stop()
@@ -55,7 +55,7 @@ func (sf *SpiraFolder) Compress() error {
 		sf.LogError(err, "error extracting spira folder")
 	}
 
-	sf.LogInfo("Spira folder extracted", "folder", sf.Source().Get().Path)
+	sf.LogInfo("Spira folder extracted", "folder", sf.GetSource().Get().Path)
 
 	return nil
 } */
@@ -84,7 +84,7 @@ func (sf *SpiraFolder) Compress() error {
 		sf.LogError(err, "error compressing spira folder")
 	}
 
-	sf.LogInfo("Spira folder compressed", "folder", sf.Source().Get().Path)
+	sf.LogInfo("Spira folder compressed", "folder", sf.GetSource().Get().Path)
 
 	return nil
 } */
@@ -92,8 +92,8 @@ func (sf *SpiraFolder) Compress() error {
 /* func (sf SpiraFolder) processFiles() *components.List[interfaces.IFileProcessor] {
 	filesList := components.NewEmptyList[string]()
 
-	if err := components.ListFiles(filesList, sf.Source().Get().Path); err != nil {
-		sf.LogError(err, "error listing files in directory", "directory", sf.Source().Get().Path)
+	if err := components.ListFiles(filesList, sf.GetSource().Get().Path); err != nil {
+		sf.LogError(err, "error listing files in directory", "directory", sf.GetSource().Get().Path)
 
 		return components.NewEmptyList[interfaces.IFileProcessor]()
 	}

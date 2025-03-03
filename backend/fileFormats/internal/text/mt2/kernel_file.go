@@ -26,7 +26,7 @@ func NewKernel(source interfaces.ISource, destination locations.IDestination) in
 	}
 }
 
-func (k *kernelFile) Source() interfaces.ISource {
+func (k *kernelFile) GetSource() interfaces.ISource {
 	return k.source
 }
 
@@ -58,7 +58,7 @@ func (k *kernelFile) Extract() error {
 	if err := verifierInstance.Verify(k.source, k.destination, textVerifier.ExtractIntegrityCheck); err != nil {
 		k.log.LogError(err, "Error verifying kernel file: %s", k.source.Get().Name)
 
-		return fmt.Errorf("failed to verify kernel file: %s", k.source.Get().Name)
+		return fmt.Errorf("failed to integrity kernel file: %s", k.source.Get().Name)
 	}
 
 	k.log.LogInfo("Kernel file extracted: %s", k.source.Get().Name)
@@ -93,7 +93,7 @@ func (k *kernelFile) Compress() error {
 	if err := textVerifierInstance.Verify(tmpSource, tmpDestination, textVerifier.CompressIntegrityCheck); err != nil {
 		k.log.LogError(err, "Error verifying kernel file: %s", k.source.Get().Name)
 
-		return fmt.Errorf("failed to verify kernel file: %s", k.source.Get().Name)
+		return fmt.Errorf("failed to integrity kernel file: %s", k.source.Get().Name)
 	}
 
 	k.log.LogInfo("Kernel file compressed: %s", k.destination.Import().Get().GetTargetFile())

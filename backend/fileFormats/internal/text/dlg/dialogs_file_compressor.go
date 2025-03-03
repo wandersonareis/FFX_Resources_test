@@ -13,8 +13,8 @@ type (
 	}
 
 	DlgCompressor struct {
-		source        interfaces.ISource
-		destination   locations.IDestination
+		//source        interfaces.ISource
+		//destination   locations.IDestination
 		dialogsClones internal.IDlgClones
 		encoder       internal.IDlgEncoder
 	}
@@ -28,10 +28,8 @@ func newDlgCompressor() *DlgCompressor {
 }
 
 func (d *DlgCompressor) Compress(source interfaces.ISource, destination locations.IDestination) error {
-	translateLocation := d.destination.Translate().Get()
-
-	if err := d.encoder.Encoder(d.source, d.destination); err != nil {
-		return fmt.Errorf("failed to compress dialog file: %s", translateLocation.GetTargetFile())
+	if err := d.encoder.Encoder(source, destination); err != nil {
+		return fmt.Errorf("failed to compress dialog file: %s", destination.Translate().Get().GetTargetFile())
 	}
 
 	d.dialogsClones.Clone(source, destination)
