@@ -5,8 +5,8 @@ import (
 	"ffxresources/backend/fileFormats/internal/dcp"
 	"ffxresources/backend/fileFormats/internal/folder"
 	"ffxresources/backend/fileFormats/internal/lockit"
-	"ffxresources/backend/fileFormats/internal/text/dlg"
 	"ffxresources/backend/fileFormats/internal/text/mt2"
+	"ffxresources/backend/fileFormats/internal/text"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/models"
 	"ffxresources/backend/notifications"
@@ -16,11 +16,11 @@ import (
 // create instances of interactions.IFileProcessor. Each entry in the map
 // corresponds to a specific type of node
 var formats = map[models.NodeType]func(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor{
-	models.Dialogs:        dlg.NewDialogs,
-	models.DialogsSpecial: dlg.NewDialogs,
-	models.Tutorial:       dlg.NewDialogs,
-	models.DcpParts:       dlg.NewDialogs,
 	models.Kernel:         mt2.NewKernel,
+	models.Dialogs:        text.NewDialogs,
+	models.DialogsSpecial: text.NewDialogs,
+	models.Tutorial:       text.NewDialogs,
+	models.DcpParts:       text.NewDialogs,
 	models.Dcp:            dcp.NewDcpFile,
 	models.Lockit:         lockit.NewLockitFile,
 	models.Folder:         folder.NewSpiraFolder,

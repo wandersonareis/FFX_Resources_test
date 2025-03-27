@@ -29,11 +29,12 @@ func NewDlgClones() *dialogsClones {
 
 func (dc *dialogsClones) Clone(source interfaces.ISource, destination locations.IDestination) {
 	importTargetFile := destination.Import().Get().GetTargetFile()
-	dc.log.Info().
-		Str("Clones from: ", importTargetFile).
-		Msg("Creating duplicated files for")
-
+	
 	if source.Get().ClonedItems != nil {
+		dc.log.Info().
+			Str("Clones from: ", importTargetFile).
+			Msg("Creating duplicated files for")
+			
 		for _, clone := range source.Get().ClonedItems {
 			cloneReimportPath := filepath.Join(destination.Import().Get().GetTargetDirectory(), clone)
 

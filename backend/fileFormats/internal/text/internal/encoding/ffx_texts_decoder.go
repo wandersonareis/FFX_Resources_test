@@ -14,9 +14,9 @@ func NewDecoder() *textsDecoder {
 }
 
 func (d *textsDecoder) DlgDecoder(sourceFile, targetFile string, encoding ffxencoding.IFFXTextDlgEncoding) error {
-	encodingFile := encoding.FetchEncoding()
+	encodingFile := encoding.GetEncoding()
 
-	executable, err := encoding.FetchDlgHandler().FetchDlgTextsHandler()
+	executable, err := encoding.GetDlgHandler().GetDlgHandlerApp()
 	if err != nil {
 		return err
 	}
@@ -29,9 +29,9 @@ func (d *textsDecoder) DlgDecoder(sourceFile, targetFile string, encoding ffxenc
 }
 
 func (d *textsDecoder) KnrlDecoder(sourceFile, targetFile string, encoding ffxencoding.IFFXTextKrnlEncoding) error {
-	encodingFile := encoding.FetchEncoding()
+	encodingFile := encoding.GetEncoding()
 
-	executable, err := encoding.FetchKrnlHandler().FetchKrnlTextsHandler()
+	executable, err := encoding.GetKrnlHandler().GetKrnlHandlerApp()
 	if err != nil {
 		return err
 	}
@@ -54,7 +54,7 @@ func (d *textsDecoder) decoder(executable, sourceFile, targetFile, encoding stri
 
 	args := []string{"-e", "-t", encoding, sourceFile, targetFile}
 
-	if err := components.RunCommand(executable, args); err != nil {
+	if _, err := components.RunCommand(executable, args); err != nil {
 		return err
 	}
 

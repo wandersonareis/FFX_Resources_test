@@ -1,9 +1,10 @@
-package dlg
+package text
 
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats/internal/text/lib/textVerifier"
+	"ffxresources/backend/fileFormats/internal/text/internal/dlg"
+	"ffxresources/backend/fileFormats/internal/text/textVerifier"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
@@ -32,25 +33,16 @@ func (d *DialogsFile) GetSource() interfaces.ISource {
 }
 
 func (d *DialogsFile) Extract() error {
-	extractorInstance := rentDlgExtractor()
-	defer returnDlgExtractor(extractorInstance)
-
 	d.log.LogInfo("Extracting dialog file: %s", d.source.Get().Name)
 
-	if err := extractorInstance.Extract(d.source, d.destination); err != nil {
-		d.log.LogError(err, "Error decoding dialog file: %s", d.source.Get().Name)
+	if err := d.extract(); err != nil {
 		return err
 	}
 
-	verifierInstance := rentTextVerifier()
-	defer returnTextVerifier(verifierInstance)
-
 	d.log.LogInfo("Verifying extracted dialog file: %s", d.destination.Extract().Get().GetTargetFile())
 
-	if err := verifierInstance.Verify(d.source, d.destination, textVerifier.ExtractIntegrityCheck); err != nil {
-		d.log.LogError(err, "Error verifying dialog file: %s", d.source.Get().Name)
-
-		return fmt.Errorf("failed to integrity dialog file: %s", d.source.Get().Name)
+	if err := d.extractVerify(); err != nil {
+		return err
 	}
 
 	d.log.LogInfo("Dialog file extracted: %s", d.source.Get().Name)
@@ -58,11 +50,40 @@ func (d *DialogsFile) Extract() error {
 	return nil
 }
 
+func (d *DialogsFile) extract() error {
+	extractorInstance := dlg.RentDlgExtractor()
+	defer dlg.ReturnDlgExtractor(extractorInstance)
+
+	if err := extractorInstance.Extract(d.source, d.destination); err != nil {
+		d.log.LogError(err, "Error decoding dialog file: %s", d.source.Get().Name)
+		return err
+	}
+
+	return nil
+}
+
+func (d *DialogsFile) extractVerify() error {
+	verifierInstance := dlg.RentTextVerifier()
+	defer dlg.ReturnTextVerifier(verifierInstance)
+
+	if err := verifierInstance.Verify(d.source, d.destination, textVerifier.ExtractIntegrityCheck); err != nil {
+		d.log.LogError(err, "Error verifying dialog file: %s", d.source.Get().Name)
+
+		return fmt.Errorf("failed to integrity dialog file: %s", d.source.Get().Name)
+	}
+
+	return nil
+}
 func (d *DialogsFile) Compress() error {
-	compressorInstance := rentDlgCompressor()
-	defer returnDlgCompressor(compressorInstance)
+	compressorInstance := dlg.RentDlgCompressor()
+	defer dlg.ReturnDlgCompressor(compressorInstance)
 
 	d.log.LogInfo("Compressing dialog file: %s", d.destination.Import().Get().GetTargetFile())
+
+	if err := d.ensureTranslatedText(); err != nil {
+		return err
+	}
+
 	if err := compressorInstance.Compress(d.source, d.destination); err != nil {
 		return err
 	}
@@ -80,8 +101,8 @@ func (d *DialogsFile) Compress() error {
 		return fmt.Errorf("failed to decode dialog file: %s", d.destination.Import().Get().GetTargetFile())
 	}
 
-	verifierInstance := rentTextVerifier()
-	defer returnTextVerifier(verifierInstance)
+	verifierInstance := dlg.RentTextVerifier()
+	defer dlg.ReturnTextVerifier(verifierInstance)
 
 	if err := verifierInstance.Verify(tmpSource, tmpDestination, textVerifier.CompressIntegrityCheck); err != nil {
 		d.log.LogError(err, "Error verifying dialog file: %s", d.source.Get().Name)
@@ -94,6 +115,19 @@ func (d *DialogsFile) Compress() error {
 	return nil
 }
 
+func (d *DialogsFile) ensureTranslatedText() error {
+	textVerifierInstance := dlg.RentTextVerifier()
+	defer dlg.ReturnTextVerifier(textVerifierInstance)
+
+	sourceFile := d.source.Get().Path
+	targetFile := d.destination.Translate().Get().GetTargetFile()
+
+	if err := textVerifierInstance.CompareTextSegmentsCount(sourceFile, targetFile, d.source.Get().Type); err != nil {
+		return fmt.Errorf("translated file segments count mismatch: %s", targetFile)
+	}
+
+	return nil
+}
 func (d *DialogsFile) createTemp(source interfaces.ISource, destination locations.IDestination) (interfaces.ISource, locations.IDestination) {
 	tmp := common.NewTempProvider("tmp", ".txt")
 

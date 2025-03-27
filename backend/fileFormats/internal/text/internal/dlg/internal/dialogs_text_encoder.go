@@ -3,23 +3,22 @@ package internal
 import (
 	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats/internal/text/encoding"
+	"ffxresources/backend/fileFormats/internal/text/internal/encoding"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
-
-	"github.com/rs/zerolog"
+	"fmt"
 )
 
 type IDlgEncoder interface {
 	Encoder(source interfaces.ISource, destination locations.IDestination) error
 }
 type dlgEncoder struct {
-	log zerolog.Logger
+	log logger.ILoggerHandler
 }
 
-func NewDlgEncoder() *dlgEncoder {
+func NewDlgEncoder(logger logger.ILoggerHandler) *dlgEncoder {
 	return &dlgEncoder{
-		log: logger.Get().With().Str("module", "dialogs_file_encoder").Logger(),
+		log: logger,
 	}
 }
 
@@ -31,19 +30,13 @@ func (e *dlgEncoder) Encoder(source interfaces.ISource, destination locations.ID
 	importLocation := destination.Import().Get()
 
 	if err := translateLocation.Validate(); err != nil {
-		e.log.Error().
-			Err(err).
-			Str("file", translateLocation.GetTargetFile()).
-			Msg("Error validating translate file")
+		e.log.LogError(err, fmt.Sprintf("Error validating translate file: %s", translateLocation.GetTargetFile()))
 
 		return err
 	}
 
 	if err := importLocation.ProvideTargetPath(); err != nil {
-		e.log.Error().
-			Err(err).
-			Str("path", importLocation.GetTargetPath()).
-			Msg("Error providing import path")
+		e.log.LogError(err, fmt.Sprintf("Error providing import path: %s", importLocation.GetTargetPath()))
 
 		return err
 	}
@@ -53,10 +46,7 @@ func (e *dlgEncoder) Encoder(source interfaces.ISource, destination locations.ID
 	encoder := textsEncoding.NewEncoder()
 
 	if err := encoder.DlgEncoder(sourceFile, translateLocation.GetTargetFile(), importLocation.GetTargetFile(), encoding); err != nil {
-		e.log.Error().
-			Err(err).
-			Str("file", sourceFile).
-			Msg("Error on encoding dialog file")
+		e.log.LogError(err, fmt.Sprintf("Error on encoding dialog file: %s", sourceFile))
 
 		return err
 	}

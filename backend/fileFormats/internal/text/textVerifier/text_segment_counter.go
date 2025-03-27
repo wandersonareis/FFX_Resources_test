@@ -2,38 +2,46 @@ package textVerifier
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/fileFormats/internal/text/internal/lib"
+	"ffxresources/backend/models"
 	"fmt"
-	"os"
 )
 
-type ISegmentCounter interface {
-	CountBinary(targetFile string) error
-	CountText(targetFile string) error
-}
+type (
+	ISegmentCounter interface {
+		CompareTextSegmentsCount(sourceFile, targetFile string, fileType models.NodeType) error
+	}
 
-type segmentCounter struct{}
+	segmentCounter struct{}
+)
 
-func (sc *segmentCounter) CountBinary(targetFile string) error {
-	info, err := os.Stat(targetFile)
+func (sc *segmentCounter) CompareTextSegmentsCount(binaryFile, textFile string, binaryType models.NodeType) error {
+	binarySegmentCount, err := sc.countBinarySegments(binaryFile, binaryType)
 	if err != nil {
-		return fmt.Errorf("error when getting file info: %w", err)
+		return err
 	}
 
-	if info.Size() == 0 {
-		/* if err := os.Remove(targetFile); err != nil {
-			return fmt.Errorf("error when removing file: %w", err)
-		} */
+	textSegmentCount, err := sc.countTextSegments(textFile)
+	if err != nil {
+		return err
+	}
 
-		return fmt.Errorf("invalid size for part: %s size: %d", targetFile, info.Size())
+	if textSegmentCount != binarySegmentCount {
+		return fmt.Errorf("source and target segments count mismatch: %s: %d, %s: %d", binaryFile, textSegmentCount, textFile, binarySegmentCount)
 	}
 
 	return nil
 }
 
-func (sc *segmentCounter) CountText(targetFile string) error {
-	if common.CountSegments(targetFile) == 0 {
-		return fmt.Errorf("error when counting segments in: %s", targetFile)
+func (sc *segmentCounter) countTextSegments(targetFile string) (int, error) {
+	segments := common.CountSegments(targetFile)
+	if segments == 0 {
+		return 0, fmt.Errorf("error when counting segments in: %s", targetFile)
 	}
 
-	return nil
+	return segments, nil
+}
+
+func (sc *segmentCounter) countBinarySegments(binaryFile string, binaryType models.NodeType) (int, error) {
+	return lib.TextSegmentsCounter(binaryFile, binaryType)
 }

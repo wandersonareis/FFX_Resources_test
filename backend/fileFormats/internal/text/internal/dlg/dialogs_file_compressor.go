@@ -2,8 +2,9 @@ package dlg
 
 import (
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats/internal/text/dlg/internal"
+	"ffxresources/backend/fileFormats/internal/text/internal/dlg/internal"
 	"ffxresources/backend/interfaces"
+	"ffxresources/backend/logger"
 	"fmt"
 )
 
@@ -12,22 +13,22 @@ type (
 		Compress(source interfaces.ISource, destination locations.IDestination) error
 	}
 
-	DlgCompressor struct {
-		//source        interfaces.ISource
-		//destination   locations.IDestination
+	dialogCompressor struct {
 		dialogsClones internal.IDlgClones
 		encoder       internal.IDlgEncoder
+		logger        logger.ILoggerHandler
 	}
 )
 
-func newDlgCompressor() *DlgCompressor {
-	return &DlgCompressor{
+func NewDlgCompressor(logger logger.ILoggerHandler) IDlgCompressor {
+	return &dialogCompressor{
 		dialogsClones: internal.NewDlgClones(),
-		encoder:       internal.NewDlgEncoder(),
+		encoder:       internal.NewDlgEncoder(logger),
+		logger:        logger,
 	}
 }
 
-func (d *DlgCompressor) Compress(source interfaces.ISource, destination locations.IDestination) error {
+func (d *dialogCompressor) Compress(source interfaces.ISource, destination locations.IDestination) error {
 	if err := d.encoder.Encoder(source, destination); err != nil {
 		return fmt.Errorf("failed to compress dialog file: %s", destination.Translate().Get().GetTargetFile())
 	}
