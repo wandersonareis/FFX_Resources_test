@@ -1,6 +1,7 @@
 package services
 
 import (
+	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats"
@@ -15,21 +16,24 @@ func TestExtractDir(path string, testExtract, testCompress bool) {
 		return
 	}
 
-	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
-	source, err := locations.NewSource(path, gameVersion)
+	source, err := locations.NewSource(path)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-
+	
+	gamaLocationAux := interactions.NewInteractionService().GameLocation.GetTargetDirectory()
+	defer interactions.NewInteractionService().GameLocation.SetTargetDirectory(gamaLocationAux)
+	
 	tree := components.NewEmptyList[spira.TreeNode]()
 	formatter := formatters.NewTxtFormatter()
-
+	
 	interactions.NewInteractionService().GameLocation.SetTargetDirectory(path)
+	
+	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
+	NodeMap = spira.CreateNodeMap(gameVersion, formatter)
 
-	NodeMap = spira.CreateFileTreeMap(gameVersion, formatter)
-
-	testRun := func(_ int, n spira.TreeNode) {
+	testRun := func(n spira.TreeNode) {
 		if testExtract {
 			extractService := NewExtractService()
 			extractService.Extract(source.Get().Path)
@@ -52,17 +56,20 @@ func TestExtractDir(path string, testExtract, testCompress bool) {
 }
 
 func TestExtractFile(path string, testExtract, testCompress bool) {
+	common.CheckArgumentNil(path, "path")
+
 	if !testExtract && !testCompress {
 		return
 	}
-	
-	source, err := locations.NewSource(path, interactions.NewInteractionService().FFXGameVersion().GetGameVersion())
+
+	source, err := locations.NewSource(path)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	destination := locations.NewDestination()
+	destination.InitializeLocations(source, formatters.NewTxtFormatter())
 
 	if testExtract {
 		fileProcessor := fileFormats.NewFileExtractor(source, destination)
