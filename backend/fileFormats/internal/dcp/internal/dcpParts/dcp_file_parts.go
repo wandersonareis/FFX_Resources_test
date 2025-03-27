@@ -3,7 +3,7 @@ package dcpParts
 import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/baseFormats"
-	"ffxresources/backend/fileFormats/internal/text/dlg"
+	"ffxresources/backend/fileFormats/internal/text"
 	"ffxresources/backend/interfaces"
 	"fmt"
 	"path/filepath"
@@ -24,7 +24,7 @@ func NewDcpFileParts(source interfaces.ISource, destination locations.IDestinati
 }
 
 func (d DcpFileParts) Extract() error {
-	dlgFile := dlg.NewDialogs(d.GetSource(), d.GetDestination())
+	dlgFile := text.NewDialogs(d.GetSource(), d.GetDestination())
 
 	if err := dlgFile.Extract(); err != nil {
 		return fmt.Errorf("failed to extract dialog file: %s", d.GetSource().Get().Name)
@@ -34,7 +34,7 @@ func (d DcpFileParts) Extract() error {
 }
 
 func (d DcpFileParts) Compress() error {
-	dlgFile := dlg.NewDialogs(d.GetSource(), d.GetDestination())
+	dlgFile := text.NewDialogs(d.GetSource(), d.GetDestination())
 
 	if err := dlgFile.Compress(); err != nil {
 		return fmt.Errorf("failed to compress dialog file: %s", d.GetSource().Get().Name)
