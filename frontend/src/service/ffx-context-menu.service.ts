@@ -6,8 +6,7 @@ import { extractFileInfo } from '../utils/utils';
 import { ExtractService } from './extract.service';
 import { CompressService } from './compress.service';
 import { EventsEmit } from '../../wailsjs/runtime';
-import {spira} from "../../wailsjs/go/models";
-import GameDataInfo = spira.GameDataInfo;
+import {core} from "../../wailsjs/go/models";
 
 @Injectable({
   providedIn: 'root'
@@ -31,12 +30,12 @@ export class FfxContextMenuService {
   async view(): Promise<void> {
     if (!this.file()) return;
 
-    const fileInfo: spira.GameDataInfo | null = extractFileInfo(this.file());
+    const fileInfo: core.SpiraFileInfo | null = extractFileInfo(this.file());
     if (!fileInfo) return;
 
     showEditorModal.set(true);
 
-    const textContent: string = await ReadFileAsString(fileInfo.file_path);
+    const textContent: string = await ReadFileAsString(fileInfo.path);
     this.extractedText.set(textContent.replace(/(\r\n|\n|\r)/g, '<br>'));
   }
 
@@ -44,19 +43,19 @@ export class FfxContextMenuService {
   async extract(): Promise<void> {
     //TODO: Review try catch
     try {
-      const fileInfo: GameDataInfo | null = extractFileInfo(this.file());
+      const fileInfo: core.SpiraFileInfo | null = extractFileInfo(this.file());
       if (!fileInfo) return;
 
-      await this._extractService.extraction(fileInfo.file_path);
+      await this._extractService.extraction(fileInfo.path);
     } catch (error) {
       EventsEmit("Notify", error);
     }
   }
 
   async compress(): Promise<void> {
-    const fileInfo: spira.GameDataInfo | null = extractFileInfo(this.file());
+    const fileInfo: core.SpiraFileInfo | null = extractFileInfo(this.file());
     if (!fileInfo) return;
 
-    await this._compressService.compress(fileInfo.file_path);
+    await this._compressService.compress(fileInfo.path);
   }
 }

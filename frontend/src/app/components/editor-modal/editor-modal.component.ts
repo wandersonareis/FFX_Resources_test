@@ -8,7 +8,7 @@ import { WriteTextFile } from '../../../../wailsjs/go/main/App';
 import { extractedEditorText, selectedFile, showEditorModal } from '../signals/signals.signal';
 import { ButtonModule } from 'primeng/button';
 import { CompressService } from '../../../service/compress.service';
-import {spira} from "../../../../wailsjs/go/models";
+import {core, spira} from "../../../../wailsjs/go/models";
 import {TreeNode} from "primeng/api";
 
 @Component({
@@ -35,16 +35,16 @@ export class EditorModalComponent {
   }
 
   async onTextChange(event: any) {
-    const fileInfo: spira.GameDataInfo | null = extractFileInfo(this.file())
+    const fileInfo: core.SpiraFileInfo | null = extractFileInfo(this.file())
     if (!fileInfo) return;
 
-    await WriteTextFile(fileInfo.file_path, event.textValue);
+    await WriteTextFile(fileInfo.path, event.textValue);
   }
 
   async saveToSpiraFile() {
-    const fileInfo: spira.GameDataInfo | null = extractFileInfo(this.file())
+    const fileInfo:core.SpiraFileInfo | null = extractFileInfo(this.file())
     if (!fileInfo) return;
 
-    await this._compressService.compress(fileInfo.file_path);
+    await this._compressService.compress(fileInfo.path);
   }
 }
