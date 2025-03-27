@@ -39,6 +39,9 @@ func (t TxtFormatter) ReadFile(source interfaces.ISource, targetDirectory string
 		outputFile, outputPath = t.providePartsReadPath(targetDirectory, util.LOCKIT_TARGET_DIR_NAME, source.Get().Name)
 	default:
 		outputFile, outputPath = t.provideDefaulReadPath(targetDirectory, source.Get().RelativePath)
+		if !common.IsValidFilePath(outputFile) {
+			outputFile = ""
+		}
 	}
 
 	return outputFile, outputPath
