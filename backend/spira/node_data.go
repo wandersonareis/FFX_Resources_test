@@ -14,7 +14,6 @@ func addTreeNodeData[T dataSetter](item T, source interfaces.ISource, destinatio
 	fileProcessor := fileFormats.NewFileProcessor(source, destination)
 
 	gameDataInfo := fileFormats.DataInfo{
-		FilePath:  source.Get().Path,
 		Source:    *source.Get(),
 		Extract:   *destination.Extract().Get(),
 		Translate: *destination.Translate().Get(),

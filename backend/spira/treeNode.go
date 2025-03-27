@@ -3,11 +3,11 @@ package spira
 import "ffxresources/backend/fileFormats"
 
 type TreeNode struct {
-	Key      string               `json:"key"`
-	Label    string               `json:"label"`
-	Data     fileFormats.DataInfo `json:"data"`
-	Icon     string               `json:"icon"`
-	Children []*TreeNode          `json:"children"`
+	Key      string                   `json:"key"`
+	Label    string                   `json:"label"`
+	Data     fileFormats.TreeNodeData `json:"data"`
+	Icon     string                   `json:"icon"`
+	Children []*TreeNode              `json:"children"`
 }
 
 func (treeNode *TreeNode) SetNodeKey(key string) {
@@ -23,7 +23,9 @@ func (treeNode *TreeNode) SetNodeIcon(icon string) {
 }
 
 func (treeNode *TreeNode) SetNodeData(data fileFormats.DataInfo) {
-	treeNode.Data = data
+	treeNode.Data.Source = data.Source
+	treeNode.Data.Extract = data.Extract
+	treeNode.Data.Translate = data.Translate
 }
 
 func (treeNode *TreeNode) AddNodeChild(child *TreeNode) {

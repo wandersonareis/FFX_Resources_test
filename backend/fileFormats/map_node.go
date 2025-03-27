@@ -9,20 +9,34 @@ import (
 type (
 	TreeMapNode = map[string]*MapNode
 
+	TreeNodeData struct {
+		Source    core.SpiraFileInfo          `json:"source"`
+		Extract   locations.ExtractLocation   `json:"extract_location"`
+		Translate locations.TranslateLocation `json:"translate_location"`
+	}
+
 	DataInfo struct {
-		FilePath      string                      `json:"file_path"`
-		Source        core.SpiraFileInfo          `json:"source"`
-		Extract       locations.ExtractLocation   `json:"extract_location"`
-		Translate     locations.TranslateLocation `json:"translate_location"`
+		Source    core.SpiraFileInfo          `json:"source"`
+		Extract   locations.ExtractLocation   `json:"extract_location"`
+		Translate locations.TranslateLocation `json:"translate_location"`	
+		
 		FileProcessor interfaces.IFileProcessor
 	}
 
-	MapNode struct {
+	node struct {
 		Key       string   `json:"key"`
 		Label     string   `json:"label"`
-		Data      DataInfo `json:"data"`
 		Icon      string   `json:"icon"`
 		ChildKeys []string `json:"childKeys"`
+	}
+	MapNode struct {
+		node
+		Data DataInfo `json:"data"`
+	}
+
+	TreeNode struct {
+		node
+		DataInfo TreeNodeData `json:"data"`
 	}
 )
 
