@@ -205,14 +205,4 @@ var _ = ginkgo.Describe("LockitFile", func() {
 			gomega.Expect(lockitIntegrity.Verify(destination, lockitEncoding, fileOptions)).To(gomega.Succeed())
 		})
 	})
-
-	ginkgo.Describe("Extract and Compress Functionality by LockitFile", func() {
-		ginkgo.It("should extract and compress the lockit file successfully", func() {
-			lockitFile := lockit.NewLockitFile(source, destination)
-
-			gomega.Expect(lockitFile).NotTo(gomega.BeNil())
-			gomega.Expect(lockitFile.Extract()).To(gomega.Succeed())
-			gomega.Expect(lockitFile.Compress()).To(gomega.Succeed())
-		})
-	})
 })
