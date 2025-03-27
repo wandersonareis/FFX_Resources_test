@@ -8,7 +8,7 @@ import (
 )
 
 type IKrnlEncodingHandler interface {
-	FetchKrnlTextsHandler() (string, error)
+	GetKrnlHandlerApp() (string, error)
 	Dispose()
 }
 
@@ -25,7 +25,7 @@ func NewKrnlTextsHandler(gamePart models.GameVersion) IKrnlEncodingHandler {
 	}
 }
 
-func (th *krnlEncodingHandler) FetchKrnlTextsHandler() (string, error) {
+func (th *krnlEncodingHandler) GetKrnlHandlerApp() (string, error) {
 	switch th.gamePart {
 	case models.FFX:
 		return th.fetchFFXKrnlTextsHandler()

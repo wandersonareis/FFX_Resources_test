@@ -8,7 +8,7 @@ import (
 )
 
 type IDlgEncodingHandler interface {
-	FetchDlgTextsHandler() (string, error)
+	GetDlgHandlerApp() (string, error)
 	Dispose()
 }
 
@@ -18,14 +18,15 @@ type dlgEncodingHandler struct {
 	handlerFile string
 }
 
-func NewDlgTextsHandler(dlgFileType models.NodeType) *dlgEncodingHandler {
+func NewDlgTextsHandler(dlgFileType models.NodeType) IDlgEncodingHandler {
 	return &dlgEncodingHandler{
 		Checksum:    util.Checksum{},
 		dlgFileType: dlgFileType,
 	}
 }
 
-func (th *dlgEncodingHandler) FetchDlgTextsHandler() (string, error) {
+// TODO: Separate the special and standard dialog file handling
+func (th *dlgEncodingHandler) GetDlgHandlerApp() (string, error) {
 	if th.dlgFileType == models.DialogsSpecial {
 		return th.getSpecialHandler()
 	}

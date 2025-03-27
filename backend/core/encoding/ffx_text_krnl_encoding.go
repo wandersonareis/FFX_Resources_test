@@ -7,8 +7,8 @@ import (
 )
 
 type IFFXTextKrnlEncoding interface {
-	FetchEncoding() string
-	FetchKrnlHandler() encodingHandler.IKrnlEncodingHandler
+	GetEncoding() string
+	GetKrnlHandler() encodingHandler.IKrnlEncodingHandler
 	Dispose()
 }
 
@@ -25,16 +25,16 @@ func newFFXTextKrnlEncoding(encoding string) *ffxTextKrnlEncoding {
 	}
 }
 
-func (e *ffxTextKrnlEncoding) FetchEncoding() string {
+func (e *ffxTextKrnlEncoding) GetEncoding() string {
 	return e.encoding
 }
 
-func (e *ffxTextKrnlEncoding) FetchKrnlHandler() encodingHandler.IKrnlEncodingHandler {
+func (e *ffxTextKrnlEncoding) GetKrnlHandler() encodingHandler.IKrnlEncodingHandler {
 	return e.textsHandler
 }
 
 func (e *ffxTextKrnlEncoding) Dispose() {
-	os.Remove(e.encoding)
+	_ = os.Remove(e.encoding)
 
 	e.encoding = ""
 

@@ -8,8 +8,8 @@ import (
 )
 
 type IFFXTextDlgEncoding interface {
-	FetchEncoding() string
-	FetchDlgHandler() encodingHandler.IDlgEncodingHandler
+	GetEncoding() string
+	GetDlgHandler() encodingHandler.IDlgEncodingHandler
 	Dispose()
 }
 
@@ -25,11 +25,11 @@ func newFFXTextDlgEncoding(encoding string, textsType models.NodeType) *ffxTextD
 	}
 }
 
-func (e *ffxTextDlgEncoding) FetchEncoding() string {
+func (e *ffxTextDlgEncoding) GetEncoding() string {
 	return e.encoding
 }
 
-func (e *ffxTextDlgEncoding) FetchDlgHandler() encodingHandler.IDlgEncodingHandler {
+func (e *ffxTextDlgEncoding) GetDlgHandler() encodingHandler.IDlgEncodingHandler {
 	return e.textsHandler
 }
 
