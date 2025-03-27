@@ -13,6 +13,7 @@ type FFXGameVersion struct {
 	gameVersion models.GameVersion
 }
 
+// TODO: Implement the methods of the IFfxGameVersion interface
 func NewFFXGameVersion() *FFXGameVersion {
 	return &FFXGameVersion{
 		gameVersion: models.FFX,
