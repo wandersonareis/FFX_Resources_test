@@ -1,6 +1,7 @@
 package locationsBase
 
 import (
+	"ffxresources/backend/common"
 	"ffxresources/backend/interfaces"
 	"path/filepath"
 )
@@ -17,6 +18,7 @@ func (lb *LocationBase) buildTargetOutput(
 	formatter interfaces.ITextFormatter,
 	op BuildOperationType,
 ) {
+	common.CheckArgumentNil(source, "source")
 	if formatter == nil {
 		panic("formatter cannot be nil")
 	}
@@ -29,7 +31,7 @@ func (lb *LocationBase) buildTargetOutput(
 		lb.TargetFile, lb.TargetPath = formatter.WriteFile(source, lb.TargetDirectory)
 	}
 
-	if !source.Get().IsDir {
+	if !source.Get().IsDir && common.IsValidFilePath(lb.TargetFile) {
 		lb.TargetFileName = filepath.Base(lb.TargetFile)
 	}
 	lb.IsExist = lb.IsTargetFileAvailable()
