@@ -66,6 +66,20 @@ func EnsurePathExists(path string) error {
 	return nil
 }
 
+// IsValidFilePath checks if the given file path is valid.
+// It returns false if the base name of the path is empty or starts with a dot.
+// Otherwise, it returns true.
+func IsValidFilePath(path string) bool {
+	base := filepath.Base(path)
+
+	if base == "" || strings.HasPrefix(base, ".") {
+		return false
+	}
+	return true
+}
+
+// RemoveDir removes the directory at the specified path along with all its contents.
+// The function returns an error if the removal process fails.
 func RemoveDir(path string) error {
 	cPath := sanitizationPath(path)
 	return os.RemoveAll(cPath)
