@@ -54,7 +54,7 @@ func (d *LockitDecoder) decoder(executable, sourceFile, targetFile string, encod
 
 	args := []string{"-t", encoding, sourceFile, targetFile}
 
-	if err := components.RunCommand(executable, args); err != nil {
+	if _, err := components.RunCommand(executable, args); err != nil {
 		return err
 	}
 
