@@ -2,7 +2,7 @@ package mt2
 
 import (
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats/internal/text/mt2/internal"
+	"ffxresources/backend/fileFormats/internal/text/internal/mt2/internal"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
@@ -19,12 +19,10 @@ type (
 	}
 )
 
-func newKrnlExtractor() *krnlExtractor {
+func newKrnlExtractor(logger logger.ILoggerHandler) *krnlExtractor {
 	return &krnlExtractor{
 		decoder: internal.NewKrnlDecoder(),
-		log: &logger.LogHandler{
-			Logger: logger.Get().With().Str("module", "kernel_file_extractor").Logger(),
-		},
+		log: logger,
 	}
 }
 

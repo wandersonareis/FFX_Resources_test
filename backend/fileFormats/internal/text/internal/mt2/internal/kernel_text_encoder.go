@@ -3,7 +3,7 @@ package internal
 import (
 	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats/internal/text/encoding"
+	"ffxresources/backend/fileFormats/internal/text/internal/encoding"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 

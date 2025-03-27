@@ -1,9 +1,10 @@
-package mt2
+package text
 
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats/internal/text/lib/textVerifier"
+	"ffxresources/backend/fileFormats/internal/text/internal/mt2"
+	"ffxresources/backend/fileFormats/internal/text/textVerifier"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
@@ -39,8 +40,8 @@ func (k *kernelFile) Extract() error {
 
 	k.log.LogInfo("Extracting kernel file: %s", k.source.Get().Name)
 
-	extractorInstance := rentKrnlExtractor()
-	defer returnKrnlExtractor(extractorInstance)
+	extractorInstance := mt2.RentKrnlExtractor()
+	defer mt2.ReturnKrnlExtractor(extractorInstance)
 	fmt.Println("extractorInstance", extractorInstance)
 
 	if err := extractorInstance.Extract(k.source, k.destination); err != nil {
@@ -51,8 +52,8 @@ func (k *kernelFile) Extract() error {
 
 	k.log.LogInfo("Verifying extracted kernel file: %s", k.destination.Extract().Get().GetTargetFile())
 
-	verifierInstance := rentTextVerifier()
-	defer returnTextVerifier(verifierInstance)
+	verifierInstance := mt2.RentTextVerifier()
+	defer mt2.ReturnTextVerifier(verifierInstance)
 	fmt.Println("verifierInstance", verifierInstance)
 
 	if err := verifierInstance.Verify(k.source, k.destination, textVerifier.ExtractIntegrityCheck); err != nil {
@@ -67,8 +68,8 @@ func (k *kernelFile) Extract() error {
 }
 
 func (k *kernelFile) Compress() error {
-	compressorInstance := rentKrnlCompressor()
-	defer returnKrnlCompressor(compressorInstance)
+	compressorInstance := mt2.RentKrnlCompressor()
+	defer mt2.ReturnKrnlCompressor(compressorInstance)
 
 	if err := compressorInstance.Compress(k.source, k.destination); err != nil {
 		k.log.LogError(err, "Error compressing kernel file: %s", k.destination.Translate().Get().GetTargetFile())
@@ -87,8 +88,8 @@ func (k *kernelFile) Compress() error {
 		return fmt.Errorf("failed to decode kernel file: %s", k.destination.Import().Get().GetTargetFile())
 	}
 
-	textVerifierInstance := rentTextVerifier()
-	defer returnTextVerifier(textVerifierInstance)
+	textVerifierInstance := mt2.RentTextVerifier()
+	defer mt2.ReturnTextVerifier(textVerifierInstance)
 
 	if err := textVerifierInstance.Verify(tmpSource, tmpDestination, textVerifier.CompressIntegrityCheck); err != nil {
 		k.log.LogError(err, "Error verifying kernel file: %s", k.source.Get().Name)
