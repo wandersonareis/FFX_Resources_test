@@ -12,6 +12,10 @@ func GetFromResources(subDir, resourceName, ext string) (string, error) {
 
 	targetFile := tempProvider.TempFile
 
+	if common.IsFileExists(targetFile) {
+		return targetFile, nil
+	}
+
 	err := common.GetFileFromResources(targetHandler, targetFile)
 	if err != nil {
 		return "", err
