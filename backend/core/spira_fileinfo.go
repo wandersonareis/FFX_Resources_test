@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type SpiraFileInfo struct {
@@ -67,7 +68,7 @@ func NewSpiraFileInfo(path string) (*SpiraFileInfo, error) {
 		RelativePath: "",
 	}
 
-	if source.Type == models.Dcp || source.Type == models.Lockit {
+	if source.Type != models.Lockit {
 		source.RelativePath = common.GetRelativePathFromMarker(path)
 	}
 
@@ -80,4 +81,16 @@ func (s *SpiraFileInfo) ReadDir() ([]fs.DirEntry, error) {
 	}
 
 	return os.ReadDir(s.Parent)
+}
+
+// CreateRelativePath sets the RelativeGameDataPath of the source to a path relative to the given gameLocationPath.
+// If the FullFilePath of the source starts with the gameLocationPath, the gameLocationPath is trimmed from the FullFilePath
+// and the result is assigned to RelativeGameDataPath.
+//
+// Parameters:
+//   - gameLocationPath: The path for game original files to which the FullFilePath should be made relative.
+func (s *SpiraFileInfo) CreateRelativePath(source *SpiraFileInfo, gameLocationPath string) {
+	if strings.HasPrefix(source.Path, gameLocationPath) {
+		source.RelativePath = strings.TrimPrefix(source.Path, gameLocationPath+string(os.PathSeparator))
+	}
 }
