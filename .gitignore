@@ -33,5 +33,5 @@ go.work.sum
 
 # env file
 .env
-cfn-tracker.log
-backend/fileFormats/internal/text/dlg/config.json
+backend/fileFormats/internal/text/internal/dlg/testdata/*
+backend/fileFormats/internal/text/testdata/*
