@@ -15,11 +15,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/onsi/ginkgo/v2"
-	"github.com/onsi/gomega"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-var _ = ginkgo.Describe("LockitFile", func() {
+var _ = Describe("LockitFile", Ordered, func() {
 	var (
 		interactionService   *interactions.InteractionService
 		extractTempPath      string
@@ -36,15 +36,16 @@ var _ = ginkgo.Describe("LockitFile", func() {
 		lockitEncoding       ffxencoding.IFFXTextLockitEncoding
 		temp                 *common.TempProvider
 		gameVersionDir       string
+		loggerHandler        logger.ILoggerHandler
 		err                  error
 	)
 
-	ginkgo.BeforeEach(func() {
-		gomega.Expect(os.Setenv("APP_BASE_PATH", `F:\ffxWails\FFX_Resources\build\bin`)).To(gomega.Succeed())
+	BeforeAll(func() {
+		Expect(os.Setenv("APP_BASE_PATH", `F:\ffxWails\FFX_Resources\build\bin`)).To(Succeed())
+		Expect(os.Setenv("FFX_GAME_VERSION", "2")).To(Succeed())
 
-		testPath := "F:\\ffxWails\\FFX_Resources\\build\\bin\\data\\ffx-2_data\\gamedata\\ps3data\\lockit\\ffx2_loc_kit_ps3_us.bin"
 		currentDir, err := filepath.Abs(".")
-		gomega.Expect(err).To(gomega.BeNil())
+		Expect(err).To(BeNil())
 
 		temp = common.NewTempProvider("", "")
 
@@ -76,24 +77,64 @@ var _ = ginkgo.Describe("LockitFile", func() {
 		interactionService = interactions.NewInteractionServiceWithConfig(config)
 		interactionService = interactions.NewInteractionWithTextFormatter(formatter)
 
-		// Setup source and destination
-		source, err = locations.NewSource(testPath)
-		gomega.Expect(err).To(gomega.BeNil())
-
-		destination = &locations.Destination{
-			ExtractLocation:   locations.NewExtractLocationInfo(locationsBase.WithDirectoryName("extracted"), locationsBase.WithTargetDirectory(extractTempPath), locationsBase.WithGameVersionDir(gameVersionDir)),
-			TranslateLocation: locations.NewTranslateLocationInfo(locationsBase.WithDirectoryName("translated"), locationsBase.WithTargetDirectory(translatePath), locationsBase.WithGameVersionDir(gameVersionDir)),
-			ImportLocation:    locations.NewImportLocationInfo(locationsBase.WithDirectoryName("reimported"), locationsBase.WithTargetDirectory(reimportTempPath), locationsBase.WithGameVersionDir(gameVersionDir)),
-		}
-
-		destination.InitializeLocations(source, formatter)
-
 		// Initialize encoding and file options
 		lockitEncoding = ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextLocalizationEncoding()
 		fileOptions = core.NewLockitFileOptions(interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber())
 
 		// Initialize logger
-		loggerHandler := logger.NewLoggerHandler("lockit_file_testing")
+		loggerHandler = logger.NewLoggerHandler("lockit_file_testing")
+
+		// Setup destination
+		destination = &locations.Destination{
+			ExtractLocation:   locations.NewExtractLocationInfo(locationsBase.WithDirectoryName("extracted"), locationsBase.WithTargetDirectory(extractTempPath), locationsBase.WithGameVersionDir(gameVersionDir)),
+			TranslateLocation: locations.NewTranslateLocationInfo(locationsBase.WithDirectoryName("translated"), locationsBase.WithTargetDirectory(translatePath), locationsBase.WithGameVersionDir(gameVersionDir)),
+			ImportLocation:    locations.NewImportLocationInfo(locationsBase.WithDirectoryName("reimported"), locationsBase.WithTargetDirectory(reimportTempPath), locationsBase.WithGameVersionDir(gameVersionDir)),
+		}
+	})
+
+	AfterAll(func() {
+		if lockitEncoding != nil {
+			lockitEncoding.Dispose()
+		}
+		Expect(common.RemoveDir(temp.TempFilePath)).To(Succeed())
+	})
+
+	BeforeEach(func() {
+		testPath := "F:\\ffxWails\\FFX_Resources\\build\\bin\\data\\ffx-2_data\\gamedata\\ps3data\\lockit\\ffx2_loc_kit_ps3_us.bin"
+		/* currentDir, err := filepath.Abs(".")
+		Expect(err).To(BeNil()) */
+
+		/* temp = common.NewTempProvider("", "")
+
+		gameVersionDir = "FFX-2" */
+
+		/* testDataPath = filepath.Join(currentDir, "testdata", gameVersionDir) */
+
+		/* extractTempPath = filepath.Join(temp.TempFilePath, "extract")
+		reimportTempPath = filepath.Join(temp.TempFilePath, "reimport")
+		translatePath = filepath.Join(testDataPath, "translated") */
+
+		// Setup config
+		/* config = &interactions.FFXAppConfig{
+			FFXGameVersion:    2,
+			GameFilesLocation: translatePath,
+			ExtractLocation:   extractTempPath,
+			TranslateLocation: translatePath,
+			ImportLocation:    reimportTempPath,
+		} */
+
+		// Initialize formatter
+		/* formatter = &formatters.TxtFormatter{
+			TargetExtension: ".txt",
+			GameVersionDir:  gameVersionDir,
+			GameFilesPath:   translatePath,
+		} */
+
+		// Setup source and destination
+		source, err = locations.NewSource(testPath)
+		Expect(err).To(BeNil())
+
+		destination.InitializeLocations(source, formatter)
 
 		// Initialize lockit extractor
 		testLockitExtractor = lockit.NewLockitFileExtractor(source, destination, lockitEncoding, fileOptions, loggerHandler)
@@ -101,108 +142,122 @@ var _ = ginkgo.Describe("LockitFile", func() {
 		testLockitCompressor = lockit.NewLockitFileCompressor(source, destination, lockitEncoding, fileOptions, loggerHandler)
 	})
 
-	ginkgo.AfterEach(func() {
-		if lockitEncoding != nil {
-			lockitEncoding.Dispose()
-		}
-		err = common.RemoveDir(temp.TempFilePath)
-		gomega.Expect(err).To(gomega.BeNil())
+	Describe("Miscellaneous Functionality", func() {
+		It("should have valid configuration", func() {
+			Expect(config).NotTo(BeNil())
+		})
+
+		It("should have initialized interaction service", func() {
+			Expect(interactionService).NotTo(BeNil())
+			Expect(interactionService.FFXAppConfig()).NotTo(BeNil())
+		})
+
+		It("should have valid formatter", func() {
+			Expect(formatter).NotTo(BeNil())
+		})
+
+		It("should have interaction service with text formatter", func() {
+			Expect(interactionService.TextFormatter()).NotTo(BeNil())
+		})
+
+		It("should have valid destination", func() {
+			Expect(destination).NotTo(BeNil())
+		})
+
+		It("should have valid source", func() {
+			Expect(source).NotTo(BeNil())
+		})
+
+		It("should have valid lockit encoding", func() {
+			Expect(lockitEncoding).NotTo(BeNil())
+		})
+
+		It("should have valid file options", func() {
+			Expect(fileOptions).NotTo(BeNil())
+		})
+
+		It("should have valid lockit extractor", func() {
+			Expect(testLockitExtractor).NotTo(BeNil())
+		})
+
+		It("should have valid lockit compressor", func() {
+			Expect(testLockitCompressor).NotTo(BeNil())
+		})
 	})
 
-	ginkgo.It("should have valid configuration", func() {
-		gomega.Expect(config).NotTo(gomega.BeNil())
-	})
-
-	ginkgo.It("should have initialized interaction service", func() {
-		gomega.Expect(interactionService).NotTo(gomega.BeNil())
-		gomega.Expect(interactionService.FFXAppConfig()).NotTo(gomega.BeNil())
-	})
-
-	ginkgo.It("should have valid formatter", func() {
-		gomega.Expect(formatter).NotTo(gomega.BeNil())
-	})
-
-	ginkgo.It("should have interaction service with text formatter", func() {
-		gomega.Expect(interactionService.TextFormatter()).NotTo(gomega.BeNil())
-	})
-
-	ginkgo.It("should have valid destination", func() {
-		gomega.Expect(destination).NotTo(gomega.BeNil())
-	})
-
-	ginkgo.Describe("Extract Functionality", func() {
-		ginkgo.It("should have correct extract location path", func() {
+	Describe("Extract Functionality", func() {
+		It("should have correct extract location path", func() {
 			expected := filepath.Join(extractTempPath, gameVersionDir, "lockit_text")
 			expected = filepath.ToSlash(expected)
 
 			actual := destination.Extract().Get().GetTargetPath()
 			actual = filepath.ToSlash(actual)
 
-			gomega.Expect(actual).To(gomega.Equal(expected))
+			Expect(actual).To(Equal(expected))
 		})
 
-		ginkgo.It("should extract the lockit file successfully", func() {
-			gomega.Expect(testLockitExtractor).NotTo(gomega.BeNil())
-			gomega.Expect(testLockitExtractor.Extract()).To(gomega.Succeed())
+		It("should extract the lockit file successfully", func() {
+			Expect(testLockitExtractor).NotTo(BeNil())
+			Expect(testLockitExtractor.Extract()).To(Succeed())
 		})
 
-		ginkgo.It("should verify file integrity successfully", func() {
-			gomega.Expect(testLockitExtractor).NotTo(gomega.BeNil())
-			gomega.Expect(testLockitExtractor.Extract()).To(gomega.Succeed())
+		It("should verify file integrity successfully", func() {
+			Expect(testLockitExtractor).NotTo(BeNil())
+			Expect(testLockitExtractor.Extract()).To(Succeed())
 
 			lockitIntegrity := integrity.NewLockitFileExtractorIntegrity(logger.NewLoggerHandler("lockit_file_integrity_testing"))
-			gomega.Expect(lockitIntegrity).NotTo(gomega.BeNil())
+			Expect(lockitIntegrity).NotTo(BeNil())
 
 			targetPath := destination.Extract().Get().GetTargetPath()
-			gomega.Expect(targetPath).NotTo(gomega.BeEmpty())
+			Expect(targetPath).NotTo(BeEmpty())
 
-			gomega.Expect(lockitIntegrity.Verify(targetPath, fileOptions)).To(gomega.Succeed())
+			Expect(lockitIntegrity.Verify(targetPath, fileOptions)).To(Succeed())
 		})
 
-		ginkgo.It("should verify file integrity binary fail", func() {
+		It("should verify file integrity binary fail", func() {
 			lockitIntegrity := integrity.NewLockitFileExtractorIntegrity(logger.NewLoggerHandler("lockit_file_integrity_testing"))
-			gomega.Expect(lockitIntegrity).NotTo(gomega.BeNil())
+			Expect(lockitIntegrity).NotTo(BeNil())
 
 			targetPath, err := filepath.Abs(filepath.Join("testdata", gameVersionDir, "binary_missing_linebreak"))
-			gomega.Expect(err).To(gomega.BeNil())
+			Expect(err).To(BeNil())
 
 			err = lockitIntegrity.Verify(targetPath, fileOptions)
-			gomega.Expect(err).NotTo(gomega.BeNil())
-			gomega.Expect(err.Error()).To(gomega.Equal("error when counting line breaks: the file has 159 line breaks, expected 162"))
+			Expect(err).NotTo(BeNil())
+			Expect(err.Error()).To(Equal("error when counting line breaks: the file has 159 line breaks, expected 162"))
 		})
 
-		ginkgo.It("should verify file integrity text fail", func() {
+		It("should verify file integrity text fail", func() {
 			lockitIntegrity := integrity.NewLockitFileExtractorIntegrity(logger.NewLoggerHandler("lockit_file_integrity_testing"))
-			gomega.Expect(lockitIntegrity).NotTo(gomega.BeNil())
+			Expect(lockitIntegrity).NotTo(BeNil())
 
 			targetPath, err := filepath.Abs(filepath.Join("testdata", gameVersionDir, "text_missing_linebreak"))
-			gomega.Expect(err).To(gomega.BeNil())
+			Expect(err).To(BeNil())
 
 			err = lockitIntegrity.Verify(targetPath, fileOptions)
-			gomega.Expect(err).NotTo(gomega.BeNil())
-			gomega.Expect(err.Error()).To(gomega.Equal("error when counting line breaks: the file has 1117 line breaks, expected 1121"))
+			Expect(err).NotTo(BeNil())
+			Expect(err.Error()).To(Equal("error when counting line breaks: the file has 1117 line breaks, expected 1121"))
 		})
 	})
 
-	ginkgo.Describe("Compress Functionality", func() {
-		ginkgo.It("should compress the lockit file successfully", func() {
+	Describe("Compress Functionality", func() {
+		It("should compress the lockit file successfully", func() {
 			extractPath := filepath.Join(testDataPath, "extracted", "lockit_text")
 
 			destination.Extract().Get().SetTargetPath(extractPath)
-			gomega.Expect(destination.Extract().Get().GetTargetPath()).To(gomega.Equal(extractPath))
+			Expect(destination.Extract().Get().GetTargetPath()).To(Equal(extractPath))
 
-			gomega.Expect(testLockitCompressor).NotTo(gomega.BeNil())
-			gomega.Expect(testLockitCompressor.Compress()).To(gomega.Succeed())
+			Expect(testLockitCompressor).NotTo(BeNil())
+			Expect(testLockitCompressor.Compress()).To(Succeed())
 		})
 
-		ginkgo.It("should verify file integrity successfully", func() {
-			gomega.Expect(testLockitCompressor).NotTo(gomega.BeNil())
-			gomega.Expect(testLockitCompressor.Compress()).To(gomega.Succeed())
+		It("should verify file integrity successfully", func() {
+			Expect(testLockitCompressor).NotTo(BeNil())
+			Expect(testLockitCompressor.Compress()).To(Succeed())
 
 			lockitIntegrity := integrity.NewLockitFileIntegrity(logger.NewLoggerHandler("lockit_file_integrity_testing"))
-			gomega.Expect(lockitIntegrity).NotTo(gomega.BeNil())
+			Expect(lockitIntegrity).NotTo(BeNil())
 
-			gomega.Expect(lockitIntegrity.Verify(destination, lockitEncoding, fileOptions)).To(gomega.Succeed())
+			Expect(lockitIntegrity.Verify(destination, lockitEncoding, fileOptions)).To(Succeed())
 		})
 	})
 })
