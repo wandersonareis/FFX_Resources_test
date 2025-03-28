@@ -1,6 +1,7 @@
 package lockit
 
 import (
+	"ffxresources/backend/common"
 	"ffxresources/backend/core"
 	"ffxresources/backend/core/components"
 	ffxencoding "ffxresources/backend/core/encoding"
@@ -35,6 +36,11 @@ func NewLockitFileExtractor(
 	lockitEncoding ffxencoding.IFFXTextLockitEncoding,
 	fileOptions core.ILockitFileOptions,
 	logger logger.ILoggerHandler) *LockitFileExtractor {
+	common.CheckArgumentNil(source, "source")
+	common.CheckArgumentNil(destination, "destination")
+	common.CheckArgumentNil(lockitEncoding, "lockitEncoding")
+	common.CheckArgumentNil(fileOptions, "fileOptions")
+	common.CheckArgumentNil(logger, "logger")
 	return &LockitFileExtractor{
 		IBaseFileFormat:  baseFormats.NewFormatsBase(source, destination),
 		filePartsDecoder: lockitParts.NewLockitFilePartsDecoder(),
