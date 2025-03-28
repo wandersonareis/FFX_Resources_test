@@ -77,8 +77,7 @@ var _ = Describe("LockitFile", Ordered, func() {
 		interactionService = interactions.NewInteractionServiceWithConfig(config)
 		interactionService = interactions.NewInteractionWithTextFormatter(formatter)
 
-		// Initialize encoding and file options
-		lockitEncoding = ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextLocalizationEncoding()
+		// Initialize file options
 		fileOptions = core.NewLockitFileOptions(interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber())
 
 		// Initialize logger
@@ -96,39 +95,10 @@ var _ = Describe("LockitFile", Ordered, func() {
 		if lockitEncoding != nil {
 			lockitEncoding.Dispose()
 		}
-		Expect(common.RemoveDir(temp.TempFilePath)).To(Succeed())
 	})
 
 	BeforeEach(func() {
 		testPath := "F:\\ffxWails\\FFX_Resources\\build\\bin\\data\\ffx-2_data\\gamedata\\ps3data\\lockit\\ffx2_loc_kit_ps3_us.bin"
-		/* currentDir, err := filepath.Abs(".")
-		Expect(err).To(BeNil()) */
-
-		/* temp = common.NewTempProvider("", "")
-
-		gameVersionDir = "FFX-2" */
-
-		/* testDataPath = filepath.Join(currentDir, "testdata", gameVersionDir) */
-
-		/* extractTempPath = filepath.Join(temp.TempFilePath, "extract")
-		reimportTempPath = filepath.Join(temp.TempFilePath, "reimport")
-		translatePath = filepath.Join(testDataPath, "translated") */
-
-		// Setup config
-		/* config = &interactions.FFXAppConfig{
-			FFXGameVersion:    2,
-			GameFilesLocation: translatePath,
-			ExtractLocation:   extractTempPath,
-			TranslateLocation: translatePath,
-			ImportLocation:    reimportTempPath,
-		} */
-
-		// Initialize formatter
-		/* formatter = &formatters.TxtFormatter{
-			TargetExtension: ".txt",
-			GameVersionDir:  gameVersionDir,
-			GameFilesPath:   translatePath,
-		} */
 
 		// Setup source and destination
 		source, err = locations.NewSource(testPath)
@@ -136,10 +106,17 @@ var _ = Describe("LockitFile", Ordered, func() {
 
 		destination.InitializeLocations(source, formatter)
 
+		// Initialize lockit encoding
+		lockitEncoding = ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextLocalizationEncoding()
+
 		// Initialize lockit extractor
 		testLockitExtractor = lockit.NewLockitFileExtractor(source, destination, lockitEncoding, fileOptions, loggerHandler)
 
 		testLockitCompressor = lockit.NewLockitFileCompressor(source, destination, lockitEncoding, fileOptions, loggerHandler)
+	})
+
+	AfterEach(func() {
+		common.RemoveDir(temp.TempFilePath)
 	})
 
 	Describe("Miscellaneous Functionality", func() {
