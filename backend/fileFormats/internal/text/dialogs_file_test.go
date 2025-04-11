@@ -7,6 +7,7 @@ import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/core/locations/locationsBase"
 	"ffxresources/backend/fileFormats/internal/text"
+	"ffxresources/backend/fileFormats/internal/text/internal/dlg"
 	"ffxresources/backend/fileFormats/internal/text/internal/lib"
 	"ffxresources/backend/fileFormats/internal/text/textVerifier"
 	"ffxresources/backend/formatters"
@@ -30,7 +31,7 @@ var (
 	formatter          interfaces.ITextFormatter
 	source             interfaces.ISource
 	destination        locations.IDestination
-	//testDlgExtractor   dlg.IDlgExtractor
+	testDlgExtractor   dlg.IDlgExtractor
 	//testDlgCompressor  dlg.IDlgCompressor
 	temp           *common.TempProvider
 	gameVersionDir string
@@ -90,7 +91,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 
 	BeforeEach(func() {
 		// Initialize dialog extractor
-		//testDlgExtractor = dlg.NewDlgExtractor()
+		testDlgExtractor = dlg.NewDlgExtractor(log)
 
 		// Initialize dialog compressor
 		//testDlgCompressor = dlg.NewDlgCompressor()
@@ -201,9 +202,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 
 			destination.InitializeLocations(source, formatter)
 
-			dlgFile := text.NewDialogs(source, destination)
-			Expect(dlgFile).NotTo(BeNil())
-			Expect(dlgFile.Extract()).To(Succeed())
+			Expect(testDlgExtractor.Extract(source, destination)).To(Succeed())
 		})
 
 		It("should extract the tutorial.msb successfully", func() {
@@ -218,9 +217,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 
 			destination.InitializeLocations(source, formatter)
 
-			dlgFile := text.NewDialogs(source, destination)
-			Expect(dlgFile).NotTo(BeNil())
-			Expect(dlgFile.Extract()).To(Succeed())
+			Expect(testDlgExtractor.Extract(source, destination)).To(Succeed())
 		})
 
 		It("should extract the cloud.bin successfully", func() {
@@ -235,9 +232,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 
 			destination.InitializeLocations(source, formatter)
 
-			dlgFile := text.NewDialogs(source, destination)
-			Expect(dlgFile).NotTo(BeNil())
-			Expect(dlgFile.Extract()).To(Succeed())
+			Expect(testDlgExtractor.Extract(source, destination)).To(Succeed())
 		})
 
 		It("should extract variant event file crcr0000.bin successfully", func() {
@@ -252,9 +247,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 
 			destination.InitializeLocations(source, formatter)
 
-			dlgFile := text.NewDialogs(source, destination)
-			Expect(dlgFile).NotTo(BeNil())
-			Expect(dlgFile.Extract()).To(Succeed())
+			Expect(testDlgExtractor.Extract(source, destination)).To(Succeed())
 		})
 
 		It("should extract variant event file credits.bin successfully", func() {
@@ -269,9 +262,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 
 			destination.InitializeLocations(source, formatter)
 
-			dlgFile := text.NewDialogs(source, destination)
-			Expect(dlgFile).NotTo(BeNil())
-			Expect(dlgFile.Extract()).To(Succeed())
+			Expect(testDlgExtractor.Extract(source, destination)).To(Succeed())
 		})
 
 		It("should verify file integrity binary fail", func() {
