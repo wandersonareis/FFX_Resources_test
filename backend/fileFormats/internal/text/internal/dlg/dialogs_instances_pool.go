@@ -27,7 +27,9 @@ type (
 
 func NewDlgExtractorPool(logger logger.ILoggerHandler) *ExtractorPool {
 	ep := &ExtractorPool{
-		dlgPool{logger: logger},
+		dlgPool{
+			pool:   &sync.Pool{},
+			logger: logger},
 	}
 
 	ep.pool.New = func() interface{} {
@@ -46,8 +48,11 @@ func (ep *ExtractorPool) Return(extractor IDlgExtractor) {
 
 func NewDlgCompressorPool(logger logger.ILoggerHandler) *CompressorPool {
 	cp := &CompressorPool{
-		dlgPool{logger: logger},
+		dlgPool{
+			pool:   &sync.Pool{},
+			logger: logger},
 	}
+
 	cp.pool.New = func() interface{} {
 		return NewDlgCompressor(logger)
 	}
@@ -64,8 +69,11 @@ func (cp *CompressorPool) Return(compressor IDlgCompressor) {
 
 func NewTextVerifierPool(logger logger.ILoggerHandler) *TextVerifierPool {
 	tv := &TextVerifierPool{
-		dlgPool{logger: logger},
+		dlgPool{
+			pool:   &sync.Pool{},
+			logger: logger},
 	}
+	
 	tv.pool.New = func() interface{} {
 		return textVerifier.NewTextsVerify(logger)
 	}
