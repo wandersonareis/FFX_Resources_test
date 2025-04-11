@@ -359,16 +359,16 @@ var _ = Describe("DlgFile", Ordered, func() {
 	})
 
 	It("should be dialogs count", func() {
+		testPath := `binary\ffx_ps2\ffx2\master\new_uspc\menu\tutorial.msb`
+		sourceFile := filepath.Join(testDataPath, testPath)
+		Expect(common.CheckPathExists(sourceFile)).To(Succeed())
+
+		source, err := locations.NewSource(sourceFile)
+		Expect(err).To(BeNil())
+		Expect(source).NotTo(BeNil())
+
 		encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextDlgEncoding(source.Get().Type)
 		defer encoding.Dispose()
-
-		file := `F:\ffxWails\FFX_Resources\build\bin\data\ffx_ps2\ffx2\master\new_uspc\menu\tutorial.msb`
-
-		source, err := locations.NewSource(file)
-		Expect(err).To(BeNil())
-
-		sourceFile := source.Get().Path
-		Expect(sourceFile).NotTo(BeEmpty())
 
 		count, err := lib.TextSegmentsCounter(sourceFile, source.Get().Type)
 		Expect(err).To(BeNil())
