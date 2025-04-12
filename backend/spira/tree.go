@@ -11,7 +11,7 @@ import (
 )
 
 func CreateNodeMap(gameVersion models.GameVersion, formatter interfaces.ITextFormatter) fileFormats.TreeMapNode {
-	nodeMap := make(fileFormats.TreeMapNode)
+	nodeMap := make(fileFormats.TreeMapNode, 1800)
 
 	rootDir := interactions.NewInteractionService().GameLocation.GetTargetDirectory()
 	if rootDir == "" {
@@ -22,6 +22,8 @@ func CreateNodeMap(gameVersion models.GameVersion, formatter interfaces.ITextFor
 	if err != nil {
 		return nil
 	}
+
+	entrySource.PopulateDuplicatesFiles(gameVersion)
 
 	destination := locations.NewDestination()
 	destination.InitializeLocations(entrySource, formatter)
@@ -80,7 +82,7 @@ func CreateNodeMap(gameVersion models.GameVersion, formatter interfaces.ITextFor
 	return nodeMap
 }
 
-func BuildTreeFromMap(nodeMap map[string]*fileFormats.MapNode, rootKey string) *TreeNode {
+func BuildTreeFromMap(nodeMap fileFormats.TreeMapNode, rootKey string) *TreeNode {
 	rootNodeData, exists := nodeMap[rootKey]
 	if !exists {
 		return nil
@@ -104,10 +106,6 @@ func convertMapNodeToTreeNode(node *fileFormats.MapNode) *TreeNode {
 	}
 
 	treeNode := &TreeNode{}
-
-	if node.Data.FileProcessor != nil {
-		node.Data.FileProcessor = nil
-	}
 
 	treeNode.SetNodeKey(node.Key)
 	treeNode.SetNodeLabel(node.Label)

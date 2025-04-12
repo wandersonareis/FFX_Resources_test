@@ -3,7 +3,6 @@ package services
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
-	"ffxresources/backend/fileFormats"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/notifications"
@@ -13,7 +12,7 @@ import (
 
 type (
 	IDirectoryService interface {
-		ProcessDirectory(targetPath string, pathMap fileFormats.TreeMapNode) error
+		ProcessDirectory(targetPath string, pathMap *NodeStore) error
 	}
 
 	directoryExtractService  struct{}
@@ -28,13 +27,13 @@ func NewDirectoryCompressService() IDirectoryService {
 	return &directoryCompressService{}
 }
 
-func (e *directoryExtractService) ProcessDirectory(targetPath string, pathMap fileFormats.TreeMapNode) error {
+func (e *directoryExtractService) ProcessDirectory(targetPath string, pathMap *NodeStore) error {
 	return ProcessDirectoryCommon(targetPath, pathMap, func(processor interfaces.IFileProcessor) error {
 		return processor.Extract()
 	})
 }
 
-func (e *directoryCompressService) ProcessDirectory(targetPath string, pathMap fileFormats.TreeMapNode) error {
+func (e *directoryCompressService) ProcessDirectory(targetPath string, pathMap *NodeStore) error {
 	return ProcessDirectoryCommon(targetPath, pathMap, func(processor interfaces.IFileProcessor) error {
 		return processor.Compress()
 	})
@@ -42,7 +41,7 @@ func (e *directoryCompressService) ProcessDirectory(targetPath string, pathMap f
 
 func ProcessDirectoryCommon(
 	targetPath string,
-	pathMap fileFormats.TreeMapNode,
+	pathMap *NodeStore,
 	operation func(interfaces.IFileProcessor) error,
 ) error {
 	common.CheckArgumentNil(targetPath, "targetPath")
@@ -59,7 +58,7 @@ func ProcessDirectoryCommon(
 	return nil
 }
 
-func processDirectory(targetPath string, pathMap fileFormats.TreeMapNode, operation func(interfaces.IFileProcessor) error) error {
+func processDirectory(targetPath string, pathMap *NodeStore, operation func(interfaces.IFileProcessor) error) error {
 	filesProcessorList := components.NewEmptyList[interfaces.IFileProcessor]()
 	defer filesProcessorList.Clear()
 
@@ -67,10 +66,12 @@ func processDirectory(targetPath string, pathMap fileFormats.TreeMapNode, operat
 		if err != nil {
 			return err
 		}
+
 		if info.IsDir() {
 			return nil
 		}
-		if node, ok := pathMap[path]; ok {
+
+		if node, ok := pathMap.Get(path); ok {
 			if node.Data.Source.IsDir {
 				return nil
 			}
@@ -80,6 +81,7 @@ func processDirectory(targetPath string, pathMap fileFormats.TreeMapNode, operat
 		}
 		return nil
 	})
+
 	if err != nil {
 		return err
 	}

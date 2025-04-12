@@ -30,9 +30,15 @@ func (c *CompressService) Compress(path string) {
 }
 
 func (c *CompressService) compress(path string) error {
-	node, ok := NodeMap[path]
+	common.CheckArgumentNil(nodeStore, "nodeStore")
+
+	node, ok := nodeStore.Get(path)
 	if !ok {
 		return fmt.Errorf("node not found for path: %s", path)
+	}
+
+	if node == nil {
+		return fmt.Errorf("node is nil for path: %s", path)
 	}
 
 	if node.Data.Source.Type == models.Folder {
@@ -40,7 +46,7 @@ func (c *CompressService) compress(path string) error {
 			c.dirCompressService = NewDirectoryCompressService()
 		})
 
-		if err := c.dirCompressService.ProcessDirectory(path, NodeMap); err != nil {
+		if err := c.dirCompressService.ProcessDirectory(path, nodeStore); err != nil {
 			return err
 		}
 

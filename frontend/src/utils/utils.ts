@@ -1,8 +1,8 @@
-import { core } from "../../wailsjs/go/models"
+import { core, fileFormats } from "../../wailsjs/go/models"
 
-export function extractFileInfo(node: any): core.SpiraFileInfo | null {
+export function getFileInfoFromNode(node: any): fileFormats.TreeNodeData | null {
     if (node?.data) {
-        return node.data as core.SpiraFileInfo
+        return node.data as fileFormats.TreeNodeData
     }
     return null
 }

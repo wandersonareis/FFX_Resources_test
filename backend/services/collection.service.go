@@ -9,6 +9,8 @@ import (
 
 type CollectionService struct{}
 
+var nodeStore *NodeStore
+
 func NewCollectionService() *CollectionService {
 	return &CollectionService{}
 }
@@ -28,8 +30,9 @@ func (c *CollectionService) BuildTree() []spira.TreeNode {
 
 	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
 
-	NodeMap = spira.CreateNodeMap(gameVersion, formatter)
-	rootTreeNode := spira.BuildTreeFromMap(NodeMap, path)
+	rawMap := spira.CreateNodeMap(gameVersion, formatter)
+	nodeStore = NewNodeStore(rawMap)
+	rootTreeNode := spira.BuildTreeFromMap(rawMap, path)
 
 	return []spira.TreeNode{*rootTreeNode}
 }

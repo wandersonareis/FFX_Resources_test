@@ -31,7 +31,8 @@ func TestExtractDir(path string, testExtract, testCompress bool) {
 	interactions.NewInteractionService().GameLocation.SetTargetDirectory(path)
 	
 	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
-	NodeMap = spira.CreateNodeMap(gameVersion, formatter)
+	rawMap := spira.CreateNodeMap(gameVersion, formatter)
+	nodeStore = NewNodeStore(rawMap)
 
 	testRun := func(n spira.TreeNode) {
 		if testExtract {

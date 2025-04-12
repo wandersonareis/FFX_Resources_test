@@ -28,11 +28,15 @@ func (e *ExtractService) Extract(path string) {
 }
 
 func (e *ExtractService) extract(path string) error {
-	common.CheckArgumentNil(NodeMap, "NodeMap")
+	common.CheckArgumentNil(nodeStore, "nodeStore")
 
-	node, ok := NodeMap[path]
+	node, ok := nodeStore.Get(path)
 	if !ok {
 		return fmt.Errorf("node not found for path: %s", path)
+	}
+
+	if node == nil {
+		return fmt.Errorf("node is nil for path: %s", path)
 	}
 
 	if node.Data.Source.Type == models.Folder {
@@ -40,7 +44,7 @@ func (e *ExtractService) extract(path string) error {
 			e.dirExtractService = NewDirectoryExtractService()
 		}
 
-		if err := e.dirExtractService.ProcessDirectory(path, NodeMap); err != nil {
+		if err := e.dirExtractService.ProcessDirectory(path, nodeStore); err != nil {
 			return err
 		}
 
