@@ -1,6 +1,7 @@
 package textVerifier
 
 import (
+	"ffxresources/backend/common"
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
@@ -8,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 )
 
 type TextIntegrityVerifyFunc func(source interfaces.ISource, destination locations.IDestination, segmentCounter ISegmentCounter, fileComparer IComparer, logger logger.ILoggerHandler) error
@@ -103,9 +105,8 @@ func compressIntegrityCheck(source interfaces.ISource, destination locations.IDe
 	}
 
 	if err := fileComparer.CompareTextPartsContents(translateLocation.GetTargetFile(), extractLocation.GetTargetFile()); err != nil {
-		if err := os.Remove(importLocation.GetTargetFile()); err != nil {
+		if err := common.RemoveFileWithRetries(importLocation.GetTargetFile(), 5, time.Second); err != nil {
 			logger.LogError(err, "failed to remove broken text file: %s", importLocation.GetTargetFile())
-			return fmt.Errorf("failed to integrity text file: %s", importLocation.GetTargetFile())
 		}
 
 		return err

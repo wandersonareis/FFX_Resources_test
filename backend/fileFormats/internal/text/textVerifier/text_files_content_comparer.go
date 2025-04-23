@@ -23,14 +23,14 @@ func newPartComparer() IComparer {
 }
 
 func (pc Comparer) CompareTextPartsContents(fromFile, toFile string) error {
-	if err := pc.compare(fromFile, toFile); err != nil {
+	if err := pc.compareFileData(fromFile, toFile); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (pc Comparer) compare(fromFile, toFile string) error {
+func (pc Comparer) compareFileData(fromFile, toFile string) error {
 	newExtractedPartData, err := os.ReadFile(fromFile)
 	if err != nil {
 		return fmt.Errorf("error: %w when reading file: %s", err, fromFile)
