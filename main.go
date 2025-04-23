@@ -58,9 +58,6 @@ func main() {
 		WindowStartState:         options.Normal,
 		Bind: []interface{}{
 			app,
-			app.CollectionService,
-			app.ExtractService,
-			app.CompressService,
 		},
 		// Windows platform specific options
 		Windows: &windows.Options{

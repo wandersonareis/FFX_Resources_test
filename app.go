@@ -132,6 +132,40 @@ func (a *App) initServices(ctx context.Context) {
 	a.ExtractService = services.NewExtractService(notification, progress)
 	a.CompressService = services.NewCompressService(notification, progress)
 }
+
+func (a *App) BuildTree() []spira.TreeNode {
+	tree := a.CollectionService.BuildTree()
+	
+	if err := common.CheckArgumentNil(tree, "BuildTree"); err != nil {
+		a.noticationService.NotifyError(fmt.Errorf("failed to build files tree"))
+		return nil
+	}
+
+	return tree
+}
+
+func (a *App) Extract(path string) {
+	if err := common.CheckArgumentNil(path, "path"); err != nil {
+		a.noticationService.NotifyError(err)
+		return
+	}
+
+	if err := a.ExtractService.Extract(path); err != nil {
+		a.noticationService.NotifyError(err)
+	}
+}
+
+func (a *App) Compress(path string) {
+	if err := common.CheckArgumentNil(path, "path"); err != nil {
+		a.noticationService.NotifyError(err)
+		return
+	}
+
+	if err := a.CompressService.Compress(path); err != nil {
+		a.noticationService.NotifyError(err)
+	}
+}
+
 func (a *App) ReadFileAsString(file string) string {
 	content, err := os.ReadFile(file)
 	if err != nil {
