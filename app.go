@@ -38,7 +38,7 @@ func NewApp() *App {
 	progress := services.NewProgressService(context.Background())
 	return &App{
 		CollectionService: services.NewCollectionService(notifier),
-		ExtractService:    services.NewExtractService(),
+		ExtractService:    services.NewExtractService(notifier, progress),
 		CompressService:   services.NewCompressService(notifier, progress),
 	}
 }
@@ -129,6 +129,7 @@ func (a *App) initServices(ctx context.Context) {
 
 	// Initialize services
 	a.CollectionService = services.NewCollectionService(notification)
+	a.ExtractService = services.NewExtractService(notification, progress)
 	a.CompressService = services.NewCompressService(notification, progress)
 }
 func (a *App) ReadFileAsString(file string) string {

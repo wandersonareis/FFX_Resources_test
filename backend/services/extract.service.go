@@ -2,64 +2,96 @@ package services
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/fileFormats"
 	"ffxresources/backend/models"
-	"ffxresources/backend/notifications"
 	"fmt"
 )
 
 type ExtractService struct {
 	dirExtractService IDirectoryService
+	notifierService   INotificationService
+	progressService   IProgressService
 }
 
-func NewExtractService() *ExtractService {
-	return &ExtractService{}
-}
-
-func (e *ExtractService) Extract(path string) {
-	common.CheckArgumentNil(path, "path")
-
-	cb := func() error {
-		return e.extract(path)
-	}
-
-	if err := common.RecoverFn(cb); err != nil {
-		notifications.NotifyError(err)
+func NewExtractService(notificationService INotificationService, progressService IProgressService) *ExtractService {
+	return &ExtractService{
+		notifierService: notificationService,
+		progressService: progressService,
 	}
 }
 
-func (e *ExtractService) extract(path string) error {
-	common.CheckArgumentNil(nodeStore, "nodeStore")
+func (e *ExtractService) Extract(path string) error {
+	if err := common.CheckArgumentNil(path, "path"); err != nil {
+		return err
+	}
 
-	node, ok := nodeStore.Get(path)
+	if err := common.CheckArgumentNil(NodeDataStore, "nodeStore"); err != nil {
+		return err
+	}
+
+	node, ok := NodeDataStore.Get(path)
 	if !ok {
 		return fmt.Errorf("node not found for path: %s", path)
 	}
 
-	if node == nil {
-		return fmt.Errorf("node is nil for path: %s", path)
+	if !NodeDataStore.IsNode(node) {
+		return fmt.Errorf("node is invalid for path: %s", path)
+	}
+
+	var cb func(node *fileFormats.MapNode) error
+
+	switch node.Data.Source.Type {
+	case models.Folder:
+		cb = e.extractDirectory
+	default:
+		cb = e.extractFile
+	}
+
+	if err := cb(node); err != nil {
+		e.notifierService.NotifyError(err)
+	}
+
+	return nil
+}
+
+func (e *ExtractService) extractFile(node *fileFormats.MapNode) error {
+	if !NodeDataStore.IsNode(node) {
+		return fmt.Errorf("node is invalid")
 	}
 
 	if node.Data.Source.Type == models.Folder {
-		if e.dirExtractService == nil {
-			e.dirExtractService = NewDirectoryExtractService()
-		}
-
-		if err := e.dirExtractService.ProcessDirectory(path, nodeStore); err != nil {
-			return err
-		}
-
-		notifications.NotifySuccess(fmt.Sprintf("Directory %s extracted successfully!", node.Label))
-		return nil
+		return fmt.Errorf("node is not a file")
 	}
 
-	processor := node.Data.FileProcessor
-	if processor != nil {
-		if err := processor.Extract(); err != nil {
-			return err
-		}
-
-		notifications.NotifySuccess(fmt.Sprintf("File %s extracted successfully!", node.Label))
+	if node.Data.FileProcessor == nil {
+		return fmt.Errorf("file processor is nil")
 	}
 
+	if err := node.Data.FileProcessor.Extract(); err != nil {
+		return err
+	}
+
+	e.notifierService.NotifySuccess(fmt.Sprintf("File %s extracted successfully!", node.Data.Source.Name))
+	return nil
+}
+
+func (e *ExtractService) extractDirectory(node *fileFormats.MapNode) error {
+	if !NodeDataStore.IsNode(node) {
+		return fmt.Errorf("node is invalid")
+	}
+
+	if node.Data.Source.Type != models.Folder {
+		return fmt.Errorf("node is not a directory")
+	}
+
+	if e.dirExtractService == nil {
+		e.dirExtractService = NewDirectoryExtractService(e.notifierService, e.progressService)
+	}
+
+	if err := e.dirExtractService.ProcessDirectory(node.Data.Source.Path, NodeDataStore); err != nil {
+		return err
+	}
+
+	e.notifierService.NotifySuccess(fmt.Sprintf("Directory %s extracted successfully!", node.Data.Source.Name))
 	return nil
 }
