@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import {Extract} from "../../wailsjs/go/services/ExtractService";
+import { Extract } from '../../wailsjs/go/main/App';
 
 @Injectable({
   providedIn: 'root'

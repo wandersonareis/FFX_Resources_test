@@ -1,4 +1,4 @@
-import { core, fileFormats } from "../../wailsjs/go/models"
+import { fileFormats } from "../../wailsjs/go/models"
 
 export function getFileInfoFromNode(node: any): fileFormats.TreeNodeData | null {
     if (node?.data) {
