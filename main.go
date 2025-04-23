@@ -21,7 +21,6 @@ var icon []byte
 
 func main() {
 	// Create an instance of the app structure
-
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered from panic:", r.(error).Error())

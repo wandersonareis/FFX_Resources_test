@@ -35,10 +35,11 @@ noticationService services.INotificationService
 // NewApp creates a new App application struct
 func NewApp() *App {
 	notifier := services.NewEventNotifier(context.Background())
+	progress := services.NewProgressService(context.Background())
 	return &App{
 		CollectionService: services.NewCollectionService(notifier),
 		ExtractService:    services.NewExtractService(),
-		CompressService:   services.NewCompressService(),
+		CompressService:   services.NewCompressService(notifier, progress),
 	}
 }
 
@@ -122,10 +123,14 @@ func (a *App) shutdown(ctx context.Context) {
 
 func (a *App) initServices(ctx context.Context) {
 	notification := services.NewEventNotifier(ctx)
+	progress := services.NewProgressService(ctx)
+
 	a.noticationService = notification
 
 	// Initialize services
 	a.CollectionService = services.NewCollectionService(notification)
+	a.CompressService = services.NewCompressService(notification, progress)
+}
 func (a *App) ReadFileAsString(file string) string {
 	content, err := os.ReadFile(file)
 	if err != nil {
@@ -138,9 +143,9 @@ func (a *App) ReadFileAsString(file string) string {
 func (a *App) WriteTextFile(file string, text string) {
 	err := os.WriteFile(file, []byte(text), 0644)
 	if err != nil {
-		notifications.NotifyError(err)
+		a.noticationService.NotifyError(err)
 
-		runtime.EventsEmit(interactions.NewInteractionService().Ctx, "Notify", err.Error())
+		//runtime.EventsEmit(interactions.NewInteractionService().Ctx, "Notify", err.Error())
 	}
 }
 
