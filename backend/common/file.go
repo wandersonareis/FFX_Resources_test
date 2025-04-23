@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 func GetFileName(path string) string {
@@ -14,6 +15,24 @@ func GetFileName(path string) string {
 func IsFileExists(path string) bool {
 	_, err := os.Stat(path)
 	return !os.IsNotExist(err)
+}
+
+func RemoveFileWithRetries(filepath string, maxRetries int, delayBetweenRetries time.Duration) error {
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		err := os.Remove(filepath)
+		if err == nil {
+			return nil
+		}
+		if os.IsNotExist(err) {
+			return nil
+		}
+				
+		if attempt < maxRetries {
+			time.Sleep(delayBetweenRetries)
+		}
+	}
+	
+	return fmt.Errorf("failure to remove the %s file after %d attempts", filepath, maxRetries)
 }
 
 func CheckPathExists(path string) error {
