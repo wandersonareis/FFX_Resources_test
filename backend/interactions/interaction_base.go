@@ -14,22 +14,26 @@ func (e *interactionBase) GetTargetDirectoryBase(field ConfigField) (interface{}
 	return NewInteractionService().FFXAppConfig().GetField(field)
 }
 
-func (e *interactionBase) SetTargetDirectoryBase(field ConfigField, path string) {
+func (e *interactionBase) SetTargetDirectoryBase(field ConfigField, path string) error {
 	fullPath, err := filepath.Abs(path)
 	if err != nil {
-		panic(fmt.Errorf("erro ao obter o caminho absoluto: %v", err))
+		return fmt.Errorf("error when obtaining the absolute path: %v", err)
 	}
 
 	if err := NewInteractionService().FFXAppConfig().UpdateField(field, fullPath); err != nil {
-		return
+		return err
 	}
+
+	return nil
 }
 
 func (e *interactionBase) ProviderTargetDirectoryBase(field ConfigField, targetDirectory string) error {
 	if targetDirectory == "" {
 		targetDirectory = filepath.Join(common.GetExecDir(), e.defaultDirName)
 
-		e.SetTargetDirectoryBase(field, targetDirectory)
+		if err := e.SetTargetDirectoryBase(field, targetDirectory); err != nil {
+			return err
+		}
 	}
 
 	err := common.EnsurePathExists(targetDirectory)

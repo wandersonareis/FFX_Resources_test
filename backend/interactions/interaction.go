@@ -31,7 +31,7 @@ func NewInteractionService() *InteractionService {
 	initOnce.Do(func() {
 		filePath := filepath.Join(common.GetExecDir(), "config.json")
 
-		ffxAppConfig := newAppConfig(filePath)
+		ffxAppConfig := NewAppConfig(filePath)
 		if err := ffxAppConfig.FromJson(); err != nil {
 			panic(err)
 		}

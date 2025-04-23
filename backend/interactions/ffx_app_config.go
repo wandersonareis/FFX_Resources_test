@@ -35,7 +35,7 @@ const (
 	ConfigImportLocation    ConfigField = "ImportLocation"
 )
 
-func newAppConfig(filePath string) *FFXAppConfig {
+func NewAppConfig(filePath string) *FFXAppConfig {
 	ffxAppConfig := &FFXAppConfig{
 		filePath: filePath,
 	}
@@ -144,6 +144,7 @@ func (c *FFXAppConfig) GetField(field ConfigField) (interface{}, error) {
 	}
 }
 
+// TODO: Add a method to update the config file
 func (c *FFXAppConfig) UpdateField(field ConfigField, value interface{}) error {
 	changed := false
 
@@ -194,4 +195,9 @@ func (c *FFXAppConfig) UpdateField(field ConfigField, value interface{}) error {
 	}
 
 	return nil
+}
+
+func (c *FFXAppConfig) UpdateConfigFile(newFilePath string) error {
+	c.filePath = newFilePath
+	return c.ToJson()
 }
