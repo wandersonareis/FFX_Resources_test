@@ -25,19 +25,20 @@ type (
 		IExtractor
 		GetSource() ISource
 	}
+
+	ITextFormatter interface {
+		ReadFile(source ISource, targetDirectory string) (string, string)
+		WriteFile(source ISource, targetDirectory string) (string, string)
+	}
+
+	IValidate interface {
+		Validate() error
+	}
+
+	IInteractionBase interface {
+		SetTargetDirectory(path string) error
+		GetTargetDirectory() string
+		ProvideTargetDirectory() error
+	}
 )
 
-type ITextFormatter interface {
-	ReadFile(source ISource, targetDirectory string) (string, string)
-	WriteFile(source ISource, targetDirectory string) (string, string)
-}
-
-type IValidate interface {
-	Validate() error
-}
-
-type IInteractionBase interface {
-	SetTargetDirectory(path string)
-	GetTargetDirectory() string
-	ProvideTargetDirectory() error
-}

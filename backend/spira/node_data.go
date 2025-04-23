@@ -7,13 +7,13 @@ import (
 )
 
 type dataSetter interface {
-	SetNodeData(data fileFormats.DataInfo)
+	SetNodeData(data *fileFormats.DataInfo)
 }
 
 func addTreeNodeData[T dataSetter](item T, source interfaces.ISource, destination locations.IDestination) {
 	fileProcessor := fileFormats.NewFileProcessor(source, destination)
 
-	gameDataInfo := fileFormats.DataInfo{
+	gameDataInfo := &fileFormats.DataInfo{
 		Source:    source.Get(),
 		Extract:   destination.Extract().Get(),
 		Translate: destination.Translate().Get(),

@@ -38,9 +38,9 @@ export namespace core {
 export namespace fileFormats {
 	
 	export class TreeNodeData {
-	    source: core.SpiraFileInfo;
-	    extract_location: locations.ExtractLocation;
-	    translate_location: locations.TranslateLocation;
+	    source?: core.SpiraFileInfo;
+	    extract_location?: locations.ExtractLocation;
+	    translate_location?: locations.TranslateLocation;
 	
 	    static createFrom(source: any = {}) {
 	        return new TreeNodeData(source);
@@ -128,7 +128,7 @@ export namespace spira {
 	export class TreeNode {
 	    key: string;
 	    label: string;
-	    data: fileFormats.TreeNodeData;
+	    data?: fileFormats.TreeNodeData;
 	    icon: string;
 	    children: TreeNode[];
 	

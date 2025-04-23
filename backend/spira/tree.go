@@ -105,12 +105,14 @@ func convertMapNodeToTreeNode(node *fileFormats.MapNode) *TreeNode {
 		return nil
 	}
 
-	treeNode := &TreeNode{}
+	treeNode := &TreeNode{
+		Data: &fileFormats.TreeNodeData{},
+	}
 
 	treeNode.SetNodeKey(node.Key)
 	treeNode.SetNodeLabel(node.Label)
-	treeNode.SetNodeData(node.Data)
 	treeNode.SetNodeIcon(node.Icon)
+	treeNode.SetNodeData(node.Data)
 
 	return treeNode
 }

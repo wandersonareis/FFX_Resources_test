@@ -36,7 +36,7 @@ export class EditorModalComponent {
 
   async onTextChange(event: any) {
     const fileInfo: fileFormats.TreeNodeData | null = getFileInfoFromNode(this.file())
-    if (!fileInfo) return;
+    if (!fileInfo || !fileInfo.source) return;
 
     const filePath = fileInfo.source.path
     await WriteTextFile(filePath, event.textValue);
@@ -44,7 +44,7 @@ export class EditorModalComponent {
 
   async saveToSpiraFile() {
     const fileInfo: fileFormats.TreeNodeData | null = getFileInfoFromNode(this.file())
-    if (!fileInfo) return;
+    if (!fileInfo || !fileInfo.source) return;
 
     const filePath = fileInfo.source.path
     await this._compressService.compress(filePath);

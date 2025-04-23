@@ -31,7 +31,7 @@ type (
 	}
 	MapNode struct {
 		node
-		Data DataInfo `json:"data"`
+		Data *DataInfo `json:"data"`
 	}
 
 	TreeNode struct {
@@ -52,7 +52,7 @@ func (mapNode *MapNode) SetNodeIcon(icon string) {
 	mapNode.Icon = icon
 }
 
-func (mapNode *MapNode) SetNodeData(data DataInfo) {
+func (mapNode *MapNode) SetNodeData(data *DataInfo) {
 	mapNode.Data = data
 }
 

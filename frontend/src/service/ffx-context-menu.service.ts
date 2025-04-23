@@ -47,7 +47,7 @@ export class FfxContextMenuService {
     if (!this.file()) return;
 
     const fileInfo: fileFormats.TreeNodeData | null = getFileInfoFromNode(this.file());
-    if (!fileInfo) return;
+    if (!fileInfo || !fileInfo.source) return;
 
     const filePath = fileInfo.source.path;
 
@@ -61,7 +61,7 @@ export class FfxContextMenuService {
     //TODO: Review try catch
     try {
       const fileInfo: fileFormats.TreeNodeData | null = getFileInfoFromNode(this.file());
-      if (!fileInfo) return;
+      if (!fileInfo || !fileInfo.source) return;  
 
       const filePath = fileInfo.source.path;
 
@@ -73,7 +73,7 @@ export class FfxContextMenuService {
 
   async compress(): Promise<void> {
     const fileInfo: fileFormats.TreeNodeData | null = getFileInfoFromNode(this.file());
-    if (!fileInfo) return;
+    if (!fileInfo || !fileInfo.source) return;
 
     const filePath = fileInfo.source.path;
     await this._compressService.compress(filePath);
