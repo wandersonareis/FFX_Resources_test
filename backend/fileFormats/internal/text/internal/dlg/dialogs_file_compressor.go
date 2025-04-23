@@ -22,7 +22,7 @@ type (
 
 func NewDlgCompressor(logger logger.ILoggerHandler) IDlgCompressor {
 	return &dialogCompressor{
-		dialogsClones: internal.NewDlgClones(),
+		dialogsClones: internal.NewDlgClones(logger),
 		encoder:       internal.NewDlgEncoder(logger),
 		logger:        logger,
 	}

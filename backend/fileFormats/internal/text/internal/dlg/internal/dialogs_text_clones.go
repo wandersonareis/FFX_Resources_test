@@ -9,8 +9,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-
-	"github.com/rs/zerolog"
 )
 
 type IDlgClones interface {
@@ -18,41 +16,34 @@ type IDlgClones interface {
 }
 
 type dialogsClones struct {
-	log zerolog.Logger
+	log logger.ILoggerHandler
 }
 
-func NewDlgClones() *dialogsClones {
+func NewDlgClones(logger logger.ILoggerHandler) *dialogsClones {
 	return &dialogsClones{
-		log: logger.Get().With().Str("module", "dialogs_clones").Logger(),
+		log: logger,
 	}
 }
 
 func (dc *dialogsClones) Clone(source interfaces.ISource, destination locations.IDestination) {
 	importTargetFile := destination.Import().Get().GetTargetFile()
-	
-	if source.Get().ClonedItems != nil {
-		dc.log.Info().
-			Str("Clones from: ", importTargetFile).
-			Msg("Creating duplicated files for")
-			
-		for _, clone := range source.Get().ClonedItems {
-			cloneReimportPath := filepath.Join(destination.Import().Get().GetTargetDirectory(), clone)
 
-			if err := dc.duplicateFile(importTargetFile, cloneReimportPath); err != nil {
-				dc.log.Error().
-					Err(err).
-					Str("Clone from: ", importTargetFile).
-					Str("Clone path: ", clone).
-					Msg("Error duplicating dialog file")
-
-				continue
-			}
-		}
-
-		dc.log.Info().
-			Str("Clone from: ", importTargetFile).
-			Msgf("Create files clones for %s successfully", source.Get().Name)
+	if len(source.Get().ClonedItems) == 0 {
+		return
 	}
+
+	dc.log.LogInfo("Clones from: %s", importTargetFile)
+
+	for _, clone := range source.Get().ClonedItems {
+		cloneReimportPath := filepath.Join(destination.Import().Get().GetTargetDirectory(), clone)
+
+		if err := dc.duplicateFile(importTargetFile, cloneReimportPath); err != nil {
+			dc.log.LogError(err, "Error duplicating file: %s", cloneReimportPath)
+			continue
+		}
+	}
+
+	dc.log.LogInfo("Create files clones for %s successfully", source.Get().Name)
 }
 
 // It ensures that the destination directory exists before creating the file.

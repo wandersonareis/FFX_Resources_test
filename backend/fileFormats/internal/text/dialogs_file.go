@@ -51,6 +51,7 @@ func (d *DialogsFile) Extract() error {
 }
 
 func (d *DialogsFile) extract() error {
+	dlg.InitExtractorsPool(d.log)
 	extractorInstance := dlg.RentDlgExtractor()
 	defer dlg.ReturnDlgExtractor(extractorInstance)
 
@@ -63,6 +64,7 @@ func (d *DialogsFile) extract() error {
 }
 
 func (d *DialogsFile) extractVerify() error {
+	dlg.InitTextVerifierPool(d.log)
 	verifierInstance := dlg.RentTextVerifier()
 	defer dlg.ReturnTextVerifier(verifierInstance)
 
@@ -75,6 +77,7 @@ func (d *DialogsFile) extractVerify() error {
 	return nil
 }
 func (d *DialogsFile) Compress() error {
+	dlg.InitCompressorsPool(d.log)
 	compressorInstance := dlg.RentDlgCompressor()
 	defer dlg.ReturnDlgCompressor(compressorInstance)
 
@@ -101,12 +104,11 @@ func (d *DialogsFile) Compress() error {
 		return fmt.Errorf("failed to decode dialog file: %s", d.destination.Import().Get().GetTargetFile())
 	}
 
+	dlg.InitTextVerifierPool(d.log)
 	verifierInstance := dlg.RentTextVerifier()
 	defer dlg.ReturnTextVerifier(verifierInstance)
 
 	if err := verifierInstance.Verify(tmpSource, tmpDestination, textVerifier.CompressIntegrityCheck); err != nil {
-		d.log.LogError(err, "Error verifying dialog file: %s", d.source.Get().Name)
-
 		return fmt.Errorf("failed to integrity dialog file: %s", d.source.Get().Name)
 	}
 
@@ -116,11 +118,20 @@ func (d *DialogsFile) Compress() error {
 }
 
 func (d *DialogsFile) ensureTranslatedText() error {
+	dlg.InitTextVerifierPool(d.log)
 	textVerifierInstance := dlg.RentTextVerifier()
 	defer dlg.ReturnTextVerifier(textVerifierInstance)
 
 	sourceFile := d.source.Get().Path
 	targetFile := d.destination.Translate().Get().GetTargetFile()
+
+	if err := common.CheckPathExists(sourceFile); err != nil {
+		return fmt.Errorf("failed to check source file path: %s", err)
+	}
+
+	if err := common.CheckPathExists(targetFile); err != nil {
+		return fmt.Errorf("failed to check target file path: %s", err)
+	}
 
 	if err := textVerifierInstance.CompareTextSegmentsCount(sourceFile, targetFile, d.source.Get().Type); err != nil {
 		return fmt.Errorf("translated file segments count mismatch: %s", targetFile)
