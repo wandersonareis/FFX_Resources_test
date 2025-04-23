@@ -3,9 +3,7 @@ package services
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
-	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/notifications"
 	"io/fs"
 	"path/filepath"
 )
@@ -15,40 +13,62 @@ type (
 		ProcessDirectory(targetPath string, pathMap *NodeStore) error
 	}
 
-	directoryExtractService  struct{}
-	directoryCompressService struct{}
+	directoryService struct {
+		notifierService INotificationService
+		progressService IProgressService
+	}
+
+	directoryExtractService struct {
+		directoryService *directoryService
+	}
+	directoryCompressService struct {
+		directoryService *directoryService
+	}
 )
 
-func NewDirectoryExtractService() IDirectoryService {
-	return &directoryExtractService{}
+func NewDirectoryService(notificationService INotificationService, progressService IProgressService) *directoryService {
+	return &directoryService{notifierService: notificationService, progressService: progressService}
 }
 
-func NewDirectoryCompressService() IDirectoryService {
-	return &directoryCompressService{}
+func NewDirectoryExtractService(notifier INotificationService, progressService IProgressService) IDirectoryService {
+	return &directoryExtractService{
+		directoryService: NewDirectoryService(notifier, progressService),
+	}
+}
+
+func NewDirectoryCompressService(notifier INotificationService, progressService IProgressService) IDirectoryService {
+	return &directoryCompressService{
+		directoryService: NewDirectoryService(notifier, progressService),
+	}
 }
 
 func (e *directoryExtractService) ProcessDirectory(targetPath string, pathMap *NodeStore) error {
-	return ProcessDirectoryCommon(targetPath, pathMap, func(processor interfaces.IFileProcessor) error {
+	return e.directoryService.processDirectoryCommon(targetPath, pathMap, func(processor interfaces.IFileProcessor) error {
 		return processor.Extract()
 	})
 }
 
 func (e *directoryCompressService) ProcessDirectory(targetPath string, pathMap *NodeStore) error {
-	return ProcessDirectoryCommon(targetPath, pathMap, func(processor interfaces.IFileProcessor) error {
+	return e.directoryService.processDirectoryCommon(targetPath, pathMap, func(processor interfaces.IFileProcessor) error {
 		return processor.Compress()
 	})
 }
 
-func ProcessDirectoryCommon(
+func (d *directoryService) processDirectoryCommon(
 	targetPath string,
 	pathMap *NodeStore,
 	operation func(interfaces.IFileProcessor) error,
 ) error {
-	common.CheckArgumentNil(targetPath, "targetPath")
-	common.CheckArgumentNil(pathMap, "pathMap")
+	if err := common.CheckArgumentNil(targetPath, "targetPath"); err != nil {
+		return err
+	}
+
+	if err := common.CheckArgumentNil(pathMap, "pathMap"); err != nil {
+		return err
+	}
 
 	cb := func() error {
-		return processDirectory(targetPath, pathMap, operation)
+		return d.processDirectory(targetPath, pathMap, operation)
 	}
 
 	if err := common.RecoverFn(cb); err != nil {
@@ -58,7 +78,7 @@ func ProcessDirectoryCommon(
 	return nil
 }
 
-func processDirectory(targetPath string, pathMap *NodeStore, operation func(interfaces.IFileProcessor) error) error {
+func (d *directoryService) processDirectory(targetPath string, pathMap *NodeStore, operation func(interfaces.IFileProcessor) error) error {
 	filesProcessorList := components.NewEmptyList[interfaces.IFileProcessor]()
 	defer filesProcessorList.Clear()
 
@@ -86,17 +106,16 @@ func processDirectory(targetPath string, pathMap *NodeStore, operation func(inte
 		return err
 	}
 
-	ctx := interactions.NewInteractionService().Ctx
-	progress := common.NewProgress(ctx)
-	progress.SetMax(filesProcessorList.GetLength())
-	progress.Start()
+	d.progressService.Stop()
+	d.progressService.SetMax(filesProcessorList.GetLength())
+	d.progressService.Start()
 
-	filesProcessorList.ParallelForEach(func(processor interfaces.IFileProcessor) {
+	filesProcessorList.ForEach(func(processor interfaces.IFileProcessor) {
 		if e := operation(processor); e != nil {
-			notifications.NotifyError(e)
+			d.notifierService.NotifyError(e)
 			return
 		}
-		progress.StepFile(processor.GetSource().Get().Name)
+		d.progressService.StepFile(processor.GetSource().Get().Name)
 	})
 
 	return nil
