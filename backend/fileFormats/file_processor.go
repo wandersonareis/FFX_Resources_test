@@ -8,7 +8,6 @@ import (
 	"ffxresources/backend/fileFormats/internal/text"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/models"
-	"ffxresources/backend/notifications"
 )
 
 // formats is a map that associates models.NodeType values with functions that
@@ -35,16 +34,6 @@ func NewFileCompressor(source interfaces.ISource, destination locations.IDestina
 
 func NewFileProcessor(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
 	fileType := source.Get().Type
-
-	if err := destination.Extract().Get().ProvideTargetDirectory(); err != nil {
-		notifications.NotifyError(err)
-		return nil
-	}
-
-	if err := destination.Translate().Get().ProvideTargetDirectory(); err != nil {
-		notifications.NotifyError(err)
-		return nil
-	}
 
 	if value, ok := formats[fileType]; ok {
 		return value(source, destination)

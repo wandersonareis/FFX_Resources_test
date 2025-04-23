@@ -28,6 +28,10 @@ func NewDlgExtractor(logger logger.ILoggerHandler) IDlgExtractor {
 }
 
 func (d *dlgExtractor) Extract(source interfaces.ISource, destination locations.IDestination) error {
+	if err := destination.Extract().Get().ProvideTargetDirectory(); err != nil {
+		return fmt.Errorf("failed to provide target directory: %s", err)
+	}
+	
 	textEncoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextDlgEncoding(source.Get().Type)
 	defer textEncoding.Dispose()
 
