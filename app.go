@@ -25,7 +25,7 @@ type AppConfig struct {
 
 // App struct
 type App struct {
-noticationService services.INotificationService
+	noticationService services.INotificationService
 
 	CollectionService *services.CollectionService
 	ExtractService    *services.ExtractService
@@ -73,28 +73,10 @@ func (a App) domReady(ctx context.Context) {
 			l.Fatal().Caller(2).Err(err.(error)).Msg("panic occurred")
 		}
 	}()
-	
+
 	EventsOnStartup(ctx)
 
 	EventsOnSaveConfig(ctx)
-
-	testPath := "F:\\ffxWails\\FFX_Resources\\build\\bin\\data\\ffx-2_data\\gamedata\\ps3data\\lockit\\ffx2_loc_kit_ps3_us.bin"
-	services.TestExtractFile(testPath, false, false)
-
-	testPath = `F:\ffxWails\FFX_Resources\build\bin\data\ffx_ps2\ffx2\master\new_uspc\menu\macrodic.dcp`
-	services.TestExtractFile(testPath, false, false)
-
-	testPath = `F:\ffxWails\FFX_Resources\build\bin\data\ffx_ps2\ffx2\master\new_uspc\battle\btl\bika07_235\bika07_235.bin`
-	services.TestExtractFile(testPath, false, false)
-
-	testPath = `build/bin/data/ffx_ps2/ffx2/master/new_uspc/event/obj_ps3/dn/dnfr0100/dnfr0100.bin`
-	services.TestExtractFile(testPath, false, false)
-
-	testPath = `build\bin\data\ffx_ps2\ffx2\master\new_uspc\lastmiss\kernel\lm_accesary.bin`
-	services.TestExtractFile(testPath, false, false)
-
-	testPath = `build\bin\data\ffx_ps2\ffx2\master\new_uspc\lastmiss\kernel`
-	services.TestExtractDir(testPath, false, false)
 }
 
 // beforeClose is called when the application is about to quit,
