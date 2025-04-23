@@ -29,8 +29,8 @@ func (g *GameLocation) GetTargetDirectory() string {
 	return path.(string)
 }
 
-func (g *GameLocation) SetTargetDirectory(path string) {
-	g.interactionBase.SetTargetDirectoryBase(ConfigGameFilesLocation, path)
+func (g *GameLocation) SetTargetDirectory(path string) error {
+	return g.interactionBase.SetTargetDirectoryBase(ConfigGameFilesLocation, path)
 }
 
 func (g *GameLocation) ProvideTargetDirectory() error {

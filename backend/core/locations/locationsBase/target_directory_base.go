@@ -42,16 +42,7 @@ func (lb *TargetDirectoryBase) GetTargetDirectoryName() string {
 }
 
 func (lb *TargetDirectoryBase) ProvideTargetDirectory() error {
-	//path := filepath.Join(common.GetExecDir(), lb.TargetDirectoryName)
-
-	err := lb.providerTargetDirectory(lb.GetTargetDirectory())
-	if err != nil {
-		return err
-	}
-
-	//lb.TargetDirectory = path
-
-	return nil
+	return lb.providerTargetDirectory(lb.GetTargetDirectory())
 }
 
 func (t *TargetDirectoryBase) providerTargetDirectory(targetDirectory string) error {

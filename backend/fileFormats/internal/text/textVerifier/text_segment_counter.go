@@ -36,7 +36,7 @@ func (sc *segmentCounter) CompareTextSegmentsCount(binaryFile, textFile string, 
 func (sc *segmentCounter) countTextSegments(targetFile string) (int, error) {
 	segments := common.CountSegments(targetFile)
 	if segments == 0 {
-		return 0, fmt.Errorf("error when counting segments in: %s", targetFile)
+		return 0, fmt.Errorf("error when counting segments: this file is empty %s", targetFile)
 	}
 
 	return segments, nil

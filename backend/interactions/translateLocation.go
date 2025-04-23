@@ -26,8 +26,8 @@ func (t *TranslateLocation) GetTargetDirectory() string {
 	return path.(string)
 }
 
-func (t *TranslateLocation) SetTargetDirectory(path string) {
-	t.interactionBase.SetTargetDirectoryBase(ConfigTranslateLocation, path)
+func (t *TranslateLocation) SetTargetDirectory(path string) error {
+	return t.interactionBase.SetTargetDirectoryBase(ConfigTranslateLocation, path)
 }
 
 func (e *TranslateLocation) ProvideTargetDirectory() error {

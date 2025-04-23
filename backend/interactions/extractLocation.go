@@ -26,8 +26,8 @@ func (e *ExtractLocation) GetTargetDirectory() string {
 	return path.(string)
 }
 
-func (e *ExtractLocation) SetTargetDirectory(path string) {
-	e.interactionBase.SetTargetDirectoryBase(ConfigExtractLocation, path)
+func (e *ExtractLocation) SetTargetDirectory(path string) error {
+	return e.interactionBase.SetTargetDirectoryBase(ConfigExtractLocation, path)
 }
 
 func (e *ExtractLocation) ProvideTargetDirectory() error {

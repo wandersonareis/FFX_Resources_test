@@ -26,8 +26,8 @@ func (i *ImportLocation) GetTargetDirectory() string {
 	return path.(string)
 }
 
-func (i *ImportLocation) SetTargetDirectory(path string) {
-	i.interactionBase.SetTargetDirectoryBase(ConfigImportLocation, path)
+func (i *ImportLocation) SetTargetDirectory(path string) error {
+	return i.interactionBase.SetTargetDirectoryBase(ConfigImportLocation, path)
 }
 
 func (i *ImportLocation) ProvideTargetDirectory() error {
