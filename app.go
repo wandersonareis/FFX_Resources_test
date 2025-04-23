@@ -6,8 +6,8 @@ import (
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/logger"
-	"ffxresources/backend/notifications"
 	"ffxresources/backend/services"
+	"ffxresources/backend/spira"
 	"fmt"
 	"log"
 	"os"
@@ -25,6 +25,8 @@ type AppConfig struct {
 
 // App struct
 type App struct {
+noticationService services.INotificationService
+
 	CollectionService *services.CollectionService
 	ExtractService    *services.ExtractService
 	CompressService   *services.CompressService
@@ -32,8 +34,9 @@ type App struct {
 
 // NewApp creates a new App application struct
 func NewApp() *App {
+	notifier := services.NewEventNotifier(context.Background())
 	return &App{
-		CollectionService: services.NewCollectionService(),
+		CollectionService: services.NewCollectionService(notifier),
 		ExtractService:    services.NewExtractService(),
 		CompressService:   services.NewCompressService(),
 	}
@@ -50,6 +53,9 @@ func (a *App) startup(ctx context.Context) {
 			l.Fatal().Caller(2).Err(err.(error)).Msg("panic occurred")
 		}
 	}()
+
+	// Initialize services
+	a.initServices(ctx)
 
 	interactions.NewInteractionWithCtx(ctx)
 	interactions.NewInteractionWithTextFormatter(formatters.NewTxtFormatter())
@@ -114,6 +120,12 @@ func (a *App) shutdown(ctx context.Context) {
 	// Perform your teardown here
 }
 
+func (a *App) initServices(ctx context.Context) {
+	notification := services.NewEventNotifier(ctx)
+	a.noticationService = notification
+
+	// Initialize services
+	a.CollectionService = services.NewCollectionService(notification)
 func (a *App) ReadFileAsString(file string) string {
 	content, err := os.ReadFile(file)
 	if err != nil {
