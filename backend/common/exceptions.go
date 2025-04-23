@@ -85,25 +85,27 @@ func validatePrimitive(arg interface{}) error {
 // 6. Primitive types:
 //    i := 0
 //    CheckArgumentNil(i, "i") // panics if 'i' is zero value
-func CheckArgumentNil(arg interface{}, name string) {
+func CheckArgumentNil(arg interface{}, name string) error {
     val := reflect.ValueOf(arg)
 
     if !val.IsValid() || (isNilable(val.Kind()) && val.IsNil()) {
-        panic(argumentIsNil(name))
+		return argumentIsNil(name)
     }
 
     switch val.Kind() {
     case reflect.Struct:
         if err := validateStruct(arg); err != nil {
-            panic(err)
+            return err
         }
     case reflect.Slice:
         if err := validateSlice(arg); err != nil {
-            panic(err)
+            return err
         }
     default:
         if err := validatePrimitive(arg); err != nil {
-            panic(err)
+            return err
         }
     }
+
+	return nil
 }
