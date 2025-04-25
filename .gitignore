@@ -35,3 +35,5 @@ go.work.sum
 .env
 backend/fileFormats/internal/text/internal/dlg/testdata/*
 backend/fileFormats/internal/text/testdata/*
+testdata/FFX/*
+testdata/FFX-2/*
