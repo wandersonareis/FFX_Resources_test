@@ -1,6 +1,9 @@
 package testcommon
 
-import "ffxresources/backend/services"
+import (
+	"ffxresources/backend/services"
+	"fmt"
+)
 
 type MockProgressService struct {
 	Max         int
@@ -24,11 +27,15 @@ func (m *MockProgressService) SetMax(max int) {
 
 func (m *MockProgressService) Step() {
 	m.Steps++
+
+	m.checkSteps()
 }
 
 func (m *MockProgressService) StepFile(file string) {
 	m.Files = append(m.Files, file)
 	m.Steps++
+
+	m.checkSteps()
 }
 
 func (m *MockProgressService) Start() {
@@ -37,4 +44,18 @@ func (m *MockProgressService) Start() {
 
 func (m *MockProgressService) Stop() {
 	m.Stopped = true
+}
+
+func (m *MockProgressService) logMsg(msg string) {
+	fmt.Printf("[PROGRESSMOCK] %s\n", msg)
+}
+
+func (m *MockProgressService) checkSteps() {
+	if m.Steps > m.Max {
+		m.logMsg(fmt.Sprintf("Error on progress: Steps %d greater %d expected steps", m.Steps, m.Max))
+	}
+
+	if m.Steps == m.Max {
+		m.logMsg(fmt.Sprintf("Progress completed: %d of %d", m.Steps, m.Max))
+	}
 }

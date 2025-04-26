@@ -19,7 +19,7 @@ func (m *MockNotifier) Notify(notification services.Severity, message string) {
         Severity: notification.String(),
     }
     m.Notifications = append(m.Notifications, n)
-    fmt.Printf("[MOCK] %s: %s\n", n.Severity, n.Message)
+    fmt.Printf("[NOTIFIERMOCK] %s: %s\n", n.Severity, n.Message)
 }
 
 func (m *MockNotifier) NotifyError(err error) {
