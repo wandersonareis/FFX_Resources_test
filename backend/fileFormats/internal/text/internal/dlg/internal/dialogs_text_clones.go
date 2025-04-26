@@ -28,13 +28,14 @@ func NewDlgClones(logger logger.ILoggerHandler) *dialogsClones {
 func (dc *dialogsClones) Clone(source interfaces.ISource, destination locations.IDestination) {
 	importTargetFile := destination.Import().Get().GetTargetFile()
 
-	if len(source.Get().ClonedItems) == 0 {
+	fileClones := source.Get().ClonedItems
+	if len(fileClones) == 0 {
 		return
 	}
 
 	dc.log.LogInfo("Clones from: %s", importTargetFile)
 
-	for _, clone := range source.Get().ClonedItems {
+	for _, clone := range fileClones {
 		cloneReimportPath := filepath.Join(destination.Import().Get().GetTargetDirectory(), clone)
 
 		if err := dc.duplicateFile(importTargetFile, cloneReimportPath); err != nil {
@@ -43,7 +44,7 @@ func (dc *dialogsClones) Clone(source interfaces.ISource, destination locations.
 		}
 	}
 
-	dc.log.LogInfo("Create files clones for %s successfully", source.Get().Name)
+	dc.log.LogInfo("Create %d files clones for %s successfully", len(fileClones), source.Get().Name)
 }
 
 // It ensures that the destination directory exists before creating the file.
