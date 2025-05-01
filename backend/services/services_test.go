@@ -5,7 +5,6 @@ import (
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
 	"ffxresources/backend/models"
 	"ffxresources/backend/services"
 	"ffxresources/testData"
@@ -41,7 +40,6 @@ var _ = Describe("FFX Services", Ordered, func() {
 		collectionService   *services.CollectionService
 		compressService     *services.CompressService
 		extractService      *services.ExtractService
-		log                 logger.ILoggerHandler
 	)
 
 	BeforeAll(func() {
@@ -80,9 +78,6 @@ var _ = Describe("FFX Services", Ordered, func() {
 		}
 
 		interactions.NewInteractionWithTextFormatter(formatter)
-
-		log = logger.NewLoggerHandler("service_test")
-		Expect(log).NotTo(BeNil(), "Logger should not be nil")
 	})
 
 	AfterAll(func() {
@@ -223,7 +218,33 @@ var _ = Describe("FFX Services", Ordered, func() {
 			Expect(err).To(MatchError("nodeStore: argument is nil"))
 		})
 
-		It("should be node not found", func() {
+		It("should be error on extract", func() {
+			file := `ffx_ps2\ffx2\master\new_uspc\menu\tutorial.msb`
+			testFilePath := filepath.Join(testDataPath, file)
+
+			gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
+
+			collectionService := services.NewCollectionService(mockNotifierService)
+			rawMap := collectionService.CreateNodeDataStore(gameVersion, formatter)
+			Expect(rawMap).NotTo(BeNil())
+			Expect(len(rawMap)).To(BeNumerically(">", 0))
+
+			extractService := services.NewExtractService(mockNotifierService, mockProgressService)
+			Expect(extractService).NotTo(BeNil(), "Extract service should not be nil")
+
+			err := extractService.Extract(testFilePath)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("node not found for path: " + testFilePath))
+
+			Expect(mockNotifierService.Notifications).To(HaveLen(0))
+
+			Expect(mockProgressService.Started).To(BeFalse())
+			Expect(mockProgressService.Max).To(Equal(0))
+			Expect(mockProgressService.Steps).To(Equal(0))
+			Expect(mockProgressService.Files).To(HaveLen(0))
+		})
+
+		It("should be error node not found", func() {
 			file := `ffx_ps2\ffx2\master\new_uspc\menu\tutorial.msb`
 			testFilePath := filepath.Join(testDataPath, file)
 
