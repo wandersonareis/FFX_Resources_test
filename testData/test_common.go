@@ -1,6 +1,7 @@
 package testcommon
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -67,3 +68,45 @@ func getCurrentFilePath() string {
 	}
 	return filename
 }
+
+// RemoveFirstNLines removes the first n lines from the file specified by filePath.
+// It reads the file, skips the first n lines, and writes the remaining lines back to the file.
+// Returns an error if the file cannot be opened, read, or written.
+func RemoveFirstNLines(filePath string, n int) error {
+			file, err := os.Open(filePath)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+
+			var remainingLines []string
+			scanner := bufio.NewScanner(file)
+
+			lineNumber := 0
+			for scanner.Scan() {
+				if lineNumber >= n {
+					remainingLines = append(remainingLines, scanner.Text())
+				}
+				lineNumber++
+			}
+
+			if err := scanner.Err(); err != nil {
+				return err
+			}
+
+			file, err = os.Create(filePath)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+
+			writer := bufio.NewWriter(file)
+			for _, line := range remainingLines {
+				_, err := writer.WriteString(line + "\n")
+				if err != nil {
+					return err
+				}
+			}
+
+			return writer.Flush()
+		}

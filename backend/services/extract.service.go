@@ -8,15 +8,15 @@ import (
 )
 
 type ExtractService struct {
-	dirExtractService IDirectoryService
-	notifierService   INotificationService
-	progressService   IProgressService
+	dirExtractService   IDirectoryService
+	NotificationService INotificationService
+	ProgressService     IProgressService
 }
 
 func NewExtractService(notificationService INotificationService, progressService IProgressService) *ExtractService {
 	return &ExtractService{
-		notifierService: notificationService,
-		progressService: progressService,
+		NotificationService: notificationService,
+		ProgressService:     progressService,
 	}
 }
 
@@ -48,7 +48,7 @@ func (e *ExtractService) Extract(path string) error {
 	}
 
 	if err := cb(node); err != nil {
-		e.notifierService.NotifyError(err)
+		e.NotificationService.NotifyError(err)
 	}
 
 	return nil
@@ -71,7 +71,7 @@ func (e *ExtractService) extractFile(node *fileFormats.MapNode) error {
 		return err
 	}
 
-	e.notifierService.NotifySuccess(fmt.Sprintf("File %s extracted successfully!", node.Data.Source.Name))
+	e.NotificationService.NotifySuccess(fmt.Sprintf("File %s extracted successfully!", node.Data.Source.Name))
 	return nil
 }
 
@@ -85,13 +85,13 @@ func (e *ExtractService) extractDirectory(node *fileFormats.MapNode) error {
 	}
 
 	if e.dirExtractService == nil {
-		e.dirExtractService = NewDirectoryExtractService(e.notifierService, e.progressService)
+		e.dirExtractService = NewDirectoryExtractService(e.NotificationService, e.ProgressService)
 	}
 
 	if err := e.dirExtractService.ProcessDirectory(node.Data.Source.Path, NodeDataStore); err != nil {
 		return err
 	}
 
-	e.notifierService.NotifySuccess(fmt.Sprintf("Directory %s extracted successfully!", node.Data.Source.Name))
+	e.NotificationService.NotifySuccess(fmt.Sprintf("Directory %s extracted successfully!", node.Data.Source.Name))
 	return nil
 }
