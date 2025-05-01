@@ -99,7 +99,7 @@ func (dfc *dcpFileCompressor) Compress() error {
 func (dfc *dcpFileCompressor) populateDcpExtractedBinaryFileParts(binaryPartsList components.IList[dcpParts.DcpFileParts]) error {
 	return dcpParts.PopulateDcpBinaryFileParts(
 		binaryPartsList,
-		dfc.destination.Extract().Get().GetTargetPath(),
+		dfc.destination.Extract().GetTargetPath(),
 		dfc.formatter,
 	)
 }

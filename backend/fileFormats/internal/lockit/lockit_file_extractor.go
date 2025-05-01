@@ -69,7 +69,7 @@ func (lfe *LockitFileExtractor) Extract() error {
 		return err
 	}
 
-	lfe.log.LogInfo("Lockit file extracted: %s", lfe.GetDestination().Extract().Get().GetTargetPath())
+	lfe.log.LogInfo("Lockit file extracted: %s", lfe.GetDestination().Extract().GetTargetPath())
 
 	return nil
 }
@@ -78,7 +78,7 @@ func (lfe *LockitFileExtractor) populateLockitBinaryFileParts(partsList componen
 	lfe.log.LogInfo("Populating lockit binary file parts...")
 	return lockitParts.PopulateLockitBinaryFileParts(
 		partsList,
-		lfe.GetDestination().Extract().Get().GetTargetPath(),
+		lfe.GetDestination().Extract().GetTargetPath(),
 	)
 }
 
@@ -99,7 +99,7 @@ func (lfe *LockitFileExtractor) ensureAllLockitBinaryFileParts(partsList compone
 
 	if partsList.GetLength() != partsLength {
 		return fmt.Errorf("error ensuring splitted lockit parts: expected %d, got %d on path: %s",
-			partsLength, partsList.GetLength(), lfe.GetDestination().Extract().Get().GetTargetPath())
+			partsLength, partsList.GetLength(), lfe.GetDestination().Extract().GetTargetPath())
 	}
 
 	return nil
@@ -109,7 +109,7 @@ func (lfe *LockitFileExtractor) extractMissingLockitFileParts() error {
 	lfe.log.LogInfo("Missing lockit file parts detected. Attempting to extract...")
 
 	splitter := internal.NewLockitFileSplitter()
-	return splitter.FileSplitter(lfe.GetSource(), lfe.GetDestination().Extract().Get(), lfe.options)
+	return splitter.FileSplitter(lfe.GetSource(), lfe.GetDestination().Extract(), lfe.options)
 }
 
 func (lfe *LockitFileExtractor) decodeFileParts(partsList components.IList[lockitParts.LockitFileParts]) error {

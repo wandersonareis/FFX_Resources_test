@@ -49,9 +49,9 @@ func (l *LockitFileParts) Extract(dec LockitEncodingType, encoding ffxencoding.I
 
 	switch dec {
 	case FFXEncoding:
-		errChan <- l.decoder.LockitDecoderFfx(l.GetSource().Get().Path, l.GetDestination().Extract().Get().GetTargetFile(), encoding)
+		errChan <- l.decoder.LockitDecoderFfx(l.GetSource().Get().Path, l.GetDestination().Extract().GetTargetFile(), encoding)
 	case UTF8Encoding:
-		errChan <- l.decoder.LockitDecoderLoc(l.GetSource().Get().Path, l.GetDestination().Extract().Get().GetTargetFile(), encoding)
+		errChan <- l.decoder.LockitDecoderLoc(l.GetSource().Get().Path, l.GetDestination().Extract().GetTargetFile(), encoding)
 	default:
 		errChan <- fmt.Errorf("invalid encode type: %d", dec)
 	}

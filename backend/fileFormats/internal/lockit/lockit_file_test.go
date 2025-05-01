@@ -85,7 +85,7 @@ var _ = Describe("LockitFile", Ordered, func() {
 
 		// Setup destination
 		destination = &locations.Destination{
-			ExtractLocation:   locations.NewExtractLocationInfo(locationsBase.WithDirectoryName("extracted"), locationsBase.WithTargetDirectory(extractTempPath), locationsBase.WithGameVersionDir(gameVersionDir)),
+			ExtractLocation:   locations.NewExtractLocation("extracted", extractTempPath, gameVersionDir),
 			TranslateLocation: locations.NewTranslateLocationInfo(locationsBase.WithDirectoryName("translated"), locationsBase.WithTargetDirectory(translatePath), locationsBase.WithGameVersionDir(gameVersionDir)),
 			ImportLocation:    locations.NewImportLocationInfo(locationsBase.WithDirectoryName("reimported"), locationsBase.WithTargetDirectory(reimportTempPath), locationsBase.WithGameVersionDir(gameVersionDir)),
 		}
@@ -167,7 +167,7 @@ var _ = Describe("LockitFile", Ordered, func() {
 			expected := filepath.Join(extractTempPath, gameVersionDir, "lockit_text")
 			expected = filepath.ToSlash(expected)
 
-			actual := destination.Extract().Get().GetTargetPath()
+			actual := destination.Extract().GetTargetPath()
 			actual = filepath.ToSlash(actual)
 
 			Expect(actual).To(Equal(expected))
@@ -185,7 +185,7 @@ var _ = Describe("LockitFile", Ordered, func() {
 			lockitIntegrity := integrity.NewLockitFileExtractorIntegrity(logger.NewLoggerHandler("lockit_file_integrity_testing"))
 			Expect(lockitIntegrity).NotTo(BeNil())
 
-			targetPath := destination.Extract().Get().GetTargetPath()
+			targetPath := destination.Extract().GetTargetPath()
 			Expect(targetPath).NotTo(BeEmpty())
 
 			Expect(lockitIntegrity.Verify(targetPath, fileOptions)).To(Succeed())
@@ -220,8 +220,8 @@ var _ = Describe("LockitFile", Ordered, func() {
 		It("should compress the lockit file successfully", func() {
 			extractPath := filepath.Join(testDataPath, "extracted", "lockit_text")
 
-			destination.Extract().Get().SetTargetPath(extractPath)
-			Expect(destination.Extract().Get().GetTargetPath()).To(Equal(extractPath))
+			destination.Extract().SetTargetPath(extractPath)
+			Expect(destination.Extract().GetTargetPath()).To(Equal(extractPath))
 
 			Expect(testLockitCompressor).NotTo(BeNil())
 			Expect(testLockitCompressor.Compress()).To(Succeed())

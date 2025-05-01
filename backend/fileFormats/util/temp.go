@@ -18,7 +18,7 @@ func CreateTemporaryFileInfo(filePath string, formatter interfaces.ITextFormatte
 
 	destination.InitializeLocations(source, formatter)
 
-	destination.Extract().Get().SetTargetPath(tmpDir)
+	destination.Extract().SetTargetPath(tmpDir)
 
 	return source, destination
 }

@@ -45,7 +45,7 @@ func NewTextsVerify(logger logger.ILoggerHandler) *TextVerifier {
 }
 
 func (dv *TextVerifier) Verify(source interfaces.ISource, destination locations.IDestination, verify TextIntegrityVerifyFunc) error {
-	extractLocation := destination.Extract().Get()
+	extractLocation := destination.Extract()
 	if err := extractLocation.Validate(); err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func extractIntegrityCheck(
 	segmentCounter ISegmentCounter,
 	fileComparer IComparer,
 	logger logger.ILoggerHandler) error {
-	extractedFile := destination.Extract().Get().GetTargetFile()
+	extractedFile := destination.Extract().GetTargetFile()
 
 	sourceFileType := source.Get().Type
 	sourceFile := source.Get().Path
@@ -96,7 +96,7 @@ func extractIntegrityCheck(
 }
 
 func compressIntegrityCheck(source interfaces.ISource, destination locations.IDestination, segmentCounter ISegmentCounter, fileComparer IComparer, logger logger.ILoggerHandler) error {
-	extractLocation := destination.Extract().Get()
+	extractLocation := destination.Extract()
 	translateLocation := destination.Translate().Get()
 	importLocation := destination.Import().Get()
 

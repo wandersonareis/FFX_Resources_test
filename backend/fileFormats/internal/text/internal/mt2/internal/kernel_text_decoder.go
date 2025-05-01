@@ -1,9 +1,9 @@
 package internal
 
 import (
-	"ffxresources/backend/core/encoding"
+	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats/internal/text/internal/encoding"
+	textsEncoding "ffxresources/backend/fileFormats/internal/text/internal/encoding"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 
@@ -28,7 +28,7 @@ func (d *krnlDecoder) Decoder(source interfaces.ISource, destination locations.I
 	encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextKrnlEncoding()
 	defer encoding.Dispose()
 
-	extractLocation := destination.Extract().Get()
+	extractLocation := destination.Extract()
 
 	if err := extractLocation.ProvideTargetPath(); err != nil {
 		d.log.Error().

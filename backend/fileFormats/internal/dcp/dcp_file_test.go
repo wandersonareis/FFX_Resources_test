@@ -81,7 +81,7 @@ var _ = ginkgo.Describe("DcpFile", func() {
 		gomega.Expect(err).To(gomega.BeNil())
 
 		destination = &locations.Destination{
-			ExtractLocation:   locations.NewExtractLocationInfo(locationsBase.WithDirectoryName("extracted"), locationsBase.WithTargetDirectory(extractTempPath), locationsBase.WithGameVersionDir(gameVersionDir)),
+			ExtractLocation: locations.NewExtractLocation("extracted", extractTempPath, gameVersionDir),
 			TranslateLocation: locations.NewTranslateLocationInfo(locationsBase.WithDirectoryName("translated"), locationsBase.WithTargetDirectory(translatePath), locationsBase.WithGameVersionDir(gameVersionDir)),
 			ImportLocation:    locations.NewImportLocationInfo(locationsBase.WithDirectoryName("reimported"), locationsBase.WithTargetDirectory(reimportTempPath), locationsBase.WithGameVersionDir(gameVersionDir)),
 		}
@@ -121,7 +121,7 @@ var _ = ginkgo.Describe("DcpFile", func() {
 		expected := filepath.Join(extractTempPath, gameVersionDir, lib.DCP_PARTS_TARGET_DIR_NAME)
 		expected = filepath.ToSlash(expected)
 
-		actual := destination.Extract().Get().GetTargetPath()
+		actual := destination.Extract().GetTargetPath()
 		actual = filepath.ToSlash(actual)
 
 		gomega.Expect(actual).To(gomega.Equal(expected))
@@ -139,7 +139,7 @@ var _ = ginkgo.Describe("DcpFile", func() {
 		dcpIntegrity := integrity.NewDcpFileExtractorIntegrity(logger.NewLoggerHandler("dcp_file_integrity_testing"))
 		gomega.Expect(dcpIntegrity).NotTo(gomega.BeNil())
 
-		targetPath := destination.Extract().Get().GetTargetPath()
+		targetPath := destination.Extract().GetTargetPath()
 		gomega.Expect(targetPath).NotTo(gomega.BeEmpty())
 
 		gomega.Expect(fileOptions).NotTo(gomega.BeNil())
@@ -168,7 +168,7 @@ var _ = ginkgo.Describe("DcpFile", func() {
 		dcpIntegrity := integrity.NewDcpFileExtractorIntegrity(logger.NewLoggerHandler("dcp_file_integrity_testing"))
 		gomega.Expect(dcpIntegrity).NotTo(gomega.BeNil())
 
-		targetPath := destination.Extract().Get().GetTargetPath()
+		targetPath := destination.Extract().GetTargetPath()
 		gomega.Expect(targetPath).NotTo(gomega.BeEmpty())
 
 		gomega.Expect(fileOptions).NotTo(gomega.BeNil())
@@ -197,7 +197,7 @@ var _ = ginkgo.Describe("DcpFile", func() {
 		dcpIntegrity := integrity.NewDcpFileExtractorIntegrity(logger.NewLoggerHandler("dcp_file_integrity_testing"))
 		gomega.Expect(dcpIntegrity).NotTo(gomega.BeNil())
 
-		targetPath := destination.Extract().Get().GetTargetPath()
+		targetPath := destination.Extract().GetTargetPath()
 		gomega.Expect(targetPath).NotTo(gomega.BeEmpty())
 
 		gomega.Expect(fileOptions).NotTo(gomega.BeNil())

@@ -39,7 +39,7 @@ func (d *DialogsFile) Extract() error {
 		return err
 	}
 
-	d.log.LogInfo("Verifying extracted dialog file: %s", d.destination.Extract().Get().GetTargetFile())
+	d.log.LogInfo("Verifying extracted dialog file: %s", d.destination.Extract().GetTargetFile())
 
 	if err := d.extractVerify(); err != nil {
 		return err
@@ -145,8 +145,8 @@ func (d *DialogsFile) createTemp(source interfaces.ISource, destination location
 	tmpSource := source
 	tmpDestination := destination
 
-	tmpDestination.Extract().Get().SetTargetFile(tmp.TempFile)
-	tmpDestination.Extract().Get().SetTargetPath(tmp.TempFilePath)
+	tmpDestination.Extract().SetTargetFile(tmp.TempFile)
+	tmpDestination.Extract().SetTargetPath(tmp.TempFilePath)
 
 	tmpSource.Get().Path = destination.Import().Get().GetTargetFile()
 

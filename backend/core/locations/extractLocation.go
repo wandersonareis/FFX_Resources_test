@@ -4,6 +4,7 @@ import (
 	"ffxresources/backend/core/locations/locationsBase"
 	"ffxresources/backend/interfaces"
 	"fmt"
+	"path/filepath"
 )
 
 type (
@@ -17,9 +18,16 @@ type (
 	}
 )
 
-func NewExtractLocation(options *locationsBase.LocationBaseOptions) *ExtractLocation {
+func NewExtractLocation(extractDirectoryName, extractTargetDirectory, gameVersionDir string) IExtractLocation {
+	targetDirectory := filepath.Join(extractTargetDirectory, gameVersionDir)
 	return &ExtractLocation{
-		LocationBase: locationsBase.NewLocationBase(options),
+		locationsBase.LocationBase{
+			TargetDirectoryBase: locationsBase.TargetDirectoryBase{
+				TargetDirectory:     targetDirectory,
+				TargetDirectoryName: extractDirectoryName,
+			},
+			TargetFileBase: locationsBase.TargetFileBase{},
+		},
 	}
 }
 

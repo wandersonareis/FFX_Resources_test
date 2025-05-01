@@ -23,7 +23,7 @@ func NewDcpFileSpliter() IDcpFileSpliter {
 func (ds *dcpFileSpliter) FileSplitter(source interfaces.ISource, destination locations.IDestination, fileOptions core.IDcpFileOptions) error {
 	targetFile := source.Get().Path
 
-	extractLocation := destination.Extract().Get()
+	extractLocation := destination.Extract()
 
 	if err := extractLocation.ProvideTargetPath(); err != nil {
 		return fmt.Errorf("error when providing the extraction directory: %s", extractLocation.GetTargetPath())

@@ -44,13 +44,13 @@ func (df *DcpFile) Extract() error {
 		return err
 	}
 
-	df.log.LogInfo("System macrodic file extracted successfully to: %s", df.GetDestination().Extract().Get().GetTargetPath())
+	df.log.LogInfo("System macrodic file extracted successfully to: %s", df.GetDestination().Extract().GetTargetPath())
 
 	return nil
 }
 
 func (df *DcpFile) extract() error {
-	df.log.LogInfo("Extracting DCP file inside path: %s", df.GetDestination().Extract().Get().GetTargetPath())
+	df.log.LogInfo("Extracting DCP file inside path: %s", df.GetDestination().Extract().GetTargetPath())
 
 	extractor := NewDcpFileExtractor(
 		df.GetSource(),
@@ -63,7 +63,7 @@ func (df *DcpFile) extract() error {
 }
 
 func (df *DcpFile) extractVerify() error {
-	targetPath := df.GetDestination().Extract().Get().GetTargetPath()
+	targetPath := df.GetDestination().Extract().GetTargetPath()
 
 	df.log.LogInfo("Verifying extracted macrodic file: %s", targetPath)
 

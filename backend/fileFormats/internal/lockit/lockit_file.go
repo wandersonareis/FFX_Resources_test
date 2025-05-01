@@ -48,13 +48,13 @@ func (lf *LockitFile) Extract() error {
 		return err
 	}
 
-	lf.log.LogInfo("Lockit file extracted successfully in path: %s", lf.destination.Extract().Get().GetTargetPath())
+	lf.log.LogInfo("Lockit file extracted successfully in path: %s", lf.destination.Extract().GetTargetPath())
 
 	return nil
 }
 
 func (lf *LockitFile) extract(lockitEncoding ffxencoding.IFFXTextLockitEncoding, fileOptions core.ILockitFileOptions) error {
-	lf.log.LogInfo("Extracting lockit file inside path: %s", lf.destination.Extract().Get().GetTargetPath())
+	lf.log.LogInfo("Extracting lockit file inside path: %s", lf.destination.Extract().GetTargetPath())
 
 	fileExtractor := NewLockitFileExtractor(lf.source, lf.destination, lockitEncoding, fileOptions, lf.log)
 
@@ -62,11 +62,11 @@ func (lf *LockitFile) extract(lockitEncoding ffxencoding.IFFXTextLockitEncoding,
 }
 
 func (lf *LockitFile) extractVerify(fileOptions core.ILockitFileOptions) error {
-	lf.log.LogInfo("Verifying lockit file parts in path: %s", lf.destination.Extract().Get().GetTargetPath())
+	lf.log.LogInfo("Verifying lockit file parts in path: %s", lf.destination.Extract().GetTargetPath())
 
 	extractVerifier := integrity.NewLockitFileExtractorIntegrity(lf.log)
 
-	return extractVerifier.Verify(lf.GetDestination().Extract().Get().GetTargetPath(), fileOptions)
+	return extractVerifier.Verify(lf.GetDestination().Extract().GetTargetPath(), fileOptions)
 }
 
 func (lf *LockitFile) Compress() error {

@@ -71,7 +71,7 @@ func (d *dcpFileExtractor) Extract() error {
 func (dfe *dcpFileExtractor) populateDcpBinaryFileParts(binaryPartsList components.IList[dcpParts.DcpFileParts]) error {
 	return dcpParts.PopulateDcpBinaryFileParts(
 		binaryPartsList,
-		dfe.destination.Extract().Get().GetTargetPath(),
+		dfe.destination.Extract().GetTargetPath(),
 		dfe.formatter,
 	)
 }

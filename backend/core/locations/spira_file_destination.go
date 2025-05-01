@@ -9,7 +9,7 @@ import (
 )
 
 type IDestination interface {
-	Extract() IExtractLocationInfo
+	Extract() IExtractLocation
 	Translate() ITranslateLocationInfo
 	Import() IImportLocationInfo
 	InitializeLocations(source interfaces.ISource, formatter interfaces.ITextFormatter)
@@ -17,7 +17,7 @@ type IDestination interface {
 }
 
 type Destination struct {
-	ExtractLocation   ExtractLocationInfo   `json:"extract_location"`
+	ExtractLocation   IExtractLocation   `json:"extract_location"`
 	TranslateLocation TranslateLocationInfo `json:"translate_location"`
 	ImportLocation    ImportLocationInfo    `json:"import_location"`
 }
@@ -32,7 +32,7 @@ func NewDestination() IDestination {
 	importPath := interactionService.ImportLocation.GetTargetDirectory()
 
 	destination := &Destination{
-		ExtractLocation:   NewExtractLocationInfo(locationsBase.WithDirectoryName("extracted"), locationsBase.WithTargetDirectory(extractPath), locationsBase.WithGameVersionDir(gameVersionDir)),
+		ExtractLocation: NewExtractLocation("extracted", extractPath, gameVersionDir),
 		TranslateLocation: NewTranslateLocationInfo(locationsBase.WithDirectoryName("translated"), locationsBase.WithTargetDirectory(translatePath), locationsBase.WithGameVersionDir(gameVersionDir)),
 		ImportLocation:    NewImportLocationInfo(locationsBase.WithDirectoryName("reimported"), locationsBase.WithTargetDirectory(importPath), locationsBase.WithGameVersionDir(gameVersionDir)),
 	}
@@ -40,13 +40,13 @@ func NewDestination() IDestination {
 }
 
 func (g *Destination) InitializeLocations(source interfaces.ISource, formatter interfaces.ITextFormatter) {
-	g.ExtractLocation.Get().BuildTargetReadOutput(source, formatter)
+	g.ExtractLocation.BuildTargetReadOutput(source, formatter)
 	g.TranslateLocation.Get().BuildTargetReadOutput(source, formatter)
 	g.ImportLocation.Get().BuildTargetWriteOutput(source, formatter)
 }
 
-func (g *Destination) Extract() IExtractLocationInfo {
-	return &g.ExtractLocation
+func (g *Destination) Extract() IExtractLocation {
+	return g.ExtractLocation
 }
 
 func (g *Destination) Translate() ITranslateLocationInfo {

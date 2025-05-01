@@ -63,14 +63,14 @@ func (lfi *lockitFileCompressorIntegrity) verifyDataIntegrity(file string, locki
 
 	splitter := internal.NewLockitFileSplitter()
 
-	if err := splitter.FileSplitter(source, destination.Extract().Get(), fileOptions); err != nil {
+	if err := splitter.FileSplitter(source, destination.Extract(), fileOptions); err != nil {
 		return err
 	}
 
 	tempExtractedBinaryPartsList := components.NewList[lockitParts.LockitFileParts](fileOptions.GetPartsLength())
 	defer tempExtractedBinaryPartsList.Clear()
 
-	tempExtractedBinaryPath := destination.Extract().Get().GetTargetPath()
+	tempExtractedBinaryPath := destination.Extract().GetTargetPath()
 
 	if err := lfi.populateTemporaryBinaryPartsList(tempExtractedBinaryPartsList, tempExtractedBinaryPath, fileOptions); err != nil {
 		return fmt.Errorf("error when checking lockit file integrity:: %w", err)
@@ -130,10 +130,10 @@ func (lfi *lockitFileCompressorIntegrity) populateTemporaryBinaryPartsList(tempP
 	}
 
 	setExtractTemporaryDirectory := func(part lockitParts.LockitFileParts) {
-		newPartFile := filepath.Join(tempDir, common.GetFileName(part.GetDestination().Extract().Get().GetTargetFile()))
+		newPartFile := filepath.Join(tempDir, common.GetFileName(part.GetDestination().Extract().GetTargetFile()))
 
-		part.GetDestination().Extract().Get().SetTargetFile(newPartFile)
-		part.GetDestination().Extract().Get().SetTargetPath(tempDir)
+		part.GetDestination().Extract().SetTargetFile(newPartFile)
+		part.GetDestination().Extract().SetTargetPath(tempDir)
 	}
 
 	tempPartsList.ForEach(setExtractTemporaryDirectory)
@@ -171,7 +171,7 @@ func (lfi *lockitFileCompressorIntegrity) temporaryPartsComparer(partsList compo
 	partsList.ForEach(func(part lockitParts.LockitFileParts) {
 		compareFilesList.Add(models.FileComparisonEntry{
 			FromFile: part.GetDestination().Translate().Get().GetTargetFile(),
-			ToFile:   part.GetDestination().Extract().Get().GetTargetFile(),
+			ToFile:   part.GetDestination().Extract().GetTargetFile(),
 		})
 	})
 
@@ -191,16 +191,14 @@ func (lfi *lockitFileCompressorIntegrity) createTemporaryFile(file string) (inte
 	}
 
 	destination := locations.NewDestination()
-	//gameFileLocation := interactions.NewInteractionService().GameLocation.GetTargetDirectory()
 
-	//destination.CreateRelativePath(source, gameFileLocation)
 	destination.InitializeLocations(source, lfi.formatter)
 
 	tmp := common.NewTempProvider("", "")
 	tmpDirectory := filepath.Join(tmp.TempFilePath, "tmpLockit")
 
-	destination.Extract().Get().SetTargetPath(tmpDirectory)
-	destination.Extract().Get().SetTargetFile(tmp.TempFile)
+	destination.Extract().SetTargetPath(tmpDirectory)
+	destination.Extract().SetTargetFile(tmp.TempFile)
 
 	return source, destination
 }

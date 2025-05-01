@@ -25,7 +25,7 @@ type (
 	LockitFileCompressor struct {
 		baseFormats.IBaseFileFormat
 
-		lockitEncoding  ffxencoding.IFFXTextLockitEncoding
+		lockitEncoding ffxencoding.IFFXTextLockitEncoding
 
 		options core.ILockitFileOptions
 		logger  logger.ILoggerHandler
@@ -40,8 +40,8 @@ func NewLockitFileCompressor(
 	logger logger.ILoggerHandler,
 ) *LockitFileCompressor {
 	return &LockitFileCompressor{
-		IBaseFileFormat:  baseFormats.NewFormatsBase(source, destination),
-		lockitEncoding:   lockitEncoding,
+		IBaseFileFormat: baseFormats.NewFormatsBase(source, destination),
+		lockitEncoding:  lockitEncoding,
 
 		options: fileOptions,
 		logger:  logger,
@@ -102,7 +102,7 @@ func (lfc *LockitFileCompressor) populateLockitExtractedBinaryFilePartsList(extr
 
 	return lockitParts.PopulateLockitBinaryFileParts(
 		extractedBinaryPartsList,
-		lfc.GetDestination().Extract().Get().GetTargetPath(),
+		lfc.GetDestination().Extract().GetTargetPath(),
 	)
 }
 
@@ -211,7 +211,7 @@ func (l *LockitFileCompressor) extractMissingLockitBinaryFileParts() error {
 	l.logger.LogInfo("Missing lockit file parts detected. Attempting to extract...")
 
 	splitter := internal.NewLockitFileSplitter()
-	return splitter.FileSplitter(l.GetSource(), l.GetDestination().Extract().Get(), l.options)
+	return splitter.FileSplitter(l.GetSource(), l.GetDestination().Extract(), l.options)
 }
 
 func (lfc *LockitFileCompressor) encodingFilesParts(extractedBinaryPartsList components.IList[lockitParts.LockitFileParts]) error {

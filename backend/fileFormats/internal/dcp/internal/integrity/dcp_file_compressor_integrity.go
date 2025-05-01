@@ -50,7 +50,7 @@ func (dfci *dcpFileCompressorIntegrity) Verify(targetFile string, formatter inte
 
 	if err := dfci.populateTemporaryBinaryPartsList(
 		tempExtractedBinaryPartsList,
-		destination.Extract().Get().GetTargetPath(),
+		destination.Extract().GetTargetPath(),
 		formatter,
 		fileOptions); err != nil {
 		return fmt.Errorf("error when checking lockit file integrity:: %s", err.Error())
@@ -81,10 +81,10 @@ func (dfci *dcpFileCompressorIntegrity) populateTemporaryBinaryPartsList(
 	}
 
 	setExtractTemporaryDirectory := func(part dcpParts.DcpFileParts) {
-		newPartFile := filepath.Join(tempDir, common.GetFileName(part.GetDestination().Extract().Get().GetTargetFile()))
+		newPartFile := filepath.Join(tempDir, common.GetFileName(part.GetDestination().Extract().GetTargetFile()))
 
-		part.GetDestination().Extract().Get().SetTargetFile(newPartFile)
-		part.GetDestination().Extract().Get().SetTargetPath(tempDir)
+		part.GetDestination().Extract().SetTargetFile(newPartFile)
+		part.GetDestination().Extract().SetTargetPath(tempDir)
 	}
 
 	tempPartsList.ForEach(setExtractTemporaryDirectory)
@@ -106,8 +106,6 @@ func (dfci *dcpFileCompressorIntegrity) temporaryPartsDecoder(tempPartsList comp
 			errChan <- err
 			return
 		}
-
-		fmt.Println("Validating part: ", part.GetDestination().Extract().Get().GetTargetFile())
 
 		if err := part.Extract(); err != nil {
 			errChan <- fmt.Errorf("failed to extract file part: %s", part.GetSource().Get().Name)
@@ -152,8 +150,8 @@ func (dfci *dcpFileCompressorIntegrity) generateTempFile(file string, formatter 
 	tmp := common.NewTempProvider("", "")
 	tmpDirectory := filepath.Join(tmp.TempFilePath, "tmpDcp")
 
-	destination.Extract().Get().SetTargetPath(tmpDirectory)
-	destination.Extract().Get().SetTargetFile(tmp.TempFile)
+	destination.Extract().SetTargetPath(tmpDirectory)
+	destination.Extract().SetTargetFile(tmp.TempFile)
 
 	return source, destination
 }
@@ -168,12 +166,12 @@ func (dfci *dcpFileCompressorIntegrity) createCompareTextList(partsList componen
 
 	partsList.ForEach(func(item dcpParts.DcpFileParts) {
 		if item.GetDestination().Translate().Get().GetTargetExtension() != ".txt" ||
-			item.GetDestination().Extract().Get().GetTargetExtension() != ".txt" {
+			item.GetDestination().Extract().GetTargetExtension() != ".txt" {
 			return
 		}
 
 		translatedFile := item.GetDestination().Translate().Get().GetTargetFile()
-		extractedFile := item.GetDestination().Extract().Get().GetTargetFile()
+		extractedFile := item.GetDestination().Extract().GetTargetFile()
 
 		if err := common.CheckPathExists(translatedFile); err != nil {
 			dfci.log.LogError(err, "failed to check path")
@@ -195,7 +193,7 @@ func (dfci *dcpFileCompressorIntegrity) createCompareTextList(partsList componen
 
 		filesToCompareList.Add(&components.FileComparisonEntry{
 			FromFile: item.GetDestination().Translate().Get().GetTargetFile(),
-			ToFile:   item.GetDestination().Extract().Get().GetTargetFile(),
+			ToFile:   item.GetDestination().Extract().GetTargetFile(),
 		})
 	})
 

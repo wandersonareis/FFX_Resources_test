@@ -50,7 +50,7 @@ func (k *kernelFile) Extract() error {
 		return fmt.Errorf("failed to decode kernel file: %s", k.source.Get().Name)
 	}
 
-	k.log.LogInfo("Verifying extracted kernel file: %s", k.destination.Extract().Get().GetTargetFile())
+	k.log.LogInfo("Verifying extracted kernel file: %s", k.destination.Extract().GetTargetFile())
 
 	verifierInstance := mt2.RentTextVerifier()
 	defer mt2.ReturnTextVerifier(verifierInstance)
@@ -108,8 +108,8 @@ func (k *kernelFile) createTemp(source interfaces.ISource, destination locations
 	tmpSource := source
 	tmpDestination := destination
 
-	tmpDestination.Extract().Get().SetTargetFile(tmp.TempFile)
-	tmpDestination.Extract().Get().SetTargetPath(tmp.TempFilePath)
+	tmpDestination.Extract().SetTargetFile(tmp.TempFile)
+	tmpDestination.Extract().SetTargetPath(tmp.TempFilePath)
 
 	tmpSource.Get().Path = destination.Import().Get().GetTargetFile()
 

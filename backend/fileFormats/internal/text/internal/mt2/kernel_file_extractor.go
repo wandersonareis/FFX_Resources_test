@@ -22,15 +22,15 @@ type (
 func newKrnlExtractor(logger logger.ILoggerHandler) *krnlExtractor {
 	return &krnlExtractor{
 		decoder: internal.NewKrnlDecoder(),
-		log: logger,
+		log:     logger,
 	}
 }
 
 func (k *krnlExtractor) Extract(source interfaces.ISource, destination locations.IDestination) error {
-	if err := destination.Extract().Get().ProvideTargetDirectory(); err != nil {
+	if err := destination.Extract().ProvideTargetDirectory(); err != nil {
 		return fmt.Errorf("failed to provide target directory: %s", err)
 	}
-	
+
 	if err := k.decoder.Decoder(source, destination); err != nil {
 		k.log.LogError(err, "Error decoding kernel file: %s", source.Get().Name)
 
