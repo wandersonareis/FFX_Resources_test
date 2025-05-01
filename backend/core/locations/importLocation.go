@@ -4,24 +4,34 @@ import (
 	"ffxresources/backend/core/locations/locationsBase"
 	"ffxresources/backend/interfaces"
 	"fmt"
+	"path/filepath"
 )
 
-type IImportLocation interface {
-	locationsBase.ILocationBase
-	interfaces.IValidate
-}
+type (
+	IImportLocation interface {
+		locationsBase.ILocationBase
+		interfaces.IValidate
+	}
 
-type ITargetImportLocation interface {
-	GetImportLocation() IImportLocation
-}
+	ITargetImportLocation interface {
+		GetImportLocation() IImportLocation
+	}
 
-type ImportLocation struct {
-	locationsBase.LocationBase
-}
+	ImportLocation struct {
+		locationsBase.LocationBase
+	}
+)
 
-func NewImportLocation(options *locationsBase.LocationBaseOptions) *ImportLocation {
+func NewImportLocation(importDirectoryName, importTargetDirectory, gameVersionDir string) IImportLocation {
+	targetDirectory := filepath.Join(importTargetDirectory, gameVersionDir)
 	return &ImportLocation{
-		LocationBase: locationsBase.NewLocationBase(options),
+		locationsBase.LocationBase{
+			TargetDirectoryBase: locationsBase.TargetDirectoryBase{
+				TargetDirectory:     targetDirectory,
+				TargetDirectoryName: importDirectoryName,
+			},
+			TargetFileBase: locationsBase.TargetFileBase{},
+		},
 	}
 }
 

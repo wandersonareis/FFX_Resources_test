@@ -97,9 +97,9 @@ func (h *dcpFileHeader) Update(dcpParts components.IList[dcpParts.DcpFileParts])
 	items := dcpParts.GetItems()
 
 	for i, pointer := range h.Pointers {
-		partInfo, err := os.Stat(items[i].GetDestination().Import().Get().GetTargetFile())
+		partInfo, err := os.Stat(items[i].GetDestination().Import().GetTargetFile())
 		if err != nil {
-			return fmt.Errorf("error getting file info: %s", items[i].GetDestination().Import().Get().GetTargetFile())
+			return fmt.Errorf("error getting file info: %s", items[i].GetDestination().Import().GetTargetFile())
 		}
 
 		if i == 0 {

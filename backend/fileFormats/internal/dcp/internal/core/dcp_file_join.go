@@ -26,7 +26,7 @@ func NewDcpFileJoiner() IDcpFileJoiner {
 func (dfj *dcpFileJoiner) DcpFileJoiner(source interfaces.ISource, destination locations.IDestination, xplitedFiles components.IList[dcpParts.DcpFileParts], targetReimportFile string) error {
 	originalDcpFile := source.Get().Path
 
-	importLocation := destination.Import().Get()
+	importLocation := destination.Import()
 
 	if err := importLocation.ProvideTargetPath(); err != nil {
 		return fmt.Errorf("error when providing target path: %w", err)

@@ -98,7 +98,7 @@ func extractIntegrityCheck(
 func compressIntegrityCheck(source interfaces.ISource, destination locations.IDestination, segmentCounter ISegmentCounter, fileComparer IComparer, logger logger.ILoggerHandler) error {
 	extractLocation := destination.Extract()
 	translateLocation := destination.Translate().Get()
-	importLocation := destination.Import().Get()
+	importLocation := destination.Import()
 
 	if err := importLocation.Validate(); err != nil {
 		return err
@@ -112,7 +112,7 @@ func compressIntegrityCheck(source interfaces.ISource, destination locations.IDe
 		return err
 	}
 
-	logger.LogInfo("Compressed text file verified successfully: %s", destination.Import().Get().GetTargetFile())
+	logger.LogInfo("Compressed text file verified successfully: %s", destination.Import().GetTargetFile())
 
 	return nil
 }

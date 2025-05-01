@@ -107,7 +107,7 @@ func (dfc *dcpFileCompressor) populateDcpExtractedBinaryFileParts(binaryPartsLis
 func (dfc *dcpFileCompressor) populateDcpTranslatedBinaryFileParts(binaryTranslatedPartsList components.IList[dcpParts.DcpFileParts]) error {
 	dfc.log.LogInfo("Populating dcp translated binary file parts...")
 
-	translatedBinaryPartsPath := filepath.Join(dfc.destination.Import().Get().TargetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME)
+	translatedBinaryPartsPath := filepath.Join(dfc.destination.Import().GetTargetDirectory(), lib.DCP_PARTS_TARGET_DIR_NAME)
 
 	return dcpParts.PopulateDcpBinaryFileParts(
 		binaryTranslatedPartsList,
@@ -213,7 +213,7 @@ func (dfc *dcpFileCompressor) compressFilesParts(partsList components.IList[dcpP
 func (dfc *dcpFileCompressor) joinFilesParts(dcpTranslatedBinaryPartsList components.IList[dcpParts.DcpFileParts]) error {
 	dfc.log.LogInfo("Joining dcp file parts...")
 
-	outputFile := dfc.destination.Import().Get().GetTargetFile()
+	outputFile := dfc.destination.Import().GetTargetFile()
 
 	dcpFileJoiner := dcpCore.NewDcpFileJoiner()
 	if err := dcpFileJoiner.DcpFileJoiner(dfc.source, dfc.destination, dcpTranslatedBinaryPartsList, outputFile); err != nil {

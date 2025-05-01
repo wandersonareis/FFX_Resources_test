@@ -219,7 +219,7 @@ func (lfc *LockitFileCompressor) encodingFilesParts(extractedBinaryPartsList com
 		return fmt.Errorf("error when encoding files parts: extracted binary parts list is empty")
 	}
 
-	lfc.logger.LogInfo("Encoding files parts to: %s", lfc.GetDestination().Import().Get().GetTargetPath())
+	lfc.logger.LogInfo("Encoding files parts to: %s", lfc.GetDestination().Import().GetTargetPath())
 
 	filePartsEncoder := lockitParts.NewLockitFilePartsEncoder(lfc.logger)
 	filePartsEncoder.EncodeFilesParts(extractedBinaryPartsList, lfc.lockitEncoding)
@@ -229,7 +229,7 @@ func (lfc *LockitFileCompressor) encodingFilesParts(extractedBinaryPartsList com
 func (lfc *LockitFileCompressor) joiningLockitBinaryFileParts(translatedBinaryPartsList components.IList[lockitParts.LockitFileParts]) error {
 	filePartsJoiner := internal.NewLockitFileJoiner(lfc.logger)
 
-	lfc.logger.LogInfo("Joining file parts inside file: %s", lfc.GetDestination().Import().Get().GetTargetFile())
+	lfc.logger.LogInfo("Joining file parts inside file: %s", lfc.GetDestination().Import().GetTargetFile())
 
 	if err := filePartsJoiner.JoinFileParts(lfc.GetDestination(), translatedBinaryPartsList, lfc.options); err != nil {
 		return fmt.Errorf("error when joining lockit binary file parts: %s", err.Error())

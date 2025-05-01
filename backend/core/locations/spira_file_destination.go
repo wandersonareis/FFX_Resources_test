@@ -11,7 +11,7 @@ import (
 type IDestination interface {
 	Extract() IExtractLocation
 	Translate() ITranslateLocationInfo
-	Import() IImportLocationInfo
+	Import() IImportLocation
 	InitializeLocations(source interfaces.ISource, formatter interfaces.ITextFormatter)
 	CreateRelativePath(source interfaces.ISource, gameLocationPath string)
 }
@@ -19,7 +19,7 @@ type IDestination interface {
 type Destination struct {
 	ExtractLocation   IExtractLocation   `json:"extract_location"`
 	TranslateLocation TranslateLocationInfo `json:"translate_location"`
-	ImportLocation    ImportLocationInfo    `json:"import_location"`
+	ImportLocation    IImportLocation    `json:"import_location"`
 }
 
 func NewDestination() IDestination {
@@ -34,7 +34,7 @@ func NewDestination() IDestination {
 	destination := &Destination{
 		ExtractLocation: NewExtractLocation("extracted", extractPath, gameVersionDir),
 		TranslateLocation: NewTranslateLocationInfo(locationsBase.WithDirectoryName("translated"), locationsBase.WithTargetDirectory(translatePath), locationsBase.WithGameVersionDir(gameVersionDir)),
-		ImportLocation:    NewImportLocationInfo(locationsBase.WithDirectoryName("reimported"), locationsBase.WithTargetDirectory(importPath), locationsBase.WithGameVersionDir(gameVersionDir)),
+		ImportLocation: NewImportLocation("reimported", importPath, gameVersionDir),
 	}
 	return destination
 }
@@ -42,7 +42,7 @@ func NewDestination() IDestination {
 func (g *Destination) InitializeLocations(source interfaces.ISource, formatter interfaces.ITextFormatter) {
 	g.ExtractLocation.BuildTargetReadOutput(source, formatter)
 	g.TranslateLocation.Get().BuildTargetReadOutput(source, formatter)
-	g.ImportLocation.Get().BuildTargetWriteOutput(source, formatter)
+	g.ImportLocation.BuildTargetWriteOutput(source, formatter)
 }
 
 func (g *Destination) Extract() IExtractLocation {
@@ -53,8 +53,8 @@ func (g *Destination) Translate() ITranslateLocationInfo {
 	return &g.TranslateLocation
 }
 
-func (g *Destination) Import() IImportLocationInfo {
-	return &g.ImportLocation
+func (g *Destination) Import() IImportLocation {
+	return g.ImportLocation
 }
 
 // CreateRelativePath sets the RelativeGameDataPath of the source to a path relative to the given gameLocationPath.

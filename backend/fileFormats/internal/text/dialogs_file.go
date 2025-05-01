@@ -81,7 +81,7 @@ func (d *DialogsFile) Compress() error {
 	compressorInstance := dlg.RentDlgCompressor()
 	defer dlg.ReturnDlgCompressor(compressorInstance)
 
-	d.log.LogInfo("Compressing dialog file: %s", d.destination.Import().Get().GetTargetFile())
+	d.log.LogInfo("Compressing dialog file: %s", d.destination.Import().GetTargetFile())
 
 	if err := d.ensureTranslatedText(); err != nil {
 		return err
@@ -91,17 +91,17 @@ func (d *DialogsFile) Compress() error {
 		return err
 	}
 
-	d.log.LogInfo("Verifying compressed dialog file: %s", d.destination.Import().Get().GetTargetFile())
+	d.log.LogInfo("Verifying compressed dialog file: %s", d.destination.Import().GetTargetFile())
 
 	tmpSource, tmpDestination := d.createTemp(d.source, d.destination)
-	defer tmpDestination.Extract().Get().Dispose()
+	defer tmpDestination.Extract().Dispose()
 
 	tmpFile := NewDialogs(tmpSource, tmpDestination)
 
 	if err := tmpFile.Extract(); err != nil {
-		d.log.LogError(err, "Error decoding dialog file: %s", d.destination.Import().Get().GetTargetFile())
+		d.log.LogError(err, "Error decoding dialog file: %s", d.destination.Import().GetTargetFile())
 
-		return fmt.Errorf("failed to decode dialog file: %s", d.destination.Import().Get().GetTargetFile())
+		return fmt.Errorf("failed to decode dialog file: %s", d.destination.Import().GetTargetFile())
 	}
 
 	dlg.InitTextVerifierPool(d.log)
@@ -112,7 +112,7 @@ func (d *DialogsFile) Compress() error {
 		return fmt.Errorf("failed to integrity dialog file: %s", d.source.Get().Name)
 	}
 
-	d.log.LogInfo("Dialog file compressed: %s", d.destination.Import().Get().GetTargetFile())
+	d.log.LogInfo("Dialog file compressed: %s", d.destination.Import().GetTargetFile())
 
 	return nil
 }
@@ -148,7 +148,7 @@ func (d *DialogsFile) createTemp(source interfaces.ISource, destination location
 	tmpDestination.Extract().SetTargetFile(tmp.TempFile)
 	tmpDestination.Extract().SetTargetPath(tmp.TempFilePath)
 
-	tmpSource.Get().Path = destination.Import().Get().GetTargetFile()
+	tmpSource.Get().Path = destination.Import().GetTargetFile()
 
 	return tmpSource, tmpDestination
 }

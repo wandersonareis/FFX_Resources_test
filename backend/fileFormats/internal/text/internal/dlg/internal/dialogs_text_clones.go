@@ -26,7 +26,7 @@ func NewDlgClones(logger logger.ILoggerHandler) *dialogsClones {
 }
 
 func (dc *dialogsClones) Clone(source interfaces.ISource, destination locations.IDestination) {
-	importTargetFile := destination.Import().Get().GetTargetFile()
+	importTargetFile := destination.Import().GetTargetFile()
 
 	fileClones := source.Get().ClonedItems
 	if len(fileClones) == 0 {
@@ -36,7 +36,7 @@ func (dc *dialogsClones) Clone(source interfaces.ISource, destination locations.
 	dc.log.LogInfo("Clones from: %s", importTargetFile)
 
 	for _, clone := range fileClones {
-		cloneReimportPath := filepath.Join(destination.Import().Get().GetTargetDirectory(), clone)
+		cloneReimportPath := filepath.Join(destination.Import().GetTargetDirectory(), clone)
 
 		if err := dc.duplicateFile(importTargetFile, cloneReimportPath); err != nil {
 			dc.log.LogError(err, "Error duplicating file: %s", cloneReimportPath)

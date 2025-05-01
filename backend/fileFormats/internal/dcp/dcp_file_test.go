@@ -83,7 +83,7 @@ var _ = ginkgo.Describe("DcpFile", func() {
 		destination = &locations.Destination{
 			ExtractLocation: locations.NewExtractLocation("extracted", extractTempPath, gameVersionDir),
 			TranslateLocation: locations.NewTranslateLocationInfo(locationsBase.WithDirectoryName("translated"), locationsBase.WithTargetDirectory(translatePath), locationsBase.WithGameVersionDir(gameVersionDir)),
-			ImportLocation:    locations.NewImportLocationInfo(locationsBase.WithDirectoryName("reimported"), locationsBase.WithTargetDirectory(reimportTempPath), locationsBase.WithGameVersionDir(gameVersionDir)),
+			ImportLocation:    locations.NewImportLocation("reimported", reimportTempPath, gameVersionDir),
 		}
 
 		destination.InitializeLocations(source, formatter)

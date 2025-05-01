@@ -93,7 +93,7 @@ func (d *DcpFile) Compress() error {
 }
 
 func (df *DcpFile) compress() error {
-	df.log.LogInfo("Compressing DCP file inside path: %s", df.GetDestination().Import().Get().GetTargetPath())
+	df.log.LogInfo("Compressing DCP file inside path: %s", df.GetDestination().Import().GetTargetPath())
 
 	compressor := NewDcpFileCompressor(
 		df.GetSource(),
@@ -106,7 +106,7 @@ func (df *DcpFile) compress() error {
 }
 
 func (df *DcpFile) compressVerify() error {
-	targetFile := df.GetDestination().Import().Get().GetTargetFile()
+	targetFile := df.GetDestination().Import().GetTargetFile()
 
 	df.log.LogInfo("Verifying reimported macrodic file: %s", targetFile)
 

@@ -42,7 +42,7 @@ func (lfi *lockitFileCompressorIntegrity) Verify(
 	destination locations.IDestination,
 	lockitEncoding ffxencoding.IFFXTextLockitEncoding,
 	fileOptions core.ILockitFileOptions) error {
-	importTargetFile := destination.Import().Get().GetTargetFile()
+	importTargetFile := destination.Import().GetTargetFile()
 
 	if err := common.CheckPathExists(importTargetFile); err != nil {
 		return fmt.Errorf("reimport file not exists: %s | %w", importTargetFile, err)

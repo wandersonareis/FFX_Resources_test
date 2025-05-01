@@ -1,9 +1,9 @@
 package internal
 
 import (
-	"ffxresources/backend/core/encoding"
+	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats/internal/text/internal/encoding"
+	textsEncoding "ffxresources/backend/fileFormats/internal/text/internal/encoding"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
@@ -27,7 +27,7 @@ func (e *dlgEncoder) Encoder(source interfaces.ISource, destination locations.ID
 	defer encoding.Dispose()
 
 	translateLocation := destination.Translate().Get()
-	importLocation := destination.Import().Get()
+	importLocation := destination.Import()
 
 	if err := translateLocation.Validate(); err != nil {
 		e.log.LogError(err, fmt.Sprintf("Error validating translate file: %s", translateLocation.GetTargetFile()))

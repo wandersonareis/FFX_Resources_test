@@ -67,7 +67,7 @@ func (c dcpFileContent) Read(file *os.File) error {
 }
 func (c dcpFileContent) Write(header *dcpFileHeader, parts components.IList[dcpParts.DcpFileParts]) error {
 	for _, part := range parts.GetItems() {
-		filePath := part.GetDestination().Import().Get().GetTargetFile()
+		filePath := part.GetDestination().Import().GetTargetFile()
 
 		file, err := os.Open(filePath)
 		if err != nil {

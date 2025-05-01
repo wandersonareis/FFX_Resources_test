@@ -104,7 +104,7 @@ func (dfe *dcpFileExtractor) extractMissingDcpFileParts() error {
 }
 
 func (dfe *dcpFileExtractor) decodeFilesParts(binaryPartsList components.IList[dcpParts.DcpFileParts]) error {
-	dfe.log.LogInfo("Decoding files parts to: %s", dfe.destination.Import().Get().GetTargetPath())
+	dfe.log.LogInfo("Decoding files parts to: %s", dfe.destination.Import().GetTargetPath())
 
 	var hasError bool
 

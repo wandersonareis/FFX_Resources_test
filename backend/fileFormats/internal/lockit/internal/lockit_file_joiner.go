@@ -25,7 +25,7 @@ func NewLockitFileJoiner(logger logger.ILoggerHandler) ILockitPartsJoiner {
 }
 
 func (lj *lockitFileJoiner) JoinFileParts(destination locations.IDestination, lockitPartsList components.IList[lockitParts.LockitFileParts], fileOptions core.ILockitFileOptions) error {
-	importLocation := destination.Import().Get()
+	importLocation := destination.Import()
 
 	if lockitPartsList.GetLength() != fileOptions.GetPartsLength() {
 		return fmt.Errorf("invalid number of parts: %d expected: %d", lockitPartsList.GetLength(), fileOptions.GetPartsLength())

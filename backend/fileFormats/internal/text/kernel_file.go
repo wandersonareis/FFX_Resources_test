@@ -78,14 +78,14 @@ func (k *kernelFile) Compress() error {
 	}
 
 	tmpSource, tmpDestination := k.createTemp(k.source, k.destination)
-	defer tmpDestination.Extract().Get().Dispose()
+	defer tmpDestination.Extract().Dispose()
 
 	tmpFile := NewKernel(tmpSource, tmpDestination)
 
 	if err := tmpFile.Extract(); err != nil {
-		k.log.LogError(err, "Error decoding kernel file: %s", k.destination.Import().Get().GetTargetFile())
+		k.log.LogError(err, "Error decoding kernel file: %s", k.destination.Import().GetTargetFile())
 
-		return fmt.Errorf("failed to decode kernel file: %s", k.destination.Import().Get().GetTargetFile())
+		return fmt.Errorf("failed to decode kernel file: %s", k.destination.Import().GetTargetFile())
 	}
 
 	textVerifierInstance := mt2.RentTextVerifier()
@@ -97,7 +97,7 @@ func (k *kernelFile) Compress() error {
 		return fmt.Errorf("failed to integrity kernel file: %s", k.source.Get().Name)
 	}
 
-	k.log.LogInfo("Kernel file compressed: %s", k.destination.Import().Get().GetTargetFile())
+	k.log.LogInfo("Kernel file compressed: %s", k.destination.Import().GetTargetFile())
 
 	return nil
 }
@@ -111,7 +111,7 @@ func (k *kernelFile) createTemp(source interfaces.ISource, destination locations
 	tmpDestination.Extract().SetTargetFile(tmp.TempFile)
 	tmpDestination.Extract().SetTargetPath(tmp.TempFilePath)
 
-	tmpSource.Get().Path = destination.Import().Get().GetTargetFile()
+	tmpSource.Get().Path = destination.Import().GetTargetFile()
 
 	return tmpSource, tmpDestination
 }
