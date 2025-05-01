@@ -63,7 +63,7 @@ func (l *LockitFileParts) Extract(dec LockitEncodingType, encoding ffxencoding.I
 }
 
 func (l *LockitFileParts) Compress(enc LockitEncodingType, encoding ffxencoding.IFFXTextLockitEncoding) error {
-	translatedTextFile := l.GetDestination().Translate().Get().GetTargetFile()
+	translatedTextFile := l.GetDestination().Translate().GetTargetFile()
 	outputTranslatedBinary := common.RemoveOneFileExtension(translatedTextFile)
 
 	if err := common.CheckPathExists(translatedTextFile); err != nil {

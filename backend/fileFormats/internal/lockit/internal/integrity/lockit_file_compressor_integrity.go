@@ -170,7 +170,7 @@ func (lfi *lockitFileCompressorIntegrity) temporaryPartsComparer(partsList compo
 
 	partsList.ForEach(func(part lockitParts.LockitFileParts) {
 		compareFilesList.Add(models.FileComparisonEntry{
-			FromFile: part.GetDestination().Translate().Get().GetTargetFile(),
+			FromFile: part.GetDestination().Translate().GetTargetFile(),
 			ToFile:   part.GetDestination().Extract().GetTargetFile(),
 		})
 	})

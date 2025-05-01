@@ -1,7 +1,6 @@
 package locations
 
 import (
-	"ffxresources/backend/core/locations/locationsBase"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"os"
@@ -10,7 +9,7 @@ import (
 
 type IDestination interface {
 	Extract() IExtractLocation
-	Translate() ITranslateLocationInfo
+	Translate() ITranslateLocation
 	Import() IImportLocation
 	InitializeLocations(source interfaces.ISource, formatter interfaces.ITextFormatter)
 	CreateRelativePath(source interfaces.ISource, gameLocationPath string)
@@ -18,7 +17,7 @@ type IDestination interface {
 
 type Destination struct {
 	ExtractLocation   IExtractLocation   `json:"extract_location"`
-	TranslateLocation TranslateLocationInfo `json:"translate_location"`
+	TranslateLocation ITranslateLocation `json:"translate_location"`
 	ImportLocation    IImportLocation    `json:"import_location"`
 }
 
@@ -33,7 +32,7 @@ func NewDestination() IDestination {
 
 	destination := &Destination{
 		ExtractLocation: NewExtractLocation("extracted", extractPath, gameVersionDir),
-		TranslateLocation: NewTranslateLocationInfo(locationsBase.WithDirectoryName("translated"), locationsBase.WithTargetDirectory(translatePath), locationsBase.WithGameVersionDir(gameVersionDir)),
+		TranslateLocation: NewTranslateLocation("translated", translatePath, gameVersionDir),
 		ImportLocation: NewImportLocation("reimported", importPath, gameVersionDir),
 	}
 	return destination
@@ -41,7 +40,7 @@ func NewDestination() IDestination {
 
 func (g *Destination) InitializeLocations(source interfaces.ISource, formatter interfaces.ITextFormatter) {
 	g.ExtractLocation.BuildTargetReadOutput(source, formatter)
-	g.TranslateLocation.Get().BuildTargetReadOutput(source, formatter)
+	g.TranslateLocation.BuildTargetReadOutput(source, formatter)
 	g.ImportLocation.BuildTargetWriteOutput(source, formatter)
 }
 
@@ -49,8 +48,8 @@ func (g *Destination) Extract() IExtractLocation {
 	return g.ExtractLocation
 }
 
-func (g *Destination) Translate() ITranslateLocationInfo {
-	return &g.TranslateLocation
+func (g *Destination) Translate() ITranslateLocation {
+	return g.TranslateLocation
 }
 
 func (g *Destination) Import() IImportLocation {

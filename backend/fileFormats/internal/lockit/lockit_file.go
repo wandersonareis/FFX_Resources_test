@@ -90,7 +90,7 @@ func (lf *LockitFile) Compress() error {
 }
 
 func (lf *LockitFile) compress(lockitEncoding ffxencoding.IFFXTextLockitEncoding, fileOptions core.ILockitFileOptions) error {
-	lf.log.LogInfo("Compressing lockit file in path: %s", lf.destination.Translate().Get().GetTargetPath())
+	lf.log.LogInfo("Compressing lockit file in path: %s", lf.destination.Translate().GetTargetPath())
 
 	fileCompressor := NewLockitFileCompressor(lf.source, lf.destination, lockitEncoding, fileOptions, lf.log)
 
@@ -98,7 +98,7 @@ func (lf *LockitFile) compress(lockitEncoding ffxencoding.IFFXTextLockitEncoding
 }
 
 func (lf *LockitFile) compressVerify(lockitEncoding ffxencoding.IFFXTextLockitEncoding, fileOptions core.ILockitFileOptions) error {
-	lf.log.LogInfo("Verifying translated lockit file in path: %s", lf.destination.Translate().Get().GetTargetPath())
+	lf.log.LogInfo("Verifying translated lockit file in path: %s", lf.destination.Translate().GetTargetPath())
 
 	compressVerify := integrity.NewLockitFileIntegrity(lf.log)
 

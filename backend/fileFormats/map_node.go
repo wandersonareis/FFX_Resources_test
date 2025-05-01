@@ -12,14 +12,14 @@ type (
 	TreeNodeData struct {
 		Source    *core.SpiraFileInfo          `json:"source"`
 		Extract   locations.IExtractLocation   `json:"extract_location"`
-		Translate *locations.TranslateLocation `json:"translate_location"`
+		Translate locations.ITranslateLocation `json:"translate_location"`
 	}
 
 	DataInfo struct {
 		Source    *core.SpiraFileInfo          `json:"source"`
 		Extract   locations.IExtractLocation   `json:"extract_location"`
-		Translate *locations.TranslateLocation `json:"translate_location"`	
-		
+		Translate locations.ITranslateLocation `json:"translate_location"`
+
 		FileProcessor interfaces.IFileProcessor
 	}
 

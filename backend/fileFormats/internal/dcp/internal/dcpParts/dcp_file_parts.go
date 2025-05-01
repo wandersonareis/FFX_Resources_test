@@ -44,7 +44,7 @@ func (d DcpFileParts) Compress() error {
 }
 
 func (d DcpFileParts) Validate() error {
-	if err := d.GetDestination().Translate().Get().Validate(); err != nil {
+	if err := d.GetDestination().Translate().Validate(); err != nil {
 		return fmt.Errorf("translated dcp parts file not found: %s", d.GetSource().Get().Name)
 	}
 

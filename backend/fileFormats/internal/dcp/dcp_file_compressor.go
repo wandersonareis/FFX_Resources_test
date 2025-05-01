@@ -121,7 +121,7 @@ func (dfc *dcpFileCompressor) populateDcpTranslatedTextFileParts(translatedTextP
 
 	return dcpParts.PopulateDcpTextFileParts(
 		translatedTextPartsList,
-		dfc.destination.Translate().Get().GetTargetPath(),
+		dfc.destination.Translate().GetTargetPath(),
 		dfc.formatter,
 	)
 }

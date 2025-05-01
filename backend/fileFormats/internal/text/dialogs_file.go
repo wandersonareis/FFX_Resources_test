@@ -123,7 +123,7 @@ func (d *DialogsFile) ensureTranslatedText() error {
 	defer dlg.ReturnTextVerifier(textVerifierInstance)
 
 	sourceFile := d.source.Get().Path
-	targetFile := d.destination.Translate().Get().GetTargetFile()
+	targetFile := d.destination.Translate().GetTargetFile()
 
 	if err := common.CheckPathExists(sourceFile); err != nil {
 		return fmt.Errorf("failed to check source file path: %s", err)

@@ -97,7 +97,7 @@ func extractIntegrityCheck(
 
 func compressIntegrityCheck(source interfaces.ISource, destination locations.IDestination, segmentCounter ISegmentCounter, fileComparer IComparer, logger logger.ILoggerHandler) error {
 	extractLocation := destination.Extract()
-	translateLocation := destination.Translate().Get()
+	translateLocation := destination.Translate()
 	importLocation := destination.Import()
 
 	if err := importLocation.Validate(); err != nil {

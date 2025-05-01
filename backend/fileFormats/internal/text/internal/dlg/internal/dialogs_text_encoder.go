@@ -26,7 +26,7 @@ func (e *dlgEncoder) Encoder(source interfaces.ISource, destination locations.ID
 	encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextDlgEncoding(source.Get().Type)
 	defer encoding.Dispose()
 
-	translateLocation := destination.Translate().Get()
+	translateLocation := destination.Translate()
 	importLocation := destination.Import()
 
 	if err := translateLocation.Validate(); err != nil {

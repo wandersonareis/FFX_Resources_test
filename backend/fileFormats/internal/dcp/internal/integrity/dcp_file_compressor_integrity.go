@@ -165,12 +165,12 @@ func (dfci *dcpFileCompressorIntegrity) createCompareTextList(partsList componen
 	filesToCompareList := components.NewList[components.IFileComparer](partsList.GetLength())
 
 	partsList.ForEach(func(item dcpParts.DcpFileParts) {
-		if item.GetDestination().Translate().Get().GetTargetExtension() != ".txt" ||
+		if item.GetDestination().Translate().GetTargetExtension() != ".txt" ||
 			item.GetDestination().Extract().GetTargetExtension() != ".txt" {
 			return
 		}
 
-		translatedFile := item.GetDestination().Translate().Get().GetTargetFile()
+		translatedFile := item.GetDestination().Translate().GetTargetFile()
 		extractedFile := item.GetDestination().Extract().GetTargetFile()
 
 		if err := common.CheckPathExists(translatedFile); err != nil {
@@ -192,7 +192,7 @@ func (dfci *dcpFileCompressorIntegrity) createCompareTextList(partsList componen
 		}
 
 		filesToCompareList.Add(&components.FileComparisonEntry{
-			FromFile: item.GetDestination().Translate().Get().GetTargetFile(),
+			FromFile: item.GetDestination().Translate().GetTargetFile(),
 			ToFile:   item.GetDestination().Extract().GetTargetFile(),
 		})
 	})

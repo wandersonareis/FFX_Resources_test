@@ -28,7 +28,7 @@ func (e *krnlEncoder) Encoder(source interfaces.ISource, destination locations.I
 	encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextKrnlEncoding()
 	defer encoding.Dispose()
 
-	translateLocation := destination.Translate().Get()
+	translateLocation := destination.Translate()
 	importLocation := destination.Import()
 
 	if err := translateLocation.Validate(); err != nil {

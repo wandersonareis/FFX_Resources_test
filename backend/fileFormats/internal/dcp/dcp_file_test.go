@@ -4,7 +4,6 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core"
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/core/locations/locationsBase"
 	"ffxresources/backend/fileFormats/internal/dcp"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/integrity"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/lib"
@@ -82,7 +81,7 @@ var _ = ginkgo.Describe("DcpFile", func() {
 
 		destination = &locations.Destination{
 			ExtractLocation: locations.NewExtractLocation("extracted", extractTempPath, gameVersionDir),
-			TranslateLocation: locations.NewTranslateLocationInfo(locationsBase.WithDirectoryName("translated"), locationsBase.WithTargetDirectory(translatePath), locationsBase.WithGameVersionDir(gameVersionDir)),
+			TranslateLocation: locations.NewTranslateLocation("translated", translatePath, gameVersionDir),
 			ImportLocation:    locations.NewImportLocation("reimported", reimportTempPath, gameVersionDir),
 		}
 

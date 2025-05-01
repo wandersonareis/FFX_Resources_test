@@ -28,7 +28,7 @@ func newKrnlCompressor(logger logger.ILoggerHandler) *KrnlCompressor {
 
 func (k *KrnlCompressor) Compress(source interfaces.ISource, destination locations.IDestination) error {
 	if err := k.encoder.Encoder(source, destination); err != nil {
-		k.log.LogError(err, "Error compressing kernel file: %s", destination.Translate().Get().GetTargetFile())
+		k.log.LogError(err, "Error compressing kernel file: %s", destination.Translate().GetTargetFile())
 
 		return fmt.Errorf("failed to compress kernel file: %s", source.Get().Name)
 	}

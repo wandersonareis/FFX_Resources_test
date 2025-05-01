@@ -36,7 +36,7 @@ func (lj *lockitFileJoiner) JoinFileParts(destination locations.IDestination, lo
 	errChan := make(chan error, lockitPartsList.GetLength())
 
 	combineFilesFunc := func(part lockitParts.LockitFileParts) {
-		translatedTextFile := part.GetDestination().Translate().Get().GetTargetFile()
+		translatedTextFile := part.GetDestination().Translate().GetTargetFile()
 		fileName := common.RemoveOneFileExtension(translatedTextFile) // remove .txt extension
 
 		partData, err := os.ReadFile(fileName)

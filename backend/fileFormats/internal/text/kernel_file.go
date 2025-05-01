@@ -72,7 +72,7 @@ func (k *kernelFile) Compress() error {
 	defer mt2.ReturnKrnlCompressor(compressorInstance)
 
 	if err := compressorInstance.Compress(k.source, k.destination); err != nil {
-		k.log.LogError(err, "Error compressing kernel file: %s", k.destination.Translate().Get().GetTargetFile())
+		k.log.LogError(err, "Error compressing kernel file: %s", k.destination.Translate().GetTargetFile())
 
 		return fmt.Errorf("failed to compress kernel file: %s", k.source.Get().Name)
 	}

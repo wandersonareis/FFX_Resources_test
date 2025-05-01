@@ -30,7 +30,7 @@ func NewDlgCompressor(logger logger.ILoggerHandler) IDlgCompressor {
 
 func (d *dialogCompressor) Compress(source interfaces.ISource, destination locations.IDestination) error {
 	if err := d.encoder.Encoder(source, destination); err != nil {
-		return fmt.Errorf("failed to compress dialog file: %s", destination.Translate().Get().GetTargetFile())
+		return fmt.Errorf("failed to compress dialog file: %s", destination.Translate().GetTargetFile())
 	}
 
 	d.dialogsClones.Clone(source, destination)

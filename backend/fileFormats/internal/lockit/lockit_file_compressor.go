@@ -113,7 +113,7 @@ func (lfc *LockitFileCompressor) populateLockitTranslatedTextFileParts(translate
 
 	return lockitParts.PopulateLockitTextFileParts(
 		translatedTextPartsList,
-		lfc.GetDestination().Translate().Get().GetTargetPath(),
+		lfc.GetDestination().Translate().GetTargetPath(),
 	)
 }
 
@@ -122,7 +122,7 @@ func (lfc *LockitFileCompressor) populateLockitTranslatedBinaryFileParts(transla
 
 	return lockitParts.PopulateLockitBinaryFileParts(
 		translatedBinaryPartsList,
-		lfc.GetDestination().Translate().Get().GetTargetPath(),
+		lfc.GetDestination().Translate().GetTargetPath(),
 	)
 }
 

@@ -5,7 +5,6 @@ import (
 	"ffxresources/backend/core"
 	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/core/locations/locationsBase"
 	"ffxresources/backend/fileFormats/internal/lockit"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/integrity"
 	"ffxresources/backend/formatters"
@@ -86,7 +85,7 @@ var _ = Describe("LockitFile", Ordered, func() {
 		// Setup destination
 		destination = &locations.Destination{
 			ExtractLocation:   locations.NewExtractLocation("extracted", extractTempPath, gameVersionDir),
-			TranslateLocation: locations.NewTranslateLocationInfo(locationsBase.WithDirectoryName("translated"), locationsBase.WithTargetDirectory(translatePath), locationsBase.WithGameVersionDir(gameVersionDir)),
+			TranslateLocation: locations.NewTranslateLocation("translated", translatePath, gameVersionDir),
 			ImportLocation:    locations.NewImportLocation("reimported", reimportTempPath, gameVersionDir),
 		}
 	})
