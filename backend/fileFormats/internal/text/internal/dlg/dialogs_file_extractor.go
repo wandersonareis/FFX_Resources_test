@@ -20,23 +20,25 @@ type (
 	}
 )
 
-func NewDlgExtractor(logger logger.ILoggerHandler) IDlgExtractor {
+func NewDlgExtractor(log logger.ILoggerHandler) IDlgExtractor {
 	return &DialogExtractor{
-		DialogDecoder: internal.NewDlgDecoder(logger),
-		Logger:        logger,
+		DialogDecoder: internal.NewDlgDecoder(),
+		Logger:        log,
 	}
 }
 
 func (d *DialogExtractor) Extract(source interfaces.ISource, destination locations.IDestination) error {
 	if err := destination.Extract().ProvideTargetDirectory(); err != nil {
-		return fmt.Errorf("failed to provide target directory: %s", err)
+		d.Logger.LogError(err, "Error providing extract path")
+		return fmt.Errorf("error providing extract directory: %s", err)
 	}
 
 	textEncoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextDlgEncoding(source.Get().Type)
 	defer textEncoding.Dispose()
 
 	if err := d.DialogDecoder.Decoder(source, destination, textEncoding); err != nil {
-		return fmt.Errorf("failed to decode dialog file: %s", source.Get().Name)
+		d.Logger.LogError(err, "Error on decoding dialog file")
+		return fmt.Errorf("error on decoding dialog file: %s", err)
 	}
 
 	return nil
