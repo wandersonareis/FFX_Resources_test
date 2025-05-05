@@ -12,8 +12,10 @@ import (
 type (
 	ITextDecoder interface {
 		// DecodeDialog decodes a dialog-type text file using the specified encoding information.
+		// Source file types are: .bin, .msb and .00[0-6] from DCP file container.
 		DecodeDialog(sourceFile, targetFile string, encodingInfo ffxencoding.IFFXTextDlgEncoding) error
 		// DecodeKernel decodes a kernel-type text file using the specified encoding information.
+		// Source file types are: .bin
 		DecodeKernel(sourceFile, targetFile string, encodingInfo ffxencoding.IFFXTextKrnlEncoding) error
 	}
 
