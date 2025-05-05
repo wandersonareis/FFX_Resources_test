@@ -1,13 +1,11 @@
 package internal
 
 import (
+	"ffxresources/backend/core/command"
 	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
 	textsEncoding "ffxresources/backend/fileFormats/internal/text/internal/encoding"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
-
-	"github.com/rs/zerolog"
 )
 
 type IKrnlDecoder interface {
@@ -15,12 +13,12 @@ type IKrnlDecoder interface {
 }
 
 type krnlDecoder struct {
-	log zerolog.Logger
+	TextDecoder textsEncoding.ITextDecoder
 }
 
 func NewKrnlDecoder() IKrnlDecoder {
 	return &krnlDecoder{
-		log: logger.Get().With().Str("module", "kernel_file_decoder").Logger(),
+		TextDecoder: textsEncoding.NewTextDecoder(command.NewCommandRunner()),
 	}
 }
 
@@ -30,25 +28,9 @@ func (d *krnlDecoder) Decoder(source interfaces.ISource, destination locations.I
 
 	extractLocation := destination.Extract()
 
-	if err := extractLocation.ProvideTargetPath(); err != nil {
-		d.log.Error().
-			Err(err).
-			Str("path", extractLocation.GetTargetPath()).
-			Msg("Error providing extract path")
-
-		return err
-	}
-
-	decoder := textsEncoding.NewDecoder()
-
 	sourceFile := source.Get().Path
 
-	if err := decoder.KnrlDecoder(sourceFile, extractLocation.GetTargetFile(), encoding); err != nil {
-		d.log.Error().
-			Err(err).
-			Str("file", sourceFile).
-			Msg("Error on decoding kernel file")
-
+	if err := d.TextDecoder.DecodeKernel(sourceFile, extractLocation.GetTargetFile(), encoding); err != nil {
 		return err
 	}
 
