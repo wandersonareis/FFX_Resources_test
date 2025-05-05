@@ -1,64 +1,42 @@
 package internal
 
 import (
+	"ffxresources/backend/core/command"
 	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
 	textsEncoding "ffxresources/backend/fileFormats/internal/text/internal/encoding"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
-
-	"github.com/rs/zerolog"
+	"fmt"
 )
 
 type IKrnlEncoder interface {
-	Encoder(source interfaces.ISource, destination locations.IDestination) error
+	Encoder(source interfaces.ISource, destination locations.IDestination, textEncoding ffxencoding.IFFXTextKrnlEncoding) error
 }
 
 type krnlEncoder struct {
-	log zerolog.Logger
+	TextEncoder textsEncoding.ITextEncoder
 }
 
 func NewKrnlEncoder() IKrnlEncoder {
 	return &krnlEncoder{
-		log: logger.Get().With().Str("module", "kernel_file_encoder").Logger(),
+		TextEncoder: textsEncoding.NewTextEncoder(command.NewCommandRunner()),
 	}
 }
 
-func (e *krnlEncoder) Encoder(source interfaces.ISource, destination locations.IDestination) error {
-	encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextKrnlEncoding()
-	defer encoding.Dispose()
+func (e *krnlEncoder) Encoder(
+	source interfaces.ISource,
+	destination locations.IDestination,
+	textEncoding ffxencoding.IFFXTextKrnlEncoding) error {
+	translatedFile := destination.Translate().GetTargetFile()
+	outputFile := destination.Import().GetTargetFile()
 
-	translateLocation := destination.Translate()
-	importLocation := destination.Import()
-
-	if err := translateLocation.Validate(); err != nil {
-		e.log.Error().
-			Err(err).
-			Str("path", translateLocation.GetTargetFile()).
-			Msg("Error validating translate file")
-
-		return err
-	}
-
-	if err := importLocation.ProvideTargetPath(); err != nil {
-		e.log.Error().
-			Err(err).
-			Str("path", importLocation.GetTargetPath()).
-			Msg("Error providing import path")
-
-		return err
+	if err := destination.Translate().Validate(); err != nil {
+		return fmt.Errorf("error validating translate file: %s | error: %w", translatedFile, err)
 	}
 
 	sourceFile := source.Get().Path
 
-	encoder := textsEncoding.NewEncoder()
-
-	if err := encoder.KnrlEncoder(sourceFile, translateLocation.GetTargetFile(), importLocation.GetTargetFile(), encoding); err != nil {
-		e.log.Error().
-			Err(err).
-			Str("file", sourceFile).
-			Msg("Error on encoding kernel file")
-
+	if err := e.TextEncoder.EncodeKernel(sourceFile, translatedFile, outputFile, textEncoding); err != nil {
 		return err
 	}
 

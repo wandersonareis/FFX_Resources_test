@@ -1,6 +1,7 @@
 package mt2
 
 import (
+	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/text/internal/mt2/internal"
 	"ffxresources/backend/interfaces"
@@ -14,23 +15,31 @@ type (
 	}
 
 	KrnlCompressor struct {
-		encoder internal.IKrnlEncoder
-		log     logger.ILoggerHandler
+		KernelEncoder internal.IKrnlEncoder
+		Log           logger.ILoggerHandler
 	}
 )
 
 func newKrnlCompressor(logger logger.ILoggerHandler) *KrnlCompressor {
 	return &KrnlCompressor{
-		encoder: internal.NewKrnlEncoder(),
-		log:     logger,
+		KernelEncoder: internal.NewKrnlEncoder(),
+		Log:           logger,
 	}
 }
 
 func (k *KrnlCompressor) Compress(source interfaces.ISource, destination locations.IDestination) error {
-	if err := k.encoder.Encoder(source, destination); err != nil {
-		k.log.LogError(err, "Error compressing kernel file: %s", destination.Translate().GetTargetFile())
+	if err := destination.Import().ProvideTargetPath(); err != nil {
+		outputPath := destination.Import().GetTargetPath()
 
-		return fmt.Errorf("failed to compress kernel file: %s", source.Get().Name)
+		return fmt.Errorf("error providing import path: %s | error: %w", outputPath, err)
+	}
+
+	textEncoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextKrnlEncoding()
+	defer textEncoding.Dispose()
+	
+	if err := k.KernelEncoder.Encoder(source, destination, textEncoding); err != nil {
+		k.Log.LogError(err, "Error compressing kernel file")
+		return fmt.Errorf("error compressing kernel file: %s", err)
 	}
 
 	return nil
