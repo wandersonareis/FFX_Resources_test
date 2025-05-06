@@ -312,7 +312,10 @@ var _ = Describe("DlgFile", Ordered, func() {
 		encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextDlgEncoding(source.Get().Type)
 		defer encoding.Dispose()
 
-		count, err := lib.TextSegmentsCounter(sourceFile, source.Get().Type)
+		gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
+		Expect(gameVersion).To(Equal(models.FFX2))
+
+		count, err := lib.TextSegmentsCounter(sourceFile, source.Get().Type, gameVersion)
 		Expect(err).To(BeNil())
 		Expect(count).To(Equal(119))
 	})
