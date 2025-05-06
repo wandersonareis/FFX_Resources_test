@@ -6,16 +6,18 @@ import (
 	"os"
 )
 
-type IFFXTextKrnlEncoding interface {
-	GetEncodingFile() string
-	GetKrnlHandler() encodingHandler.IKrnlEncodingHandler
-	Dispose()
-}
+type (
+	IFFXTextKrnlEncoding interface {
+		GetEncodingFile() string
+		GetKrnlHandler() encodingHandler.IKernelTextHandler
+		Dispose()
+	}
 
-type ffxTextKrnlEncoding struct {
-	fileEncoding string
-	textsHandler encodingHandler.IKrnlEncodingHandler
-}
+	ffxTextKrnlEncoding struct {
+		fileEncoding string
+		textsHandler encodingHandler.IKernelTextHandler
+	}
+)
 
 func newFFXTextKrnlEncoding(encoding string) *ffxTextKrnlEncoding {
 	gamePart := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
@@ -29,7 +31,7 @@ func (e *ffxTextKrnlEncoding) GetEncodingFile() string {
 	return e.fileEncoding
 }
 
-func (e *ffxTextKrnlEncoding) GetKrnlHandler() encodingHandler.IKrnlEncodingHandler {
+func (e *ffxTextKrnlEncoding) GetKrnlHandler() encodingHandler.IKernelTextHandler {
 	return e.textsHandler
 }
 
