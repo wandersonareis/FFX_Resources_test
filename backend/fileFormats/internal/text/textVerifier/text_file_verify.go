@@ -3,6 +3,7 @@ package textVerifier
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/locations"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"ffxresources/backend/models"
@@ -70,7 +71,8 @@ func (dv *TextVerifier) CompareTextSegmentsCount(binaryFile, textFile string, bi
 		dv.fileSegmentCounter = new(segmentCounter)
 	})
 
-	return dv.fileSegmentCounter.CompareTextSegmentsCount(binaryFile, textFile, binaryType)
+	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
+	return dv.fileSegmentCounter.CompareTextSegmentsCount(binaryFile, textFile, binaryType, gameVersion)
 }
 
 func extractIntegrityCheck(
@@ -84,7 +86,9 @@ func extractIntegrityCheck(
 	sourceFileType := source.Get().Type
 	sourceFile := source.Get().Path
 
-	if err := segmentCounter.CompareTextSegmentsCount(sourceFile, extractedFile, sourceFileType); err != nil {
+	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
+
+	if err := segmentCounter.CompareTextSegmentsCount(sourceFile, extractedFile, sourceFileType, gameVersion); err != nil {
 		if err := os.Remove(extractedFile); err != nil {
 			logger.LogError(err, "failed to remove broken text file: %s", extractedFile)
 			return fmt.Errorf("failed to integrity text file: %s", extractedFile)

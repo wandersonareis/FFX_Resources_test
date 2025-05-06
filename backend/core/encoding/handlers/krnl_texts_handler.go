@@ -9,33 +9,31 @@ import (
 
 type (
 	IKernelTextHandler interface {
-		GetKernelTextHandler() (string, error)
+		GetKernelTextHandler(gameVersion models.GameVersion) (string, error)
 		Dispose()
 	}
 
 	kernelTextHandler struct {
 		util.Checksum
 
-		currentGameVersion models.GameVersion
-		kernelTextAppFile  string
+		kernelTextAppFile string
 	}
 )
 
-func NewKrnlTextsHandler(gameVersion models.GameVersion) IKernelTextHandler {
+func NewKrnlTextsHandler() IKernelTextHandler {
 	return &kernelTextHandler{
-		currentGameVersion: gameVersion,
-		Checksum:           util.Checksum{},
+		Checksum: util.Checksum{},
 	}
 }
 
-func (kth *kernelTextHandler) GetKernelTextHandler() (string, error) {
-	switch kth.currentGameVersion {
+func (kth *kernelTextHandler) GetKernelTextHandler(gameVersion models.GameVersion) (string, error) {
+	switch gameVersion {
 	case models.FFX:
 		return kth.ffxKernelTextHandler()
 	case models.FFX2:
 		return kth.ffx2KernelTexthandler()
 	default:
-		return "", fmt.Errorf("game version not supported for kernel text handler: %s", kth.currentGameVersion)
+		return "", fmt.Errorf("game version not supported for kernel text handler: %s", gameVersion)
 	}
 }
 

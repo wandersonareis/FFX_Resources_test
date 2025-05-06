@@ -7,12 +7,12 @@ import (
 	"fmt"
 )
 
-func TextSegmentsCounter(file string, fileType models.NodeType) (int, error) {
+func TextSegmentsCounter(file string, fileType models.NodeType, gameVersion models.GameVersion) (int, error) {
 	switch fileType {
 	case models.Dialogs, models.DialogsSpecial, models.Tutorial:
 		return dialogsSegmentsCounter(file, fileType)
 	case models.Kernel:
-		return kernelSegmentsCounter(file)
+		return kernelSegmentsCounter(file, gameVersion)
 	default:
 		return 0, fmt.Errorf("cannot count segments for file type: %v", fileType)
 	}
@@ -32,13 +32,13 @@ func dialogsSegmentsCounter(dialogFile string, dialogType models.NodeType) (int,
 	return components.GetDialogSegmentsCount(executable, args)
 }
 
-func kernelSegmentsCounter(kernelFile string) (int, error) {
+func kernelSegmentsCounter(kernelFile string, gameVersion models.GameVersion) (int, error) {
 	encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextKrnlEncoding()
 	defer encoding.Dispose()
 
 	args := createSegmentsCountArgs(kernelFile)
 
-	executable, err := encoding.GetKrnlHandler().GetKernelTextHandler()
+	executable, err := encoding.GetKrnlHandler().GetKernelTextHandler(gameVersion)
 	if err != nil {
 		return 0, err
 	}

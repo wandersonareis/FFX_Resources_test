@@ -4,6 +4,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/command"
 	ffxencoding "ffxresources/backend/core/encoding"
+	"ffxresources/backend/interactions"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -67,7 +68,8 @@ func (d *textDecoder) DecodeKernel(sourceFile, targetFile string, encodingInfo f
 		return fmt.Errorf("kernel encoding file path is empty")
 	}
 
-	executablePath, err := encodingInfo.GetKrnlHandler().GetKernelTextHandler()
+	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
+	executablePath, err := encodingInfo.GetKrnlHandler().GetKernelTextHandler(gameVersion)
 	if err != nil {
 		return fmt.Errorf("failed to get kernel handler executable: %w", err)
 	}

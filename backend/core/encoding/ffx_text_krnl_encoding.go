@@ -2,7 +2,6 @@ package ffxencoding
 
 import (
 	encodingHandler "ffxresources/backend/core/encoding/handlers"
-	"ffxresources/backend/interactions"
 	"os"
 )
 
@@ -20,9 +19,8 @@ type (
 )
 
 func newFFXTextKrnlEncoding(encoding string) *ffxTextKrnlEncoding {
-	gamePart := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
 	return &ffxTextKrnlEncoding{
-		textsHandler: encodingHandler.NewKrnlTextsHandler(gamePart),
+		textsHandler: encodingHandler.NewKrnlTextsHandler(),
 		fileEncoding: encoding,
 	}
 }
