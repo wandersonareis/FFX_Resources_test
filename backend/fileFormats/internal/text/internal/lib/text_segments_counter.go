@@ -38,7 +38,7 @@ func kernelSegmentsCounter(kernelFile string) (int, error) {
 
 	args := createSegmentsCountArgs(kernelFile)
 
-	executable, err := encoding.GetKrnlHandler().GetKrnlHandlerApp()
+	executable, err := encoding.GetKrnlHandler().GetKernelTextHandler()
 	if err != nil {
 		return 0, err
 	}

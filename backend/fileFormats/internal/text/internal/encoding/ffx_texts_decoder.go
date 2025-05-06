@@ -67,7 +67,7 @@ func (d *textDecoder) DecodeKernel(sourceFile, targetFile string, encodingInfo f
 		return fmt.Errorf("kernel encoding file path is empty")
 	}
 
-	executablePath, err := encodingInfo.GetKrnlHandler().GetKrnlHandlerApp()
+	executablePath, err := encodingInfo.GetKrnlHandler().GetKernelTextHandler()
 	if err != nil {
 		return fmt.Errorf("failed to get kernel handler executable: %w", err)
 	}
