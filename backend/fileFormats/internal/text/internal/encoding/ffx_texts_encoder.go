@@ -3,7 +3,7 @@ package textsEncoding
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/command"
-	"ffxresources/backend/core/encoding"
+	ffxencoding "ffxresources/backend/core/encoding"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -61,7 +61,7 @@ func (d *textsEncoder) EncodeDialog(sourceFile, targetFile, outputFile string, e
 }
 
 func (d *textsEncoder) EncodeKernel(sourceFile, targetFile, outputFile string, encodingInfo ffxencoding.IFFXTextKrnlEncoding) error {
-	encodingFilePath := encodingInfo.GetEncoding()
+	encodingFilePath := encodingInfo.GetEncodingFile()
 	if encodingFilePath == "" {
 		return fmt.Errorf("kernel encoding file path is empty")
 	}

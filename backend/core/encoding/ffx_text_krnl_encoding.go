@@ -7,13 +7,13 @@ import (
 )
 
 type IFFXTextKrnlEncoding interface {
-	GetEncoding() string
+	GetEncodingFile() string
 	GetKrnlHandler() encodingHandler.IKrnlEncodingHandler
 	Dispose()
 }
 
 type ffxTextKrnlEncoding struct {
-	encoding     string
+	fileEncoding string
 	textsHandler encodingHandler.IKrnlEncodingHandler
 }
 
@@ -21,12 +21,12 @@ func newFFXTextKrnlEncoding(encoding string) *ffxTextKrnlEncoding {
 	gamePart := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
 	return &ffxTextKrnlEncoding{
 		textsHandler: encodingHandler.NewKrnlTextsHandler(gamePart),
-		encoding:     encoding,
+		fileEncoding: encoding,
 	}
 }
 
-func (e *ffxTextKrnlEncoding) GetEncoding() string {
-	return e.encoding
+func (e *ffxTextKrnlEncoding) GetEncodingFile() string {
+	return e.fileEncoding
 }
 
 func (e *ffxTextKrnlEncoding) GetKrnlHandler() encodingHandler.IKrnlEncodingHandler {
@@ -34,9 +34,9 @@ func (e *ffxTextKrnlEncoding) GetKrnlHandler() encodingHandler.IKrnlEncodingHand
 }
 
 func (e *ffxTextKrnlEncoding) Dispose() {
-	_ = os.Remove(e.encoding)
+	_ = os.Remove(e.fileEncoding)
 
-	e.encoding = ""
+	e.fileEncoding = ""
 
 	e.textsHandler.Dispose()
 }

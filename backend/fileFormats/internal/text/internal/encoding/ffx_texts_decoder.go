@@ -62,7 +62,7 @@ func (d *textDecoder) DecodeDialog(sourceFile, targetFile string, encodingInfo f
 }
 
 func (d *textDecoder) DecodeKernel(sourceFile, targetFile string, encodingInfo ffxencoding.IFFXTextKrnlEncoding) error {
-	encodingFilePath := encodingInfo.GetEncoding()
+	encodingFilePath := encodingInfo.GetEncodingFile()
 	if encodingFilePath == "" {
 		return fmt.Errorf("kernel encoding file path is empty")
 	}
