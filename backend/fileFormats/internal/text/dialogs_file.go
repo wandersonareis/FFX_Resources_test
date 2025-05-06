@@ -22,9 +22,7 @@ func NewDialogs(source interfaces.ISource, destination locations.IDestination) i
 		source:      source,
 		destination: destination,
 
-		log: &logger.LogHandler{
-			Logger: logger.Get().With().Str("module", "dialogs_file").Logger(),
-		},
+		log: logger.NewLoggerHandler("DialogsFile"),
 	}
 }
 

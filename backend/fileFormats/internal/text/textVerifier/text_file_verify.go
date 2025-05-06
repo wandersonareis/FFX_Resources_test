@@ -45,21 +45,21 @@ func NewTextsVerify(logger logger.ILoggerHandler) *TextVerifier {
 	}
 }
 
-func (dv *TextVerifier) Verify(source interfaces.ISource, destination locations.IDestination, verify TextIntegrityVerifyFunc) error {
+func (dv *TextVerifier) Verify(source interfaces.ISource, destination locations.IDestination, verifyFunc TextIntegrityVerifyFunc) error {
 	extractLocation := destination.Extract()
 	if err := extractLocation.Validate(); err != nil {
 		return err
 	}
 
 	dv.initializeSegmentCounter.Do(func() {
-		dv.fileSegmentCounter = new(segmentCounter)
+		dv.fileSegmentCounter = newSegmentCounter()
 	})
 
 	dv.initializeFilesComparer.Do(func() {
 		dv.fileContentComparer = newPartComparer()
 	})
 
-	if err := verify(source, destination, dv.fileSegmentCounter, dv.fileContentComparer, dv.log); err != nil {
+	if err := verifyFunc(source, destination, dv.fileSegmentCounter, dv.fileContentComparer, dv.log); err != nil {
 		return err
 	}
 
@@ -99,7 +99,12 @@ func extractIntegrityCheck(
 	return nil
 }
 
-func compressIntegrityCheck(source interfaces.ISource, destination locations.IDestination, segmentCounter ISegmentCounter, fileComparer IComparer, logger logger.ILoggerHandler) error {
+func compressIntegrityCheck(
+	source interfaces.ISource,
+	destination locations.IDestination,
+	segmentCounter ISegmentCounter,
+	fileComparer IComparer,
+	logger logger.ILoggerHandler) error {
 	extractLocation := destination.Extract()
 	translateLocation := destination.Translate()
 	importLocation := destination.Import()
