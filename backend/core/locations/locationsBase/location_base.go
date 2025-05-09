@@ -2,7 +2,6 @@ package locationsBase
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"os"
 	"path/filepath"
@@ -12,9 +11,8 @@ type (
 	ILocationBase interface {
 		ITargetDirectoryBase
 		ITargetFileBase
+		IBuildTargets
 
-		BuildTargetReadOutput(source interfaces.ISource, formatter interfaces.ITextFormatter)
-		BuildTargetWriteOutput(source interfaces.ISource, formatter interfaces.ITextFormatter)
 		Dispose()
 	}
 	LocationBase struct {

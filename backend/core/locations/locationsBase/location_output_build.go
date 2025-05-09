@@ -6,47 +6,68 @@ import (
 	"path/filepath"
 )
 
-type BuildOperationType int
-
-const (
-	opRead BuildOperationType = iota
-	opWrite
+type (
+	IBuildTargets interface {
+		BuildExtractOutput(source interfaces.ISource, formatter interfaces.ITextFormatter) error
+		BuildImportOutput(source interfaces.ISource, formatter interfaces.ITextFormatter) error
+	}
+	IOperationStrategy interface {
+		Process(lb *LocationBase, source interfaces.ISource, formatter interfaces.ITextFormatter)
+	}
 )
 
+type readOperation struct{}
+
+func (r readOperation) Process(lb *LocationBase, source interfaces.ISource, formatter interfaces.ITextFormatter) {
+	lb.TargetFile, lb.TargetPath = formatter.ReadFile(source, lb.GetTargetDirectory())
+}
+
+type writeOperation struct{}
+
+func (w writeOperation) Process(lb *LocationBase, source interfaces.ISource, formatter interfaces.ITextFormatter) {
+	lb.TargetFile, lb.TargetPath = formatter.WriteFile(source, lb.GetTargetDirectory())
+}
+
 func (lb *LocationBase) buildTargetOutput(
+	strategy IOperationStrategy,
 	source interfaces.ISource,
 	formatter interfaces.ITextFormatter,
-	op BuildOperationType,
-) {
-	common.CheckArgumentNil(source, "source")
-	if formatter == nil {
-		panic("formatter cannot be nil")
+) error {
+	if err := common.CheckArgumentNil(source, "source"); err != nil {
+		return err
 	}
 
-	if op == opRead {
-		lb.TargetFile, lb.TargetPath = formatter.ReadFile(source, lb.TargetDirectory)
+	if err := common.CheckArgumentNil(formatter, "formatter"); err != nil {
+		return err
 	}
 
-	if op == opWrite {
-		lb.TargetFile, lb.TargetPath = formatter.WriteFile(source, lb.TargetDirectory)
-	}
+	strategy.Process(lb, source, formatter)
 
 	if !source.Get().IsDir && common.IsValidFilePath(lb.TargetFile) {
 		lb.TargetFileName = filepath.Base(lb.TargetFile)
 	}
+
 	lb.IsExist = lb.IsTargetFileAvailable()
+
+	return nil
 }
 
-func (lb *LocationBase) BuildTargetReadOutput(
+func (lb *LocationBase) BuildExtractOutput(
 	source interfaces.ISource,
 	formatter interfaces.ITextFormatter,
-) {
-	lb.buildTargetOutput(source, formatter, opRead)
+) error {
+	if err := lb.buildTargetOutput(readOperation{}, source, formatter); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (lb *LocationBase) BuildTargetWriteOutput(
+func (lb *LocationBase) BuildImportOutput(
 	source interfaces.ISource,
 	formatter interfaces.ITextFormatter,
-) {
-	lb.buildTargetOutput(source, formatter, opWrite)
+) error {
+	if err := lb.buildTargetOutput(writeOperation{}, source, formatter); err != nil {
+		return err
+	}
+	return nil
 }

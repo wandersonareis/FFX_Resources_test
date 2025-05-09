@@ -11,7 +11,7 @@ type IDestination interface {
 	Extract() IExtractLocation
 	Translate() ITranslateLocation
 	Import() IImportLocation
-	InitializeLocations(source interfaces.ISource, formatter interfaces.ITextFormatter)
+	InitializeLocations(source interfaces.ISource, formatter interfaces.ITextFormatter) error
 	CreateRelativePath(source interfaces.ISource, gameLocationPath string)
 }
 
@@ -31,17 +31,26 @@ func NewDestination() IDestination {
 	importPath := interactionService.ImportLocation.GetTargetDirectory()
 
 	destination := &Destination{
-		ExtractLocation: NewExtractLocation("extracted", extractPath, gameVersionDir),
+		ExtractLocation:   NewExtractLocation("extracted", extractPath, gameVersionDir),
 		TranslateLocation: NewTranslateLocation("translated", translatePath, gameVersionDir),
-		ImportLocation: NewImportLocation("reimported", importPath, gameVersionDir),
+		ImportLocation:    NewImportLocation("reimported", importPath, gameVersionDir),
 	}
 	return destination
 }
 
-func (g *Destination) InitializeLocations(source interfaces.ISource, formatter interfaces.ITextFormatter) {
-	g.ExtractLocation.BuildTargetReadOutput(source, formatter)
-	g.TranslateLocation.BuildTargetReadOutput(source, formatter)
-	g.ImportLocation.BuildTargetWriteOutput(source, formatter)
+func (g *Destination) InitializeLocations(source interfaces.ISource, formatter interfaces.ITextFormatter) error {
+	if err := g.ExtractLocation.BuildExtractOutput(source, formatter); err != nil {
+		return err
+	}
+
+	if err := g.TranslateLocation.BuildExtractOutput(source, formatter); err != nil {
+		return err
+	}
+
+	if err := g.ImportLocation.BuildImportOutput(source, formatter); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (g *Destination) Extract() IExtractLocation {
