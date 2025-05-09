@@ -138,16 +138,22 @@ func (d *DialogsFile) ensureTranslatedText() error {
 
 	return nil
 }
+
 func (d *DialogsFile) createTemp(source interfaces.ISource, destination locations.IDestination) (interfaces.ISource, locations.IDestination) {
 	tmp := common.NewTempProvider("tmp", ".txt")
 
 	tmpSource := source
-	tmpDestination := destination
-
-	tmpDestination.Extract().SetTargetFile(tmp.TempFile)
-	tmpDestination.Extract().SetTargetPath(tmp.TempFilePath)
-
 	tmpSource.Get().Path = destination.Import().GetTargetFile()
+
+	extractLocation := destination.Extract().Copy()
+	extractLocation.SetTargetFile(tmp.TempFile)
+	extractLocation.SetTargetPath(tmp.TempFilePath)
+
+	tmpDestination := &locations.Destination{
+		ExtractLocation:   &extractLocation,
+		TranslateLocation: destination.Translate(),
+		ImportLocation:    destination.Import(),
+	}
 
 	return tmpSource, tmpDestination
 }
