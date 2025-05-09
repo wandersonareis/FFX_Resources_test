@@ -39,7 +39,10 @@ func (dfci *dcpFileCompressorIntegrity) Verify(targetFile string, formatter inte
 		return err
 	}
 
-	source, destination := dfci.generateTempFile(targetFile, formatter)
+	source, destination, err := dfci.generateTempFile(targetFile, formatter)
+	if err != nil {
+		return err
+	}
 
 	if err := dfci.temporaryFileSplitter(source, destination, fileOptions); err != nil {
 		return err
@@ -137,15 +140,17 @@ func (dfci *dcpFileCompressorIntegrity) temporaryPartsIntegrity(tempPartsList co
 	return nil
 }
 
-func (dfci *dcpFileCompressorIntegrity) generateTempFile(file string, formatter interfaces.ITextFormatter) (interfaces.ISource, locations.IDestination) {
+func (dfci *dcpFileCompressorIntegrity) generateTempFile(file string, formatter interfaces.ITextFormatter) (interfaces.ISource, locations.IDestination, error) {
 	source, err := locations.NewSource(file)
 	if err != nil {
-		return nil, nil
+		return nil, nil, err
 	}
 
 	destination := locations.NewDestination()
 
-	destination.InitializeLocations(source, formatter)
+	if err := destination.InitializeLocations(source, formatter); err != nil {
+		return nil, nil, err
+	}
 
 	tmp := common.NewTempProvider("", "")
 	tmpDirectory := filepath.Join(tmp.TempFilePath, "tmpDcp")
@@ -153,7 +158,7 @@ func (dfci *dcpFileCompressorIntegrity) generateTempFile(file string, formatter 
 	destination.Extract().SetTargetPath(tmpDirectory)
 	destination.Extract().SetTargetFile(tmp.TempFile)
 
-	return source, destination
+	return source, destination, nil
 }
 
 func (dfci *dcpFileCompressorIntegrity) temporaryFileSplitter(source interfaces.ISource, destination locations.IDestination, fileOptions core.IDcpFileOptions) error {
