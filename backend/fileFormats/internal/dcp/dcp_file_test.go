@@ -85,7 +85,7 @@ var _ = ginkgo.Describe("DcpFile", func() {
 			ImportLocation:    locations.NewImportLocation("reimported", reimportTempPath, gameVersionDir),
 		}
 
-		destination.InitializeLocations(source, formatter)
+		gomega.Expect(destination.InitializeLocations(source, formatter)).To(gomega.Succeed())
 
 		dcpFile = dcp.NewDcpFile(source, destination)
 	})
