@@ -66,7 +66,7 @@ func (d *DialogsFile) extractVerify() error {
 	verifierInstance := dlg.RentTextVerifier()
 	defer dlg.ReturnTextVerifier(verifierInstance)
 
-	if err := verifierInstance.Verify(d.source, d.destination, textVerifier.ExtractIntegrityCheck); err != nil {
+	if err := verifierInstance.Verify(d.source, d.destination, textVerifier.NewTextExtractVerify()); err != nil {
 		d.log.LogError(err, "Error verifying dialog file: %s", d.source.Get().Name)
 
 		return fmt.Errorf("failed to integrity dialog file: %s", d.source.Get().Name)
@@ -106,7 +106,8 @@ func (d *DialogsFile) Compress() error {
 	verifierInstance := dlg.RentTextVerifier()
 	defer dlg.ReturnTextVerifier(verifierInstance)
 
-	if err := verifierInstance.Verify(tmpSource, tmpDestination, textVerifier.CompressIntegrityCheck); err != nil {
+	if err := verifierInstance.Verify(tmpSource, tmpDestination, textVerifier.NewTextCompressVerify()); err != nil {
+		d.log.LogError(err, "Error verifying dialog file: %s", d.destination.Import().GetTargetFile())
 		return fmt.Errorf("failed to integrity dialog file: %s", d.source.Get().Name)
 	}
 
@@ -131,7 +132,7 @@ func (d *DialogsFile) ensureTranslatedText() error {
 		return fmt.Errorf("failed to check target file path: %s", err)
 	}
 
-	if err := textVerifierInstance.CompareTextSegmentsCount(sourceFile, targetFile, d.source.Get().Type); err != nil {
+	if err := textVerifierInstance.Verify(d.source, d.destination, textVerifier.NewTextSegmentsVerify()); err != nil {
 		return fmt.Errorf("translated file segments count mismatch: %s", targetFile)
 	}
 
