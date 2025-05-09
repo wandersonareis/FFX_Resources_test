@@ -146,6 +146,10 @@ var _ = Describe("DlgFile", Ordered, func() {
 			Expect(testDlgExtractor).NotTo(BeNil())
 		})
 
+		AfterEach(func() {
+			Expect(common.RemoveDir(temp.TempFilePath)).To(Succeed())
+		})
+
 		var extractFile = func(fileRelPath string, fileType models.NodeType) {
 			testFilePath := filepath.Join(gameLocationPath, fileRelPath)
 			Expect(common.CheckPathExists(testFilePath)).To(Succeed())
@@ -267,7 +271,10 @@ var _ = Describe("DlgFile", Ordered, func() {
 		})
 	})
 
-	Describe("Verifyer Functionality", func() {
+	Context("Verifyer Functionality", func() {
+		AfterEach(func() {
+			Expect(common.RemoveDir(temp.TempFilePath)).To(Succeed())
+		})
 
 		It("should verify file integrity binary fail", func() {
 			testPath := `binary\ffx_ps2\ffx2\master\new_uspc\cloudsave\cloud.bin`
@@ -290,7 +297,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 
 			Expect(testcommon.RemoveFirstNLines(destination.Extract().GetTargetFile(), 4)).To(Succeed())
 
-			err = dlgIntegrity.Verify(source, destination, textVerifier.ExtractIntegrityCheck)
+			err = dlgIntegrity.Verify(source, destination, textVerifier.NewTextExtractVerify())
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("source and target segments count mismatch"))
 
@@ -300,23 +307,72 @@ var _ = Describe("DlgFile", Ordered, func() {
 		})
 	})
 
-	It("should be dialogs count", func() {
-		testPath := `binary\ffx_ps2\ffx2\master\new_uspc\menu\tutorial.msb`
-		sourceFile := filepath.Join(testDataPath, testPath)
-		Expect(common.CheckPathExists(sourceFile)).To(Succeed())
+	Context("DialogFile Functionality", func() {
+		AfterEach(func() {
+			Expect(common.RemoveDir(temp.TempFilePath)).To(Succeed())
+		})
 
-		source, err := locations.NewSource(sourceFile)
-		Expect(err).To(BeNil())
-		Expect(source).NotTo(BeNil())
+		It("should extract dialogFile cloud.bin successfully", func() {
+			testPath := `ffx_ps2\ffx2\master\new_uspc\cloudsave\cloud.bin`
+			sourceFile := filepath.Join(gameLocationPath, testPath)
+			Expect(common.CheckPathExists(sourceFile)).To(Succeed(), "File should exist: %s", sourceFile)
 
-		encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextDlgEncoding(source.Get().Type)
-		defer encoding.Dispose()
+			source, err := locations.NewSource(sourceFile)
+			Expect(err).To(BeNil())
+			Expect(source).NotTo(BeNil())
 
-		gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
-		Expect(gameVersion).To(Equal(models.FFX2))
+			Expect(destination).NotTo(BeNil())
+			destination.InitializeLocations(source, formatter)
 
-		count, err := lib.TextSegmentsCounter(sourceFile, source.Get().Type, gameVersion)
-		Expect(err).To(BeNil())
-		Expect(count).To(Equal(119))
+			dlgFile := text.NewDialogs(source, destination)
+			Expect(dlgFile).NotTo(BeNil())
+			Expect(dlgFile.Extract()).To(Succeed())
+
+			err = testDlgVerifyer.Verify(source, destination, textVerifier.NewTextExtractVerify())
+			Expect(err).To(BeNil())
+		})
+
+		It("should compress dialogFile cloud.bin successfully", func() {
+			testPath := `ffx_ps2\ffx2\master\new_uspc\cloudsave\cloud.bin`
+			sourceFile := filepath.Join(gameLocationPath, testPath)
+			Expect(common.CheckPathExists(sourceFile)).To(Succeed(), "File should exist: %s", sourceFile)
+
+			source, err := locations.NewSource(sourceFile)
+			Expect(err).To(BeNil())
+			Expect(source).NotTo(BeNil())
+
+			Expect(destination).NotTo(BeNil())
+			destination.InitializeLocations(source, formatter)
+
+			dlgFile := text.NewDialogs(source, destination)
+			Expect(dlgFile).NotTo(BeNil())
+			Expect(dlgFile.Extract()).To(Succeed())
+			Expect(dlgFile.Compress()).To(Succeed())
+
+			err = testDlgVerifyer.Verify(source, destination, textVerifier.NewTextCompressVerify())
+			Expect(err).To(BeNil())
+		})
+	})
+
+	Context("Dialogs Count Functionality", func() {
+		It("should be dialogs count", func() {
+			testPath := `binary\ffx_ps2\ffx2\master\new_uspc\menu\tutorial.msb`
+			sourceFile := filepath.Join(testDataPath, testPath)
+			Expect(common.CheckPathExists(sourceFile)).To(Succeed())
+
+			source, err := locations.NewSource(sourceFile)
+			Expect(err).To(BeNil())
+			Expect(source).NotTo(BeNil())
+
+			encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextDlgEncoding(source.Get().Type)
+			defer encoding.Dispose()
+
+			gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
+			Expect(gameVersion).To(Equal(models.FFX2))
+
+			count, err := lib.TextSegmentsCounter(sourceFile, source.Get().Type, gameVersion)
+			Expect(err).To(BeNil())
+			Expect(count).To(Equal(119))
+		})
 	})
 })
