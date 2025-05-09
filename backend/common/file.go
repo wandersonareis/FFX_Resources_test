@@ -35,6 +35,8 @@ func RemoveFileWithRetries(filepath string, maxRetries int, delayBetweenRetries 
 	return fmt.Errorf("failure to remove the %s file after %d attempts", filepath, maxRetries)
 }
 
+// CheckPathExists verifies if the given file path exists.
+// It returns an error if the path does not exist, otherwise nil.
 func CheckPathExists(path string) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return fmt.Errorf("path does not exist: %s", path)
