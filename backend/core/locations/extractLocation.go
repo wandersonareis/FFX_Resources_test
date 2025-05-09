@@ -4,7 +4,6 @@ import (
 	"ffxresources/backend/core/locations/locationsBase"
 	"ffxresources/backend/interfaces"
 	"fmt"
-	"path/filepath"
 )
 
 type (
@@ -15,20 +14,18 @@ type (
 	IExtractLocation interface {
 		locationsBase.ILocationBase
 		interfaces.IValidate
+		Copy() ExtractLocation
 	}
 )
 
 func NewExtractLocation(extractDirectoryName, extractTargetDirectory, gameVersionDir string) IExtractLocation {
-	targetDirectory := filepath.Join(extractTargetDirectory, gameVersionDir)
 	return &ExtractLocation{
-		locationsBase.LocationBase{
-			TargetDirectoryBase: locationsBase.TargetDirectoryBase{
-				TargetDirectory:     targetDirectory,
-				TargetDirectoryName: extractDirectoryName,
-			},
-			TargetFileBase: locationsBase.TargetFileBase{},
-		},
+		LocationBase: locationsBase.NewLocationBase(extractDirectoryName, extractTargetDirectory, gameVersionDir),
 	}
+}
+
+func (e *ExtractLocation) Copy() ExtractLocation {
+	return *e
 }
 
 func (e *ExtractLocation) Validate() error {

@@ -4,13 +4,13 @@ import (
 	"ffxresources/backend/core/locations/locationsBase"
 	"ffxresources/backend/interfaces"
 	"fmt"
-	"path/filepath"
 )
 
 type (
 	ITranslateLocation interface {
 		locationsBase.ILocationBase
 		interfaces.IValidate
+		Copy() TranslateLocation
 	}
 
 	ITargetTranslateLocation interface {
@@ -22,17 +22,14 @@ type (
 	}
 )
 
-func NewTranslateLocation(translateDirectoryName, translateTargetDirectory, gameVersionDir string) ITranslateLocation {
-	targetDirectory := filepath.Join(translateTargetDirectory, gameVersionDir)
+func NewTranslateLocation(translateDirectoryName, translateTargetDirectoryPath, gameVersionDir string) ITranslateLocation {
 	return &TranslateLocation{
-		locationsBase.LocationBase{
-			TargetDirectoryBase: locationsBase.TargetDirectoryBase{
-				TargetDirectory:     targetDirectory,
-				TargetDirectoryName: translateDirectoryName,
-			},
-			TargetFileBase: locationsBase.TargetFileBase{},
-		},
+		LocationBase: locationsBase.NewLocationBase(translateDirectoryName, translateTargetDirectoryPath, gameVersionDir),
 	}
+}
+
+func (t *TranslateLocation) Copy() TranslateLocation {
+	return *t
 }
 
 func (t *TranslateLocation) Validate() error {

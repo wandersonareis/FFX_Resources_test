@@ -4,13 +4,13 @@ import (
 	"ffxresources/backend/core/locations/locationsBase"
 	"ffxresources/backend/interfaces"
 	"fmt"
-	"path/filepath"
 )
 
 type (
 	IImportLocation interface {
 		locationsBase.ILocationBase
 		interfaces.IValidate
+		Copy() ImportLocation
 	}
 
 	ITargetImportLocation interface {
@@ -22,21 +22,18 @@ type (
 	}
 )
 
-func NewImportLocation(importDirectoryName, importTargetDirectory, gameVersionDir string) IImportLocation {
-	targetDirectory := filepath.Join(importTargetDirectory, gameVersionDir)
+func NewImportLocation(importDirectoryName, importTargetDirectoryPath, gameVersionDir string) IImportLocation {
 	return &ImportLocation{
-		locationsBase.LocationBase{
-			TargetDirectoryBase: locationsBase.TargetDirectoryBase{
-				TargetDirectory:     targetDirectory,
-				TargetDirectoryName: importDirectoryName,
-			},
-			TargetFileBase: locationsBase.TargetFileBase{},
-		},
+		LocationBase: locationsBase.NewLocationBase(importDirectoryName, importTargetDirectoryPath, gameVersionDir),
 	}
 }
 
+func (i *ImportLocation) Copy() ImportLocation {
+	return *i
+}
+
 func (i *ImportLocation) GenerateTargetOutput(formatter interfaces.ITextFormatter, source interfaces.ISource) {
-	i.TargetFile, i.TargetPath = formatter.WriteFile(source, i.TargetDirectory)
+	i.TargetFile, i.TargetPath = formatter.WriteFile(source, i.GetTargetDirectory())
 }
 
 func (i *ImportLocation) Validate() error {

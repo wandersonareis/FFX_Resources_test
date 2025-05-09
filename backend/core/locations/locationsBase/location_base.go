@@ -23,13 +23,13 @@ type (
 	}
 )
 
-func NewLocationBase(options *LocationBaseOptions) LocationBase {
-	targetDirectory := filepath.Join(options.TargetDirectory, options.GameVersionDir)
+func NewLocationBase(targetDirectoryName, targetDirectoryPath, gameVersionDir string) LocationBase {
+	targetDirectory := filepath.Join(targetDirectoryPath, gameVersionDir)
 
 	return LocationBase{
 		TargetDirectoryBase: TargetDirectoryBase{
-			TargetDirectory:     targetDirectory,
-			TargetDirectoryName: options.TargetDirectoryName,
+			targetDirectory:     targetDirectory,
+			targetDirectoryName: targetDirectoryName,
 		},
 		TargetFileBase: TargetFileBase{},
 	}

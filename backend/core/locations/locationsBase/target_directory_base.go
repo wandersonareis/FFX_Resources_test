@@ -4,8 +4,8 @@ import "ffxresources/backend/common"
 
 type (
 	TargetDirectoryBase struct {
-		TargetDirectory     string
-		TargetDirectoryName string
+		targetDirectory     string
+		targetDirectoryName string
 	}
 
 	ITargetDirectoryBase interface {
@@ -22,11 +22,11 @@ func (lb *TargetDirectoryBase) SetTargetDirectory(path string) {
 		return
 	}
 
-	lb.TargetDirectory = path
+	lb.targetDirectory = path
 }
 
 func (lb *TargetDirectoryBase) GetTargetDirectory() string {
-	return lb.TargetDirectory
+	return lb.targetDirectory
 }
 
 func (lb *TargetDirectoryBase) SetTargetDirectoryName(name string) {
@@ -34,11 +34,11 @@ func (lb *TargetDirectoryBase) SetTargetDirectoryName(name string) {
 		return
 	}
 
-	lb.TargetDirectoryName = name
+	lb.targetDirectoryName = name
 }
 
 func (lb *TargetDirectoryBase) GetTargetDirectoryName() string {
-	return lb.TargetDirectoryName
+	return lb.targetDirectoryName
 }
 
 func (lb *TargetDirectoryBase) ProvideTargetDirectory() error {
@@ -50,8 +50,7 @@ func (t *TargetDirectoryBase) providerTargetDirectory(targetDirectory string) er
 		return nil
 	}
 
-	err := common.EnsurePathExists(targetDirectory)
-	if err != nil {
+	if err := common.EnsurePathExists(targetDirectory); err != nil {
 		return err
 	}
 	return nil
