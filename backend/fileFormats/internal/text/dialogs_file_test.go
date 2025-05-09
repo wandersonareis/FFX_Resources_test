@@ -32,7 +32,7 @@ func TestDlg(t *testing.T) {
 var _ = Describe("DlgFile", Ordered, func() {
 	var (
 		formatter           interfaces.ITextFormatter
-		testDlgVerifyer     textVerifier.ITextVerifier
+		testDlgVerifyer     textVerifier.ITextVerificationService
 		destination         locations.IDestination
 		testDlgCompressor   dlg.IDlgCompressor
 		testDlgExtractor    dlg.IDlgExtractor
@@ -102,7 +102,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 		testDlgCompressor = dlg.NewDlgCompressor(log)
 		Expect(testDlgCompressor).NotTo(BeNil())
 
-		testDlgVerifyer = textVerifier.NewTextsVerify(log)
+		testDlgVerifyer = textVerifier.NewTextVerificationService(log)
 		Expect(testDlgVerifyer).NotTo(BeNil())
 
 		mockNotifierService = testcommon.NewMockNotifier()
@@ -292,12 +292,12 @@ var _ = Describe("DlgFile", Ordered, func() {
 			Expect(dlgFile).NotTo(BeNil())
 			Expect(dlgFile.Extract()).To(Succeed())
 
-			dlgIntegrity := textVerifier.NewTextsVerify(log)
+			dlgIntegrity := textVerifier.NewTextVerificationService(log)
 			Expect(dlgIntegrity).NotTo(BeNil())
 
 			Expect(testcommon.RemoveFirstNLines(destination.Extract().GetTargetFile(), 4)).To(Succeed())
 
-			err = dlgIntegrity.Verify(source, destination, textVerifier.NewTextExtractVerify())
+			err = dlgIntegrity.Verify(source, destination, textVerifier.NewTextExtractionVerificationStrategy())
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("source and target segments count mismatch"))
 
@@ -328,7 +328,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 			Expect(dlgFile).NotTo(BeNil())
 			Expect(dlgFile.Extract()).To(Succeed())
 
-			err = testDlgVerifyer.Verify(source, destination, textVerifier.NewTextExtractVerify())
+			err = testDlgVerifyer.Verify(source, destination, textVerifier.NewTextExtractionVerificationStrategy())
 			Expect(err).To(BeNil())
 		})
 
@@ -349,7 +349,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 			Expect(dlgFile.Extract()).To(Succeed())
 			Expect(dlgFile.Compress()).To(Succeed())
 
-			err = testDlgVerifyer.Verify(source, destination, textVerifier.NewTextCompressVerify())
+			err = testDlgVerifyer.Verify(source, destination, textVerifier.NewTextCompressionVerificationStrategy())
 			Expect(err).To(BeNil())
 		})
 	})

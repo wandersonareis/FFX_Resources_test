@@ -8,17 +8,17 @@ import (
 	"fmt"
 )
 
-type textExtractVerify struct{
-	FileSegmentCounter  ISegmentCounter
+type textExtractionVerificationStrategy struct {
+	FileSegmentCounter ISegmentCounter
 }
 
-func NewTextExtractVerify() ITextVerifyInstance {
-	return &textExtractVerify{
+func NewTextExtractionVerificationStrategy() ITextVerificationStrategy {
+	return &textExtractionVerificationStrategy{
 		FileSegmentCounter: newSegmentCounter(),
 	}
 }
 
-func (ev *textExtractVerify) Verify(source interfaces.ISource, destination locations.IDestination) error {
+func (ev *textExtractionVerificationStrategy) Verify(source interfaces.ISource, destination locations.IDestination) error {
 	extractLocation := destination.Extract()
 	if err := extractLocation.Validate(); err != nil {
 		return err

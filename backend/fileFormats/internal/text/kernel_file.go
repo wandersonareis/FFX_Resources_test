@@ -56,7 +56,7 @@ func (k *kernelFile) Extract() error {
 	defer mt2.ReturnTextVerifier(verifierInstance)
 	fmt.Println("verifierInstance", verifierInstance)
 
-	if err := verifierInstance.Verify(k.source, k.destination, textVerifier.NewTextExtractVerify()); err != nil {
+	if err := verifierInstance.Verify(k.source, k.destination, textVerifier.NewTextExtractionVerificationStrategy()); err != nil {
 		k.log.LogError(err, "Error verifying kernel file: %s", k.source.Get().Name)
 
 		return fmt.Errorf("failed to integrity kernel file: %s", k.source.Get().Name)
@@ -91,7 +91,7 @@ func (k *kernelFile) Compress() error {
 	textVerifierInstance := mt2.RentTextVerifier()
 	defer mt2.ReturnTextVerifier(textVerifierInstance)
 
-	if err := textVerifierInstance.Verify(tmpSource, tmpDestination, textVerifier.NewTextCompressVerify()); err != nil {
+	if err := textVerifierInstance.Verify(tmpSource, tmpDestination, textVerifier.NewTextCompressionVerificationStrategy()); err != nil {
 		k.log.LogError(err, "Error verifying kernel file: %s", k.source.Get().Name)
 
 		return fmt.Errorf("failed to integrity kernel file: %s", k.source.Get().Name)

@@ -8,19 +8,19 @@ import (
 	"time"
 )
 
-type textCompressVerify struct {
+type textCompressionVerificationStrategy struct {
 	FileSegmentCounter  ISegmentCounter
 	FileContentComparer IComparer
 }
 
-func NewTextCompressVerify() ITextVerifyInstance {
-	return &textCompressVerify{
+func NewTextCompressionVerificationStrategy() ITextVerificationStrategy {
+	return &textCompressionVerificationStrategy{
 		FileSegmentCounter:  newSegmentCounter(),
 		FileContentComparer: newPartComparer(),
 	}
 }
 
-func (cv *textCompressVerify) Verify(source interfaces.ISource, destination locations.IDestination) error {
+func (cv *textCompressionVerificationStrategy) Verify(source interfaces.ISource, destination locations.IDestination) error {
 	if err := destination.Translate().Validate(); err != nil {
 		return err
 	}

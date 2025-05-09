@@ -67,16 +67,16 @@ func NewTextVerifierPool(logger logger.ILoggerHandler) *TextVerifierPool {
 		krnlPool{logger: logger},
 	}
 	tv.pool.New = func() interface{} {
-		return textVerifier.NewTextsVerify(logger)
+		return textVerifier.NewTextVerificationService(logger)
 	}
 	return tv
 }
 
-func (tv *TextVerifierPool) Rent() textVerifier.ITextVerifier {
-	return tv.pool.Get().(textVerifier.ITextVerifier)
+func (tv *TextVerifierPool) Rent() textVerifier.ITextVerificationService {
+	return tv.pool.Get().(textVerifier.ITextVerificationService)
 }
 
-func (tv *TextVerifierPool) Return(textVerifier textVerifier.ITextVerifier) {
+func (tv *TextVerifierPool) Return(textVerifier textVerifier.ITextVerificationService) {
 	tv.pool.Put(textVerifier)
 }
 
@@ -114,10 +114,10 @@ func ReturnKrnlCompressor(compressor IKrnlCompressor) {
 	compressorPool.Return(compressor)
 }
 
-func RentTextVerifier() textVerifier.ITextVerifier {
+func RentTextVerifier() textVerifier.ITextVerificationService {
 	return textVerifierPool.Rent()
 }
 
-func ReturnTextVerifier(textVerifier textVerifier.ITextVerifier) {
+func ReturnTextVerifier(textVerifier textVerifier.ITextVerificationService) {
 	textVerifierPool.Return(textVerifier)
 }

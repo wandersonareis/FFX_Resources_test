@@ -9,17 +9,17 @@ import (
 	"time"
 )
 
-type textSegmentsVerify struct {
+type textSegmentsVerificationStrategy struct {
 	FileSegmentCounter ISegmentCounter
 }
 
-func NewTextSegmentsVerify() ITextVerifyInstance {
-	return &textSegmentsVerify{
+func NewTextSegmentsVerificationStrategy() ITextVerificationStrategy {
+	return &textSegmentsVerificationStrategy{
 		FileSegmentCounter: newSegmentCounter(),
 	}
 }
 
-func (sv *textSegmentsVerify) Verify(source interfaces.ISource, destination locations.IDestination) error {
+func (sv *textSegmentsVerificationStrategy) Verify(source interfaces.ISource, destination locations.IDestination) error {
 	sourceFile := source.Get().Path
 	sourceFileType := source.Get().Type
 	targetFile := destination.Translate().GetTargetFile()

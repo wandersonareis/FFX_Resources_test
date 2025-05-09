@@ -7,27 +7,27 @@ import (
 )
 
 type (
-	ITextVerifyInstance interface {
+	ITextVerificationStrategy interface {
 		Verify(source interfaces.ISource, destination locations.IDestination) error
 	}
 
-	ITextVerifier interface {
-		Verify(source interfaces.ISource, destination locations.IDestination, verifyInstance ITextVerifyInstance) error
+	ITextVerificationService interface {
+		Verify(source interfaces.ISource, destination locations.IDestination, strategy ITextVerificationStrategy) error
 	}
 
-	TextVerifier struct {
+	TextVerificationService struct {
 		log logger.ILoggerHandler
 	}
 )
 
-func NewTextsVerify(logger logger.ILoggerHandler) *TextVerifier {
-	return &TextVerifier{
+func NewTextVerificationService(logger logger.ILoggerHandler) *TextVerificationService {
+	return &TextVerificationService{
 		log: logger,
 	}
 }
 
-func (dv *TextVerifier) Verify(source interfaces.ISource, destination locations.IDestination, verifyInstance ITextVerifyInstance) error {
-	if err := verifyInstance.Verify(source, destination); err != nil {
+func (svc *TextVerificationService) Verify(source interfaces.ISource, destination locations.IDestination, strategy ITextVerificationStrategy) error {
+	if err := strategy.Verify(source, destination); err != nil {
 		return err
 	}
 
