@@ -87,7 +87,7 @@ func (d *DcpFile) Compress() error {
 		return err
 	}
 
-	d.log.LogInfo("Macrodic file compressed: %s", d.GetSource().Get().Name)
+	d.log.LogInfo("Macrodic file compressed: %s", d.GetSource().GetName())
 
 	return nil
 }

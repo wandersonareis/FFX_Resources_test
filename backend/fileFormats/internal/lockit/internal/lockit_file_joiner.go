@@ -41,7 +41,7 @@ func (lj *lockitFileJoiner) JoinFileParts(destination locations.IDestination, lo
 
 		partData, err := os.ReadFile(fileName)
 		if err != nil {
-			errChan <- fmt.Errorf("error when reading file part %s: %w", part.GetSource().Get().Path, err)
+			errChan <- fmt.Errorf("error when reading file part %s: %w", part.GetSource().GetPath(), err)
 			return
 		}
 

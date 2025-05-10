@@ -26,19 +26,19 @@ func NewTxtFormatter() *TxtFormatter {
 func (t TxtFormatter) ReadFile(source interfaces.ISource, targetDirectory string) (string, string) {
 	var outputFile, outputPath string
 
-	switch source.Get().Type {
+	switch source.GetType() {
 	case models.Folder:
 		outputPath = t.provideFolderReadPath(source, targetDirectory)
 	case models.Dcp:
-		outputFile, outputPath = t.provideDcpReadPath(targetDirectory, source.Get().Name)
+		outputFile, outputPath = t.provideDcpReadPath(targetDirectory, source.GetName())
 	case models.DcpParts:
-		outputFile, outputPath = t.providePartsReadPath(targetDirectory, util.DCP_PARTS_TARGET_DIR_NAME, source.Get().Name)
+		outputFile, outputPath = t.providePartsReadPath(targetDirectory, util.DCP_PARTS_TARGET_DIR_NAME, source.GetName())
 	case models.Lockit:
-		outputFile, outputPath = t.provideLockitReadPath(targetDirectory, source.Get().NamePrefix)
+		outputFile, outputPath = t.provideLockitReadPath(targetDirectory, source.GetNameWithoutExtension())
 	case models.LockitParts:
-		outputFile, outputPath = t.providePartsReadPath(targetDirectory, util.LOCKIT_TARGET_DIR_NAME, source.Get().Name)
+		outputFile, outputPath = t.providePartsReadPath(targetDirectory, util.LOCKIT_TARGET_DIR_NAME, source.GetName())
 	default:
-		outputFile, outputPath = t.provideDefaulReadPath(targetDirectory, source.Get().RelativePath)
+		outputFile, outputPath = t.provideDefaulReadPath(targetDirectory, source.GetRelativePath())
 		if !common.IsValidFilePath(outputFile) {
 			outputFile = ""
 		}
@@ -52,9 +52,8 @@ func (t TxtFormatter) provideDefaulReadPath(targetDirectory, relativePath string
 }
 
 func (t *TxtFormatter) provideFolderReadPath(source interfaces.ISource, targetDirectory string) string {
-	relative := common.MakeRelativePath(t.GameFilesPath, source.Get().Parent)
-
-	source.Get().RelativePath = relative
+	relative := common.MakeRelativePath(t.GameFilesPath, source.GetParentPath())
+	source.SetRelativePath(relative)
 
 	outputPath := filepath.Join(targetDirectory, t.GameVersionDir, relative)
 
@@ -76,15 +75,15 @@ func (t TxtFormatter) provideLockitReadPath(targetDirectory, fileName string) (s
 func (t TxtFormatter) WriteFile(source interfaces.ISource, targetDirectory string) (string, string) {
 	var outputFile, outputPath string
 
-	switch source.Get().Type {
+	switch source.GetType() {
 	case models.Dcp:
-		outputFile, outputPath = t.provideDcpWritePath(targetDirectory, source.Get().RelativePath)
+		outputFile, outputPath = t.provideDcpWritePath(targetDirectory, source.GetRelativePath())
 	case models.DcpParts:
-		outputFile, outputPath = t.providePartsWritePath(targetDirectory, util.DCP_PARTS_TARGET_DIR_NAME, source.Get().Name)
+		outputFile, outputPath = t.providePartsWritePath(targetDirectory, util.DCP_PARTS_TARGET_DIR_NAME, source.GetName())
 	case models.LockitParts:
-		outputFile, outputPath = t.providePartsWritePath(targetDirectory, util.LOCKIT_TARGET_DIR_NAME, source.Get().Name)
+		outputFile, outputPath = t.providePartsWritePath(targetDirectory, util.LOCKIT_TARGET_DIR_NAME, source.GetName())
 	default:
-		outputFile, outputPath = t.provideDefaultWritePath(targetDirectory, source.Get().RelativePath, source.Get().Extension)
+		outputFile, outputPath = t.provideDefaultWritePath(targetDirectory, source.GetRelativePath(), source.Get().Extension)
 	}
 
 	return outputFile, outputPath

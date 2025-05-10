@@ -1,7 +1,6 @@
-package core
+package models
 
 import (
-	"ffxresources/backend/models"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -10,59 +9,59 @@ import (
 
 type spiraFilesTypes struct {
 	regex     *regexp.Regexp
-	spiratype models.NodeType
+	spiratype NodeType
 }
 
 var spiraFiles = []spiraFilesTypes{
 	{
 		regex:     regexp.MustCompile(`^.*\.msb$`),
-		spiratype: models.Tutorial,
+		spiratype: Tutorial,
 	},
 	{
 		regex:     regexp.MustCompile(`.*macrodic.*\.dcp$`),
-		spiratype: models.Dcp,
+		spiratype: Dcp,
 	},
 	{
 		regex:     regexp.MustCompile(`.*macrodic.*\.00[0-6]$`),
-		spiratype: models.DcpParts,
+		spiratype: DcpParts,
 	},
 	{
 		regex:     regexp.MustCompile(`.*macrodic.*\.00[0-6].txt$`),
-		spiratype: models.DcpParts,
+		spiratype: DcpParts,
 	},
 	{
 		regex:     regexp.MustCompile(`.*kernel.*\.bin$`),
-		spiratype: models.Kernel,
+		spiratype: Kernel,
 	},
 	{
 		regex:     regexp.MustCompile(`.*loc_kit_ps3.*\.bin$`),
-		spiratype: models.Lockit,
+		spiratype: Lockit,
 	},
 	{
 		regex:     regexp.MustCompile(`.*loc_kit_ps3.*\.part([0-9]{2})$`),
-		spiratype: models.LockitParts,
+		spiratype: LockitParts,
 	},
 	{
 		regex:     regexp.MustCompile(`.*ffx2.*(monlist|credits|crjiten|crcr0000)\.bin$`),
-		spiratype: models.DialogsSpecial,
+		spiratype: DialogsSpecial,
 	},
 }
 
-func guessFileType(path string) models.NodeType {
+func guessFileType(path string) NodeType {
 	cleanPath := filepath.Clean(path)
 	info, err := os.Stat(cleanPath)
 	if err != nil {
-		return models.None
+		return None
 	}
 
 	if info.IsDir() {
-		return models.Folder
+		return Folder
 	}
 
 	return guessSpiraFileType(cleanPath)
 }
 
-func guessSpiraFileType(path string) models.NodeType {
+func guessSpiraFileType(path string) NodeType {
 	lowerPath := strings.ToLower(path)
 
 	for _, spiraFile := range spiraFiles {
@@ -72,8 +71,8 @@ func guessSpiraFileType(path string) models.NodeType {
 	}
 
 	if strings.HasSuffix(lowerPath, ".bin") {
-		return models.Dialogs
+		return Dialogs
 	}
 
-	return models.File
+	return File
 }

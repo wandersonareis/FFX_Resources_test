@@ -33,7 +33,7 @@ func CreateNodeMap(gameVersion models.GameVersion, formatter interfaces.ITextFor
 	rootMapNode.SetNodeKey(rootDir)
 
 	addTreeNodeLabel(rootMapNode, gameVersion)
-	addTreeNodeIcon(rootMapNode, entrySource.Get().Type)
+	addTreeNodeIcon(rootMapNode, entrySource.GetType())
 	addTreeNodeData(rootMapNode, entrySource, destination)
 
 	nodeMap[rootDir] = rootMapNode
@@ -48,7 +48,7 @@ func CreateNodeMap(gameVersion models.GameVersion, formatter interfaces.ITextFor
 			return err
 		}
 
-		if entrySource.Get().Size == 0 {
+		if entrySource.GetSize() == 0 {
 			return nil
 		}
 
@@ -62,12 +62,12 @@ func CreateNodeMap(gameVersion models.GameVersion, formatter interfaces.ITextFor
 		childNode.SetNodeKey(path)
 		childNode.SetNodeLabel(info.Name())
 
-		addTreeNodeIcon(childNode, entrySource.Get().Type)
+		addTreeNodeIcon(childNode, entrySource.GetType())
 		addTreeNodeData(childNode, entrySource, destination)
 
 		nodeMap[path] = childNode
 
-		parent := entrySource.Get().Parent
+		parent := entrySource.GetParentPath()
 		if parentNode, ok := nodeMap[parent]; ok {
 			parentNode.AddChildKey(path)
 		}

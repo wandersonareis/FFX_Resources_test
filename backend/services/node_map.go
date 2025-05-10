@@ -36,10 +36,6 @@ func (ns *NodeStore) IsNode(node *fileFormats.MapNode) bool {
 	if node.Data == nil {
 		return false
 	}
-
-	if node.Data.Source == nil {
-		return false
-	}
 	
 	return true
 }

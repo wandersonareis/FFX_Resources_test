@@ -27,7 +27,7 @@ func (ls *lockitFileSplitter) FileSplitter(source interfaces.ISource, extractLoc
 		return fmt.Errorf("error when providing the target path: %w", err)
 	}
 
-	file, err := os.Open(source.Get().Path)
+	file, err := os.Open(source.GetPath())
 	if err != nil {
 		return fmt.Errorf("error when opening the file: %v", err)
 	}

@@ -72,7 +72,9 @@ func (g *Destination) Import() IImportLocation {
 // Parameters:
 //   - gameLocationPath: The path for game original files to which the FullFilePath should be made relative.
 func (g *Destination) CreateRelativePath(source interfaces.ISource, gameLocationPath string) {
-	if strings.HasPrefix(source.Get().Path, gameLocationPath) {
-		source.Get().RelativePath = strings.TrimPrefix(source.Get().Path, gameLocationPath+string(os.PathSeparator))
+	if strings.HasPrefix(source.GetPath(), gameLocationPath) {
+		relativePath := strings.TrimPrefix(source.GetPath(), gameLocationPath+string(os.PathSeparator))
+
+		source.SetRelativePath(relativePath)
 	}
 }

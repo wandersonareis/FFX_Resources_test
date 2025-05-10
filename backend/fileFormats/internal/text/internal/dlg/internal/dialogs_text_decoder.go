@@ -26,7 +26,7 @@ func (d *dlgDecoder) Decoder(
 	source interfaces.ISource,
 	destination locations.IDestination,
 	textEncoding ffxencoding.IFFXTextDlgEncoding) error {
-	sourceFile := source.Get().Path
+	sourceFile := source.GetPath()
 	extractFile := destination.Extract().GetTargetFile()
 
 	if err := d.TextDecoder.DecodeDialog(sourceFile, extractFile, textEncoding); err != nil {

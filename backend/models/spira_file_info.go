@@ -1,8 +1,7 @@
-package core
+package models
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/models"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -10,35 +9,17 @@ import (
 )
 
 type SpiraFileInfo struct {
-	Name         string          `json:"name"`
-	NamePrefix   string          `json:"name_prefix"`
-	Type         models.NodeType `json:"type"`
-	Size         int64           `json:"size"`
-	Extension    string          `json:"extension"`
-	EntryPath    string          `json:"entry_path"`
-	Parent       string          `json:"parent"`
-	IsDir        bool            `json:"is_dir"`
-	ClonedItems  []string        `json:"cloned_items"`
-	Path         string          `json:"path"`
-	RelativePath string          `json:"relative_path"`
-}
-
-func getDirSize(path string) (int64, error) {
-	var size int64
-	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !d.IsDir() {
-			info, err := d.Info()
-			if err != nil {
-				return err
-			}
-			size += info.Size()
-		}
-		return nil
-	})
-	return size, err
+	Name         string   `json:"name"`
+	NamePrefix   string   `json:"name_prefix"`
+	Type         NodeType `json:"type"`
+	Size         int64    `json:"size"`
+	Extension    string   `json:"extension"`
+	EntryPath    string   `json:"entry_path"`
+	Parent       string   `json:"parent"`
+	IsDir        bool     `json:"is_dir"`
+	ClonedItems  []string `json:"cloned_items"`
+	Path         string   `json:"path"`
+	RelativePath string   `json:"relative_path"`
 }
 
 func NewSpiraFileInfo(path string) (*SpiraFileInfo, error) {
@@ -68,11 +49,19 @@ func NewSpiraFileInfo(path string) (*SpiraFileInfo, error) {
 		RelativePath: "",
 	}
 
-	if source.Type != models.Lockit {
+	if source.Type != Lockit {
 		source.RelativePath = common.GetRelativePathFromMarker(path)
 	}
 
 	return source, nil
+}
+
+func (s *SpiraFileInfo) SetPath(path string) {
+	s.Path = path
+}
+
+func (s *SpiraFileInfo) SetRelativePath(relativePath string) {
+	s.RelativePath = relativePath
 }
 
 func (s *SpiraFileInfo) ReadDir() ([]fs.DirEntry, error) {
@@ -93,4 +82,22 @@ func (s *SpiraFileInfo) CreateRelativePath(source *SpiraFileInfo, gameLocationPa
 	if strings.HasPrefix(source.Path, gameLocationPath) {
 		source.RelativePath = strings.TrimPrefix(source.Path, gameLocationPath+string(os.PathSeparator))
 	}
+}
+
+func getDirSize(path string) (int64, error) {
+	var size int64
+	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() {
+			info, err := d.Info()
+			if err != nil {
+				return err
+			}
+			size += info.Size()
+		}
+		return nil
+	})
+	return size, err
 }

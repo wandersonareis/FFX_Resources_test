@@ -68,7 +68,7 @@ func PopulateGameFilePartsList[T any](
 			return
 		}
 
-		if s.Get().Size == 0 {
+		if s.GetSize() == 0 {
 			return
 		}
 
@@ -110,7 +110,7 @@ func PopulateFilePartsList[T any](
 			return
 		}
 
-		if s.Get().Size == 0 {
+		if s.GetSize() == 0 {
 			return
 		}
 

@@ -105,13 +105,13 @@ func (dfci *dcpFileCompressorIntegrity) temporaryPartsDecoder(tempPartsList comp
 	errChan := make(chan error, tempPartsList.GetLength())
 
 	tempPartsList.ForEach(func(part dcpParts.DcpFileParts) {
-		if err := common.CheckPathExists(part.GetSource().Get().Path); err != nil {
+		if err := common.CheckPathExists(part.GetSource().GetPath()); err != nil {
 			errChan <- err
 			return
 		}
 
 		if err := part.Extract(); err != nil {
-			errChan <- fmt.Errorf("failed to extract file part: %s", part.GetSource().Get().Name)
+			errChan <- fmt.Errorf("failed to extract file part: %s", part.GetSource().GetName())
 		}
 	})
 

@@ -9,7 +9,7 @@ import (
 )
 
 type Source struct {
-	FileInfo *core.SpiraFileInfo `json:"file_info"`
+	FileInfo *models.SpiraFileInfo `json:"file_info"`
 }
 
 var ffx2FileDuplicates = &sync.Pool{
@@ -26,7 +26,7 @@ func NewSource(path string) (interfaces.ISource, error) {
 		return nil, err
 	}
 
-	fileInfo, err := core.NewSpiraFileInfo(absPath)
+	fileInfo, err := models.NewSpiraFileInfo(absPath)
 	if err != nil {
 		return nil, err
 	}
@@ -36,12 +36,44 @@ func NewSource(path string) (interfaces.ISource, error) {
 	}, nil
 }
 
-func (g *Source) Get() *core.SpiraFileInfo {
-	return g.FileInfo
+func (g *Source) Get() models.SpiraFileInfo {
+	return *g.FileInfo
 }
 
-func (g *Source) Set(fileInfo *core.SpiraFileInfo) {
-	g.FileInfo = fileInfo
+func (g *Source) GetName() string {
+	return g.FileInfo.Name
+}
+
+func (g *Source) GetNameWithoutExtension() string {
+	return g.FileInfo.NamePrefix
+}
+
+func (g *Source) GetParentPath() string {
+	return g.FileInfo.Parent
+}
+
+func (g *Source) GetPath() string {
+	return g.FileInfo.Path
+}
+
+func (g *Source) SetPath(path string) {
+	g.FileInfo.Path = path
+}
+
+func (g *Source) GetRelativePath() string {
+	return g.FileInfo.RelativePath
+}
+
+func (g *Source) SetRelativePath(relativePath string) {
+	g.FileInfo.RelativePath = relativePath
+}
+
+func (g *Source) GetSize() int64 {
+	return g.FileInfo.Size
+}
+
+func (g *Source) GetType() models.NodeType {
+	return g.FileInfo.Type
 }
 
 func (g *Source) PopulateDuplicatesFiles(gameVersion models.GameVersion) {

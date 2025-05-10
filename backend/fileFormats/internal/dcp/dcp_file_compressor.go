@@ -156,12 +156,12 @@ func (dfc *dcpFileCompressor) ensureAllDcpTranslatedBinaryFileParts(binaryTransl
 	errChan := make(chan error, binaryTranslatedPartsList.GetLength())
 
 	binaryTranslatedPartsList.ForEach(func(part dcpParts.DcpFileParts) {
-		if err := common.CheckPathExists(part.GetSource().Get().Path); err != nil {
+		if err := common.CheckPathExists(part.GetSource().GetPath()); err != nil {
 			errChan <- err
 		}
 
-		if part.GetSource().Get().Size <= 0 {
-			errChan <- lib.ErrInvalidFileSize(part.GetSource().Get().Path)
+		if part.GetSource().GetSize() <= 0 {
+			errChan <- lib.ErrInvalidFileSize(part.GetSource().GetPath())
 		}
 	})
 
@@ -230,7 +230,7 @@ func (dfc *dcpFileCompressor) disposePartsList(partsList components.IList[dcpPar
 	}
 
 	item := partsList.GetItems()[0]
-	dir := item.GetSource().Get().Parent
+	dir := item.GetSource().GetParentPath()
 
 	if err := os.RemoveAll(dir); err != nil {
 		return fmt.Errorf("error removing directory: %s", dir)

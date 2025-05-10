@@ -36,7 +36,7 @@ func (d *dialogCompressor) Compress(source interfaces.ISource, destination locat
 		return fmt.Errorf("error providing import path: %s | error: %w", outputPath, err)
 	}
 
-	textEncoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextDlgEncoding(source.Get().Type)
+	textEncoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextDlgEncoding(source.GetType())
 	defer textEncoding.Dispose()
 
 	if err := d.DialogEncoder.Encoder(source, destination, textEncoding); err != nil {

@@ -31,7 +31,8 @@ const (
 )
 
 func NewLockitFileParts(source interfaces.ISource, destination locations.IDestination) *LockitFileParts {
-	source.Get().RelativePath = filepath.Join(util.LOCKIT_TARGET_DIR_NAME, source.Get().NamePrefix)
+	relativePath := filepath.Join(util.LOCKIT_TARGET_DIR_NAME, source.GetNameWithoutExtension())
+	source.SetRelativePath(relativePath)
 
 	destination.InitializeLocations(source, formatters.NewTxtFormatter())
 
@@ -49,9 +50,9 @@ func (l *LockitFileParts) Extract(dec LockitEncodingType, encoding ffxencoding.I
 
 	switch dec {
 	case FFXEncoding:
-		errChan <- l.decoder.LockitDecoderFfx(l.GetSource().Get().Path, l.GetDestination().Extract().GetTargetFile(), encoding)
+		errChan <- l.decoder.LockitDecoderFfx(l.GetSource().GetPath(), l.GetDestination().Extract().GetTargetFile(), encoding)
 	case UTF8Encoding:
-		errChan <- l.decoder.LockitDecoderLoc(l.GetSource().Get().Path, l.GetDestination().Extract().GetTargetFile(), encoding)
+		errChan <- l.decoder.LockitDecoderLoc(l.GetSource().GetPath(), l.GetDestination().Extract().GetTargetFile(), encoding)
 	default:
 		errChan <- fmt.Errorf("invalid encode type: %d", dec)
 	}

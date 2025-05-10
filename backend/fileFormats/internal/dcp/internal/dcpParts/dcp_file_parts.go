@@ -14,9 +14,10 @@ type DcpFileParts struct {
 }
 
 func NewDcpFileParts(source interfaces.ISource, destination locations.IDestination, formatter interfaces.ITextFormatter) *DcpFileParts {
-	source.Get().RelativePath = filepath.Join("system", source.Get().Name)
+	relativePath := filepath.Join("system", source.GetName())
+	source.SetRelativePath(relativePath)
 
-	destination.InitializeLocations(source, formatter)
+	//destination.InitializeLocations(source, formatter)
 
 	return &DcpFileParts{
 		IBaseFileFormat: baseFormats.NewFormatsBase(source, destination),
@@ -27,7 +28,7 @@ func (d DcpFileParts) Extract() error {
 	dlgFile := text.NewDialogs(d.GetSource(), d.GetDestination())
 
 	if err := dlgFile.Extract(); err != nil {
-		return fmt.Errorf("failed to extract dialog file: %s", d.GetSource().Get().Name)
+		return fmt.Errorf("failed to extract dialog file: %s", d.GetSource().GetName())
 	}
 
 	return nil
@@ -37,7 +38,7 @@ func (d DcpFileParts) Compress() error {
 	dlgFile := text.NewDialogs(d.GetSource(), d.GetDestination())
 
 	if err := dlgFile.Compress(); err != nil {
-		return fmt.Errorf("failed to compress dialog file: %s", d.GetSource().Get().Name)
+		return fmt.Errorf("failed to compress dialog file: %s", d.GetSource().GetName())
 	}
 
 	return nil
@@ -45,7 +46,7 @@ func (d DcpFileParts) Compress() error {
 
 func (d DcpFileParts) Validate() error {
 	if err := d.GetDestination().Translate().Validate(); err != nil {
-		return fmt.Errorf("translated dcp parts file not found: %s", d.GetSource().Get().Name)
+		return fmt.Errorf("translated dcp parts file not found: %s", d.GetSource().GetName())
 	}
 
 	return nil

@@ -33,7 +33,7 @@ func NewFileCompressor(source interfaces.ISource, destination locations.IDestina
 }
 
 func NewFileProcessor(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
-	fileType := source.Get().Type
+	fileType := source.GetType()
 
 	if value, ok := formats[fileType]; ok {
 		return value(source, destination)

@@ -140,7 +140,7 @@ func (lfc *LockitFileCompressor) ensureAllLockitTranslatedTextFileParts(translat
 
 	translatedTextPartsList.ForEach(func(part lockitParts.LockitFileParts) {
 		translatedTextList.Add(
-			part.GetSource().Get().Path)
+			part.GetSource().GetPath())
 	})
 
 	return lfc.validateLineBreaksCount(translatedTextList)
@@ -160,7 +160,7 @@ func (lfc *LockitFileCompressor) ensureAllLockitTranslatedBinaryFileParts(transl
 
 	translatedBinaryPartsList.ForEach(func(part lockitParts.LockitFileParts) {
 		translatedBinaryList.Add(
-			part.GetSource().Get().Path)
+			part.GetSource().GetPath())
 	})
 
 	return lfc.validateLineBreaksCount(translatedBinaryList)
@@ -197,7 +197,7 @@ func (l *LockitFileCompressor) ensureAllLockitExtractedBinaryFileParts(extracted
 
 	extractedBinaryPartsList.ForEach(func(part lockitParts.LockitFileParts) {
 		extractedBinaryList.Add(
-			part.GetSource().Get().Path)
+			part.GetSource().GetPath())
 	})
 
 	if err := l.validateLineBreaksCount(extractedBinaryList); err != nil {
@@ -249,7 +249,7 @@ func (lfc *LockitFileCompressor) validateLineBreaksCount(filesList components.IL
 
 func (lfc *LockitFileCompressor) disposeList(list components.IList[lockitParts.LockitFileParts]) {
 	list.ForEach(func(part lockitParts.LockitFileParts) {
-		os.Remove(part.GetSource().Get().Path)
+		os.Remove(part.GetSource().GetPath())
 	})
 
 	list.Clear()

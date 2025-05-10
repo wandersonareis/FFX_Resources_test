@@ -21,7 +21,7 @@ func NewDcpFileSpliter() IDcpFileSpliter {
 }
 
 func (ds *dcpFileSpliter) FileSplitter(source interfaces.ISource, destination locations.IDestination, fileOptions core.IDcpFileOptions) error {
-	targetFile := source.Get().Path
+	targetFile := source.GetPath()
 
 	extractLocation := destination.Extract()
 

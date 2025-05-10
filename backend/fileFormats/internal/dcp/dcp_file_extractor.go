@@ -109,13 +109,13 @@ func (dfe *dcpFileExtractor) decodeFilesParts(binaryPartsList components.IList[d
 	var hasError bool
 
 	extractParts := func(part dcpParts.DcpFileParts) {
-		if err := common.CheckPathExists(part.GetSource().Get().Path); err != nil {
-			dfe.log.LogError(err, "error when checking dcp file part path: %s", part.GetSource().Get().Path)
+		if err := common.CheckPathExists(part.GetSource().GetPath()); err != nil {
+			dfe.log.LogError(err, "error when checking dcp file part path: %s", part.GetSource().GetPath())
 			hasError = true
 		}
 
 		if err := part.Extract(); err != nil {
-			dfe.log.LogError(err, "error when extracting dcp file part: %s", part.GetSource().Get().Path)
+			dfe.log.LogError(err, "error when extracting dcp file part: %s", part.GetSource().GetPath())
 			hasError = true
 		}
 	}

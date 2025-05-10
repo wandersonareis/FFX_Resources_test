@@ -33,7 +33,7 @@ func (d *DialogExtractor) Extract(source interfaces.ISource, destination locatio
 		return fmt.Errorf("error providing extract directory: %s", err)
 	}
 
-	textEncoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextDlgEncoding(source.Get().Type)
+	textEncoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextDlgEncoding(source.GetType())
 	defer textEncoding.Dispose()
 
 	if err := d.DialogDecoder.Decoder(source, destination, textEncoding); err != nil {

@@ -33,7 +33,7 @@ func (e *dlgEncoder) Encoder(
 		return fmt.Errorf("error validating translate file: %s | error: %w", translatedFile, err)
 	}
 
-	sourceFile := source.Get().Path
+	sourceFile := source.GetPath()
 
 	if err := e.TextEncoder.EncodeDialog(sourceFile, translatedFile, outputFile, textEncoding); err != nil {
 		return err

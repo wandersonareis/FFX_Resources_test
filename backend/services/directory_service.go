@@ -115,7 +115,7 @@ func (d *directoryService) processDirectory(targetPath string, pathMap *NodeStor
 			d.notifierService.NotifyError(e)
 			return
 		}
-		d.progressService.StepFile(processor.GetSource().Get().Name)
+		d.progressService.StepFile(processor.GetSource().GetName())
 	})
 
 	return nil

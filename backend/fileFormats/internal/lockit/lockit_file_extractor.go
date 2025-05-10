@@ -122,7 +122,7 @@ func (lfe *LockitFileExtractor) decodeFileParts(partsList components.IList[locki
 	filePartsDecoder := lockitParts.NewLockitFilePartsDecoder()
 	if err := filePartsDecoder.DecodeFileParts(partsList, lfe.lockitEncoding); err != nil {
 		lfe.log.LogError(err, "failed to decode lockit file parts")
-		return fmt.Errorf("failed to decode lockit file: %s", lfe.GetSource().Get().Name)
+		return fmt.Errorf("failed to decode lockit file: %s", lfe.GetSource().GetName())
 	}
 
 	return nil

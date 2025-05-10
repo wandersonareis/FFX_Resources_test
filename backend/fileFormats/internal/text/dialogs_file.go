@@ -31,19 +31,23 @@ func (d *DialogsFile) GetSource() interfaces.ISource {
 }
 
 func (d *DialogsFile) Extract() error {
-	d.log.LogInfo("Extracting dialog file: %s", d.source.Get().Name)
+	if err := common.CheckPathExists(d.source.GetPath()); err != nil {
+		return fmt.Errorf("dialog file not found: %s", d.source.GetName())
+	}
+
+	d.log.LogInfo("Initiating extraction of kernel file: %s", d.source.GetName())
 
 	if err := d.extract(); err != nil {
 		return err
 	}
 
-	d.log.LogInfo("Verifying extracted dialog file: %s", d.destination.Extract().GetTargetFile())
+	d.log.LogInfo("Verifying the integrity of the extracted dialog file: %s", d.destination.Extract().GetTargetFile())
 
 	if err := d.extractVerify(); err != nil {
 		return err
 	}
 
-	d.log.LogInfo("Dialog file extracted: %s", d.source.Get().Name)
+	d.log.LogInfo("Successfully extracted dialog file: %s", d.source.GetName())
 
 	return nil
 }
@@ -54,7 +58,7 @@ func (d *DialogsFile) extract() error {
 	defer dlg.ReturnDlgExtractor(extractorInstance)
 
 	if err := extractorInstance.Extract(d.source, d.destination); err != nil {
-		d.log.LogError(err, "Error decoding dialog file: %s", d.source.Get().Name)
+		d.log.LogError(err, "Error decoding dialog file: %s", d.source.GetName())
 		return err
 	}
 
@@ -67,9 +71,9 @@ func (d *DialogsFile) extractVerify() error {
 	defer dlg.ReturnTextVerifier(verifierInstance)
 
 	if err := verifierInstance.Verify(d.source, d.destination, textVerifier.NewTextExtractionVerificationStrategy()); err != nil {
-		d.log.LogError(err, "Error verifying dialog file: %s", d.source.Get().Name)
+		d.log.LogError(err, "Error verifying dialog file: %s", d.source.GetName())
 
-		return fmt.Errorf("failed to integrity dialog file: %s", d.source.Get().Name)
+		return fmt.Errorf("failed to integrity dialog file: %s", d.source.GetName())
 	}
 
 	return nil
@@ -108,7 +112,7 @@ func (d *DialogsFile) Compress() error {
 
 	if err := verifierInstance.Verify(tmpSource, tmpDestination, textVerifier.NewTextCompressionVerificationStrategy()); err != nil {
 		d.log.LogError(err, "Error verifying dialog file: %s", d.destination.Import().GetTargetFile())
-		return fmt.Errorf("failed to integrity dialog file: %s", d.source.Get().Name)
+		return fmt.Errorf("failed to integrity dialog file: %s", d.source.GetName())
 	}
 
 	d.log.LogInfo("Dialog file compressed: %s", d.destination.Import().GetTargetFile())
@@ -121,7 +125,7 @@ func (d *DialogsFile) ensureTranslatedText() error {
 	textVerifierInstance := dlg.RentTextVerifier()
 	defer dlg.ReturnTextVerifier(textVerifierInstance)
 
-	sourceFile := d.source.Get().Path
+	sourceFile := d.source.GetPath()
 	targetFile := d.destination.Translate().GetTargetFile()
 
 	if err := common.CheckPathExists(sourceFile); err != nil {

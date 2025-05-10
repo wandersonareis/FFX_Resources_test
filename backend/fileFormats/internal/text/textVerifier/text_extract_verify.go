@@ -26,8 +26,8 @@ func (ev *textExtractionVerificationStrategy) Verify(source interfaces.ISource, 
 
 	extractedFile := extractLocation.GetTargetFile()
 
-	sourceFileType := source.Get().Type
-	sourceFile := source.Get().Path
+	sourceFileType := source.GetType()
+	sourceFile := source.GetPath()
 
 	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
 

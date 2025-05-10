@@ -44,7 +44,7 @@ func (dc *dialogsClones) Clone(source interfaces.ISource, destination locations.
 		}
 	}
 
-	dc.log.LogInfo("Create %d files clones for %s successfully", len(fileClones), source.Get().Name)
+	dc.log.LogInfo("Create %d files clones for %s successfully", len(fileClones), source.GetName())
 }
 
 // It ensures that the destination directory exists before creating the file.

@@ -157,7 +157,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 			source, err := locations.NewSource(testFilePath)
 			Expect(err).To(BeNil())
 			Expect(source).NotTo(BeNil())
-			Expect(source.Get().Type).To(Equal(fileType))
+			Expect(source.GetType()).To(Equal(fileType))
 
 			Expect(destination).NotTo(BeNil())
 			destination.InitializeLocations(source, formatter)
@@ -342,7 +342,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 			Expect(source).NotTo(BeNil())
 
 			Expect(destination).NotTo(BeNil())
-			destination.InitializeLocations(source, formatter)
+			Expect(destination.InitializeLocations(source, formatter)).To(Succeed())
 
 			dlgFile := text.NewDialogs(source, destination)
 			Expect(dlgFile).NotTo(BeNil())
@@ -364,13 +364,13 @@ var _ = Describe("DlgFile", Ordered, func() {
 			Expect(err).To(BeNil())
 			Expect(source).NotTo(BeNil())
 
-			encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextDlgEncoding(source.Get().Type)
+			encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextDlgEncoding(source.GetType())
 			defer encoding.Dispose()
 
 			gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
 			Expect(gameVersion).To(Equal(models.FFX2))
 
-			count, err := lib.TextSegmentsCounter(sourceFile, source.Get().Type, gameVersion)
+			count, err := lib.TextSegmentsCounter(sourceFile, source.GetType(), gameVersion)
 			Expect(err).To(BeNil())
 			Expect(count).To(Equal(119))
 		})

@@ -20,8 +20,8 @@ func NewTextSegmentsVerificationStrategy() ITextVerificationStrategy {
 }
 
 func (sv *textSegmentsVerificationStrategy) Verify(source interfaces.ISource, destination locations.IDestination) error {
-	sourceFile := source.Get().Path
-	sourceFileType := source.Get().Type
+	sourceFile := source.GetPath()
+	sourceFileType := source.GetType()
 	targetFile := destination.Translate().GetTargetFile()
 
 	if err := common.CheckPathExists(sourceFile); err != nil {

@@ -1,9 +1,6 @@
 package interfaces
 
-import (
-	"ffxresources/backend/core"
-	"ffxresources/backend/models"
-)
+import "ffxresources/backend/models"
 
 type (
 	IExtractor interface {
@@ -15,8 +12,16 @@ type (
 	}
 
 	ISource interface {
-		Get() *core.SpiraFileInfo
-		Set(source *core.SpiraFileInfo)
+		Get() models.SpiraFileInfo
+		GetPath() string
+		SetPath(path string)
+		GetRelativePath() string
+		SetRelativePath(relativePath string)
+		GetName() string
+		GetNameWithoutExtension() string
+		GetParentPath() string
+		GetSize() int64
+		GetType() models.NodeType
 		PopulateDuplicatesFiles(gamePart models.GameVersion)
 	}
 
@@ -41,4 +46,3 @@ type (
 		ProvideTargetDirectory() error
 	}
 )
-

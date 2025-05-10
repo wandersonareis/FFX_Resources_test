@@ -1,22 +1,22 @@
 package fileFormats
 
 import (
-	"ffxresources/backend/core"
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/interfaces"
+	"ffxresources/backend/models"
 )
 
 type (
 	TreeMapNode = map[string]*MapNode
 
 	TreeNodeData struct {
-		Source    *core.SpiraFileInfo          `json:"source"`
+		Source    models.SpiraFileInfo          `json:"source"`
 		Extract   locations.IExtractLocation   `json:"extract_location"`
 		Translate locations.ITranslateLocation `json:"translate_location"`
 	}
 
 	DataInfo struct {
-		Source    *core.SpiraFileInfo          `json:"source"`
+		Source    models.SpiraFileInfo          `json:"source"`
 		Extract   locations.IExtractLocation   `json:"extract_location"`
 		Translate locations.ITranslateLocation `json:"translate_location"`
 
