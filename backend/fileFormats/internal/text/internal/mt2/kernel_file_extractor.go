@@ -19,7 +19,7 @@ type (
 	}
 )
 
-func newKrnlExtractor(logger logger.ILoggerHandler) *krnlExtractor {
+func NewKrnlExtractor(logger logger.ILoggerHandler) *krnlExtractor {
 	return &krnlExtractor{
 		decoder: internal.NewKrnlDecoder(),
 		log:     logger,

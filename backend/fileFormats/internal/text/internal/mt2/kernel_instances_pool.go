@@ -8,116 +8,124 @@ import (
 
 type (
 	krnlPool struct {
-		pool   *sync.Pool
-		logger logger.ILoggerHandler
+		pool *sync.Pool
+		log  logger.ILoggerHandler
 	}
 
-	ExtractorPool struct {
+	ExtractionServicePool struct {
 		krnlPool
 	}
 
-	CompressorPool struct {
+	CompressionServicePool struct {
 		krnlPool
 	}
 
-	TextVerifierPool struct {
+	TextVerificationServicePool struct {
 		krnlPool
 	}
 )
 
-func NewKrnlExtractorPool(logger logger.ILoggerHandler) *ExtractorPool {
-	ep := &ExtractorPool{
-		krnlPool{logger: logger},
+func NewKrnlExtractorPool(logger logger.ILoggerHandler) *ExtractionServicePool {
+	ep := &ExtractionServicePool{
+		krnlPool{
+			pool: &sync.Pool{},
+			log:  logger},
 	}
 
-	ep.pool.New = func() interface{} {
-		return newKrnlExtractor(logger)
+	ep.pool.New = func() any {
+		return NewKrnlExtractor(logger)
 	}
 	return ep
 }
 
-func (ep *ExtractorPool) Rent() IKrnlExtractor {
+func (ep *ExtractionServicePool) Rent() IKrnlExtractor {
 	return ep.pool.Get().(IKrnlExtractor)
 }
 
-func (ep *ExtractorPool) Return(extractor IKrnlExtractor) {
+func (ep *ExtractionServicePool) Return(extractor IKrnlExtractor) {
 	ep.pool.Put(extractor)
 }
 
-func NewKrnlCompressorPool(logger logger.ILoggerHandler) *CompressorPool {
-	cp := &CompressorPool{
-		krnlPool{logger: logger},
+func NewKrnlCompressionServicePool(logger logger.ILoggerHandler) *CompressionServicePool {
+	cp := &CompressionServicePool{
+		krnlPool{
+			pool: &sync.Pool{},
+			log:  logger},
 	}
-	cp.pool.New = func() interface{} {
-		return newKrnlCompressor(logger)
+
+	cp.pool.New = func() any {
+		return NewKrnlCompressor(logger)
 	}
 	return cp
 }
 
-func (cp *CompressorPool) Rent() IKrnlCompressor {
+func (cp *CompressionServicePool) Rent() IKrnlCompressor {
 	return cp.pool.Get().(IKrnlCompressor)
 }
 
-func (cp *CompressorPool) Return(compressor IKrnlCompressor) {
+func (cp *CompressionServicePool) Return(compressor IKrnlCompressor) {
 	cp.pool.Put(compressor)
 }
 
-func NewTextVerifierPool(logger logger.ILoggerHandler) *TextVerifierPool {
-	tv := &TextVerifierPool{
-		krnlPool{logger: logger},
+func NewTextVerificationServicePool(logger logger.ILoggerHandler) *TextVerificationServicePool {
+	tv := &TextVerificationServicePool{
+		krnlPool{
+			pool: &sync.Pool{},
+			log:  logger},
 	}
-	tv.pool.New = func() interface{} {
+
+	tv.pool.New = func() any {
 		return textVerifier.NewTextVerificationService(logger)
 	}
 	return tv
 }
 
-func (tv *TextVerifierPool) Rent() textVerifier.ITextVerificationService {
+func (tv *TextVerificationServicePool) Rent() textVerifier.ITextVerificationService {
 	return tv.pool.Get().(textVerifier.ITextVerificationService)
 }
 
-func (tv *TextVerifierPool) Return(textVerifier textVerifier.ITextVerificationService) {
+func (tv *TextVerificationServicePool) Return(textVerifier textVerifier.ITextVerificationService) {
 	tv.pool.Put(textVerifier)
 }
 
 var (
-	extractorPool    *ExtractorPool
-	compressorPool   *CompressorPool
-	textVerifierPool *TextVerifierPool
+	extractionServicePool       *ExtractionServicePool
+	compressionServicePool      *CompressionServicePool
+	textVerificationServicePool *TextVerificationServicePool
 )
 
-func InitExtractorsPools(logger logger.ILoggerHandler) {
-	extractorPool = NewKrnlExtractorPool(logger)
+func InitExtractionServicePool(logger logger.ILoggerHandler) {
+	extractionServicePool = NewKrnlExtractorPool(logger)
 }
 
-func InitCompressorsPools(logger logger.ILoggerHandler) {
-	compressorPool = NewKrnlCompressorPool(logger)
+func InitCompressionServicePool(logger logger.ILoggerHandler) {
+	compressionServicePool = NewKrnlCompressionServicePool(logger)
 }
 
-func InitTextVerifiersPools(logger logger.ILoggerHandler) {
-	textVerifierPool = NewTextVerifierPool(logger)
+func InitTextVerificationServicePool(logger logger.ILoggerHandler) {
+	textVerificationServicePool = NewTextVerificationServicePool(logger)
 }
 
 func RentKrnlExtractor() IKrnlExtractor {
-	return extractorPool.Rent()
+	return extractionServicePool.Rent()
 }
 
 func ReturnKrnlExtractor(extractor IKrnlExtractor) {
-	extractorPool.Return(extractor)
+	extractionServicePool.Return(extractor)
 }
 
 func RentKrnlCompressor() IKrnlCompressor {
-	return compressorPool.Rent()
+	return compressionServicePool.Rent()
 }
 
 func ReturnKrnlCompressor(compressor IKrnlCompressor) {
-	compressorPool.Return(compressor)
+	compressionServicePool.Return(compressor)
 }
 
 func RentTextVerifier() textVerifier.ITextVerificationService {
-	return textVerifierPool.Rent()
+	return textVerificationServicePool.Rent()
 }
 
 func ReturnTextVerifier(textVerifier textVerifier.ITextVerificationService) {
-	textVerifierPool.Return(textVerifier)
+	textVerificationServicePool.Return(textVerifier)
 }

@@ -20,7 +20,7 @@ type (
 	}
 )
 
-func newKrnlCompressor(logger logger.ILoggerHandler) *KrnlCompressor {
+func NewKrnlCompressor(logger logger.ILoggerHandler) *KrnlCompressor {
 	return &KrnlCompressor{
 		KernelEncoder: internal.NewKrnlEncoder(),
 		Log:           logger,
@@ -36,7 +36,7 @@ func (k *KrnlCompressor) Compress(source interfaces.ISource, destination locatio
 
 	textEncoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextKrnlEncoding()
 	defer textEncoding.Dispose()
-	
+
 	if err := k.KernelEncoder.Encoder(source, destination, textEncoding); err != nil {
 		k.Log.LogError(err, "Error compressing kernel file")
 		return fmt.Errorf("error compressing kernel file: %s", err)

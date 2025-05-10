@@ -4,6 +4,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/text/internal/dlg"
+	"ffxresources/backend/fileFormats/internal/text/internal/lib"
 	"ffxresources/backend/fileFormats/internal/text/textVerifier"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
@@ -95,7 +96,7 @@ func (d *DialogsFile) Compress() error {
 
 	d.log.LogInfo("Verifying compressed dialog file: %s", d.destination.Import().GetTargetFile())
 
-	tmpSource, tmpDestination := d.createTemp(d.source, d.destination)
+	tmpSource, tmpDestination := lib.CreateTemp(d.source, d.destination)
 	defer tmpDestination.Extract().Dispose()
 
 	tmpFile := NewDialogs(tmpSource, tmpDestination)
@@ -141,23 +142,4 @@ func (d *DialogsFile) ensureTranslatedText() error {
 	}
 
 	return nil
-}
-
-func (d *DialogsFile) createTemp(source interfaces.ISource, destination locations.IDestination) (interfaces.ISource, locations.IDestination) {
-	tmp := common.NewTempProvider("tmp", ".txt")
-
-	tmpSource := source
-	tmpSource.Get().Path = destination.Import().GetTargetFile()
-
-	extractLocation := destination.Extract().Copy()
-	extractLocation.SetTargetFile(tmp.TempFile)
-	extractLocation.SetTargetPath(tmp.TempFilePath)
-
-	tmpDestination := &locations.Destination{
-		ExtractLocation:   &extractLocation,
-		TranslateLocation: destination.Translate(),
-		ImportLocation:    destination.Import(),
-	}
-
-	return tmpSource, tmpDestination
 }

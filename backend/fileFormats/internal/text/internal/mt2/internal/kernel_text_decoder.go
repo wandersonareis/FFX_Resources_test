@@ -28,7 +28,7 @@ func (d *krnlDecoder) Decoder(source interfaces.ISource, destination locations.I
 
 	extractLocation := destination.Extract()
 
-	sourceFile := source.Get().Path
+	sourceFile := source.GetPath()
 
 	if err := d.TextDecoder.DecodeKernel(sourceFile, extractLocation.GetTargetFile(), encoding); err != nil {
 		return err
