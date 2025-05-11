@@ -3,17 +3,17 @@ package lockitFileEncoder
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
-	"ffxresources/backend/core/encoding"
+	ffxencoding "ffxresources/backend/core/encoding"
 	"fmt"
 )
 
-type LockitDecoder struct{}
+type LockitDecoderUTF8Strategy struct{}
 
-func NewDecoder() *LockitDecoder {
-	return &LockitDecoder{}
+func NewLockitDecoderUTF8Strategy() *LockitDecoderUTF8Strategy {
+	return &LockitDecoderUTF8Strategy{}
 }
 
-func (ld *LockitDecoder) LockitDecoderLoc(sourceFile, targetFile string, encoding ffxencoding.IFFXTextLockitEncoding) error {
+func (ld *LockitDecoderUTF8Strategy) Process(sourceFile, targetFile string, encoding ffxencoding.IFFXTextLockitEncoding) error {
 	encodingFile := encoding.GetFFXTextLockitLocalizationEncoding()
 
 	executable, err := encoding.GetLockitFileHandler().FetchLockitHandler()
@@ -21,14 +21,21 @@ func (ld *LockitDecoder) LockitDecoderLoc(sourceFile, targetFile string, encodin
 		return err
 	}
 
-	if err := ld.decoder(executable, sourceFile, targetFile, encodingFile); err != nil {
+	if err := decoder(executable, sourceFile, targetFile, encodingFile); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (ld *LockitDecoder) LockitDecoderFfx(sourceFile, targetFile string, encoding ffxencoding.IFFXTextLockitEncoding) error {
+
+type LockitDecoderFFXStrategy struct{}
+
+func NewLockitDecoderFFXStrategy() *LockitDecoderFFXStrategy {
+	return &LockitDecoderFFXStrategy{}
+}
+
+func (ld *LockitDecoderFFXStrategy) Process(sourceFile, targetFile string, encoding ffxencoding.IFFXTextLockitEncoding) error {
 	encodingFile := encoding.GetFFXTextLockitEncoding()
 
 	executable, err := encoding.GetLockitFileHandler().FetchLockitHandler()
@@ -36,23 +43,27 @@ func (ld *LockitDecoder) LockitDecoderFfx(sourceFile, targetFile string, encodin
 		return err
 	}
 
-	if err := ld.decoder(executable, sourceFile, targetFile, encodingFile); err != nil {
+	if err := decoder(executable, sourceFile, targetFile, encodingFile); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (d *LockitDecoder) decoder(executable, sourceFile, targetFile string, encoding string) error {
+func decoder(executable, sourceFile, targetFile string, encodingFile string) error {
+	if err := common.CheckPathExists(executable); err != nil {
+		return fmt.Errorf("executable file not found: %s", executable)
+	}
+
 	if !common.IsFileExists(sourceFile) {
-		return fmt.Errorf("source file does not exist")
+		return fmt.Errorf("source file not found: %s", sourceFile)
 	}
 
-	if !common.IsFileExists(encoding) {
-		return fmt.Errorf("encoding file does not exist")
+	if err := common.CheckPathExists(encodingFile); err != nil {
+		return fmt.Errorf("encoding file not found: %s", encodingFile)
 	}
 
-	args := []string{"-t", encoding, sourceFile, targetFile}
+	args := []string{"-t", encodingFile, sourceFile, targetFile}
 
 	if _, err := components.RunCommand(executable, args); err != nil {
 		return err

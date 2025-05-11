@@ -3,6 +3,7 @@ package lockitParts
 import (
 	"ffxresources/backend/core/components"
 	ffxencoding "ffxresources/backend/core/encoding"
+	lockitFileEncoder "ffxresources/backend/fileFormats/internal/lockit/internal/encoder"
 	"fmt"
 )
 
@@ -25,18 +26,24 @@ func (ld *LockitFilePartsDecoder) DecodeFileParts(partsList components.IList[Loc
 
 	errChan := make(chan error, partsList.GetLength())
 
-	// extractorFunc applies different encodings based on the part’s index.
-	// Even parts (greater than zero) are processed using UTF-8 encoding,
-	// while index zero and odd parts use a custom FFX codepage.
-	extractorFunc := func(index int, part LockitFileParts) {
+	utf8Decoding := lockitFileEncoder.NewLockitDecoderUTF8Strategy()
+	ffxDecoding := lockitFileEncoder.NewLockitDecoderFFXStrategy()
+
+	// ChoosedeCodingStrategy returns the proper decoding strategy
+	// Based on the index: If the index is greater than zero and pair, the UTF-8 strategy returns;Otherwise, the FFX strategy returns.
+	chooseDecodingStrategy := func(index int) lockitFileEncoder.ILockitProcessingStrategy {
 		if index > 0 && index%2 == 0 {
-			errChan <- part.Extract(UTF8Encoding, lockitEncoding)
-		} else {
-			errChan <- part.Extract(FFXEncoding, lockitEncoding)
+			return utf8Decoding
 		}
+		return ffxDecoding
 	}
 
-	partsList.ForIndex(extractorFunc)
+	processLockitPartForDecoding := func(index int, part LockitFileParts) {
+		decoderStrategy := chooseDecodingStrategy(index)
+		errChan <- part.Extract(lockitEncoding, decoderStrategy)
+	}
+
+	partsList.ForIndex(processLockitPartForDecoding)
 	close(errChan)
 
 	for err := range errChan {

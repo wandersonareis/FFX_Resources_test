@@ -3,6 +3,7 @@ package components
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/locations"
+	"ffxresources/backend/formatters"
 	"ffxresources/backend/interfaces"
 	"os"
 	"path/filepath"
@@ -73,6 +74,9 @@ func PopulateGameFilePartsList[T any](
 		}
 
 		t := locations.NewDestination()
+		if err := t.InitializeLocations(s, formatters.NewTxtFormatter()); err != nil {
+			return
+		}
 
 		part := partsInstance(s, t)
 		if part == nil {

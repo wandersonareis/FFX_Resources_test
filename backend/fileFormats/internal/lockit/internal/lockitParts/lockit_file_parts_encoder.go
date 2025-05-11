@@ -3,14 +3,16 @@ package lockitParts
 import (
 	"ffxresources/backend/core/components"
 	ffxencoding "ffxresources/backend/core/encoding"
+	lockitFileEncoder "ffxresources/backend/fileFormats/internal/lockit/internal/encoder"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
+	"fmt"
 )
 
 type (
 	ILockitFilePartsEncoder interface {
-		EncodeFilesParts(binaryPartsList components.IList[LockitFileParts], encoding ffxencoding.IFFXTextLockitEncoding)
+		EncodeFilesParts(binaryPartsList components.IList[LockitFileParts], encoding ffxencoding.IFFXTextLockitEncoding) error
 	}
 	LockitFilePartsEncoder struct {
 		formatter interfaces.ITextFormatter
@@ -25,20 +27,31 @@ func NewLockitFilePartsEncoder(logger logger.ILoggerHandler) ILockitFilePartsEnc
 	}
 }
 
-func (le *LockitFilePartsEncoder) EncodeFilesParts(
-	binaryPartsList components.IList[LockitFileParts],
-	lockitEncoding ffxencoding.IFFXTextLockitEncoding) {
-	errChan := make(chan error, binaryPartsList.GetLength())
-
-	compressorFunc := func(index int, part LockitFileParts) {
-		if index > 0 && index%2 == 0 {
-			errChan <- part.Compress(UTF8Encoding, lockitEncoding)
-		} else {
-			errChan <- part.Compress(FFXEncoding, lockitEncoding)
-		}
+func (le *LockitFilePartsEncoder) EncodeFilesParts(partsList components.IList[LockitFileParts], lockitEncoding ffxencoding.IFFXTextLockitEncoding) error {
+	if partsList.GetLength() == 0 {
+		return fmt.Errorf("lockit file parts list is empty")
 	}
 
-	binaryPartsList.ForIndex(compressorFunc)
+	errChan := make(chan error, partsList.GetLength())
+
+	utf8Enconding := lockitFileEncoder.NewLockitEncoderUTF8Strategy()
+	ffxEnconding := lockitFileEncoder.NewLockitEncoderFFXStrategy()
+
+	// Choosencodingstrategy returns the appropriate coding strategy
+	// Based on the index: If the index is greater than zero and pair, the UTF-8 strategy returns;Otherwise, the FFX strategy returns.
+	chooseEncodingStrategy := func(index int) lockitFileEncoder.ILockitProcessingStrategy {
+		if index > 0 && index%2 == 0 {
+			return utf8Enconding
+		}
+		return ffxEnconding
+	}
+
+	processLockitPartForEncoding := func(index int, part LockitFileParts) {
+		encoderStrategy := chooseEncodingStrategy(index)
+		errChan <- part.Compress(lockitEncoding, encoderStrategy)
+	}
+
+	partsList.ForIndex(processLockitPartForEncoding)
 
 	close(errChan)
 
@@ -47,4 +60,6 @@ func (le *LockitFilePartsEncoder) EncodeFilesParts(
 			le.log.LogError(err, "error when compressing lockit file parts: %s", err.Error())
 		}
 	}
+
+	return nil
 }

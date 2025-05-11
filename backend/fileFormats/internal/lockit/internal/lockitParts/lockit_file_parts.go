@@ -7,7 +7,6 @@ import (
 	"ffxresources/backend/fileFormats/internal/baseFormats"
 	lockitFileEncoder "ffxresources/backend/fileFormats/internal/lockit/internal/encoder"
 	"ffxresources/backend/fileFormats/util"
-	"ffxresources/backend/formatters"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
@@ -17,9 +16,9 @@ import (
 type (
 	LockitFileParts struct {
 		baseFormats.IBaseFileFormat
-		decoder *lockitFileEncoder.LockitDecoder
-		encoder *lockitFileEncoder.LockitEncoder
-		logger  logger.ILoggerHandler
+
+		lockitEncodingService lockitFileEncoder.ILockitEncodingService
+		logger                logger.ILoggerHandler
 	}
 
 	LockitEncodingType int
@@ -33,37 +32,25 @@ const (
 func NewLockitFileParts(source interfaces.ISource, destination locations.IDestination) *LockitFileParts {
 	relativePath := filepath.Join(util.LOCKIT_TARGET_DIR_NAME, source.GetNameWithoutExtension())
 	source.SetRelativePath(relativePath)
-
-	destination.InitializeLocations(source, formatters.NewTxtFormatter())
-
 	return &LockitFileParts{
-		IBaseFileFormat: baseFormats.NewFormatsBase(source, destination),
-		decoder:         lockitFileEncoder.NewDecoder(),
-		encoder:         lockitFileEncoder.NewEncoder(),
-		logger:          logger.NewLoggerHandler("lockit_file_parts"),
+		IBaseFileFormat:       baseFormats.NewFormatsBase(source, destination),
+		lockitEncodingService: lockitFileEncoder.NewLockitEncodingService(),
+		logger:                logger.NewLoggerHandler("lockit_file_parts"),
 	}
 }
 
-func (l *LockitFileParts) Extract(dec LockitEncodingType, encoding ffxencoding.IFFXTextLockitEncoding) error {
-	errChan := make(chan error, 1)
-	defer close(errChan)
+func (l *LockitFileParts) Extract(encoding ffxencoding.IFFXTextLockitEncoding, encodingStrategy lockitFileEncoder.ILockitProcessingStrategy) error {
+	sourceFile := l.GetSource().GetPath()
+	targetFile := l.GetDestination().Extract().GetTargetFile()
 
-	switch dec {
-	case FFXEncoding:
-		errChan <- l.decoder.LockitDecoderFfx(l.GetSource().GetPath(), l.GetDestination().Extract().GetTargetFile(), encoding)
-	case UTF8Encoding:
-		errChan <- l.decoder.LockitDecoderLoc(l.GetSource().GetPath(), l.GetDestination().Extract().GetTargetFile(), encoding)
-	default:
-		errChan <- fmt.Errorf("invalid encode type: %d", dec)
-	}
-
-	if err := <-errChan; err != nil {
+	if err := l.lockitEncodingService.Process(sourceFile, targetFile, encoding, encodingStrategy); err != nil {
 		return fmt.Errorf("error when extracting lockit file parts: %w", err)
 	}
+
 	return nil
 }
 
-func (l *LockitFileParts) Compress(enc LockitEncodingType, encoding ffxencoding.IFFXTextLockitEncoding) error {
+func (l *LockitFileParts) Compress(encoding ffxencoding.IFFXTextLockitEncoding, encodingStrategy lockitFileEncoder.ILockitProcessingStrategy) error {
 	translatedTextFile := l.GetDestination().Translate().GetTargetFile()
 	outputTranslatedBinary := common.RemoveOneFileExtension(translatedTextFile)
 
@@ -71,17 +58,8 @@ func (l *LockitFileParts) Compress(enc LockitEncodingType, encoding ffxencoding.
 		return err
 	}
 
-	switch enc {
-	case FFXEncoding:
-		if err := l.encoder.LockitEncoderFfx(translatedTextFile, outputTranslatedBinary, encoding); err != nil {
-			return err
-		}
-	case UTF8Encoding:
-		if err := l.encoder.LockitEncoderLoc(translatedTextFile, outputTranslatedBinary, encoding); err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("invalid encode type: %d", enc)
+	if err := l.lockitEncodingService.Process(translatedTextFile, outputTranslatedBinary, encoding, encodingStrategy); err != nil {
+		return fmt.Errorf("error when compressing lockit file parts: %w", err)
 	}
 
 	return nil

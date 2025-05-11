@@ -3,17 +3,17 @@ package lockitFileEncoder
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
-	"ffxresources/backend/core/encoding"
+	ffxencoding "ffxresources/backend/core/encoding"
 	"fmt"
 )
 
-type LockitEncoder struct{}
+type LockitEncoderUTF8Strategy struct{}
 
-func NewEncoder() *LockitEncoder {
-	return &LockitEncoder{}
+func NewLockitEncoderUTF8Strategy() *LockitEncoderUTF8Strategy {
+	return &LockitEncoderUTF8Strategy{}
 }
 
-func (le *LockitEncoder) LockitEncoderLoc(sourceFile, outputFile string, encoding ffxencoding.IFFXTextLockitEncoding) error {
+func (le *LockitEncoderUTF8Strategy) Process(sourceFile, outputFile string, encoding ffxencoding.IFFXTextLockitEncoding) error {
 	encodingFile := encoding.GetFFXTextLockitLocalizationEncoding()
 
 	lockitExecutable, err := encoding.GetLockitFileHandler().FetchLockitHandler()
@@ -21,7 +21,7 @@ func (le *LockitEncoder) LockitEncoderLoc(sourceFile, outputFile string, encodin
 		return err
 	}
 
-	if err := le.encoder(lockitExecutable, sourceFile, outputFile, encodingFile); err != nil {
+	if err := encoder(lockitExecutable, sourceFile, outputFile, encodingFile); err != nil {
 		return err
 	}
 
@@ -30,14 +30,21 @@ func (le *LockitEncoder) LockitEncoderLoc(sourceFile, outputFile string, encodin
 		return err
 	}
 
-	if _, err := le.normalizeBom(utf8BomExecutable, outputFile); err != nil {
+	if _, err := normalizeBom(utf8BomExecutable, outputFile); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (ld *LockitEncoder) LockitEncoderFfx(sourceFile, outputFile string, encoding ffxencoding.IFFXTextLockitEncoding) error {
+
+type LockitEncoderFFXStrategy struct{}
+
+func NewLockitEncoderFFXStrategy() *LockitEncoderFFXStrategy {
+	return &LockitEncoderFFXStrategy{}
+}
+
+func (le *LockitEncoderFFXStrategy) Process(sourceFile, outputFile string, encoding ffxencoding.IFFXTextLockitEncoding) error {
 	encodingFile := encoding.GetFFXTextLockitEncoding()
 
 	executable, err := encoding.GetLockitFileHandler().FetchLockitHandler()
@@ -45,14 +52,14 @@ func (ld *LockitEncoder) LockitEncoderFfx(sourceFile, outputFile string, encodin
 		return err
 	}
 
-	if err := ld.encoder(executable, sourceFile, outputFile, encodingFile); err != nil {
+	if err := encoder(executable, sourceFile, outputFile, encodingFile); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (d *LockitEncoder) encoder(executable, sourceFile, outputFile string, encoding string) error {
+func encoder(executable, sourceFile, outputFile string, encoding string) error {
 	if !common.IsFileExists(executable) {
 		return fmt.Errorf("executable does not exist")
 	}
@@ -74,7 +81,7 @@ func (d *LockitEncoder) encoder(executable, sourceFile, outputFile string, encod
 	return nil
 }
 
-func (ld *LockitEncoder) normalizeBom(executable, target string) (string, error) {
+func normalizeBom(executable, target string) (string, error) {
 	args := []string{"-r", target}
 
 	return components.RunCommand(executable, args)
