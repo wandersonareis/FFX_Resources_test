@@ -8,24 +8,24 @@ import (
 )
 
 type ILockitEncodingHandler interface {
-	FetchLockitHandler() (string, error)
-	FetchLockitUtf8BomNormalizer() (string, error)
+	GetLockitFileHandler() (string, error)
+	GetLockitFileUtf8BomNormalizer() (string, error)
 	Dispose()
 }
 
-type lockitEncodingHandler struct {
+type LockitEncodingHandler struct {
 	util.Checksum
 	handlerFile string
 	utf8BomFile string
 }
 
-func NewLockitHandler() *lockitEncodingHandler {
-	return &lockitEncodingHandler{
+func NewLockitHandler() *LockitEncodingHandler {
+	return &LockitEncodingHandler{
 		Checksum: util.Checksum{},
 	}
 }
 
-func (lh *lockitEncodingHandler) FetchLockitHandler() (string, error) {
+func (lh *LockitEncodingHandler) GetLockitFileHandler() (string, error) {
 	targetFile, err := util.GetFromResources(LOCKIT_RESOURCES_DIR, LOCKIT_HANDLER_APPLICATION, util.DEFAULT_APPLICATION_FILE_EXTENSION)
 	if err != nil {
 		return "", err
@@ -44,7 +44,7 @@ func (lh *lockitEncodingHandler) FetchLockitHandler() (string, error) {
 	return lh.handlerFile, nil
 }
 
-func (lh *lockitEncodingHandler) FetchLockitUtf8BomNormalizer() (string, error) {
+func (lh *LockitEncodingHandler) GetLockitFileUtf8BomNormalizer() (string, error) {
 	targetFile, err := util.GetFromResources(LOCKIT_RESOURCES_DIR, UTF8BOM_NORMALIZER_APPLICATION, util.DEFAULT_APPLICATION_FILE_EXTENSION)
 	if err != nil {
 		return "", err
@@ -63,7 +63,7 @@ func (lh *lockitEncodingHandler) FetchLockitUtf8BomNormalizer() (string, error) 
 	return lh.utf8BomFile, nil
 }
 
-func (lh *lockitEncodingHandler) Dispose() {
+func (lh *LockitEncodingHandler) Dispose() {
 	if lh.handlerFile != "" {
 		if err := os.Remove(lh.handlerFile); err != nil {
 			fmt.Println("error when removing lockit file handler")
@@ -76,7 +76,7 @@ func (lh *lockitEncodingHandler) Dispose() {
 		if err := os.Remove(lh.utf8BomFile); err != nil {
 			fmt.Println("error when removing lockit file utf8bom normalizer")
 		}
-		
+
 		lh.utf8BomFile = ""
 	}
 }

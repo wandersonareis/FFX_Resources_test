@@ -34,7 +34,7 @@ func NewLockitFile(source interfaces.ISource, destination locations.IDestination
 }
 
 func (lf *LockitFile) Extract() error {
-	lockitEncoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextLocalizationEncoding()
+	lockitEncoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextUTF8Encoding()
 	defer lockitEncoding.Dispose()
 
 	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
@@ -70,7 +70,7 @@ func (lf *LockitFile) extractVerify(fileOptions core.ILockitFileOptions) error {
 }
 
 func (lf *LockitFile) Compress() error {
-	lockitEncoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextLocalizationEncoding()
+	lockitEncoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextUTF8Encoding()
 	defer lockitEncoding.Dispose()
 
 	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()

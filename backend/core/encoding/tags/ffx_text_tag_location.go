@@ -12,11 +12,11 @@ func NewTextTagLocation() *FFXTextTagLocation {
 	}
 }
 
-func (l *FFXTextTagLocation) FFXTextLocationCodePage() []string {
-	return l.generateLocationsCodePage()
+func (l *FFXTextTagLocation) FFXTextUTF8CodePage() []string {
+	return l.generateUTF8CodePage()
 }
 
-func (l *FFXTextTagLocation) generateLocationsCodePage() []string {
+func (l *FFXTextTagLocation) generateUTF8CodePage() []string {
 	return l.processCodePage(&ffxLocationEncoding{})
 }
 

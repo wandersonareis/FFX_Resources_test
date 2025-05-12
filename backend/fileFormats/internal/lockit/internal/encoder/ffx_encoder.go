@@ -16,7 +16,7 @@ func NewLockitEncoderUTF8Strategy() *LockitEncoderUTF8Strategy {
 func (le *LockitEncoderUTF8Strategy) Process(sourceFile, outputFile string, encoding ffxencoding.IFFXTextLockitEncoding) error {
 	encodingFile := encoding.GetFFXTextLockitLocalizationEncoding()
 
-	lockitExecutable, err := encoding.GetLockitFileHandler().FetchLockitHandler()
+	lockitExecutable, err := encoding.GetLockitFileHandler().GetLockitFileHandler()
 	if err != nil {
 		return err
 	}
@@ -25,7 +25,7 @@ func (le *LockitEncoderUTF8Strategy) Process(sourceFile, outputFile string, enco
 		return err
 	}
 
-	utf8BomExecutable, err := encoding.GetLockitFileHandler().FetchLockitUtf8BomNormalizer()
+	utf8BomExecutable, err := encoding.GetLockitFileHandler().GetLockitFileUtf8BomNormalizer()
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func NewLockitEncoderFFXStrategy() *LockitEncoderFFXStrategy {
 func (le *LockitEncoderFFXStrategy) Process(sourceFile, outputFile string, encoding ffxencoding.IFFXTextLockitEncoding) error {
 	encodingFile := encoding.GetFFXTextLockitEncoding()
 
-	executable, err := encoding.GetLockitFileHandler().FetchLockitHandler()
+	executable, err := encoding.GetLockitFileHandler().GetLockitFileHandler()
 	if err != nil {
 		return err
 	}

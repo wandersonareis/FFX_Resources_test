@@ -49,8 +49,8 @@ func (e *FFXTextEncodingFactory) CreateFFXTextKrnlEncoding() IFFXTextKrnlEncodin
 	return newFFXTextKrnlEncoding(tmpProvider.TempFile)
 }
 
-func (e *FFXTextEncodingFactory) CreateFFXTextLocalizationEncoding() IFFXTextLockitEncoding {
-	locCodePage := e.FFXTextEncoding.createFFXTextLocalizationEncoding()
+func (e *FFXTextEncodingFactory) CreateFFXTextUTF8Encoding() IFFXTextLockitEncoding {
+	locCodePage := e.FFXTextEncoding.createFFXTextUTF8Encoding()
 	ffxCodePage := e.FFXTextEncoding.createFFXTextSimpleEncoding()
 
 	locEncodingTemp := common.NewTempProvider("ffx_text_localization", "tbs")

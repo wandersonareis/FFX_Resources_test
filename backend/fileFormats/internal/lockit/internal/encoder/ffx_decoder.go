@@ -16,7 +16,7 @@ func NewLockitDecoderUTF8Strategy() *LockitDecoderUTF8Strategy {
 func (ld *LockitDecoderUTF8Strategy) Process(sourceFile, targetFile string, encoding ffxencoding.IFFXTextLockitEncoding) error {
 	encodingFile := encoding.GetFFXTextLockitLocalizationEncoding()
 
-	executable, err := encoding.GetLockitFileHandler().FetchLockitHandler()
+	executable, err := encoding.GetLockitFileHandler().GetLockitFileHandler()
 	if err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ func NewLockitDecoderFFXStrategy() *LockitDecoderFFXStrategy {
 func (ld *LockitDecoderFFXStrategy) Process(sourceFile, targetFile string, encoding ffxencoding.IFFXTextLockitEncoding) error {
 	encodingFile := encoding.GetFFXTextLockitEncoding()
 
-	executable, err := encoding.GetLockitFileHandler().FetchLockitHandler()
+	executable, err := encoding.GetLockitFileHandler().GetLockitFileHandler()
 	if err != nil {
 		return err
 	}

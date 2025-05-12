@@ -67,8 +67,8 @@ func (e *ffxTextEncodingHelper) createFFXTextEncoding() []string {
 	return codePage
 }
 
-func (l *ffxTextEncodingHelper) createFFXTextLocalizationEncoding() []string {
-	return l.localizationCodePage.FFXTextLocationCodePage()
+func (l *ffxTextEncodingHelper) createFFXTextUTF8Encoding() []string {
+	return l.localizationCodePage.FFXTextUTF8CodePage()
 }
 
 func (e *ffxTextEncodingHelper) createFFXTextSimpleEncoding() []string {
