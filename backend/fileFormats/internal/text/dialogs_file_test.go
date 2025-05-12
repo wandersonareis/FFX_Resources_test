@@ -160,7 +160,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 			Expect(source.GetType()).To(Equal(fileType))
 
 			Expect(destination).NotTo(BeNil())
-			destination.InitializeLocations(source, formatter)
+			Expect(destination.InitializeLocations(source, formatter)).To(Succeed())
 
 			Expect(testDlgExtractor.Extract(source, destination)).To(Succeed())
 		}
