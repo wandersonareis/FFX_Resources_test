@@ -9,7 +9,7 @@ import (
 	"ffxresources/backend/fileFormats/internal/dcp/internal/dcpParts"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/lib"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"fmt"
 )
 
@@ -24,7 +24,7 @@ type (
 		formatter   interfaces.ITextFormatter
 		options     core.IDcpFileOptions
 
-		log logger.ILoggerHandler
+		log loggingService.ILoggerService
 	}
 )
 
@@ -33,7 +33,7 @@ func NewDcpFileExtractor(
 	destination locations.IDestination,
 	formatter interfaces.ITextFormatter,
 	options core.IDcpFileOptions,
-	log logger.ILoggerHandler) IDcpFileExtractor {
+	log loggingService.ILoggerService) IDcpFileExtractor {
 	common.CheckArgumentNil(source, "source")
 	common.CheckArgumentNil(destination, "destination")
 	common.CheckArgumentNil(formatter, "formatter")

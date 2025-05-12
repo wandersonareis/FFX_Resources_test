@@ -3,7 +3,7 @@ package textVerifier
 import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 )
 
 type (
@@ -16,11 +16,11 @@ type (
 	}
 
 	TextVerificationService struct {
-		log logger.ILoggerHandler
+		log loggingService.ILoggerService
 	}
 )
 
-func NewTextVerificationService(logger logger.ILoggerHandler) *TextVerificationService {
+func NewTextVerificationService(logger loggingService.ILoggerService) *TextVerificationService {
 	return &TextVerificationService{
 		log: logger,
 	}

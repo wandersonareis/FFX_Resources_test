@@ -5,7 +5,7 @@ import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/text/internal/mt2/internal"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"fmt"
 )
 
@@ -16,11 +16,11 @@ type (
 
 	KrnlCompressor struct {
 		KernelEncoder internal.IKrnlEncoder
-		Log           logger.ILoggerHandler
+		Log           loggingService.ILoggerService
 	}
 )
 
-func NewKrnlCompressor(logger logger.ILoggerHandler) *KrnlCompressor {
+func NewKrnlCompressor(logger loggingService.ILoggerService) *KrnlCompressor {
 	return &KrnlCompressor{
 		KernelEncoder: internal.NewKrnlEncoder(),
 		Log:           logger,

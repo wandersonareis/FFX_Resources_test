@@ -7,7 +7,7 @@ import (
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lockitParts"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"fmt"
 	"os"
 )
@@ -17,10 +17,10 @@ type ILockitPartsJoiner interface {
 }
 
 type lockitFileJoiner struct {
-	log logger.ILoggerHandler
+	log loggingService.ILoggerService
 }
 
-func NewLockitFileJoiner(logger logger.ILoggerHandler) ILockitPartsJoiner {
+func NewLockitFileJoiner(logger loggingService.ILoggerService) ILockitPartsJoiner {
 	return &lockitFileJoiner{log: logger}
 }
 

@@ -3,7 +3,7 @@ package ffxencoding
 import (
 	"ffxresources/backend/common"
 	encodingHandler "ffxresources/backend/core/encoding/handlers"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"ffxresources/backend/models"
 )
 
@@ -35,7 +35,7 @@ func (e *ffxTextDlgEncoding) GetDlgHandler() encodingHandler.IDlgEncodingHandler
 
 func (e *ffxTextDlgEncoding) Dispose() {
 	if err := common.RemoveFileWithRetries(e.encoding, 3, 2); err != nil {
-		l := logger.Get().With().Str("module", "ffx_text_dlg_encoding").Logger()
+		l := loggingService.Get().With().Str("module", "ffx_text_dlg_encoding").Logger()
 		l.Error().Err(err).Str("file", e.encoding).Msg("Error on removing encoding file")
 		return
 	}

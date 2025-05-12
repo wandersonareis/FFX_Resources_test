@@ -2,7 +2,7 @@ package locationsBase
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"os"
 	"path/filepath"
 )
@@ -37,7 +37,7 @@ func (lb *LocationBase) Dispose() {
 	if common.IsFileExists(lb.GetTargetFile()) {
 		err := os.Remove(lb.TargetFile)
 		if err != nil {
-			l := logger.Get()
+			l := loggingService.Get()
 			l.Error().Msgf("error when removing file: %s", err)
 		}
 	}

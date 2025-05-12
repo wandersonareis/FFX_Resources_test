@@ -11,7 +11,7 @@ import (
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lockitParts"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"fmt"
 	"os"
 )
@@ -31,7 +31,7 @@ type (
 
 		lockitEncoding ffxencoding.IFFXTextLockitEncoding
 		options        core.ILockitFileOptions
-		logger         logger.ILoggerHandler
+		logger         loggingService.ILoggerService
 	}
 )
 
@@ -40,7 +40,7 @@ func NewLockitFileCompressor(
 	destination locations.IDestination,
 	lockitEncoding ffxencoding.IFFXTextLockitEncoding,
 	fileOptions core.ILockitFileOptions,
-	logger logger.ILoggerHandler,
+	logger loggingService.ILoggerService,
 ) *LockitFileCompressor {
 	return &LockitFileCompressor{
 		IBaseFileFormat:          baseFormats.NewFormatsBase(source, destination),

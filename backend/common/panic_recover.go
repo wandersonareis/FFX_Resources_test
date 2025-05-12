@@ -1,12 +1,12 @@
 package common
 
 import (
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"fmt"
 )
 
 func RecoverFn(fn func() error) error {
-	l := logger.NewLoggerHandler("panic_recover")
+	l := loggingService.NewLoggerHandler("panic_recover")
 	logger := l.GetLogger().Logger.Fatal()
 	var outError error
 	defer func() {

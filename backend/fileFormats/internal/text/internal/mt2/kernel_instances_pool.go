@@ -2,14 +2,14 @@ package mt2
 
 import (
 	"ffxresources/backend/fileFormats/internal/text/textVerifier"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"sync"
 )
 
 type (
 	krnlPool struct {
 		pool *sync.Pool
-		log  logger.ILoggerHandler
+		log  loggingService.ILoggerService
 	}
 
 	ExtractionServicePool struct {
@@ -25,7 +25,7 @@ type (
 	}
 )
 
-func NewKrnlExtractorPool(logger logger.ILoggerHandler) *ExtractionServicePool {
+func NewKrnlExtractorPool(logger loggingService.ILoggerService) *ExtractionServicePool {
 	ep := &ExtractionServicePool{
 		krnlPool{
 			pool: &sync.Pool{},
@@ -46,7 +46,7 @@ func (ep *ExtractionServicePool) Return(extractor IKrnlExtractor) {
 	ep.pool.Put(extractor)
 }
 
-func NewKrnlCompressionServicePool(logger logger.ILoggerHandler) *CompressionServicePool {
+func NewKrnlCompressionServicePool(logger loggingService.ILoggerService) *CompressionServicePool {
 	cp := &CompressionServicePool{
 		krnlPool{
 			pool: &sync.Pool{},
@@ -67,7 +67,7 @@ func (cp *CompressionServicePool) Return(compressor IKrnlCompressor) {
 	cp.pool.Put(compressor)
 }
 
-func NewTextVerificationServicePool(logger logger.ILoggerHandler) *TextVerificationServicePool {
+func NewTextVerificationServicePool(logger loggingService.ILoggerService) *TextVerificationServicePool {
 	tv := &TextVerificationServicePool{
 		krnlPool{
 			pool: &sync.Pool{},
@@ -94,15 +94,15 @@ var (
 	textVerificationServicePool *TextVerificationServicePool
 )
 
-func InitExtractionServicePool(logger logger.ILoggerHandler) {
+func InitExtractionServicePool(logger loggingService.ILoggerService) {
 	extractionServicePool = NewKrnlExtractorPool(logger)
 }
 
-func InitCompressionServicePool(logger logger.ILoggerHandler) {
+func InitCompressionServicePool(logger loggingService.ILoggerService) {
 	compressionServicePool = NewKrnlCompressionServicePool(logger)
 }
 
-func InitTextVerificationServicePool(logger logger.ILoggerHandler) {
+func InitTextVerificationServicePool(logger loggingService.ILoggerService) {
 	textVerificationServicePool = NewTextVerificationServicePool(logger)
 }
 

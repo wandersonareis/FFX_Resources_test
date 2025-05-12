@@ -5,7 +5,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"ffxresources/backend/services"
 	"ffxresources/backend/spira"
 	"fmt"
@@ -50,7 +50,7 @@ func (a *App) startup(ctx context.Context) {
 		if err := recover(); err != nil {
 			log.Println("panic occurred:", err)
 
-			l := logger.Get()
+			l := loggingService.Get()
 			l.Fatal().Caller(2).Err(err.(error)).Msg("panic occurred")
 		}
 	}()
@@ -69,7 +69,7 @@ func (a App) domReady(ctx context.Context) {
 		if err := recover(); err != nil {
 			log.Println("panic occurred:", err)
 
-			l := logger.Get()
+			l := loggingService.Get()
 			l.Fatal().Caller(2).Err(err.(error)).Msg("panic occurred")
 		}
 	}()
@@ -117,7 +117,7 @@ func (a *App) initServices(ctx context.Context) {
 
 func (a *App) BuildTree() []spira.TreeNode {
 	tree := a.CollectionService.BuildTree()
-	
+
 	if err := common.CheckArgumentNil(tree, "BuildTree"); err != nil {
 		a.noticationService.NotifyError(fmt.Errorf("failed to build files tree"))
 		return nil

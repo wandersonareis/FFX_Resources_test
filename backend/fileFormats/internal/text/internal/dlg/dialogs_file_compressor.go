@@ -5,7 +5,7 @@ import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/text/internal/dlg/internal"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"fmt"
 )
 
@@ -17,11 +17,11 @@ type (
 	dialogCompressor struct {
 		dialogsClones internal.IDlgClones
 		DialogEncoder internal.IDlgEncoder
-		Logger        logger.ILoggerHandler
+		Logger        loggingService.ILoggerService
 	}
 )
 
-func NewDlgCompressor(logger logger.ILoggerHandler) IDlgCompressor {
+func NewDlgCompressor(logger loggingService.ILoggerService) IDlgCompressor {
 	return &dialogCompressor{
 		dialogsClones: internal.NewDlgClones(logger),
 		DialogEncoder: internal.NewDlgEncoder(),

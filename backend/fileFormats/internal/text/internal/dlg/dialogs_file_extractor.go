@@ -5,7 +5,7 @@ import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/text/internal/dlg/internal"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"fmt"
 )
 
@@ -16,11 +16,11 @@ type (
 
 	DialogExtractor struct {
 		DialogDecoder internal.IDlgDecoder
-		Logger        logger.ILoggerHandler
+		Logger        loggingService.ILoggerService
 	}
 )
 
-func NewDlgExtractor(log logger.ILoggerHandler) IDlgExtractor {
+func NewDlgExtractor(log loggingService.ILoggerService) IDlgExtractor {
 	return &DialogExtractor{
 		DialogDecoder: internal.NewDlgDecoder(),
 		Logger:        log,

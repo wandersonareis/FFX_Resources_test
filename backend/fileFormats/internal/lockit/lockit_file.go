@@ -9,7 +9,7 @@ import (
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 )
 
 type LockitFile struct {
@@ -20,7 +20,7 @@ type LockitFile struct {
 	lockitFileExtractIntegrity  integrity.ILockitFileExtractorIntegrity
 	lockitFileCompressIntegrity integrity.ILockitFileCompressorIntegrity
 	options                     core.ILockitFileOptions
-	log                         logger.ILoggerHandler
+	log                         loggingService.ILoggerService
 }
 
 func NewLockitFile(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
@@ -34,12 +34,12 @@ func NewLockitFile(source interfaces.ISource, destination locations.IDestination
 		IBaseFileFormat: baseFormats.NewFormatsBase(source, destination),
 		lockitFileExtractIntegrity: integrity.NewLockitFileExtractorIntegrity(
 			options,
-			logger.NewLoggerHandler("lockit_file_integrity"),
+			loggingService.NewLoggerHandler("lockit_file_integrity"),
 		),
 		source:      source,
 		destination: destination,
 		options:     options,
-		log:         logger.NewLoggerHandler("lockit_file"),
+		log:         loggingService.NewLoggerHandler("lockit_file"),
 	}
 }
 

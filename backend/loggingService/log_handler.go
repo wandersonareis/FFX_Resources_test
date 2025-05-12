@@ -1,24 +1,24 @@
-package logger
+package loggingService
 
 import "github.com/rs/zerolog"
 
 type (
-	ILoggerHandler interface {
-		GetLogger() *LogHandler
+	ILoggerService interface {
+		GetLogger() *LoggerService
 		LogInfo(message string, args ...interface{})
 		LogError(err error, message string, args ...interface{})
 	}
 
-	LogHandler struct {
+	LoggerService struct {
 		Logger zerolog.Logger
 	}
 )
 
-func (l *LogHandler) GetLogger() *LogHandler {
+func (l *LoggerService) GetLogger() *LoggerService {
 	return l
 }
 
-func (l *LogHandler) LogInfo(message string, args ...interface{}) {
+func (l *LoggerService) LogInfo(message string, args ...interface{}) {
 	if len(args) > 0 {
 		l.Logger.Info().Msgf(message, args...)
 		return
@@ -27,7 +27,7 @@ func (l *LogHandler) LogInfo(message string, args ...interface{}) {
 	l.Logger.Info().Msg(message)
 }
 
-func (l *LogHandler) LogError(err error, message string, args ...interface{}) {
+func (l *LoggerService) LogError(err error, message string, args ...interface{}) {
 	if err != nil {
 		if len(args) > 0 {
 			l.Logger.Error().Err(err).Msgf(message, args...)

@@ -3,7 +3,7 @@ package integrity
 import (
 	"ffxresources/backend/core"
 	"ffxresources/backend/core/components"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"ffxresources/backend/models"
 )
 
@@ -15,11 +15,11 @@ type (
 	LockitFilePartsIntegrity struct {
 		lockitFileLineBreaksCounter ILineBreakCounter
 		lockitFileContentComparer   IComparerContent
-		log                         logger.ILoggerHandler
+		log                         loggingService.ILoggerService
 	}
 )
 
-func NewLockitFilePartsIntegrity(logger logger.ILoggerHandler) ILockitFilePartsIntegrity {
+func NewLockitFilePartsIntegrity(logger loggingService.ILoggerService) ILockitFilePartsIntegrity {
 	return &LockitFilePartsIntegrity{
 		lockitFileLineBreaksCounter: NewLineBreakCounter(logger),
 		lockitFileContentComparer:   NewComparerContent(logger),

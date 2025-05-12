@@ -4,7 +4,7 @@ import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/text/internal/mt2/internal"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"fmt"
 )
 
@@ -15,11 +15,11 @@ type (
 
 	krnlExtractor struct {
 		decoder internal.IKrnlDecoder
-		log     logger.ILoggerHandler
+		log     loggingService.ILoggerService
 	}
 )
 
-func NewKrnlExtractor(logger logger.ILoggerHandler) *krnlExtractor {
+func NewKrnlExtractor(logger loggingService.ILoggerService) *krnlExtractor {
 	return &krnlExtractor{
 		decoder: internal.NewKrnlDecoder(),
 		log:     logger,

@@ -11,7 +11,7 @@ import (
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lockitParts"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"fmt"
 )
 
@@ -27,7 +27,7 @@ type (
 		lockitEncoding   ffxencoding.IFFXTextLockitEncoding
 		options          core.ILockitFileOptions
 
-		log logger.ILoggerHandler
+		log loggingService.ILoggerService
 	}
 )
 
@@ -36,7 +36,7 @@ func NewLockitFileExtractor(
 	destination locations.IDestination,
 	lockitEncoding ffxencoding.IFFXTextLockitEncoding,
 	fileOptions core.ILockitFileOptions,
-	logger logger.ILoggerHandler) *LockitFileExtractor {
+	logger loggingService.ILoggerService) *LockitFileExtractor {
 	common.CheckArgumentNil(source, "source")
 	common.CheckArgumentNil(destination, "destination")
 	common.CheckArgumentNil(lockitEncoding, "lockitEncoding")
@@ -119,7 +119,6 @@ func (lfe *LockitFileExtractor) decodeFileParts(partsList components.IList[locki
 	}
 
 	lfe.log.LogInfo("Decoding lockit file parts...")
-
 
 	// TODO: Implement a way to get the game version from the source file
 	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()

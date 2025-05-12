@@ -11,7 +11,7 @@ import (
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lockitParts"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"ffxresources/backend/models"
 	"fmt"
 	"os"
@@ -27,11 +27,11 @@ type (
 	}
 	lockitFileCompressorIntegrity struct {
 		formatter interfaces.ITextFormatter
-		log       logger.ILoggerHandler
+		log       loggingService.ILoggerService
 	}
 )
 
-func NewLockitFileIntegrity(logger logger.ILoggerHandler) ILockitFileCompressorIntegrity {
+func NewLockitFileIntegrity(logger loggingService.ILoggerService) ILockitFileCompressorIntegrity {
 	return &lockitFileCompressorIntegrity{
 		formatter: interactions.NewInteractionService().TextFormatter(),
 		log:       logger,

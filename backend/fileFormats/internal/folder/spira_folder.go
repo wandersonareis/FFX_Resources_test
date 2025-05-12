@@ -4,21 +4,21 @@ import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/baseFormats"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"fmt"
 )
 
 type SpiraFolder struct {
 	baseFormats.IBaseFileFormat
-	logger.ILoggerHandler
+	loggingService.ILoggerService
 }
 
 func NewSpiraFolder(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
 	return &SpiraFolder{
 		IBaseFileFormat: baseFormats.NewFormatsBase(source, destination),
 
-		ILoggerHandler: &logger.LogHandler{
-			Logger: logger.Get().With().Str("module", "spira_folder").Logger(),
+		ILoggerService: &loggingService.LoggerService{
+			Logger: loggingService.Get().With().Str("module", "spira_folder").Logger(),
 		},
 	}
 }

@@ -8,7 +8,7 @@ import (
 	lockitFileEncoder "ffxresources/backend/fileFormats/internal/lockit/internal/encoder"
 	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"fmt"
 	"path/filepath"
 )
@@ -18,7 +18,7 @@ type (
 		baseFormats.IBaseFileFormat
 
 		lockitEncodingService lockitFileEncoder.ILockitEncodingService
-		logger                logger.ILoggerHandler
+		logger                loggingService.ILoggerService
 	}
 
 	LockitEncodingType int
@@ -35,7 +35,7 @@ func NewLockitFileParts(source interfaces.ISource, destination locations.IDestin
 	return &LockitFileParts{
 		IBaseFileFormat:       baseFormats.NewFormatsBase(source, destination),
 		lockitEncodingService: lockitFileEncoder.NewLockitEncodingService(),
-		logger:                logger.NewLoggerHandler("lockit_file_parts"),
+		logger:                loggingService.NewLoggerHandler("lockit_file_parts"),
 	}
 }
 

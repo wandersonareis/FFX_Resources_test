@@ -1,4 +1,4 @@
-package logger
+package loggingService
 
 import (
 	"fmt"
@@ -19,8 +19,8 @@ var once sync.Once
 
 var log zerolog.Logger
 
-func NewLoggerHandler(moduleName string) ILoggerHandler {
-	return &LogHandler{
+func NewLoggerHandler(moduleName string) ILoggerService {
+	return &LoggerService{
 		Logger: Get().With().Str("module", moduleName).Logger(),
 	}
 }

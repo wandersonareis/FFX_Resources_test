@@ -7,7 +7,7 @@ import (
 	"ffxresources/backend/fileFormats/internal/text/internal/lib"
 	"ffxresources/backend/fileFormats/internal/text/textVerifier"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"fmt"
 )
 
@@ -15,7 +15,7 @@ type DialogsFile struct {
 	source      interfaces.ISource
 	destination locations.IDestination
 
-	log logger.ILoggerHandler
+	log loggingService.ILoggerService
 }
 
 func NewDialogs(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
@@ -23,7 +23,7 @@ func NewDialogs(source interfaces.ISource, destination locations.IDestination) i
 		source:      source,
 		destination: destination,
 
-		log: logger.NewLoggerHandler("DialogsFile"),
+		log: loggingService.NewLoggerHandler("DialogsFile"),
 	}
 }
 

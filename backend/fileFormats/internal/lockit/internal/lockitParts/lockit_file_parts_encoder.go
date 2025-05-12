@@ -6,7 +6,7 @@ import (
 	lockitFileEncoder "ffxresources/backend/fileFormats/internal/lockit/internal/encoder"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"ffxresources/backend/models"
 	"fmt"
 )
@@ -17,11 +17,11 @@ type (
 	}
 	LockitFilePartsEncoder struct {
 		formatter interfaces.ITextFormatter
-		log       logger.ILoggerHandler
+		log       loggingService.ILoggerService
 	}
 )
 
-func NewLockitFilePartsEncoder(logger logger.ILoggerHandler) ILockitFilePartsEncoder {
+func NewLockitFilePartsEncoder(logger loggingService.ILoggerService) ILockitFilePartsEncoder {
 	return &LockitFilePartsEncoder{
 		formatter: formatters.NewTxtFormatter(),
 		log:       logger,

@@ -4,7 +4,7 @@ import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/util"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"fmt"
 	"io"
 	"os"
@@ -16,10 +16,10 @@ type IDlgClones interface {
 }
 
 type dialogsClones struct {
-	log logger.ILoggerHandler
+	log loggingService.ILoggerService
 }
 
-func NewDlgClones(logger logger.ILoggerHandler) *dialogsClones {
+func NewDlgClones(logger loggingService.ILoggerService) *dialogsClones {
 	return &dialogsClones{
 		log: logger,
 	}

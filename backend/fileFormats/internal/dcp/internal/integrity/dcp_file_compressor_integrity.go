@@ -9,7 +9,7 @@ import (
 	"ffxresources/backend/fileFormats/internal/dcp/internal/dcpParts"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/lib"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"fmt"
 	"path/filepath"
 )
@@ -20,11 +20,11 @@ type (
 	}
 
 	dcpFileCompressorIntegrity struct {
-		log logger.ILoggerHandler
+		log loggingService.ILoggerService
 	}
 )
 
-func NewDcpFileCompressorVerify(logger logger.ILoggerHandler) IDcpFileCompressorIntegrity {
+func NewDcpFileCompressorVerify(logger loggingService.ILoggerService) IDcpFileCompressorIntegrity {
 	return &dcpFileCompressorIntegrity{
 		log: logger,
 	}

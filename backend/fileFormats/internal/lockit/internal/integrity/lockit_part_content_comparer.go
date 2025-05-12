@@ -3,7 +3,7 @@ package integrity
 import (
 	"bytes"
 	"ffxresources/backend/core/components"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"ffxresources/backend/models"
 	"fmt"
 	"io"
@@ -16,12 +16,12 @@ type (
 	}
 
 	comparerContent struct {
-		log logger.ILoggerHandler
+		log loggingService.ILoggerService
 	}
 )
 
 // TODO: Review the implementation of this function
-func NewComparerContent(loggerHandler logger.ILoggerHandler) IComparerContent {
+func NewComparerContent(loggerHandler loggingService.ILoggerService) IComparerContent {
 	return &comparerContent{
 		log: loggerHandler,
 	}

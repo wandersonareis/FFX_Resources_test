@@ -7,7 +7,7 @@ import (
 	"ffxresources/backend/fileFormats/internal/text/internal/mt2"
 	"ffxresources/backend/fileFormats/internal/text/textVerifier"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"fmt"
 )
 
@@ -15,7 +15,7 @@ type KernelFile struct {
 	source      interfaces.ISource
 	destination locations.IDestination
 
-	log logger.ILoggerHandler
+	log loggingService.ILoggerService
 }
 
 func NewKernel(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
@@ -23,7 +23,7 @@ func NewKernel(source interfaces.ISource, destination locations.IDestination) in
 		source:      source,
 		destination: destination,
 
-		log: logger.NewLoggerHandler("KernelFile"),
+		log: loggingService.NewLoggerHandler("KernelFile"),
 	}
 }
 

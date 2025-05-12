@@ -4,7 +4,7 @@ import (
 	"ffxresources/backend/core"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lockitParts"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"fmt"
 )
 
@@ -17,13 +17,13 @@ type (
 		lockitFilePartsIntegrity ILockitFilePartsIntegrity
 
 		options core.ILockitFileOptions
-		logger  logger.ILoggerHandler
+		logger  loggingService.ILoggerService
 	}
 )
 
 func NewLockitFileExtractorIntegrity(
 	options core.ILockitFileOptions,
-	logger logger.ILoggerHandler) ILockitFileExtractorIntegrity {
+	logger loggingService.ILoggerService) ILockitFileExtractorIntegrity {
 	return &lockitFileExtractorIntegrity{
 		lockitFilePartsIntegrity: NewLockitFilePartsIntegrity(logger),
 
@@ -94,7 +94,6 @@ func (lfei *lockitFileExtractorIntegrity) ensureAllLockitExtractedTextFileParts(
 		return fmt.Errorf("extracted lockit text file parts list length mismatch: expected %d, got %d",
 			lfei.options.GetPartsLength(), lockitTextPartsList.GetLength())
 	}
-
 
 	translatedTextList, err := lfei.createPartsPathsList(lockitTextPartsList)
 	defer translatedTextList.Clear()

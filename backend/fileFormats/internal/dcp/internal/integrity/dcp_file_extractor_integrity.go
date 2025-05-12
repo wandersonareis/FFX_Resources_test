@@ -7,7 +7,7 @@ import (
 	"ffxresources/backend/fileFormats/internal/dcp/internal/dcpParts"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/lib"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"fmt"
 )
 
@@ -17,11 +17,11 @@ type (
 	}
 
 	dcpFileExtractorIntegrity struct {
-		log logger.ILoggerHandler
+		log loggingService.ILoggerService
 	}
 )
 
-func NewDcpFileExtractorIntegrity(logger logger.ILoggerHandler) IDcpFileExtractorIntegrity {
+func NewDcpFileExtractorIntegrity(logger loggingService.ILoggerService) IDcpFileExtractorIntegrity {
 	common.CheckArgumentNil(logger, "logger")
 
 	return &dcpFileExtractorIntegrity{

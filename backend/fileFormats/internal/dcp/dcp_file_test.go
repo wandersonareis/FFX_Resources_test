@@ -10,7 +10,7 @@ import (
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"fmt"
 
 	"os"
@@ -80,7 +80,7 @@ var _ = ginkgo.Describe("DcpFile", func() {
 		gomega.Expect(err).To(gomega.BeNil())
 
 		destination = &locations.Destination{
-			ExtractLocation: locations.NewExtractLocation("extracted", extractTempPath, gameVersionDir),
+			ExtractLocation:   locations.NewExtractLocation("extracted", extractTempPath, gameVersionDir),
 			TranslateLocation: locations.NewTranslateLocation("translated", translatePath, gameVersionDir),
 			ImportLocation:    locations.NewImportLocation("reimported", reimportTempPath, gameVersionDir),
 		}
@@ -135,7 +135,7 @@ var _ = ginkgo.Describe("DcpFile", func() {
 		gomega.Expect(dcpFile).NotTo(gomega.BeNil())
 		gomega.Expect(dcpFile.Extract()).To(gomega.Succeed())
 
-		dcpIntegrity := integrity.NewDcpFileExtractorIntegrity(logger.NewLoggerHandler("dcp_file_integrity_testing"))
+		dcpIntegrity := integrity.NewDcpFileExtractorIntegrity(loggingService.NewLoggerHandler("dcp_file_integrity_testing"))
 		gomega.Expect(dcpIntegrity).NotTo(gomega.BeNil())
 
 		targetPath := destination.Extract().GetTargetPath()
@@ -164,7 +164,7 @@ var _ = ginkgo.Describe("DcpFile", func() {
 		gomega.Expect(dcpFile).NotTo(gomega.BeNil())
 		gomega.Expect(dcpFile.Extract()).To(gomega.Succeed())
 
-		dcpIntegrity := integrity.NewDcpFileExtractorIntegrity(logger.NewLoggerHandler("dcp_file_integrity_testing"))
+		dcpIntegrity := integrity.NewDcpFileExtractorIntegrity(loggingService.NewLoggerHandler("dcp_file_integrity_testing"))
 		gomega.Expect(dcpIntegrity).NotTo(gomega.BeNil())
 
 		targetPath := destination.Extract().GetTargetPath()
@@ -193,7 +193,7 @@ var _ = ginkgo.Describe("DcpFile", func() {
 		gomega.Expect(dcpFile).NotTo(gomega.BeNil())
 		gomega.Expect(dcpFile.Extract()).To(gomega.Succeed())
 
-		dcpIntegrity := integrity.NewDcpFileExtractorIntegrity(logger.NewLoggerHandler("dcp_file_integrity_testing"))
+		dcpIntegrity := integrity.NewDcpFileExtractorIntegrity(loggingService.NewLoggerHandler("dcp_file_integrity_testing"))
 		gomega.Expect(dcpIntegrity).NotTo(gomega.BeNil())
 
 		targetPath := destination.Extract().GetTargetPath()

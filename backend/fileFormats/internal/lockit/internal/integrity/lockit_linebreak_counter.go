@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"ffxresources/backend/core"
 	"ffxresources/backend/core/components"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"fmt"
 	"os"
 )
@@ -14,10 +14,10 @@ type ILineBreakCounter interface {
 }
 
 type lineBreakCounter struct {
-	log logger.ILoggerHandler
+	log loggingService.ILoggerService
 }
 
-func NewLineBreakCounter(logger logger.ILoggerHandler) ILineBreakCounter {
+func NewLineBreakCounter(logger loggingService.ILoggerService) ILineBreakCounter {
 	return &lineBreakCounter{log: logger}
 }
 
@@ -58,7 +58,7 @@ func (lc *lineBreakCounter) verify(pathList components.IList[string], partsSizes
 			return e
 		}
 	}
-	
+
 	return nil
 }
 

@@ -9,7 +9,7 @@ import (
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"fmt"
 )
 
@@ -19,7 +19,7 @@ type DcpFile struct {
 	formatter   interfaces.ITextFormatter
 	fileOptions core.IDcpFileOptions
 
-	log logger.ILoggerHandler
+	log loggingService.ILoggerService
 }
 
 func NewDcpFile(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
@@ -29,7 +29,7 @@ func NewDcpFile(source interfaces.ISource, destination locations.IDestination) i
 	return &DcpFile{
 		IBaseFileFormat: baseFormats.NewFormatsBase(source, destination),
 		formatter:       interactions.NewInteractionService().TextFormatter(),
-		log:             logger.NewLoggerHandler("dcp_file"),
+		log:             loggingService.NewLoggerHandler("dcp_file"),
 	}
 }
 

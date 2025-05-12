@@ -2,14 +2,14 @@ package dlg
 
 import (
 	"ffxresources/backend/fileFormats/internal/text/textVerifier"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/loggingService"
 	"sync"
 )
 
 type (
 	dlgPool struct {
 		pool   *sync.Pool
-		logger logger.ILoggerHandler
+		logger loggingService.ILoggerService
 	}
 
 	ExtractorPool struct {
@@ -25,7 +25,7 @@ type (
 	}
 )
 
-func NewDlgExtractorPool(logger logger.ILoggerHandler) *ExtractorPool {
+func NewDlgExtractorPool(logger loggingService.ILoggerService) *ExtractorPool {
 	ep := &ExtractorPool{
 		dlgPool{
 			pool:   &sync.Pool{},
@@ -46,7 +46,7 @@ func (ep *ExtractorPool) Return(extractor IDlgExtractor) {
 	ep.pool.Put(extractor)
 }
 
-func NewDlgCompressorPool(logger logger.ILoggerHandler) *CompressorPool {
+func NewDlgCompressorPool(logger loggingService.ILoggerService) *CompressorPool {
 	cp := &CompressorPool{
 		dlgPool{
 			pool:   &sync.Pool{},
@@ -67,13 +67,13 @@ func (cp *CompressorPool) Return(compressor IDlgCompressor) {
 	cp.pool.Put(compressor)
 }
 
-func NewTextVerifierPool(logger logger.ILoggerHandler) *TextVerifierPool {
+func NewTextVerifierPool(logger loggingService.ILoggerService) *TextVerifierPool {
 	tv := &TextVerifierPool{
 		dlgPool{
 			pool:   &sync.Pool{},
 			logger: logger},
 	}
-	
+
 	tv.pool.New = func() interface{} {
 		return textVerifier.NewTextVerificationService(logger)
 	}
@@ -94,15 +94,15 @@ var (
 	textVerifierPool *TextVerifierPool
 )
 
-func InitExtractorsPool(logger logger.ILoggerHandler) {
+func InitExtractorsPool(logger loggingService.ILoggerService) {
 	extractorPool = NewDlgExtractorPool(logger)
 }
 
-func InitCompressorsPool(logger logger.ILoggerHandler) {
+func InitCompressorsPool(logger loggingService.ILoggerService) {
 	compressorPool = NewDlgCompressorPool(logger)
 }
 
-func InitTextVerifierPool(logger logger.ILoggerHandler) {
+func InitTextVerifierPool(logger loggingService.ILoggerService) {
 	textVerifierPool = NewTextVerifierPool(logger)
 }
 
