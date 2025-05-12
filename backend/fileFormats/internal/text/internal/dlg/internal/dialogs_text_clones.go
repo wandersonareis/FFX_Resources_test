@@ -33,18 +33,18 @@ func (dc *dialogsClones) Clone(source interfaces.ISource, destination locations.
 		return
 	}
 
-	dc.log.LogInfo("Clones from: %s", importTargetFile)
+	dc.log.Info("Clones from: %s", importTargetFile)
 
 	for _, clone := range fileClones {
 		cloneReimportPath := filepath.Join(destination.Import().GetTargetDirectory(), clone)
 
 		if err := dc.duplicateFile(importTargetFile, cloneReimportPath); err != nil {
-			dc.log.LogError(err, "Error duplicating file: %s", cloneReimportPath)
+			dc.log.Error(err, "Error duplicating file: %s", cloneReimportPath)
 			continue
 		}
 	}
 
-	dc.log.LogInfo("Create %d files clones for %s successfully", len(fileClones), source.GetName())
+	dc.log.Info("Create %d files clones for %s successfully", len(fileClones), source.GetName())
 }
 
 // It ensures that the destination directory exists before creating the file.

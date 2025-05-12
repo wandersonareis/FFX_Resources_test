@@ -44,13 +44,13 @@ func (df *DcpFile) Extract() error {
 		return err
 	}
 
-	df.log.LogInfo("System macrodic file extracted successfully to: %s", df.GetDestination().Extract().GetTargetPath())
+	df.log.Info("System macrodic file extracted successfully to: %s", df.GetDestination().Extract().GetTargetPath())
 
 	return nil
 }
 
 func (df *DcpFile) extract() error {
-	df.log.LogInfo("Extracting DCP file inside path: %s", df.GetDestination().Extract().GetTargetPath())
+	df.log.Info("Extracting DCP file inside path: %s", df.GetDestination().Extract().GetTargetPath())
 
 	extractor := NewDcpFileExtractor(
 		df.GetSource(),
@@ -65,7 +65,7 @@ func (df *DcpFile) extract() error {
 func (df *DcpFile) extractVerify() error {
 	targetPath := df.GetDestination().Extract().GetTargetPath()
 
-	df.log.LogInfo("Verifying extracted macrodic file: %s", targetPath)
+	df.log.Info("Verifying extracted macrodic file: %s", targetPath)
 
 	dcpFileIntegrity := integrity.NewDcpFileExtractorIntegrity(df.log)
 
@@ -87,13 +87,13 @@ func (d *DcpFile) Compress() error {
 		return err
 	}
 
-	d.log.LogInfo("Macrodic file compressed: %s", d.GetSource().GetName())
+	d.log.Info("Macrodic file compressed: %s", d.GetSource().GetName())
 
 	return nil
 }
 
 func (df *DcpFile) compress() error {
-	df.log.LogInfo("Compressing DCP file inside path: %s", df.GetDestination().Import().GetTargetPath())
+	df.log.Info("Compressing DCP file inside path: %s", df.GetDestination().Import().GetTargetPath())
 
 	compressor := NewDcpFileCompressor(
 		df.GetSource(),
@@ -108,7 +108,7 @@ func (df *DcpFile) compress() error {
 func (df *DcpFile) compressVerify() error {
 	targetFile := df.GetDestination().Import().GetTargetFile()
 
-	df.log.LogInfo("Verifying reimported macrodic file: %s", targetFile)
+	df.log.Info("Verifying reimported macrodic file: %s", targetFile)
 
 	dcpFileCompressorIntegrity := integrity.NewDcpFileCompressorVerify(df.log)
 

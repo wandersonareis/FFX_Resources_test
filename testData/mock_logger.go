@@ -25,7 +25,7 @@ func (m *MockLogHandler) GetLogger() *loggingService.LoggerService {
 	return nil
 }
 
-func (m *MockLogHandler) LogInfo(message string, args ...interface{}) {
+func (m *MockLogHandler) Info(message string, args ...interface{}) {
 	var msg string
 	if len(args) > 0 {
 		msg = fmt.Sprintf(message, args...)
@@ -40,7 +40,7 @@ func (m *MockLogHandler) LogInfo(message string, args ...interface{}) {
 	})
 }
 
-func (m *MockLogHandler) LogError(err error, message string, args ...interface{}) {
+func (m *MockLogHandler) Error(err error, message string, args ...interface{}) {
 	var msg string
 	if err != nil {
 		if len(args) > 0 {

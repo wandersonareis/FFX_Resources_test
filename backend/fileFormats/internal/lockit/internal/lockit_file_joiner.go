@@ -60,7 +60,7 @@ func (lj *lockitFileJoiner) JoinFileParts(destination locations.IDestination, lo
 	}
 
 	if err := os.WriteFile(importLocation.GetTargetFile(), combinedBuffer.Bytes(), 0644); err != nil {
-		lj.log.LogError(err, "error when creating output file", "file", importLocation.GetTargetFile())
+		lj.log.Error(err, "error when creating output file", "file", importLocation.GetTargetFile())
 
 		return fmt.Errorf("error when creating output file: %v", err)
 	}

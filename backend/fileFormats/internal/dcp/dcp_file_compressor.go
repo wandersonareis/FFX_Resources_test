@@ -105,7 +105,7 @@ func (dfc *dcpFileCompressor) populateDcpExtractedBinaryFileParts(binaryPartsLis
 }
 
 func (dfc *dcpFileCompressor) populateDcpTranslatedBinaryFileParts(binaryTranslatedPartsList components.IList[dcpParts.DcpFileParts]) error {
-	dfc.log.LogInfo("Populating dcp translated binary file parts...")
+	dfc.log.Info("Populating dcp translated binary file parts...")
 
 	translatedBinaryPartsPath := filepath.Join(dfc.destination.Import().GetTargetDirectory(), lib.DCP_PARTS_TARGET_DIR_NAME)
 
@@ -117,7 +117,7 @@ func (dfc *dcpFileCompressor) populateDcpTranslatedBinaryFileParts(binaryTransla
 }
 
 func (dfc *dcpFileCompressor) populateDcpTranslatedTextFileParts(translatedTextPartsList components.IList[dcpParts.DcpFileParts]) error {
-	dfc.log.LogInfo("Populating dcp translated text file parts...")
+	dfc.log.Info("Populating dcp translated text file parts...")
 
 	return dcpParts.PopulateDcpTextFileParts(
 		translatedTextPartsList,
@@ -131,7 +131,7 @@ func (dfc *dcpFileCompressor) ensureAllDcpExtractedBinaryFileParts(binaryExtract
 		return nil
 	}
 
-	dfc.log.LogInfo("Missing dcp file parts detected. Attempting to extract...")
+	dfc.log.Info("Missing dcp file parts detected. Attempting to extract...")
 
 	if err := dfc.extractMissingDcpFileParts(); err != nil {
 		return err
@@ -182,7 +182,7 @@ func (dfc *dcpFileCompressor) extractMissingDcpFileParts() error {
 }
 
 func (dfc *dcpFileCompressor) compressFilesParts(partsList components.IList[dcpParts.DcpFileParts]) error {
-	dfc.log.LogInfo("Compressing dcp file parts...")
+	dfc.log.Info("Compressing dcp file parts...")
 
 	errChan := make(chan error, partsList.GetLength())
 
@@ -200,7 +200,7 @@ func (dfc *dcpFileCompressor) compressFilesParts(partsList components.IList[dcpP
 
 	for err := range errChan {
 		hasError = true
-		dfc.log.LogError(err, "failed to compress file part")
+		dfc.log.Error(err, "failed to compress file part")
 	}
 
 	if hasError {
@@ -211,13 +211,13 @@ func (dfc *dcpFileCompressor) compressFilesParts(partsList components.IList[dcpP
 }
 
 func (dfc *dcpFileCompressor) joinFilesParts(dcpTranslatedBinaryPartsList components.IList[dcpParts.DcpFileParts]) error {
-	dfc.log.LogInfo("Joining dcp file parts...")
+	dfc.log.Info("Joining dcp file parts...")
 
 	outputFile := dfc.destination.Import().GetTargetFile()
 
 	dcpFileJoiner := dcpCore.NewDcpFileJoiner()
 	if err := dcpFileJoiner.DcpFileJoiner(dfc.source, dfc.destination, dcpTranslatedBinaryPartsList, outputFile); err != nil {
-		dfc.log.LogError(err, "error joining macrodic file: %s", outputFile)
+		dfc.log.Error(err, "error joining macrodic file: %s", outputFile)
 
 		return fmt.Errorf("error joining macrodic file: %s", outputFile)
 	}

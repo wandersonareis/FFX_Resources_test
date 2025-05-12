@@ -103,7 +103,7 @@ func (lfc *LockitFileCompressor) Compress() error {
 }
 
 func (lfc *LockitFileCompressor) populateLockitExtractedBinaryFilePartsList(extractedBinaryPartsList components.IList[lockitParts.LockitFileParts]) error {
-	lfc.logger.LogInfo("Populating lockit extracted binary file parts...")
+	lfc.logger.Info("Populating lockit extracted binary file parts...")
 
 	if err := lockitParts.PopulateLockitBinaryFileParts(
 		extractedBinaryPartsList,
@@ -116,7 +116,7 @@ func (lfc *LockitFileCompressor) populateLockitExtractedBinaryFilePartsList(extr
 }
 
 func (lfc *LockitFileCompressor) populateLockitTranslatedTextFileParts(translatedTextPartsList components.IList[lockitParts.LockitFileParts]) error {
-	lfc.logger.LogInfo("Populating lockit translated text file parts...")
+	lfc.logger.Info("Populating lockit translated text file parts...")
 
 	if err := lockitParts.PopulateLockitTextFileParts(
 		translatedTextPartsList,
@@ -129,7 +129,7 @@ func (lfc *LockitFileCompressor) populateLockitTranslatedTextFileParts(translate
 }
 
 func (lfc *LockitFileCompressor) populateLockitTranslatedBinaryFileParts(translatedBinaryPartsList components.IList[lockitParts.LockitFileParts]) error {
-	lfc.logger.LogInfo("Populating lockit translated binary file parts...")
+	lfc.logger.Info("Populating lockit translated binary file parts...")
 
 	if err := lockitParts.PopulateLockitBinaryFileParts(
 		translatedBinaryPartsList,
@@ -159,7 +159,7 @@ func (lfc *LockitFileCompressor) ensureAllLockitTranslatedTextFileParts(translat
 		return fmt.Errorf("error validating line breaks count for lockit translated text parts: %w", err)
 	}
 
-	lfc.logger.LogInfo("Lockit file translated text parts validated: %s", lfc.GetDestination().Translate().GetTargetPath())
+	lfc.logger.Info("Lockit file translated text parts validated: %s", lfc.GetDestination().Translate().GetTargetPath())
 
 	return nil
 }
@@ -182,7 +182,7 @@ func (lfc *LockitFileCompressor) ensureAllLockitTranslatedBinaryFileParts(transl
 		return fmt.Errorf("error validating line breaks count for lockit translated binary parts: %w", err)
 	}
 
-	lfc.logger.LogInfo("Lockit file translated binary parts validated: %s", lfc.GetDestination().Translate().GetTargetPath())
+	lfc.logger.Info("Lockit file translated binary parts validated: %s", lfc.GetDestination().Translate().GetTargetPath())
 
 	return nil
 }
@@ -222,13 +222,13 @@ func (lfc *LockitFileCompressor) ensureAllLockitExtractedBinaryFileParts(extract
 		return fmt.Errorf("error validating line breaks count for lockit extracted binary parts: %w", err)
 	}
 
-	lfc.logger.LogInfo("Lockit file extracted binary parts validated: %s", lfc.GetDestination().Extract().GetTargetPath())
+	lfc.logger.Info("Lockit file extracted binary parts validated: %s", lfc.GetDestination().Extract().GetTargetPath())
 
 	return nil
 }
 
 func (l *LockitFileCompressor) extractMissingLockitBinaryFileParts() error {
-	l.logger.LogInfo("Missing lockit file parts detected. Attempting to extract...")
+	l.logger.Info("Missing lockit file parts detected. Attempting to extract...")
 
 	if err := l.lockitFileSplitter.FileSplitter(
 		l.GetSource(),
@@ -237,7 +237,7 @@ func (l *LockitFileCompressor) extractMissingLockitBinaryFileParts() error {
 		return fmt.Errorf("error extracting missing lockit binary file parts: %w", err)
 	}
 
-	l.logger.LogInfo("Missing lockit file parts extracted: %s", l.GetDestination().Extract().GetTargetPath())
+	l.logger.Info("Missing lockit file parts extracted: %s", l.GetDestination().Extract().GetTargetPath())
 
 	return nil
 }
@@ -247,7 +247,7 @@ func (lfc *LockitFileCompressor) encodingFilesParts(extractedBinaryPartsList com
 		return fmt.Errorf("error when encoding files parts: extracted binary parts list is empty")
 	}
 
-	lfc.logger.LogInfo("Encoding files parts to: %s", lfc.GetDestination().Import().GetTargetPath())
+	lfc.logger.Info("Encoding files parts to: %s", lfc.GetDestination().Import().GetTargetPath())
 
 	// TODO: Implement a way to get the game version from the source file
 	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
@@ -259,7 +259,7 @@ func (lfc *LockitFileCompressor) encodingFilesParts(extractedBinaryPartsList com
 	return nil
 }
 func (lfc *LockitFileCompressor) joiningLockitBinaryFileParts(translatedBinaryPartsList components.IList[lockitParts.LockitFileParts]) error {
-	lfc.logger.LogInfo("Joining process of the translated files to file: %s", lfc.GetDestination().Import().GetTargetFile())
+	lfc.logger.Info("Joining process of the translated files to file: %s", lfc.GetDestination().Import().GetTargetFile())
 
 	if err := lfc.lockitFileJoiner.JoinFileParts(lfc.GetDestination(), translatedBinaryPartsList, lfc.options); err != nil {
 		return fmt.Errorf("error when joining lockit binary file parts: %s", err.Error())

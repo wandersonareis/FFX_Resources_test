@@ -32,7 +32,7 @@ func (k *krnlExtractor) Extract(source interfaces.ISource, destination locations
 	}
 
 	if err := k.decoder.Decoder(source, destination); err != nil {
-		k.log.LogError(err, "Error decoding kernel file: %s", source.GetName())
+		k.log.Error(err, "Error decoding kernel file: %s", source.GetName())
 
 		return fmt.Errorf("failed to decode kernel file: %s", source.GetName())
 	}

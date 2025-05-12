@@ -37,13 +37,13 @@ func (lc *lineBreakCounter) verify(pathList components.IList[string], partsSizes
 
 		data, err := lc.readFilePart(part)
 		if err != nil {
-			lc.log.LogError(err, "error when reading file part %s", part)
+			lc.log.Error(err, "error when reading file part %s", part)
 			errChan <- err
 			return
 		}
 
 		if err := lc.compareOcorrrences(&data, ocorrencesExpected); err != nil {
-			lc.log.LogError(err, "error when comparing ocorrences on file part %s", part)
+			lc.log.Error(err, "error when comparing ocorrences on file part %s", part)
 			errChan <- err
 			return
 		}

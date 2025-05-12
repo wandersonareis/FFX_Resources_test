@@ -43,7 +43,7 @@ func (le *LockitFilePartsEncoder) EncodeFilesParts(partsList components.IList[Lo
 
 	for err := range errChan {
 		if err != nil {
-			le.log.LogError(err, "error when compressing lockit file parts: %s", err.Error())
+			le.log.Error(err, "error when compressing lockit file parts: %s", err.Error())
 		}
 	}
 

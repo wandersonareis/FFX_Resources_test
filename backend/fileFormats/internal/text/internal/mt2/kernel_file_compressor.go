@@ -38,7 +38,7 @@ func (k *KrnlCompressor) Compress(source interfaces.ISource, destination locatio
 	defer textEncoding.Dispose()
 
 	if err := k.KernelEncoder.Encoder(source, destination, textEncoding); err != nil {
-		k.Log.LogError(err, "Error compressing kernel file")
+		k.Log.Error(err, "Error compressing kernel file")
 		return fmt.Errorf("error compressing kernel file: %s", err)
 	}
 

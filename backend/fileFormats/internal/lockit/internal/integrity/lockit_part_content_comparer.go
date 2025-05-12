@@ -41,7 +41,7 @@ func (pc *comparerContent) CompareContent(filesList components.IList[models.File
 
 	var hasError bool
 	for e := range errChan {
-		pc.log.LogError(e, "error when comparing text content")
+		pc.log.Error(e, "error when comparing text content")
 		hasError = true
 	}
 
@@ -75,18 +75,18 @@ func (pc *comparerContent) checkFileSizes(fromFile, toFile string) error {
 	readingErrorMsg := "error reading file info"
 	fromInfo, err := os.Stat(fromFile)
 	if err != nil {
-		pc.log.LogError(err, readingErrorMsg, fromFile)
+		pc.log.Error(err, readingErrorMsg, fromFile)
 		return fmt.Errorf("%s", readingErrorMsg)
 	}
 
 	toInfo, err := os.Stat(toFile)
 	if err != nil {
-		pc.log.LogError(err, readingErrorMsg, toFile)
+		pc.log.Error(err, readingErrorMsg, toFile)
 		return fmt.Errorf("%s", readingErrorMsg)
 	}
 
 	if fromInfo.Size() != toInfo.Size() {
-		pc.log.LogError(nil, "size mismatch detected between %s and %s", fromFile, toFile)
+		pc.log.Error(nil, "size mismatch detected between %s and %s", fromFile, toFile)
 		return fmt.Errorf("size mismatch detected between files")
 	}
 
@@ -97,13 +97,13 @@ func (pc *comparerContent) openFiles(fromFile, toFile string) (*os.File, *os.Fil
 	openingErrorMsg := "error opening file"
 	fromF, err := os.Open(fromFile)
 	if err != nil {
-		pc.log.LogError(err, openingErrorMsg, fromFile)
+		pc.log.Error(err, openingErrorMsg, fromFile)
 		return nil, nil, fmt.Errorf("%s", openingErrorMsg)
 	}
 
 	toF, err := os.Open(toFile)
 	if err != nil {
-		pc.log.LogError(err, openingErrorMsg, toFile)
+		pc.log.Error(err, openingErrorMsg, toFile)
 		return nil, nil, fmt.Errorf("%s", openingErrorMsg)
 	}
 
@@ -123,16 +123,16 @@ func (pc *comparerContent) compareFilesContent(fromF, toF *os.File) error {
 		toN, toErr := toF.Read(toBuf)
 
 		if fromErr != nil && fromErr != io.EOF {
-			pc.log.LogError(fromErr, openFileErrorMsg)
+			pc.log.Error(fromErr, openFileErrorMsg)
 			return fmt.Errorf("%s", openFileErrorMsg)
 		}
 		if toErr != nil && toErr != io.EOF {
-			pc.log.LogError(toErr, openFileErrorMsg)
+			pc.log.Error(toErr, openFileErrorMsg)
 			return fmt.Errorf("%s", openFileErrorMsg)
 		}
 
 		if fromN != toN {
-			pc.log.LogError(nil, mismatchErrMsg)
+			pc.log.Error(nil, mismatchErrMsg)
 			return fmt.Errorf("%s", mismatchErrMsg)
 		}
 
@@ -141,7 +141,7 @@ func (pc *comparerContent) compareFilesContent(fromF, toF *os.File) error {
 		}
 
 		if !bytes.Equal(fromBuf[:fromN], toBuf[:toN]) {
-			pc.log.LogError(nil, mismatchErrMsg)
+			pc.log.Error(nil, mismatchErrMsg)
 			return fmt.Errorf("%s", mismatchErrMsg)
 		}
 	}

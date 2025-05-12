@@ -81,7 +81,7 @@ func (dfe *dcpFileExtractor) ensureAllDcpBinaryFileParts(binaryPartsList compone
 		return nil
 	}
 
-	dfe.log.LogInfo("Missing dcp file parts detected. Attempting to extract...")
+	dfe.log.Info("Missing dcp file parts detected. Attempting to extract...")
 
 	if err := dfe.extractMissingDcpFileParts(); err != nil {
 		return err
@@ -104,18 +104,18 @@ func (dfe *dcpFileExtractor) extractMissingDcpFileParts() error {
 }
 
 func (dfe *dcpFileExtractor) decodeFilesParts(binaryPartsList components.IList[dcpParts.DcpFileParts]) error {
-	dfe.log.LogInfo("Decoding files parts to: %s", dfe.destination.Import().GetTargetPath())
+	dfe.log.Info("Decoding files parts to: %s", dfe.destination.Import().GetTargetPath())
 
 	var hasError bool
 
 	extractParts := func(part dcpParts.DcpFileParts) {
 		if err := common.CheckPathExists(part.GetSource().GetPath()); err != nil {
-			dfe.log.LogError(err, "error when checking dcp file part path: %s", part.GetSource().GetPath())
+			dfe.log.Error(err, "error when checking dcp file part path: %s", part.GetSource().GetPath())
 			hasError = true
 		}
 
 		if err := part.Extract(); err != nil {
-			dfe.log.LogError(err, "error when extracting dcp file part: %s", part.GetSource().GetPath())
+			dfe.log.Error(err, "error when extracting dcp file part: %s", part.GetSource().GetPath())
 			hasError = true
 		}
 	}

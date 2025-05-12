@@ -36,19 +36,19 @@ func (k *KernelFile) Extract() error {
 		return fmt.Errorf("kernel file not found: %s", k.source.GetName())
 	}
 
-	k.log.LogInfo("Initiating extraction of kernel file: %s", k.source.GetName())
+	k.log.Info("Initiating extraction of kernel file: %s", k.source.GetName())
 
 	if err := k.extract(); err != nil {
 		return err
 	}
 
-	k.log.LogInfo("Verifying the integrity of the extracted kernel file: %s", k.destination.Extract().GetTargetFile())
+	k.log.Info("Verifying the integrity of the extracted kernel file: %s", k.destination.Extract().GetTargetFile())
 
 	if err := k.extractVerify(); err != nil {
 		return err
 	}
 
-	k.log.LogInfo("Successfully extracted kernel file: %s", k.source.GetName())
+	k.log.Info("Successfully extracted kernel file: %s", k.source.GetName())
 
 	return nil
 }
@@ -59,7 +59,7 @@ func (k *KernelFile) extract() error {
 	defer mt2.ReturnKrnlExtractor(extractorInstance)
 
 	if err := extractorInstance.Extract(k.source, k.destination); err != nil {
-		k.log.LogError(err, "Error decoding kernel file: %s", k.source.GetName())
+		k.log.Error(err, "Error decoding kernel file: %s", k.source.GetName())
 		return err
 	}
 
@@ -84,7 +84,7 @@ func (k *KernelFile) Compress() error {
 	defer mt2.ReturnKrnlCompressor(compressorInstance)
 
 	if err := compressorInstance.Compress(k.source, k.destination); err != nil {
-		k.log.LogError(err, "Error compressing kernel file: %s", k.destination.Translate().GetTargetFile())
+		k.log.Error(err, "Error compressing kernel file: %s", k.destination.Translate().GetTargetFile())
 
 		return fmt.Errorf("failed to compress kernel file: %s", k.source.GetName())
 	}
@@ -95,7 +95,7 @@ func (k *KernelFile) Compress() error {
 	tmpFile := NewKernel(tmpSource, tmpDestination)
 
 	if err := tmpFile.Extract(); err != nil {
-		k.log.LogError(err, "Error decoding kernel file: %s", k.destination.Import().GetTargetFile())
+		k.log.Error(err, "Error decoding kernel file: %s", k.destination.Import().GetTargetFile())
 
 		return fmt.Errorf("failed to decode kernel file: %s", k.destination.Import().GetTargetFile())
 	}
@@ -104,12 +104,12 @@ func (k *KernelFile) Compress() error {
 	defer mt2.ReturnTextVerifier(textVerifierInstance)
 
 	if err := textVerifierInstance.Verify(tmpSource, tmpDestination, textVerifier.NewTextCompressionVerificationStrategy()); err != nil {
-		k.log.LogError(err, "Error verifying kernel file: %s", k.source.GetName())
+		k.log.Error(err, "Error verifying kernel file: %s", k.source.GetName())
 
 		return fmt.Errorf("failed to integrity kernel file: %s", k.source.GetName())
 	}
 
-	k.log.LogInfo("Kernel file compressed: %s", k.destination.Import().GetTargetFile())
+	k.log.Info("Kernel file compressed: %s", k.destination.Import().GetTargetFile())
 
 	return nil
 }

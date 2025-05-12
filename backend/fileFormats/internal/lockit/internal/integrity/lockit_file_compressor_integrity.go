@@ -146,13 +146,13 @@ func (lfi *lockitFileCompressorIntegrity) temporaryPartsDecoder(tempPartsList co
 	defaultIntegrityError := fmt.Errorf("error when checking lockit file integrity")
 
 	if tempPartsList.IsEmpty() {
-		lfi.log.LogError(defaultIntegrityError, "")
+		lfi.log.Error(defaultIntegrityError, "")
 		return defaultIntegrityError
 	}
 
 	filePartsDecoder := lockitParts.NewLockitFilePartsDecoder()
 	if err := filePartsDecoder.DecodeFileParts(tempPartsList, lockitEncoding, gameVersion); err != nil {
-		lfi.log.LogError(err, "error when decoding temporary lockit file parts")
+		lfi.log.Error(err, "error when decoding temporary lockit file parts")
 		return defaultIntegrityError
 	}
 
@@ -161,7 +161,7 @@ func (lfi *lockitFileCompressorIntegrity) temporaryPartsDecoder(tempPartsList co
 
 func (lfi *lockitFileCompressorIntegrity) temporaryPartsComparer(partsList components.IList[lockitParts.LockitFileParts]) error {
 	if partsList.IsEmpty() {
-		lfi.log.LogError(nil, "error when comparing temporary lockit file parts: parts list is empty")
+		lfi.log.Error(nil, "error when comparing temporary lockit file parts: parts list is empty")
 
 		return fmt.Errorf("error when checking lockit file integrity")
 	}

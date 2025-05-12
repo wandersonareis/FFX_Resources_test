@@ -70,13 +70,13 @@ func (lfe *LockitFileExtractor) Extract() error {
 		return err
 	}
 
-	lfe.log.LogInfo("Lockit file extracted: %s", lfe.GetDestination().Extract().GetTargetPath())
+	lfe.log.Info("Lockit file extracted: %s", lfe.GetDestination().Extract().GetTargetPath())
 
 	return nil
 }
 
 func (lfe *LockitFileExtractor) populateLockitBinaryFileParts(partsList components.IList[lockitParts.LockitFileParts]) error {
-	lfe.log.LogInfo("Populating lockit binary file parts...")
+	lfe.log.Info("Populating lockit binary file parts...")
 	return lockitParts.PopulateLockitBinaryFileParts(
 		partsList,
 		lfe.GetDestination().Extract().GetTargetPath(),
@@ -84,7 +84,7 @@ func (lfe *LockitFileExtractor) populateLockitBinaryFileParts(partsList componen
 }
 
 func (lfe *LockitFileExtractor) ensureAllLockitBinaryFileParts(partsList components.IList[lockitParts.LockitFileParts], partsLength int) error {
-	lfe.log.LogInfo("Ensuring all lockit binary file parts...")
+	lfe.log.Info("Ensuring all lockit binary file parts...")
 
 	if partsList.GetLength() == partsLength {
 		return nil
@@ -107,7 +107,7 @@ func (lfe *LockitFileExtractor) ensureAllLockitBinaryFileParts(partsList compone
 }
 
 func (lfe *LockitFileExtractor) extractMissingLockitFileParts() error {
-	lfe.log.LogInfo("Missing lockit file parts detected. Attempting to extract...")
+	lfe.log.Info("Missing lockit file parts detected. Attempting to extract...")
 
 	splitter := internal.NewLockitFileSplitter()
 	return splitter.FileSplitter(lfe.GetSource(), lfe.GetDestination().Extract(), lfe.options)
@@ -118,13 +118,13 @@ func (lfe *LockitFileExtractor) decodeFileParts(partsList components.IList[locki
 		return fmt.Errorf("error ensuring lockit parts: list is empty")
 	}
 
-	lfe.log.LogInfo("Decoding lockit file parts...")
+	lfe.log.Info("Decoding lockit file parts...")
 
 	// TODO: Implement a way to get the game version from the source file
 	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
 	filePartsDecoder := lockitParts.NewLockitFilePartsDecoder()
 	if err := filePartsDecoder.DecodeFileParts(partsList, lfe.lockitEncoding, gameVersion); err != nil {
-		lfe.log.LogError(err, "failed to decode lockit file parts")
+		lfe.log.Error(err, "failed to decode lockit file parts")
 		return fmt.Errorf("failed to decode lockit file: %s", lfe.GetSource().GetName())
 	}
 

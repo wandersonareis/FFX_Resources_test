@@ -40,7 +40,7 @@ func (d *dialogCompressor) Compress(source interfaces.ISource, destination locat
 	defer textEncoding.Dispose()
 
 	if err := d.DialogEncoder.Encoder(source, destination, textEncoding); err != nil {
-		d.Logger.LogError(err, "Error on compressing dialog file")
+		d.Logger.Error(err, "Error on compressing dialog file")
 		return fmt.Errorf("error on compressing dialog file: %s", err)
 	}
 

@@ -119,7 +119,7 @@ func (dfci *dcpFileCompressorIntegrity) temporaryPartsDecoder(tempPartsList comp
 
 	for err := range errChan {
 		if err != nil {
-			dfci.log.LogError(err, "error when decoding temporary dcp file parts")
+			dfci.log.Error(err, "error when decoding temporary dcp file parts")
 			return defaultIntegrityError
 		}
 	}
@@ -133,7 +133,7 @@ func (dfci *dcpFileCompressorIntegrity) temporaryPartsIntegrity(tempPartsList co
 
 	filesToCompareList.ForEach(func(item components.IFileComparer) {
 		if err := item.CompareFiles(); err != nil {
-			dfci.log.LogError(err, "failed to compare parts")
+			dfci.log.Error(err, "failed to compare parts")
 		}
 	})
 
@@ -179,21 +179,21 @@ func (dfci *dcpFileCompressorIntegrity) createCompareTextList(partsList componen
 		extractedFile := item.GetDestination().Extract().GetTargetFile()
 
 		if err := common.CheckPathExists(translatedFile); err != nil {
-			dfci.log.LogError(err, "failed to check path")
+			dfci.log.Error(err, "failed to check path")
 			return
 		}
 
 		if common.CountSegments(translatedFile) <= 0 {
-			dfci.log.LogError(nil, "error when counting segments in translated part: %s", translatedFile)
+			dfci.log.Error(nil, "error when counting segments in translated part: %s", translatedFile)
 		}
 
 		if err := common.CheckPathExists(extractedFile); err != nil {
-			dfci.log.LogError(err, "failed to check path")
+			dfci.log.Error(err, "failed to check path")
 			return
 		}
 
 		if common.CountSegments(extractedFile) <= 0 {
-			dfci.log.LogError(nil, "error when counting segments in extracted part: %s", extractedFile)
+			dfci.log.Error(nil, "error when counting segments in extracted part: %s", extractedFile)
 		}
 
 		filesToCompareList.Add(&components.FileComparisonEntry{
