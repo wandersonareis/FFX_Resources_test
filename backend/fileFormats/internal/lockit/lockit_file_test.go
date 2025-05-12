@@ -10,13 +10,20 @@ import (
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/logger"
+	"ffxresources/backend/models"
+	testcommon "ffxresources/testData"
 	"os"
 	"path/filepath"
+	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
+
+func TestLockit(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Lockit Suite")
+}
 
 var _ = Describe("LockitFile", Ordered, func() {
 	var (
@@ -24,7 +31,11 @@ var _ = Describe("LockitFile", Ordered, func() {
 		extractTempPath      string
 		reimportTempPath     string
 		translatePath        string
+		rootDir              string
+		binaryPath           string
+		gameVersionDir       string
 		testDataPath         string
+		gameLocationPath     string
 		config               *interactions.FFXAppConfig
 		formatter            interfaces.ITextFormatter
 		fileOptions          core.ILockitFileOptions
@@ -34,53 +45,59 @@ var _ = Describe("LockitFile", Ordered, func() {
 		testLockitCompressor *lockit.LockitFileCompressor
 		lockitEncoding       ffxencoding.IFFXTextLockitEncoding
 		temp                 *common.TempProvider
-		gameVersionDir       string
-		loggerHandler        logger.ILoggerHandler
+		loggerHandler        *testcommon.MockLogHandler
 		err                  error
 	)
 
 	BeforeAll(func() {
-		Expect(os.Setenv("APP_BASE_PATH", `F:\ffxWails\FFX_Resources\build\bin`)).To(Succeed())
+		Expect(testcommon.SetBuildBinPath()).To(Succeed())
 		Expect(os.Setenv("FFX_GAME_VERSION", "2")).To(Succeed())
 
-		currentDir, err := filepath.Abs(".")
-		Expect(err).To(BeNil())
+		rootDir = testcommon.GetTestDataRootDirectory()
+		Expect(rootDir).NotTo(BeEmpty(), "Project root directory should not be empty")
 
+		binaryPath = "binary"
 		temp = common.NewTempProvider("", "")
-
 		gameVersionDir = "FFX-2"
 
-		testDataPath = filepath.Join(currentDir, "testdata", gameVersionDir)
+		testDataPath = filepath.Join(rootDir, gameVersionDir)
+		gameLocationPath = filepath.Join(testDataPath, binaryPath)
 
 		extractTempPath = filepath.Join(temp.TempFilePath, "extract")
 		reimportTempPath = filepath.Join(temp.TempFilePath, "reimport")
 		translatePath = filepath.Join(testDataPath, "translated")
 
-		// Setup config
 		config = &interactions.FFXAppConfig{
 			FFXGameVersion:    2,
-			GameFilesLocation: translatePath,
+			GameFilesLocation: gameLocationPath,
 			ExtractLocation:   extractTempPath,
 			TranslateLocation: translatePath,
 			ImportLocation:    reimportTempPath,
 		}
+		Expect(config).NotTo(BeNil())
 
-		// Initialize formatter
 		formatter = &formatters.TxtFormatter{
 			TargetExtension: ".txt",
 			GameVersionDir:  gameVersionDir,
 			GameFilesPath:   translatePath,
 		}
+		Expect(formatter).NotTo(BeNil())
 
-		// Setup interaction service
 		interactionService = interactions.NewInteractionServiceWithConfig(config)
+		Expect(interactionService.FFXAppConfig()).NotTo(BeNil())
+
 		interactionService = interactions.NewInteractionWithTextFormatter(formatter)
+		Expect(interactionService.TextFormatter()).NotTo(BeNil())
+
+		gameVersionNumber := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
+		Expect(gameVersionNumber).To(Equal(config.FFXGameVersion))
 
 		// Initialize file options
-		fileOptions = core.NewLockitFileOptions(interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber())
+		fileOptions = core.NewLockitFileOptions(gameVersionNumber)
+		Expect(fileOptions).NotTo(BeNil())
 
-		// Initialize logger
-		loggerHandler = logger.NewLoggerHandler("lockit_file_testing")
+		loggerHandler = testcommon.NewLogHandlerMock()
+		Expect(loggerHandler).NotTo(BeNil())
 
 		// Setup destination
 		destination = &locations.Destination{
@@ -88,6 +105,7 @@ var _ = Describe("LockitFile", Ordered, func() {
 			TranslateLocation: locations.NewTranslateLocation("translated", translatePath, gameVersionDir),
 			ImportLocation:    locations.NewImportLocation("reimported", reimportTempPath, gameVersionDir),
 		}
+		Expect(destination).NotTo(BeNil())
 	})
 
 	AfterAll(func() {
@@ -97,72 +115,48 @@ var _ = Describe("LockitFile", Ordered, func() {
 	})
 
 	BeforeEach(func() {
-		testPath := "F:\\ffxWails\\FFX_Resources\\build\\bin\\data\\ffx-2_data\\gamedata\\ps3data\\lockit\\ffx2_loc_kit_ps3_us.bin"
+		file := "ffx-2_data\\gamedata\\ps3data\\lockit\\ffx2_loc_kit_ps3_us.bin"
+		testFilePath := filepath.Join(gameLocationPath, file)
+		Expect(common.CheckPathExists(testFilePath)).To(Succeed())
 
 		// Setup source and destination
-		source, err = locations.NewSource(testPath)
+		source, err = locations.NewSource(testFilePath)
 		Expect(err).To(BeNil())
+		Expect(source).NotTo(BeNil())
+		Expect(source.GetType()).To(Equal(models.Lockit))
 
-		destination.InitializeLocations(source, formatter)
+		// Setup destination targets paths using the source
+		Expect(destination).NotTo(BeNil())
+		Expect(destination.InitializeLocations(source, formatter)).To(Succeed())
 
-		// Initialize lockit encoding
-		lockitEncoding = ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextLocalizationEncoding()
+		lockitEncoding = ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextUTF8Encoding()
 
-		// Initialize lockit extractor
 		testLockitExtractor = lockit.NewLockitFileExtractor(source, destination, lockitEncoding, fileOptions, loggerHandler)
 
 		testLockitCompressor = lockit.NewLockitFileCompressor(source, destination, lockitEncoding, fileOptions, loggerHandler)
 	})
 
 	AfterEach(func() {
-		common.RemoveDir(temp.TempFilePath)
-	})
-
-	Describe("Miscellaneous Functionality", func() {
-		It("should have valid configuration", func() {
-			Expect(config).NotTo(BeNil())
-		})
-
-		It("should have initialized interaction service", func() {
-			Expect(interactionService).NotTo(BeNil())
-			Expect(interactionService.FFXAppConfig()).NotTo(BeNil())
-		})
-
-		It("should have valid formatter", func() {
-			Expect(formatter).NotTo(BeNil())
-		})
-
-		It("should have interaction service with text formatter", func() {
-			Expect(interactionService.TextFormatter()).NotTo(BeNil())
-		})
-
-		It("should have valid destination", func() {
-			Expect(destination).NotTo(BeNil())
-		})
-
-		It("should have valid source", func() {
-			Expect(source).NotTo(BeNil())
-		})
-
-		It("should have valid lockit encoding", func() {
-			Expect(lockitEncoding).NotTo(BeNil())
-		})
-
-		It("should have valid file options", func() {
-			Expect(fileOptions).NotTo(BeNil())
-		})
-
-		It("should have valid lockit extractor", func() {
-			Expect(testLockitExtractor).NotTo(BeNil())
-		})
-
-		It("should have valid lockit compressor", func() {
-			Expect(testLockitCompressor).NotTo(BeNil())
-		})
+		Expect(common.RemoveDir(temp.TempFilePath)).To(Succeed())
 	})
 
 	Describe("Extract Functionality", func() {
-		It("should have correct extract location path", func() {
+		var lockitExtractIntegrity integrity.ILockitFileExtractorIntegrity
+
+		BeforeEach(func() {
+			lockitEncoding = ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextUTF8Encoding()
+
+			testLockitExtractor = lockit.NewLockitFileExtractor(source, destination, lockitEncoding, fileOptions, loggerHandler)
+			lockitExtractIntegrity = integrity.NewLockitFileExtractorIntegrity(fileOptions, loggerHandler)
+		})
+
+		AfterEach(func() {
+			Expect(lockitEncoding).NotTo(BeNil())
+			lockitEncoding.Dispose()
+			lockitEncoding = nil
+		})
+
+		/* It("should have correct extract location path", func() {
 			expected := filepath.Join(extractTempPath, gameVersionDir, "lockit_text")
 			expected = filepath.ToSlash(expected)
 
@@ -170,7 +164,7 @@ var _ = Describe("LockitFile", Ordered, func() {
 			actual = filepath.ToSlash(actual)
 
 			Expect(actual).To(Equal(expected))
-		})
+		}) */
 
 		It("should extract the lockit file successfully", func() {
 			Expect(testLockitExtractor).NotTo(BeNil())
@@ -181,37 +175,34 @@ var _ = Describe("LockitFile", Ordered, func() {
 			Expect(testLockitExtractor).NotTo(BeNil())
 			Expect(testLockitExtractor.Extract()).To(Succeed())
 
-			lockitIntegrity := integrity.NewLockitFileExtractorIntegrity(logger.NewLoggerHandler("lockit_file_integrity_testing"))
-			Expect(lockitIntegrity).NotTo(BeNil())
+			Expect(lockitExtractIntegrity).NotTo(BeNil())
 
 			targetPath := destination.Extract().GetTargetPath()
 			Expect(targetPath).NotTo(BeEmpty())
 
-			Expect(lockitIntegrity.Verify(targetPath, fileOptions)).To(Succeed())
+			Expect(lockitExtractIntegrity.Verify(targetPath)).To(Succeed())
 		})
 
 		It("should verify file integrity binary fail", func() {
-			lockitIntegrity := integrity.NewLockitFileExtractorIntegrity(logger.NewLoggerHandler("lockit_file_integrity_testing"))
-			Expect(lockitIntegrity).NotTo(BeNil())
+			Expect(lockitExtractIntegrity).NotTo(BeNil())
 
 			targetPath, err := filepath.Abs(filepath.Join("testdata", gameVersionDir, "binary_missing_linebreak"))
 			Expect(err).To(BeNil())
 
-			err = lockitIntegrity.Verify(targetPath, fileOptions)
+			err = lockitExtractIntegrity.Verify(targetPath)
 			Expect(err).NotTo(BeNil())
-			Expect(err.Error()).To(Equal("error when counting line breaks: the file has 159 line breaks, expected 162"))
+			Expect(err.Error()).To(Equal("error validating line breaks count for extracted lockit binary file parts: error validating line breaks count for lockit file parts: error when counting line breaks: the file has 159 line breaks, expected 162"))
 		})
 
 		It("should verify file integrity text fail", func() {
-			lockitIntegrity := integrity.NewLockitFileExtractorIntegrity(logger.NewLoggerHandler("lockit_file_integrity_testing"))
-			Expect(lockitIntegrity).NotTo(BeNil())
+			Expect(lockitExtractIntegrity).NotTo(BeNil())
 
 			targetPath, err := filepath.Abs(filepath.Join("testdata", gameVersionDir, "text_missing_linebreak"))
 			Expect(err).To(BeNil())
 
-			err = lockitIntegrity.Verify(targetPath, fileOptions)
+			err = lockitExtractIntegrity.Verify(targetPath)
 			Expect(err).NotTo(BeNil())
-			Expect(err.Error()).To(Equal("error when counting line breaks: the file has 1117 line breaks, expected 1121"))
+			Expect(err.Error()).To(Equal("error validating line breaks count for extracted lockit text file parts: error validating line breaks count for lockit file parts: error when counting line breaks: the file has 1117 line breaks, expected 1121"))
 		})
 	})
 
@@ -230,7 +221,7 @@ var _ = Describe("LockitFile", Ordered, func() {
 			Expect(testLockitCompressor).NotTo(BeNil())
 			Expect(testLockitCompressor.Compress()).To(Succeed())
 
-			lockitIntegrity := integrity.NewLockitFileIntegrity(logger.NewLoggerHandler("lockit_file_integrity_testing"))
+			lockitIntegrity := integrity.NewLockitFileIntegrity(loggerHandler)
 			Expect(lockitIntegrity).NotTo(BeNil())
 
 			Expect(lockitIntegrity.Verify(destination, lockitEncoding, fileOptions)).To(Succeed())

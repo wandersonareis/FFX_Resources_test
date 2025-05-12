@@ -9,26 +9,37 @@ import (
 
 type (
 	ILockitFilePartsIntegrity interface {
-		ValidatePartsLineBreaksCount(fileList components.IList[string], lockitFileOptions core.ILockitFileOptions) error
+		ComparePartsLineBreaksCount(fileList components.IList[string], lockitFileOptions core.ILockitFileOptions) error
 		ComparePartsContent(partsList components.IList[models.FileComparisonEntry]) error
 	}
 	LockitFilePartsIntegrity struct {
-		log logger.ILoggerHandler
+		lockitFileLineBreaksCounter ILineBreakCounter
+		lockitFileContentComparer   IComparerContent
+		log                         logger.ILoggerHandler
 	}
 )
 
 func NewLockitFilePartsIntegrity(logger logger.ILoggerHandler) ILockitFilePartsIntegrity {
-	return &LockitFilePartsIntegrity{log: logger}
+	return &LockitFilePartsIntegrity{
+		lockitFileLineBreaksCounter: NewLineBreakCounter(logger),
+		lockitFileContentComparer:   NewComparerContent(logger),
+
+		log: logger,
+	}
 }
 
-func (lfpi *LockitFilePartsIntegrity) ValidatePartsLineBreaksCount(fileList components.IList[string], lockitFileOptions core.ILockitFileOptions) error {
-	filePartsLineBreakCounter := NewLineBreakCounter(lfpi.log)
+func (lfpi *LockitFilePartsIntegrity) ComparePartsLineBreaksCount(fileList components.IList[string], lockitFileOptions core.ILockitFileOptions) error {
+	if err := lfpi.lockitFileLineBreaksCounter.VerifyLineBreaks(fileList, lockitFileOptions); err != nil {
+		return err
+	}
 
-	return filePartsLineBreakCounter.VerifyLineBreaks(fileList, lockitFileOptions)
+	return nil
 }
 
 func (lfpi *LockitFilePartsIntegrity) ComparePartsContent(partsList components.IList[models.FileComparisonEntry]) error {
-	filePartsCompareContent := NewComparerContent(lfpi.log)
+	if err := lfpi.lockitFileContentComparer.CompareContent(partsList); err != nil {
+		return err
+	}
 
-	return filePartsCompareContent.CompareContent(partsList)
+	return nil
 }

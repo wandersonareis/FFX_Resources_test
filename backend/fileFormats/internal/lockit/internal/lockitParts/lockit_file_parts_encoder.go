@@ -7,12 +7,13 @@ import (
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
+	"ffxresources/backend/models"
 	"fmt"
 )
 
 type (
 	ILockitFilePartsEncoder interface {
-		EncodeFilesParts(binaryPartsList components.IList[LockitFileParts], encoding ffxencoding.IFFXTextLockitEncoding) error
+		EncodeFilesParts(partsList components.IList[LockitFileParts], lockitEncoding ffxencoding.IFFXTextLockitEncoding, gameVersion models.GameVersion) error
 	}
 	LockitFilePartsEncoder struct {
 		formatter interfaces.ITextFormatter
@@ -27,31 +28,16 @@ func NewLockitFilePartsEncoder(logger logger.ILoggerHandler) ILockitFilePartsEnc
 	}
 }
 
-func (le *LockitFilePartsEncoder) EncodeFilesParts(partsList components.IList[LockitFileParts], lockitEncoding ffxencoding.IFFXTextLockitEncoding) error {
+func (le *LockitFilePartsEncoder) EncodeFilesParts(partsList components.IList[LockitFileParts], lockitEncoding ffxencoding.IFFXTextLockitEncoding, gameVersion models.GameVersion) error {
 	if partsList.GetLength() == 0 {
 		return fmt.Errorf("lockit file parts list is empty")
 	}
 
 	errChan := make(chan error, partsList.GetLength())
 
-	utf8Enconding := lockitFileEncoder.NewLockitEncoderUTF8Strategy()
-	ffxEnconding := lockitFileEncoder.NewLockitEncoderFFXStrategy()
-
-	// Choosencodingstrategy returns the appropriate coding strategy
-	// Based on the index: If the index is greater than zero and pair, the UTF-8 strategy returns;Otherwise, the FFX strategy returns.
-	chooseEncodingStrategy := func(index int) lockitFileEncoder.ILockitProcessingStrategy {
-		if index > 0 && index%2 == 0 {
-			return utf8Enconding
-		}
-		return ffxEnconding
-	}
-
-	processLockitPartForEncoding := func(index int, part LockitFileParts) {
-		encoderStrategy := chooseEncodingStrategy(index)
-		errChan <- part.Compress(lockitEncoding, encoderStrategy)
-	}
-
-	partsList.ForIndex(processLockitPartForEncoding)
+	partsList.ForIndex(func(index int, part LockitFileParts) {
+		errChan <- part.Compress(lockitEncoding, le.chooseStrategy(index, gameVersion))
+	})
 
 	close(errChan)
 
@@ -62,4 +48,29 @@ func (le *LockitFilePartsEncoder) EncodeFilesParts(partsList components.IList[Lo
 	}
 
 	return nil
+}
+
+func (le *LockitFilePartsEncoder) chooseStrategy(index int, gameVersion models.GameVersion) lockitFileEncoder.ILockitProcessingStrategy {
+	getStrategyV1 := func(index int) lockitFileEncoder.ILockitProcessingStrategy {
+		if index > 0 && index%2 == 0 {
+			return lockitFileEncoder.NewLockitEncoderUTF8Strategy()
+		}
+		return lockitFileEncoder.NewLockitEncoderFFXStrategy()
+	}
+
+	getStrategyV2 := func(index int) lockitFileEncoder.ILockitProcessingStrategy {
+		if index > 0 && index%2 == 0 {
+			return lockitFileEncoder.NewLockitEncoderUTF8Strategy()
+		}
+		return lockitFileEncoder.NewLockitEncoderFFX2Strategy()
+	}
+
+	switch gameVersion {
+	case models.FFX:
+		return getStrategyV1(index)
+	case models.FFX2:
+		return getStrategyV2(index)
+	default:
+		return getStrategyV1(index)
+	}
 }

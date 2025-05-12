@@ -9,6 +9,7 @@ import (
 	"ffxresources/backend/fileFormats/internal/baseFormats"
 	"ffxresources/backend/fileFormats/internal/lockit/internal"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/lockitParts"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/logger"
 	"fmt"
@@ -119,8 +120,11 @@ func (lfe *LockitFileExtractor) decodeFileParts(partsList components.IList[locki
 
 	lfe.log.LogInfo("Decoding lockit file parts...")
 
+
+	// TODO: Implement a way to get the game version from the source file
+	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
 	filePartsDecoder := lockitParts.NewLockitFilePartsDecoder()
-	if err := filePartsDecoder.DecodeFileParts(partsList, lfe.lockitEncoding); err != nil {
+	if err := filePartsDecoder.DecodeFileParts(partsList, lfe.lockitEncoding, gameVersion); err != nil {
 		lfe.log.LogError(err, "failed to decode lockit file parts")
 		return fmt.Errorf("failed to decode lockit file: %s", lfe.GetSource().GetName())
 	}

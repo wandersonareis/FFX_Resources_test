@@ -15,9 +15,12 @@ import (
 type LockitFile struct {
 	baseFormats.IBaseFileFormat
 
-	source      interfaces.ISource
-	destination locations.IDestination
-	log         logger.ILoggerHandler
+	source                      interfaces.ISource
+	destination                 locations.IDestination
+	lockitFileExtractIntegrity  integrity.ILockitFileExtractorIntegrity
+	lockitFileCompressIntegrity integrity.ILockitFileCompressorIntegrity
+	options                     core.ILockitFileOptions
+	log                         logger.ILoggerHandler
 }
 
 func NewLockitFile(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
@@ -25,11 +28,18 @@ func NewLockitFile(source interfaces.ISource, destination locations.IDestination
 
 	destination.InitializeLocations(source, formatters.NewTxtFormatter())
 
+	options := core.NewLockitFileOptions(interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber())
+
 	return &LockitFile{
 		IBaseFileFormat: baseFormats.NewFormatsBase(source, destination),
-		log:             logger.NewLoggerHandler("lockit_file"),
-		source:          source,
-		destination:     destination,
+		lockitFileExtractIntegrity: integrity.NewLockitFileExtractorIntegrity(
+			options,
+			logger.NewLoggerHandler("lockit_file_integrity"),
+		),
+		source:      source,
+		destination: destination,
+		options:     options,
+		log:         logger.NewLoggerHandler("lockit_file"),
 	}
 }
 
@@ -37,14 +47,11 @@ func (lf *LockitFile) Extract() error {
 	lockitEncoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextUTF8Encoding()
 	defer lockitEncoding.Dispose()
 
-	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
-	fileOptions := core.NewLockitFileOptions(gameVersion)
-
-	if err := lf.extract(lockitEncoding, fileOptions); err != nil {
+	if err := lf.extract(lockitEncoding); err != nil {
 		return err
 	}
 
-	if err := lf.extractVerify(fileOptions); err != nil {
+	if err := lf.extractVerify(); err != nil {
 		return err
 	}
 
@@ -53,34 +60,34 @@ func (lf *LockitFile) Extract() error {
 	return nil
 }
 
-func (lf *LockitFile) extract(lockitEncoding ffxencoding.IFFXTextLockitEncoding, fileOptions core.ILockitFileOptions) error {
+func (lf *LockitFile) extract(lockitEncoding ffxencoding.IFFXTextLockitEncoding) error {
 	lf.log.LogInfo("Extracting lockit file inside path: %s", lf.destination.Extract().GetTargetPath())
 
-	fileExtractor := NewLockitFileExtractor(lf.source, lf.destination, lockitEncoding, fileOptions, lf.log)
+	fileExtractor := NewLockitFileExtractor(lf.source, lf.destination, lockitEncoding, lf.options, lf.log)
 
 	return fileExtractor.Extract()
 }
 
-func (lf *LockitFile) extractVerify(fileOptions core.ILockitFileOptions) error {
+func (lf *LockitFile) extractVerify() error {
 	lf.log.LogInfo("Verifying lockit file parts in path: %s", lf.destination.Extract().GetTargetPath())
 
-	extractVerifier := integrity.NewLockitFileExtractorIntegrity(lf.log)
+	if err := lf.lockitFileExtractIntegrity.Verify(lf.GetDestination().Extract().GetTargetPath()); err != nil {
+		return err
+	}
 
-	return extractVerifier.Verify(lf.GetDestination().Extract().GetTargetPath(), fileOptions)
+	lf.log.LogInfo("Lockit file parts verified successfully in path: %s", lf.destination.Extract().GetTargetPath())
+	return nil
 }
 
 func (lf *LockitFile) Compress() error {
 	lockitEncoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextUTF8Encoding()
 	defer lockitEncoding.Dispose()
 
-	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
-	fileOptions := core.NewLockitFileOptions(gameVersion)
-
-	if err := lf.compress(lockitEncoding, fileOptions); err != nil {
+	if err := lf.compress(lockitEncoding); err != nil {
 		return err
 	}
 
-	if err := lf.compressVerify(lockitEncoding, fileOptions); err != nil {
+	if err := lf.compressVerify(lockitEncoding); err != nil {
 		return err
 	}
 
@@ -89,18 +96,28 @@ func (lf *LockitFile) Compress() error {
 	return nil
 }
 
-func (lf *LockitFile) compress(lockitEncoding ffxencoding.IFFXTextLockitEncoding, fileOptions core.ILockitFileOptions) error {
+func (lf *LockitFile) compress(lockitEncoding ffxencoding.IFFXTextLockitEncoding) error {
 	lf.log.LogInfo("Compressing lockit file in path: %s", lf.destination.Translate().GetTargetPath())
 
-	fileCompressor := NewLockitFileCompressor(lf.source, lf.destination, lockitEncoding, fileOptions, lf.log)
+	fileCompressor := NewLockitFileCompressor(lf.source, lf.destination, lockitEncoding, lf.options, lf.log)
 
-	return fileCompressor.Compress()
+	if err := fileCompressor.Compress(); err != nil {
+		return err
+	}
+
+	lf.log.LogInfo("Lockit file compressed successfully in path: %s", lf.destination.Translate().GetTargetPath())
+
+	return nil
 }
 
-func (lf *LockitFile) compressVerify(lockitEncoding ffxencoding.IFFXTextLockitEncoding, fileOptions core.ILockitFileOptions) error {
+func (lf *LockitFile) compressVerify(lockitEncoding ffxencoding.IFFXTextLockitEncoding) error {
 	lf.log.LogInfo("Verifying translated lockit file in path: %s", lf.destination.Translate().GetTargetPath())
 
-	compressVerify := integrity.NewLockitFileIntegrity(lf.log)
+	if err := lf.lockitFileCompressIntegrity.Verify(lf.GetDestination(), lockitEncoding, lf.options); err != nil {
+		return err
+	}
 
-	return compressVerify.Verify(lf.GetDestination(), lockitEncoding, fileOptions)
+	lf.log.LogInfo("Translated lockit file verified successfully")
+
+	return nil
 }

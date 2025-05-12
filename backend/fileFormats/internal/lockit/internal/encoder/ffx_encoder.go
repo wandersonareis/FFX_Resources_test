@@ -37,7 +37,6 @@ func (le *LockitEncoderUTF8Strategy) Process(sourceFile, outputFile string, enco
 	return nil
 }
 
-
 type LockitEncoderFFXStrategy struct{}
 
 func NewLockitEncoderFFXStrategy() *LockitEncoderFFXStrategy {
@@ -45,6 +44,16 @@ func NewLockitEncoderFFXStrategy() *LockitEncoderFFXStrategy {
 }
 
 func (le *LockitEncoderFFXStrategy) Process(sourceFile, outputFile string, encoding ffxencoding.IFFXTextLockitEncoding) error {
+	return fmt.Errorf("v1 encoder not implemented")
+}
+
+type LockitEncoderFFX2Strategy struct{}
+
+func NewLockitEncoderFFX2Strategy() *LockitEncoderFFX2Strategy {
+	return &LockitEncoderFFX2Strategy{}
+}
+
+func (le *LockitEncoderFFX2Strategy) Process(sourceFile, outputFile string, encoding ffxencoding.IFFXTextLockitEncoding) error {
 	encodingFile := encoding.GetFFXTextLockitEncoding()
 
 	executable, err := encoding.GetLockitFileHandler().GetLockitFileHandler()

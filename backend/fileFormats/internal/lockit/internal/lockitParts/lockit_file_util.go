@@ -2,8 +2,13 @@ package lockitParts
 
 import (
 	"ffxresources/backend/core/components"
-	"ffxresources/backend/fileFormats/internal/lockit/internal/lib"
 	"fmt"
+)
+
+const (
+	LOCKIT_FILE_BINARY_PARTS_PATTERN string = `.*loc_kit_ps3.*\.part([0-9]{2})$`
+
+	LOCKIT_FILE_TXT_PARTS_PATTERN string = `.*loc_kit_ps3.*\.part([0-9]{2}).*\.txt$`
 )
 
 func populateLockitPartsList(list components.IList[LockitFileParts], path, pattern string) error {
@@ -29,7 +34,7 @@ func PopulateLockitBinaryFileParts(
 	return populateLockitPartsList(
 		binaryPartsList,
 		path,
-		lib.LOCKIT_FILE_BINARY_PARTS_PATTERN,
+		LOCKIT_FILE_BINARY_PARTS_PATTERN,
 	)
 }
 
@@ -39,6 +44,6 @@ func PopulateLockitTextFileParts(
 	return populateLockitPartsList(
 		translatedPartsList,
 		path,
-		lib.LOCKIT_FILE_TXT_PARTS_PATTERN,
+		LOCKIT_FILE_TXT_PARTS_PATTERN,
 	)
 }
