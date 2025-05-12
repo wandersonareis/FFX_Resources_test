@@ -20,6 +20,7 @@ type SpiraFileInfo struct {
 	ClonedItems  []string `json:"cloned_items"`
 	Path         string   `json:"path"`
 	RelativePath string   `json:"relative_path"`
+	Version      int      `json:"version"`
 }
 
 func NewSpiraFileInfo(path string) (*SpiraFileInfo, error) {

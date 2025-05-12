@@ -3,8 +3,8 @@ package interactions
 import (
 	"context"
 	"ffxresources/backend/common"
-	"ffxresources/backend/core"
 	"ffxresources/backend/interfaces"
+	"ffxresources/backend/models"
 	"path/filepath"
 	"sync"
 )
@@ -15,7 +15,7 @@ type InteractionService struct {
 	cancel            context.CancelFunc
 	mu                sync.Mutex
 	ffxAppConfig      IFFXAppConfig
-	ffxGameVersion    core.IFfxGameVersion
+	ffxGameVersion    models.IFfxGameVersion
 	ffxTextFormat     interfaces.ITextFormatter
 	GameLocation      IGameLocation
 	ExtractLocation   IExtractLocation
@@ -36,7 +36,7 @@ func NewInteractionService() *InteractionService {
 			panic(err)
 		}
 
-		gameVersion := core.NewFFXGameVersion()
+		gameVersion := models.NewFFXGameVersion()
 		gameVersion.SetGameVersionNumber(ffxAppConfig.FFXGameVersion)
 
 		ffxAppConfig.FFXGameVersion = gameVersion.GetGameVersionNumber()
@@ -57,7 +57,7 @@ func NewInteractionService() *InteractionService {
 
 func NewInteractionServiceWithConfig(config *FFXAppConfig) *InteractionService {
 	initOnce.Do(func() {
-		gameVersion := core.NewFFXGameVersion()
+		gameVersion := models.NewFFXGameVersion()
 		gameVersion.SetGameVersionNumber(config.FFXGameVersion)
 
 		interactionInstance = &InteractionService{
@@ -103,7 +103,7 @@ func (i *InteractionService) FFXAppConfig() IFFXAppConfig {
 	return i.ffxAppConfig
 }
 
-func (i *InteractionService) FFXGameVersion() core.IFfxGameVersion {
+func (i *InteractionService) FFXGameVersion() models.IFfxGameVersion {
 	return i.ffxGameVersion
 }
 
