@@ -4,9 +4,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats"
 	"ffxresources/backend/formatters"
-	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/models"
 	"ffxresources/backend/spira"
 	"fmt"
 )
@@ -19,22 +17,14 @@ func NewCollectionService(notifier INotificationService) *CollectionService {
 	return &CollectionService{notifier: notifier}
 }
 
-func (c *CollectionService) BuildTree() []spira.TreeNode {
-	path := interactions.NewInteractionService().GameLocation.GetTargetDirectory()
+func (c *CollectionService) BuildTree(path string) []spira.TreeNode {
 	if path == "" {
-		return nil
-	}
-
-	if err := interactions.NewInteractionService().GameLocation.IsSpira(); err != nil {
-		c.notifier.NotifyError(err)
 		return nil
 	}
 
 	formatter := formatters.NewTxtFormatter()
 
-	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
-
-	rawMap := c.CreateNodeDataStore(gameVersion, formatter)
+	rawMap := c.CreateNodeDataStore(path, formatter)
 
 	if err := common.CheckArgumentNil(rawMap, "BuildTree"); err != nil {
 		c.notifier.NotifyError(fmt.Errorf("failed to create node data store"))
@@ -47,9 +37,9 @@ func (c *CollectionService) BuildTree() []spira.TreeNode {
 }
 
 func (c *CollectionService) CreateNodeDataStore(
-	gameVersion models.GameVersion,
+	path string,
 	formatter interfaces.ITextFormatter) fileFormats.TreeMapNode {
-	rawMap := spira.CreateNodeMap(gameVersion, formatter)
+	rawMap := spira.CreateNodeMap(path, formatter)
 	NodeDataStore = NewNodeStore(rawMap)
 
 	return rawMap

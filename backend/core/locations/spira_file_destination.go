@@ -3,8 +3,6 @@ package locations
 import (
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
-	"os"
-	"strings"
 )
 
 type IDestination interface {
@@ -12,7 +10,6 @@ type IDestination interface {
 	Translate() ITranslateLocation
 	Import() IImportLocation
 	InitializeLocations(source interfaces.ISource, formatter interfaces.ITextFormatter) error
-	CreateRelativePath(source interfaces.ISource, gameLocationPath string)
 }
 
 type Destination struct {
@@ -63,18 +60,4 @@ func (g *Destination) Translate() ITranslateLocation {
 
 func (g *Destination) Import() IImportLocation {
 	return g.ImportLocation
-}
-
-// CreateRelativePath sets the RelativeGameDataPath of the source to a path relative to the given gameLocationPath.
-// If the FullFilePath of the source starts with the gameLocationPath, the gameLocationPath is trimmed from the FullFilePath
-// and the result is assigned to RelativeGameDataPath.
-//
-// Parameters:
-//   - gameLocationPath: The path for game original files to which the FullFilePath should be made relative.
-func (g *Destination) CreateRelativePath(source interfaces.ISource, gameLocationPath string) {
-	if strings.HasPrefix(source.GetPath(), gameLocationPath) {
-		relativePath := strings.TrimPrefix(source.GetPath(), gameLocationPath+string(os.PathSeparator))
-
-		source.SetRelativePath(relativePath)
-	}
 }
