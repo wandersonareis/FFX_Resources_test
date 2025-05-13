@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, NgZone, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  NgZone,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { MessageService } from 'primeng/api';
 import { CommonModule } from '@angular/common';
 import { FfxTreeComponent } from './components/tree/tree.component';
@@ -14,47 +21,57 @@ const imports = [
   ReactiveFormsModule,
   FfxTreeComponent,
   ConfigModalComponent,
-  ToggleButton
-]
+  ToggleButton,
+];
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
   imports: imports,
   providers: [MessageService],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent implements OnInit {
-  private readonly _messageService: MessageService = inject(MessageService)
+  private readonly _messageService: MessageService = inject(MessageService);
 
   versionFFX = signal<boolean>(false);
   versionFFX2 = signal<boolean>(false);
 
   ngOnInit() {
-    EventsOn("Notify", data => {
-      this._messageService.add({ severity: data.severity, summary: data.severity, detail: data.message })
+    EventsOn('Notify', (data) => {
+      let sticky: boolean = false;
+      if (data.severity === 'error') {
+        sticky = true;
+      }
+
+      this._messageService.add({
+        severity: data.severity,
+        summary: data.severity,
+        detail: data.message,
+        sticky: sticky,
+      });
     });
 
-    EventsOn("GameVersion", data => {
-      console.log("GameVersion on init", data);
+    EventsOn('GameVersion', (data) => {
+      console.log('GameVersion on init', data);
       let version: number = parseInt(data);
 
       this.versionFFX.set(version === 1);
       this.versionFFX2.set(version === 2);
     });
-  };
+  }
 
   versionFFXChange(event: ToggleButtonChangeEvent) {
-    this.versionFFX2.set(false)
-    console.log("versionFFXChange", event);
-    EventsEmit("GameVersionChanged", 1);
-    EventsEmit("Refresh_Tree");
+    this.versionFFX2.set(false);
+    console.log('versionFFXChange', event);
+    EventsEmit('GameVersionChanged', 1);
+    EventsEmit('Refresh_Tree');
   }
 
   versionFFX2Change(event: ToggleButtonChangeEvent) {
-    this.versionFFX.set(false)
-    console.log("versionFFX2Change", event);
-    EventsEmit("GameVersionChanged", 2);
-    EventsEmit("Refresh_Tree");
+    this.versionFFX.set(false);
+    console.log('versionFFX2Change', event);
+    EventsEmit('GameVersionChanged', 2);
+    EventsEmit('Refresh_Tree');
   }
 }

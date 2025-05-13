@@ -8,7 +8,7 @@ import { WriteTextFile } from '../../../../wailsjs/go/main/App';
 import { extractedEditorText, selectedFile, showEditorModal } from '../signals/signals.signal';
 import { ButtonModule } from 'primeng/button';
 import { CompressService } from '../../../service/compress.service';
-import {core, fileFormats, spira} from "../../../../wailsjs/go/models";
+import {fileFormats} from "../../../../wailsjs/go/models";
 import {TreeNode} from "primeng/api";
 
 @Component({

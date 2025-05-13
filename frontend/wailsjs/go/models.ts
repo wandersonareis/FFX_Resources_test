@@ -1,46 +1,9 @@
-export namespace core {
-	
-	export class SpiraFileInfo {
-	    name: string;
-	    name_prefix: string;
-	    type: number;
-	    size: number;
-	    extension: string;
-	    entry_path: string;
-	    parent: string;
-	    is_dir: boolean;
-	    cloned_items: string[];
-	    path: string;
-	    relative_path: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new SpiraFileInfo(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.name_prefix = source["name_prefix"];
-	        this.type = source["type"];
-	        this.size = source["size"];
-	        this.extension = source["extension"];
-	        this.entry_path = source["entry_path"];
-	        this.parent = source["parent"];
-	        this.is_dir = source["is_dir"];
-	        this.cloned_items = source["cloned_items"];
-	        this.path = source["path"];
-	        this.relative_path = source["relative_path"];
-	    }
-	}
-
-}
-
 export namespace fileFormats {
 	
 	export class TreeNodeData {
-	    source?: core.SpiraFileInfo;
-	    extract_location?: locations.ExtractLocation;
-	    translate_location?: locations.TranslateLocation;
+	    source: models.SpiraFileInfo;
+	    extract_location: any;
+	    translate_location: any;
 	
 	    static createFrom(source: any = {}) {
 	        return new TreeNodeData(source);
@@ -48,9 +11,9 @@ export namespace fileFormats {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.source = this.convertValues(source["source"], core.SpiraFileInfo);
-	        this.extract_location = this.convertValues(source["extract_location"], locations.ExtractLocation);
-	        this.translate_location = this.convertValues(source["translate_location"], locations.TranslateLocation);
+	        this.source = this.convertValues(source["source"], models.SpiraFileInfo);
+	        this.extract_location = source["extract_location"];
+	        this.translate_location = source["translate_location"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -74,50 +37,40 @@ export namespace fileFormats {
 
 }
 
-export namespace locations {
+export namespace models {
 	
-	export class ExtractLocation {
-	    TargetDirectory: string;
-	    TargetDirectoryName: string;
-	    IsExist: boolean;
-	    TargetFile: string;
-	    TargetPath: string;
-	    TargetFileName: string;
+	export class SpiraFileInfo {
+	    name: string;
+	    name_prefix: string;
+	    type: number;
+	    size: number;
+	    extension: string;
+	    entry_path: string;
+	    parent: string;
+	    is_dir: boolean;
+	    cloned_items: string[];
+	    path: string;
+	    relative_path: string;
+	    version: number;
 	
 	    static createFrom(source: any = {}) {
-	        return new ExtractLocation(source);
+	        return new SpiraFileInfo(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.TargetDirectory = source["TargetDirectory"];
-	        this.TargetDirectoryName = source["TargetDirectoryName"];
-	        this.IsExist = source["IsExist"];
-	        this.TargetFile = source["TargetFile"];
-	        this.TargetPath = source["TargetPath"];
-	        this.TargetFileName = source["TargetFileName"];
-	    }
-	}
-	export class TranslateLocation {
-	    TargetDirectory: string;
-	    TargetDirectoryName: string;
-	    IsExist: boolean;
-	    TargetFile: string;
-	    TargetPath: string;
-	    TargetFileName: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new TranslateLocation(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.TargetDirectory = source["TargetDirectory"];
-	        this.TargetDirectoryName = source["TargetDirectoryName"];
-	        this.IsExist = source["IsExist"];
-	        this.TargetFile = source["TargetFile"];
-	        this.TargetPath = source["TargetPath"];
-	        this.TargetFileName = source["TargetFileName"];
+	        this.name = source["name"];
+	        this.name_prefix = source["name_prefix"];
+	        this.type = source["type"];
+	        this.size = source["size"];
+	        this.extension = source["extension"];
+	        this.entry_path = source["entry_path"];
+	        this.parent = source["parent"];
+	        this.is_dir = source["is_dir"];
+	        this.cloned_items = source["cloned_items"];
+	        this.path = source["path"];
+	        this.relative_path = source["relative_path"];
+	        this.version = source["version"];
 	    }
 	}
 
