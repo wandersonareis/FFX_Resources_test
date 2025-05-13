@@ -189,4 +189,112 @@ func ContainsGameResourcesPath(path string) error {
 	}
 
 	return nil
+
+func hasExactComponent(path, component string) bool {
+	clean := filepath.Clean(path)
+	parts := strings.Split(clean, string(os.PathSeparator))
+	return slices.Contains(parts, component)
+}
+
+func checkPS2Version1(path string) (int, string, bool) {
+	p1 := "ffx_ps2"
+	p2 := "ffx"
+	p3 := "master"
+
+	if hasExactComponent(path, p1) && hasExactComponent(path, p2) && hasExactComponent(path, p3) {
+		return 1, p1, true
+	}
+	return 0, "", false
+}
+
+func checkPS2Version2(path string) (int, string, bool) {
+	p1 := filepath.Join("ffx_ps2")
+	p2 := filepath.Join("ffx2")
+	p3 := filepath.Join("master")
+	if hasExactComponent(path, p1) && hasExactComponent(path, p2) && hasExactComponent(path, p3) {
+		return 2, p1, true
+	}
+	return 0, "", false
+}
+
+func checkDataVersion1(path string) (int, string, bool) {
+	p1 := filepath.Join("ffx_data")
+	p2 := filepath.Join("gamedata")
+	p3 := filepath.Join("ps3data")
+	if hasExactComponent(path, p1) && hasExactComponent(path, p2) && hasExactComponent(path, p3) {
+		return 1, p1, true
+	}
+	return 0, "", false
+}
+
+func checkDataVersion2(path string) (int, string, bool) {
+	p1 := filepath.Join("ffx-2_data")
+	p2 := filepath.Join("gamedata")
+	p3 := filepath.Join("ps3data")
+	if hasExactComponent(path, p1) && hasExactComponent(path, p2) && hasExactComponent(path, p3) {
+		return 2, p1, true
+	}
+	return 0, "", false
+}
+
+// CheckFFXPath resolves the given path to its absolute form and then validates it
+// by running a series of checks for known PS2 and Data version patterns. If one of
+// the checks succeeds, the function returns the detected version number along with
+// a nil error. If no check passes, it returns 0 and an error indicating that the
+// supplied path does not conform to a valid spira us path.
+func CheckFFXPath(path string) (int, error) {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return 0, fmt.Errorf("error getting absolute path: %s", err.Error())
+	}
+
+	checks := []func(string) (int, string, bool){
+		checkPS2Version1,
+		checkPS2Version2,
+		checkDataVersion1,
+		checkDataVersion2,
+	}
+	for _, check := range checks {
+		if version, _, ok := check(absPath); ok {
+			return version, nil
+		}
+	}
+	return 0, fmt.Errorf("not a valid spira us path: %s", path)
+}
+
+// RelativePathFromMatch converts the given file path into its absolute path form,
+// then inspects it against a series of predefined checks (such as checkPS2Version1,
+// checkPS2Version2, checkDataVersion1, and checkDataVersion2) to determine if it contains
+// a valid segment indicative of a recognized spira us path.
+// 
+// If a matching segment is found, the function extracts and returns the portion of the absolute path
+// starting from this segment (including the trailing path separator). Otherwise, it returns an error
+// indicating that the provided path is not a valid spira us path.
+// 
+// Parameters:
+//   path - A string representing the file system path to be processed.
+// 
+// Returns:
+//   A string containing the relative path starting from the matched segment, or an error if the
+//   path does not conform to any of the expected spira us path formats.
+func RelativePathFromMatch(path string) (string, error) {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	checks := []func(string) (int, string, bool){
+		checkPS2Version1,
+		checkPS2Version2,
+		checkDataVersion1,
+		checkDataVersion2,
+	}
+	for _, check := range checks {
+		if _, seg, ok := check(absPath); ok && seg != "" {
+			idx := strings.Index(absPath, seg+string(os.PathSeparator))
+			if idx != -1 {
+				return absPath[idx:], nil
+			}
+		}
+	}
+	return "", fmt.Errorf("not a valid spira us path: %s", path)
 }
