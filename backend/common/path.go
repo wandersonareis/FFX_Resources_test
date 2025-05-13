@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"slices"
 )
 
 func sanitizationPath(path string) string {
@@ -145,50 +146,6 @@ func MakeRelativePath(fromPath, toPath string) string {
 	result := strings.TrimPrefix(from, to)
 	return strings.TrimPrefix(result, string(os.PathSeparator))
 }
-
-// ContainsNewUSPCPath checks if the provided path contains the required sequence
-// for a valid Spira US path. The required sequence is "ffx_ps2/ffx2/master/new_uspc".
-// If the required sequence is not found in the provided path, an error is returned.
-//
-// Parameters:
-//   - path: The path to be checked.
-//
-// Returns:
-//   - error: An error indicating that the path is not a valid Spira US path, or nil if the path is valid.
-func ContainsNewUSPCPath(path string) error {
-	cPath := filepath.Clean(path)
-
-	requiredSequence := filepath.Join("ffx_ps2", "ffx2", "master", "new_uspc")
-	requiredPath := filepath.Join(cPath, requiredSequence)
-
-	if !IsPathExists(requiredPath) {
-		return fmt.Errorf("is not a valid spira us path: %s", path)
-	}
-
-	return nil
-}
-
-// ContainsGameResourcesPath checks if the provided path contains the required game resources path.
-// It constructs the required path by joining the provided path with the sequence "ffx-2_data/gamedata/ps3data".
-// If the constructed path does not exist, it returns an error indicating that the path is not a valid Spira game resources US path.
-// Otherwise, it returns nil.
-//
-// Parameters:
-//   - path: The base path to check.
-//
-// Returns:
-//   - error: An error if the required path does not exist, otherwise nil.
-func ContainsGameResourcesPath(path string) error {
-	cPath := filepath.Clean(path)
-
-	requiredSequence := filepath.Join("ffx-2_data", "gamedata", "ps3data")
-	requiredPath := filepath.Join(cPath, requiredSequence)
-
-	if !IsPathExists(requiredPath) {
-		return fmt.Errorf("is not a valid spira game resources us path: %s", path)
-	}
-
-	return nil
 
 func hasExactComponent(path, component string) bool {
 	clean := filepath.Clean(path)
