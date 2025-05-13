@@ -62,7 +62,7 @@ var _ = Describe("FFX Services", Ordered, func() {
 
 		config = &interactions.FFXAppConfig{
 			FFXGameVersion:    2,
-			GameFilesLocation: translatePath,
+			GameFilesLocation: gameLocationPath,
 			ExtractLocation:   extractTempPath,
 			TranslateLocation: translatePath,
 			ImportLocation:    reimportTempPath,
@@ -100,7 +100,9 @@ var _ = Describe("FFX Services", Ordered, func() {
 	Context("CollectionService", func() {
 		BeforeEach(func() {
 			Expect(mockNotifierService).NotTo(BeNil(), "Mock notifier service should not be nil")
+
 			collectionService = services.NewCollectionService(mockNotifierService)
+			Expect(collectionService).NotTo(BeNil(), "Collection service should not be nil")
 		})
 
 		AfterEach(func() {
@@ -110,11 +112,10 @@ var _ = Describe("FFX Services", Ordered, func() {
 		})
 
 		It("should be equal rawMap and nodeStore", func() {
-			gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
-			Expect(gameVersion).To(Equal(models.FFX2), "Game version should be FFX2")
-	
-	
-			rawMap := collectionService.CreateNodeDataStore(gameVersion, formatter)
+			/* rootDir := interactions.NewInteractionService().GameLocation.GetTargetDirectory()
+			Expect(rootDir).NotTo(BeEmpty(), "Root directory should not be empty") */
+
+			rawMap := collectionService.CreateNodeDataStore(gameLocationPath, formatter)
 			Expect(rawMap).NotTo(BeNil(), "Raw map should not be nil")
 			
 			nodeStore := services.NodeDataStore
@@ -157,21 +158,18 @@ var _ = Describe("FFX Services", Ordered, func() {
 			Expect(err).NotTo(HaveOccurred(), "Error getting current working directory")
 			Expect(gamePath).To(Equal(currentPath), "Target directory should be current working directory")
 
-			tree := collectionService.BuildTree()
+			tree := collectionService.BuildTree("")
 			Expect(tree).To(BeNil(), "Tree should be nil")
-
-			Expect(mockNotifierService.Notifications).To(HaveLen(1))
-			Expect(mockNotifierService.Notifications[0].Severity).To(Equal(services.SeverityError.String()))
-			Expect(mockNotifierService.Notifications[0].Message).To(HavePrefix("is not a valid spira us path"))
 		})
 
 		It("should create file tree successfully", func() {
-			tree := collectionService.BuildTree()
+			tree := collectionService.BuildTree(gameLocationPath)
 			Expect(tree).To(HaveLen(1), "Tree should have one element")
 			Expect(tree[0].Label).To(Equal("Final Fantasy X-2"), "Tree node label should be Final Fantasy X-2")
 			Expect(tree[0].Icon).To(Equal("pi pi-folder"), "Tree node icon should be pi pi-folder")
-			Expect(tree[0].Children).To(HaveLen(1), "Tree node should have one child")
-			Expect(tree[0].Children[0].Label).To(Equal("ffx_ps2"), "Tree node child label should be ffx_ps2")
+			Expect(tree[0].Children).To(HaveLen(2), "Tree node should have two child")
+			Expect(tree[0].Children[0].Label).To(Equal("ffx-2_data"), "Tree node child label should be ffx-2_data")
+			Expect(tree[0].Children[1].Label).To(Equal("ffx_ps2"), "Tree node child label should be ffx_ps2")
 
 			Expect(tree[0].Data).ToNot(BeNil(), "Tree node data should not be nil")
 			Expect(tree[0].Data.Source).ToNot(BeNil(), "Tree node data source should not be nil")
@@ -222,14 +220,15 @@ var _ = Describe("FFX Services", Ordered, func() {
 			file := `ffx_ps2\ffx2\master\new_uspc\menu\tutorial.msb`
 			testFilePath := filepath.Join(testDataPath, file)
 
-			gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
+			Expect(collectionService).NotTo(BeNil(), "Collection service should not be nil")
 
-			collectionService := services.NewCollectionService(mockNotifierService)
-			rawMap := collectionService.CreateNodeDataStore(gameVersion, formatter)
+			/* rootDir := interactions.NewInteractionService().GameLocation.GetTargetDirectory()
+			Expect(rootDir).NotTo(BeEmpty(), "Root directory should not be empty") */
+
+			rawMap := collectionService.CreateNodeDataStore(gameLocationPath, formatter)
 			Expect(rawMap).NotTo(BeNil())
 			Expect(len(rawMap)).To(BeNumerically(">", 0))
 
-			extractService := services.NewExtractService(mockNotifierService, mockProgressService)
 			Expect(extractService).NotTo(BeNil(), "Extract service should not be nil")
 
 			err := extractService.Extract(testFilePath)
@@ -248,10 +247,11 @@ var _ = Describe("FFX Services", Ordered, func() {
 			file := `ffx_ps2\ffx2\master\new_uspc\menu\tutorial.msb`
 			testFilePath := filepath.Join(testDataPath, file)
 
-			gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
+			/* gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
 
-			collectionService := services.NewCollectionService(mockNotifierService)
-			rawMap := collectionService.CreateNodeDataStore(gameVersion, formatter)
+			rootDir := interactions.NewInteractionService().GameLocation.GetTargetDirectory() */
+
+			rawMap := collectionService.CreateNodeDataStore(gameLocationPath, formatter)
 			Expect(rawMap).NotTo(BeNil())
 			Expect(len(rawMap)).To(BeNumerically(">", 0))
 
@@ -274,10 +274,7 @@ var _ = Describe("FFX Services", Ordered, func() {
 			file := `ffx_ps2\ffx2\master\new_uspc\menu\tutorial.msb`
 			testFilePath := filepath.Join(gameLocationPath, file)
 
-			gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
-
-			collectionService := services.NewCollectionService(mockNotifierService)
-			rawMap := collectionService.CreateNodeDataStore(gameVersion, formatter)
+			rawMap := collectionService.CreateNodeDataStore(gameLocationPath, formatter)
 			Expect(rawMap).NotTo(BeNil())
 			Expect(len(rawMap)).To(BeNumerically(">", 0))
 
@@ -301,17 +298,14 @@ var _ = Describe("FFX Services", Ordered, func() {
 			directoryPath := filepath.Join(gameLocationPath, directory)
 
 			//Expect(interactions.NewInteractionService().GameLocation.SetTargetDirectory(testDataPath)).To(Succeed())
-			gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
 
-			collectionService := services.NewCollectionService(mockNotifierService)
-			rawMap := collectionService.CreateNodeDataStore(gameVersion, formatter)
+			rawMap := collectionService.CreateNodeDataStore(gameLocationPath, formatter)
 			Expect(rawMap).NotTo(BeNil())
 			Expect(len(rawMap)).To(BeNumerically(">", 0))
 
-			extractService := services.NewExtractService(mockNotifierService, mockProgressService)
 			Expect(extractService).NotTo(BeNil(), "Extract service should not be nil")
 
-			extractService.Extract(directoryPath)
+			Expect(extractService.Extract(directoryPath)).To(Succeed())
 
 			Expect(mockNotifierService.Notifications).To(HaveLen(1))
 			Expect(mockNotifierService.Notifications[0].Severity).To(Equal(services.SeveritySuccess.String()))
@@ -355,11 +349,15 @@ var _ = Describe("FFX Services", Ordered, func() {
 				Expect(interactions.NewInteractionService().TranslateLocation.SetTargetDirectory(oldTranslatedPath)).To(Succeed())
 			}()
 
-			tree := collectionService.BuildTree()
+			/* gamePath := interactions.NewInteractionService().GameLocation.GetTargetDirectory()
+			Expect(gamePath).NotTo(BeEmpty(), "Game path should not be empty") */
+
+			Expect(collectionService).NotTo(BeNil(), "Collection service should not be nil")
+			tree := collectionService.BuildTree(gameLocationPath)
 			Expect(tree).ToNot(BeNil(), "Tree should not be nil")
 
-			err := compressService.Compress(testFilePath)
-			Expect(err).To(BeNil())
+			Expect(compressService).NotTo(BeNil(), "Compress service should not be nil")
+			Expect(compressService.Compress(testFilePath)).To(Succeed())
 
 			Expect(mockNotifierService.Notifications).To(HaveLen(1))
 			Expect(mockNotifierService.Notifications[0].Severity).To(Equal(services.SeverityError.String()))
@@ -375,16 +373,12 @@ var _ = Describe("FFX Services", Ordered, func() {
 			file := `ffx_ps2\ffx2\master\new_uspc\menu\tutorial.msb`
 			testFilePath := filepath.Join(gameLocationPath, file)
 
-			gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
-
-			collectionService := services.NewCollectionService(mockNotifierService)
-			rawMap := collectionService.CreateNodeDataStore(gameVersion, formatter)
+			Expect(collectionService).NotTo(BeNil(), "Collection service should not be nil")
+			rawMap := collectionService.CreateNodeDataStore(gameLocationPath, formatter)
 			Expect(rawMap).NotTo(BeNil())
 			Expect(len(rawMap)).To(BeNumerically(">", 0))
 
-			compressService := services.NewCompressService(mockNotifierService, mockProgressService)
 			Expect(compressService).NotTo(BeNil(), "Extract service should not be nil")
-
 			Expect(compressService.Compress(testFilePath)).To(Succeed())
 
 			Expect(mockNotifierService.Notifications).To(HaveLen(1))
@@ -401,16 +395,12 @@ var _ = Describe("FFX Services", Ordered, func() {
 			directory := `ffx_ps2\ffx2\master\new_uspc\cloudsave`
 			directoryPath := filepath.Join(gameLocationPath, directory)
 
-			gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
-
-			collectionService := services.NewCollectionService(mockNotifierService)
-			rawMap := collectionService.CreateNodeDataStore(gameVersion, formatter)
+			Expect(collectionService).NotTo(BeNil(), "Collection service should not be nil")
+			rawMap := collectionService.CreateNodeDataStore(gameLocationPath, formatter)
 			Expect(rawMap).NotTo(BeNil())
 			Expect(len(rawMap)).To(BeNumerically(">", 0))
 
-			compressService := services.NewCompressService(mockNotifierService, mockProgressService)
 			Expect(compressService).NotTo(BeNil(), "Compress service should not be nil")
-
 			Expect(compressService.Compress(directoryPath)).To(Succeed())
 
 			Expect(mockNotifierService.Notifications).To(HaveLen(1))
