@@ -13,7 +13,7 @@ type Source struct {
 }
 
 var ffx2FileDuplicates = &sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		ffx2Duplicates := core.NewFfx2Duplicate()
 		ffx2Duplicates.AddFfx2TextDuplicate()
 		return ffx2Duplicates
@@ -48,6 +48,10 @@ func (g *Source) GetNameWithoutExtension() string {
 	return g.FileInfo.NamePrefix
 }
 
+func (g *Source) GetExtension() string {
+	return g.FileInfo.Extension
+}
+
 func (g *Source) GetParentPath() string {
 	return g.FileInfo.Parent
 }
@@ -74,6 +78,10 @@ func (g *Source) GetSize() int64 {
 
 func (g *Source) GetType() models.NodeType {
 	return g.FileInfo.Type
+}
+
+func (g *Source) IsDir() bool {
+	return g.FileInfo.IsDir
 }
 
 func (g *Source) PopulateDuplicatesFiles(gameVersion models.GameVersion) {

@@ -13,15 +13,17 @@ type (
 
 	ISource interface {
 		Get() models.SpiraFileInfo
+		GetName() string
+		GetNameWithoutExtension() string
+		GetExtension() string
 		GetPath() string
 		SetPath(path string)
 		GetRelativePath() string
 		SetRelativePath(relativePath string)
-		GetName() string
-		GetNameWithoutExtension() string
 		GetParentPath() string
 		GetSize() int64
 		GetType() models.NodeType
+		IsDir() bool
 		PopulateDuplicatesFiles(gamePart models.GameVersion)
 	}
 

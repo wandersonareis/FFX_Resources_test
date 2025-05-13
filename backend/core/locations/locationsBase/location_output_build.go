@@ -43,7 +43,7 @@ func (lb *LocationBase) buildTargetOutput(
 
 	strategy.Process(lb, source, formatter)
 
-	if !source.Get().IsDir && common.IsValidFilePath(lb.TargetFile) {
+	if !source.IsDir() && common.IsValidFilePath(lb.TargetFile) {
 		lb.TargetFileName = filepath.Base(lb.TargetFile)
 	}
 
