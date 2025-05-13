@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -116,7 +117,25 @@ func (a *App) initServices(ctx context.Context) {
 }
 
 func (a *App) BuildTree() []spira.TreeNode {
-	tree := a.CollectionService.BuildTree()
+	var tree []spira.TreeNode
+
+	root := interactions.NewInteractionService().GameLocation.GetTargetDirectory()
+	if root == "" {
+		return nil
+	}
+
+	dirs, err := os.ReadDir(root)
+	if err != nil {
+		a.noticationService.NotifyError(fmt.Errorf("failed to read root directory: %s", err))
+		return tree
+	}
+
+	for _, d := range dirs {
+		if d.IsDir() {
+			buildTreeNode := a.CollectionService.BuildTree(filepath.Join(root, d.Name()))
+			tree = append(tree, buildTreeNode...)
+		}
+	}
 
 	if err := common.CheckArgumentNil(tree, "BuildTree"); err != nil {
 		a.noticationService.NotifyError(fmt.Errorf("failed to build files tree"))
@@ -161,8 +180,6 @@ func (a *App) WriteTextFile(file string, text string) {
 	err := os.WriteFile(file, []byte(text), 0644)
 	if err != nil {
 		a.noticationService.NotifyError(err)
-
-		//runtime.EventsEmit(interactions.NewInteractionService().Ctx, "Notify", err.Error())
 	}
 }
 
