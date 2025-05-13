@@ -3,39 +3,32 @@ package spira
 import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats"
-	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/models"
 	"io/fs"
 	"path/filepath"
 )
 
-func CreateNodeMap(gameVersion models.GameVersion, formatter interfaces.ITextFormatter) fileFormats.TreeMapNode {
+func CreateNodeMap(rootDir string, formatter interfaces.ITextFormatter) fileFormats.TreeMapNode {
 	nodeMap := make(fileFormats.TreeMapNode, 1800)
 
-	rootDir := interactions.NewInteractionService().GameLocation.GetTargetDirectory()
 	if rootDir == "" {
 		return nil
 	}
 
-	entrySource, err := locations.NewSource(rootDir)
+	entrySource, err := newEntrySource(rootDir)
 	if err != nil {
 		return nil
 	}
 
-	entrySource.PopulateDuplicatesFiles(gameVersion)
+	prepareSource(entrySource)
 
-	destination := locations.NewDestination()
-	destination.InitializeLocations(entrySource, formatter)
+	destination, err := newDestination(entrySource, formatter)
+	if err != nil {
+		return nil
+	}
 
-	rootMapNode := &fileFormats.MapNode{}
-
-	rootMapNode.SetNodeKey(rootDir)
-
-	addTreeNodeLabel(rootMapNode, gameVersion)
-	addTreeNodeIcon(rootMapNode, entrySource.GetType())
-	addTreeNodeData(rootMapNode, entrySource, destination)
-
+	rootMapNode := createRootMapNode(rootDir, entrySource, destination)
 	nodeMap[rootDir] = rootMapNode
 
 	err = filepath.WalkDir(rootDir, func(path string, info fs.DirEntry, err error) error {
@@ -43,7 +36,7 @@ func CreateNodeMap(gameVersion models.GameVersion, formatter interfaces.ITextFor
 			return err
 		}
 
-		entrySource, err := locations.NewSource(path)
+		entrySource, err := newEntrySource(path)
 		if err != nil {
 			return err
 		}
@@ -52,10 +45,12 @@ func CreateNodeMap(gameVersion models.GameVersion, formatter interfaces.ITextFor
 			return nil
 		}
 
-		entrySource.PopulateDuplicatesFiles(gameVersion)
+		prepareSource(entrySource)
 
-		destination := locations.NewDestination()
-		destination.InitializeLocations(entrySource, formatter)
+		destination, err := newDestination(entrySource, formatter)
+		if err != nil {
+			return err
+		}
 
 		childNode := &fileFormats.MapNode{}
 
@@ -80,6 +75,33 @@ func CreateNodeMap(gameVersion models.GameVersion, formatter interfaces.ITextFor
 	}
 
 	return nodeMap
+}
+
+func newEntrySource(rootDir string) (interfaces.ISource, error) {
+	return locations.NewSource(rootDir)
+}
+
+func prepareSource(src interfaces.ISource) {
+	if src.GetType() == models.Dialogs {
+		src.PopulateDuplicatesFiles(src.Get().Version)
+	}
+}
+
+func newDestination(src interfaces.ISource, formatter interfaces.ITextFormatter) (locations.IDestination, error) {
+	dest := locations.NewDestination()
+	if err := dest.InitializeLocations(src, formatter); err != nil {
+		return nil, err
+	}
+	return dest, nil
+}
+
+func createRootMapNode(rootDir string, src interfaces.ISource, dest locations.IDestination) *fileFormats.MapNode {
+	rootMapNode := &fileFormats.MapNode{}
+	rootMapNode.SetNodeKey(rootDir)
+	addTreeNodeLabel(rootMapNode, src.Get().Version)
+	addTreeNodeIcon(rootMapNode, src.GetType())
+	addTreeNodeData(rootMapNode, src, dest)
+	return rootMapNode
 }
 
 func BuildTreeFromMap(nodeMap fileFormats.TreeMapNode, rootKey string) *TreeNode {

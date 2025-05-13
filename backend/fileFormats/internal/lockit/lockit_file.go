@@ -6,7 +6,6 @@ import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/baseFormats"
 	"ffxresources/backend/fileFormats/internal/lockit/internal/integrity"
-	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/loggingService"
@@ -24,10 +23,6 @@ type LockitFile struct {
 }
 
 func NewLockitFile(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
-	destination.CreateRelativePath(source, interactions.NewInteractionService().GameLocation.GetTargetDirectory())
-
-	destination.InitializeLocations(source, formatters.NewTxtFormatter())
-
 	options := core.NewLockitFileOptions(interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber())
 
 	return &LockitFile{
