@@ -83,7 +83,7 @@ func newEntrySource(rootDir string) (interfaces.ISource, error) {
 
 func prepareSource(src interfaces.ISource) {
 	if src.GetType() == models.Dialogs {
-		src.PopulateDuplicatesFiles(src.Get().Version)
+		src.PopulateDuplicatesFiles()
 	}
 }
 

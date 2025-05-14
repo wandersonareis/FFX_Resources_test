@@ -121,8 +121,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 			source, err := locations.NewSource(testFilePath)
 			Expect(err).To(BeNil())
 
-			gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
-			source.PopulateDuplicatesFiles(gameVersion)
+			source.PopulateDuplicatesFiles()
 
 			Expect(source.Get().ClonedItems).To(HaveLen(expectedCount))
 		}
@@ -239,8 +238,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 
 			Expect(destination).NotTo(BeNil())
 
-			gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
-			source.PopulateDuplicatesFiles(gameVersion)
+			source.PopulateDuplicatesFiles()
 
 			Expect(testDlgCompressor.Compress(source, destination)).To(Succeed())
 			Expect(common.CheckPathExists(destination.Import().GetTargetFile())).To(Succeed())

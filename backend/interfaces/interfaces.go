@@ -24,7 +24,7 @@ type (
 		GetSize() int64
 		GetType() models.NodeType
 		IsDir() bool
-		PopulateDuplicatesFiles(gamePart models.GameVersion)
+		PopulateDuplicatesFiles()
 	}
 
 	IFileProcessor interface {
