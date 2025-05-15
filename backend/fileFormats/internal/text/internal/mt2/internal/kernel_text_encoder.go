@@ -1,11 +1,12 @@
 package internal
 
 import (
+	"ffxresources/backend/common"
 	"ffxresources/backend/core/command"
 	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
-	textsEncoding "ffxresources/backend/fileFormats/internal/text/internal/encoding"
 	"ffxresources/backend/interfaces"
+	"ffxresources/backend/models"
 	"fmt"
 )
 
@@ -14,12 +15,12 @@ type IKrnlEncoder interface {
 }
 
 type krnlEncoder struct {
-	TextEncoder textsEncoding.ITextEncoder
+	commandRunner command.ICommandRunner
 }
 
 func NewKrnlEncoder() IKrnlEncoder {
 	return &krnlEncoder{
-		TextEncoder: textsEncoding.NewTextEncoder(command.NewCommandRunner()),
+		commandRunner: command.NewCommandRunner(),
 	}
 }
 
@@ -35,9 +36,37 @@ func (e *krnlEncoder) Encoder(
 	}
 
 	sourceFile := source.GetPath()
+	sourceFileVersion := source.GetVersion()
 
-	if err := e.TextEncoder.EncodeKernel(sourceFile, translatedFile, outputFile, textEncoding); err != nil {
+	if err := e.encodeKernel(sourceFile, translatedFile, outputFile, textEncoding, sourceFileVersion); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (d *krnlEncoder) encodeKernel(sourceFile, targetFile, outputFile string, encodingInfo ffxencoding.IFFXTextKrnlEncoding, gameVersion models.GameVersion) error {
+	encodingFilePath := encodingInfo.GetEncodingFile()
+	if encodingFilePath == "" {
+		return fmt.Errorf("kernel encoding file path is empty")
+	}
+
+	executablePath, err := encodingInfo.GetKrnlHandler().GetKernelTextHandler(gameVersion)
+	if err != nil {
+		return fmt.Errorf("failed to get kernel handler executable: %w", err)
+	}
+
+	if executablePath == "" {
+		return fmt.Errorf("kernel handler executable path is empty")
+	}
+
+	if err := d.commandRunner.RunTextEncodingTool(executablePath, sourceFile, targetFile, outputFile, encodingFilePath); err != nil {
+		return fmt.Errorf("failed to encode kernel file: %w", err)
+	}
+
+	// Check if the output file was created successfully
+	if err := common.CheckPathExists(outputFile); err != nil {
+		return fmt.Errorf("output file was not created: %w", err)
 	}
 
 	return nil

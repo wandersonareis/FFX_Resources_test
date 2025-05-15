@@ -23,6 +23,7 @@ type (
 		GetParentPath() string
 		GetSize() int64
 		GetType() models.NodeType
+		GetVersion() models.GameVersion
 		IsDir() bool
 		PopulateDuplicatesFiles()
 	}

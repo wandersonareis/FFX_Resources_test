@@ -1,11 +1,12 @@
 package internal
 
 import (
+	"ffxresources/backend/common"
 	"ffxresources/backend/core/command"
 	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
-	textsEncoding "ffxresources/backend/fileFormats/internal/text/internal/encoding"
 	"ffxresources/backend/interfaces"
+	"fmt"
 )
 
 type IKrnlDecoder interface {
@@ -13,12 +14,12 @@ type IKrnlDecoder interface {
 }
 
 type krnlDecoder struct {
-	TextDecoder textsEncoding.ITextDecoder
+	CommandRunner command.ICommandRunner
 }
 
 func NewKrnlDecoder() IKrnlDecoder {
 	return &krnlDecoder{
-		TextDecoder: textsEncoding.NewTextDecoder(command.NewCommandRunner()),
+		CommandRunner: command.NewCommandRunner(),
 	}
 }
 
@@ -26,12 +27,38 @@ func (d *krnlDecoder) Decoder(source interfaces.ISource, destination locations.I
 	encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextKrnlEncoding()
 	defer encoding.Dispose()
 
-	extractLocation := destination.Extract()
+	if err := d.decodeKernel(source, destination.Extract().GetTargetFile(), encoding); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *krnlDecoder) decodeKernel(source interfaces.ISource, targetFile string, encodingInfo ffxencoding.IFFXTextKrnlEncoding) error {
+	encodingFilePath := encodingInfo.GetEncodingFile()
+	if encodingFilePath == "" {
+		return fmt.Errorf("kernel encoding file path is empty")
+	}
 
 	sourceFile := source.GetPath()
+	sourceFileVersion := source.GetVersion()
 
-	if err := d.TextDecoder.DecodeKernel(sourceFile, extractLocation.GetTargetFile(), encoding); err != nil {
-		return err
+	executablePath, err := encodingInfo.GetKrnlHandler().GetKernelTextHandler(sourceFileVersion)
+	if err != nil {
+		return fmt.Errorf("failed to get kernel handler executable: %w", err)
+	}
+
+	if executablePath == "" {
+		return fmt.Errorf("kernel handler executable path is empty")
+	}
+
+	if err := d.CommandRunner.RunTextDecodingTool(executablePath, sourceFile, targetFile, encodingFilePath); err != nil {
+		return fmt.Errorf("failed to decode kernel file: %w", err)
+	}
+
+	// Check if the target file was created successfully
+	if err := common.CheckPathExists(targetFile); err != nil {
+		return fmt.Errorf("target file was not created: %w", err)
 	}
 
 	return nil

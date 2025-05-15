@@ -77,6 +77,10 @@ func (g *Source) GetType() models.NodeType {
 	return g.FileInfo.Type
 }
 
+func (g *Source) GetVersion() models.GameVersion {
+	return g.FileInfo.Version
+}
+
 func (g *Source) IsDir() bool {
 	return g.FileInfo.IsDir
 }

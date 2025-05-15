@@ -3,7 +3,6 @@ package textVerifier
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"fmt"
 )
@@ -24,14 +23,13 @@ func (ev *textExtractionVerificationStrategy) Verify(source interfaces.ISource, 
 		return err
 	}
 
+	
+	sourceFile := source.GetPath()
+	sourceFileType := source.GetType()
+	sourceFileVersion := source.GetVersion()
 	extractedFile := extractLocation.GetTargetFile()
 
-	sourceFileType := source.GetType()
-	sourceFile := source.GetPath()
-
-	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
-
-	if err := ev.FileSegmentCounter.CompareTextSegmentsCount(sourceFile, extractedFile, sourceFileType, gameVersion); err != nil {
+	if err := ev.FileSegmentCounter.CompareTextSegmentsCount(sourceFile, extractedFile, sourceFileType, sourceFileVersion); err != nil {
 		if err := common.RemoveFileWithRetries(extractedFile, 5, 5); err != nil {
 			return fmt.Errorf("failed to remove broken text file: %s", extractedFile)
 		}
