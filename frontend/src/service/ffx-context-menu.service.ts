@@ -9,7 +9,6 @@ import {
 import { getFileInfoFromNode } from '../utils/utils';
 import { ExtractService } from './extract.service';
 import { CompressService } from './compress.service';
-import { EventsEmit } from '../../wailsjs/runtime';
 import { fileFormats } from '../../wailsjs/go/models';
 import { ErrorHandlerService } from './error-handler.service';
 
@@ -76,7 +75,7 @@ export class FfxContextMenuService {
       const fileInfo: fileFormats.TreeNodeData | null = getFileInfoFromNode(
         this.file()
       );
-      
+
       if (!fileInfo || !fileInfo.source) return;
 
       const filePath = fileInfo.source.path;
