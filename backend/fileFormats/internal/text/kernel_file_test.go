@@ -7,7 +7,7 @@ import (
 	"ffxresources/backend/fileFormats/internal/text"
 	"ffxresources/backend/fileFormats/internal/text/internal/lib"
 	"ffxresources/backend/fileFormats/internal/text/internal/mt2"
-	"ffxresources/backend/fileFormats/internal/text/textVerifier"
+	"ffxresources/backend/fileFormats/internal/text/textverify"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
@@ -32,7 +32,7 @@ var _ = Describe("KrnlFile", Ordered, func() {
 		destination           locations.IDestination
 		krnlCompressor        mt2.IKrnlCompressor
 		krnlExtractor         mt2.IKrnlExtractor
-		integrityVerification textVerifier.ITextVerificationService
+		integrityVerification textverify.ITextVerificationService
 		rootDir               string
 		binaryPath            string
 		gameVersionDir        string
@@ -196,7 +196,7 @@ var _ = Describe("KrnlFile", Ordered, func() {
 		BeforeEach(func() {
 			krnlExtractor = nil
 			krnlCompressor = nil
-			integrityVerification = textVerifier.NewTextVerificationService(log)
+			integrityVerification = textverify.NewTextVerificationService(log)
 			Expect(integrityVerification).NotTo(BeNil())
 			mockNotifierService = testcommon.NewMockNotifier()
 			Expect(mockNotifierService).NotTo(BeNil())
@@ -224,7 +224,7 @@ var _ = Describe("KrnlFile", Ordered, func() {
 
 			Expect(testcommon.RemoveFirstNLines(destination.Extract().GetTargetFile(), 4)).To(Succeed())
 
-			err = integrityVerification.Verify(source, destination, textVerifier.NewTextExtractionVerificationStrategy())
+			err = integrityVerification.Verify(source, destination, textverify.NewTextExtractionVerificationStrategy())
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("source and target segments count mismatch"))
 
@@ -238,7 +238,7 @@ var _ = Describe("KrnlFile", Ordered, func() {
 		BeforeEach(func() {
 			krnlExtractor = nil
 			krnlCompressor = nil
-			integrityVerification = textVerifier.NewTextVerificationService(log)
+			integrityVerification = textverify.NewTextVerificationService(log)
 			Expect(integrityVerification).NotTo(BeNil())
 			mockNotifierService = testcommon.NewMockNotifier()
 			Expect(mockNotifierService).NotTo(BeNil())
@@ -264,7 +264,7 @@ var _ = Describe("KrnlFile", Ordered, func() {
 			Expect(krnlFile).NotTo(BeNil())
 			Expect(krnlFile.Extract()).To(Succeed())
 
-			Expect(integrityVerification.Verify(source, destination, textVerifier.NewTextExtractionVerificationStrategy())).To(Succeed())
+			Expect(integrityVerification.Verify(source, destination, textverify.NewTextExtractionVerificationStrategy())).To(Succeed())
 			Expect(mockNotifierService.Notifications).To(HaveLen(0))
 		})
 
@@ -285,7 +285,7 @@ var _ = Describe("KrnlFile", Ordered, func() {
 			Expect(krnlFile.Extract()).To(Succeed())
 			Expect(krnlFile.Compress()).To(Succeed())
 
-			Expect(integrityVerification.Verify(source, destination, textVerifier.NewTextCompressionVerificationStrategy())).To(Succeed())
+			Expect(integrityVerification.Verify(source, destination, textverify.NewTextCompressionVerificationStrategy())).To(Succeed())
 			Expect(mockNotifierService.Notifications).To(HaveLen(0))
 			Expect(common.CheckPathExists(destination.Import().GetTargetFile())).To(Succeed(), "File should exist: %s", destination.Import().GetTargetFile())
 			Expect(common.CheckPathExists(destination.Extract().GetTargetFile())).To(Succeed(), "File should exist: %s", destination.Extract().GetTargetFile())

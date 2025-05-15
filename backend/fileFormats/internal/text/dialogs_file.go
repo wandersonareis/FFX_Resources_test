@@ -5,7 +5,7 @@ import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/text/internal/dlg"
 	"ffxresources/backend/fileFormats/internal/text/internal/lib"
-	"ffxresources/backend/fileFormats/internal/text/textVerifier"
+	"ffxresources/backend/fileFormats/internal/text/textverify"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/loggingService"
 	"fmt"
@@ -71,7 +71,7 @@ func (d *DialogsFile) extractVerify() error {
 	verifierInstance := dlg.RentTextVerifier()
 	defer dlg.ReturnTextVerifier(verifierInstance)
 
-	if err := verifierInstance.Verify(d.source, d.destination, textVerifier.NewTextExtractionVerificationStrategy()); err != nil {
+	if err := verifierInstance.Verify(d.source, d.destination, textverify.NewTextExtractionVerificationStrategy()); err != nil {
 		d.log.Error(err, "Error verifying dialog file: %s", d.source.GetName())
 
 		return fmt.Errorf("failed to integrity dialog file: %s", d.source.GetName())
@@ -111,7 +111,7 @@ func (d *DialogsFile) Compress() error {
 	verifierInstance := dlg.RentTextVerifier()
 	defer dlg.ReturnTextVerifier(verifierInstance)
 
-	if err := verifierInstance.Verify(tmpSource, tmpDestination, textVerifier.NewTextCompressionVerificationStrategy()); err != nil {
+	if err := verifierInstance.Verify(tmpSource, tmpDestination, textverify.NewTextCompressionVerificationStrategy()); err != nil {
 		d.log.Error(err, "Error verifying dialog file: %s", d.destination.Import().GetTargetFile())
 		return fmt.Errorf("failed to integrity dialog file: %s", d.source.GetName())
 	}
@@ -137,7 +137,7 @@ func (d *DialogsFile) ensureTranslatedText() error {
 		return fmt.Errorf("failed to check target file path: %s", err)
 	}
 
-	if err := textVerifierInstance.Verify(d.source, d.destination, textVerifier.NewTextSegmentsVerificationStrategy()); err != nil {
+	if err := textVerifierInstance.Verify(d.source, d.destination, textverify.NewTextSegmentsVerificationStrategy()); err != nil {
 		return fmt.Errorf("translated file segments count mismatch: %s", targetFile)
 	}
 

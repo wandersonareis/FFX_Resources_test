@@ -1,7 +1,7 @@
 package dlg
 
 import (
-	"ffxresources/backend/fileFormats/internal/text/textVerifier"
+	"ffxresources/backend/fileFormats/internal/text/textverify"
 	"ffxresources/backend/loggingService"
 	"sync"
 )
@@ -75,16 +75,16 @@ func NewTextVerifierPool(logger loggingService.ILoggerService) *TextVerifierPool
 	}
 
 	tv.pool.New = func() interface{} {
-		return textVerifier.NewTextVerificationService(logger)
+		return textverify.NewTextVerificationService(logger)
 	}
 	return tv
 }
 
-func (tv *TextVerifierPool) Rent() textVerifier.ITextVerificationService {
-	return tv.pool.Get().(textVerifier.ITextVerificationService)
+func (tv *TextVerifierPool) Rent() textverify.ITextVerificationService {
+	return tv.pool.Get().(textverify.ITextVerificationService)
 }
 
-func (tv *TextVerifierPool) Return(textVerifier textVerifier.ITextVerificationService) {
+func (tv *TextVerifierPool) Return(textVerifier textverify.ITextVerificationService) {
 	tv.pool.Put(textVerifier)
 }
 
@@ -122,10 +122,10 @@ func ReturnDlgCompressor(compressor IDlgCompressor) {
 	compressorPool.Return(compressor)
 }
 
-func RentTextVerifier() textVerifier.ITextVerificationService {
+func RentTextVerifier() textverify.ITextVerificationService {
 	return textVerifierPool.Rent()
 }
 
-func ReturnTextVerifier(textVerifier textVerifier.ITextVerificationService) {
+func ReturnTextVerifier(textVerifier textverify.ITextVerificationService) {
 	textVerifierPool.Return(textVerifier)
 }

@@ -1,4 +1,4 @@
-package textVerifier
+package textverify
 
 import (
 	"ffxresources/backend/common"

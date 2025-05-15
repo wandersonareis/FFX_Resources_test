@@ -5,7 +5,7 @@ import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/fileFormats/internal/text/internal/lib"
 	"ffxresources/backend/fileFormats/internal/text/internal/mt2"
-	"ffxresources/backend/fileFormats/internal/text/textVerifier"
+	"ffxresources/backend/fileFormats/internal/text/textverify"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/loggingService"
 	"fmt"
@@ -71,7 +71,7 @@ func (k *KernelFile) extractVerify() error {
 	verificationService := mt2.RentTextVerifier()
 	defer mt2.ReturnTextVerifier(verificationService)
 
-	if err := verificationService.Verify(k.source, k.destination, textVerifier.NewTextExtractionVerificationStrategy()); err != nil {
+	if err := verificationService.Verify(k.source, k.destination, textverify.NewTextExtractionVerificationStrategy()); err != nil {
 		return fmt.Errorf("failed to integrity kernel file: %s", k.source.GetName())
 	}
 
@@ -103,7 +103,7 @@ func (k *KernelFile) Compress() error {
 	textVerifierInstance := mt2.RentTextVerifier()
 	defer mt2.ReturnTextVerifier(textVerifierInstance)
 
-	if err := textVerifierInstance.Verify(tmpSource, tmpDestination, textVerifier.NewTextCompressionVerificationStrategy()); err != nil {
+	if err := textVerifierInstance.Verify(tmpSource, tmpDestination, textverify.NewTextCompressionVerificationStrategy()); err != nil {
 		k.log.Error(err, "Error verifying kernel file: %s", k.source.GetName())
 
 		return fmt.Errorf("failed to integrity kernel file: %s", k.source.GetName())

@@ -7,7 +7,7 @@ import (
 	"ffxresources/backend/fileFormats/internal/text"
 	"ffxresources/backend/fileFormats/internal/text/internal/dlg"
 	"ffxresources/backend/fileFormats/internal/text/internal/lib"
-	"ffxresources/backend/fileFormats/internal/text/textVerifier"
+	"ffxresources/backend/fileFormats/internal/text/textverify"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
@@ -32,7 +32,7 @@ func TestDlg(t *testing.T) {
 var _ = Describe("DlgFile", Ordered, func() {
 	var (
 		formatter           interfaces.ITextFormatter
-		testDlgVerifyer     textVerifier.ITextVerificationService
+		testDlgVerifyer     textverify.ITextVerificationService
 		destination         locations.IDestination
 		testDlgCompressor   dlg.IDlgCompressor
 		testDlgExtractor    dlg.IDlgExtractor
@@ -102,7 +102,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 		testDlgCompressor = dlg.NewDlgCompressor(log)
 		Expect(testDlgCompressor).NotTo(BeNil())
 
-		testDlgVerifyer = textVerifier.NewTextVerificationService(log)
+		testDlgVerifyer = textverify.NewTextVerificationService(log)
 		Expect(testDlgVerifyer).NotTo(BeNil())
 
 		mockNotifierService = testcommon.NewMockNotifier()
@@ -290,12 +290,12 @@ var _ = Describe("DlgFile", Ordered, func() {
 			Expect(dlgFile).NotTo(BeNil())
 			Expect(dlgFile.Extract()).To(Succeed())
 
-			dlgIntegrity := textVerifier.NewTextVerificationService(log)
+			dlgIntegrity := textverify.NewTextVerificationService(log)
 			Expect(dlgIntegrity).NotTo(BeNil())
 
 			Expect(testcommon.RemoveFirstNLines(destination.Extract().GetTargetFile(), 4)).To(Succeed())
 
-			err = dlgIntegrity.Verify(source, destination, textVerifier.NewTextExtractionVerificationStrategy())
+			err = dlgIntegrity.Verify(source, destination, textverify.NewTextExtractionVerificationStrategy())
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("source and target segments count mismatch"))
 
@@ -326,7 +326,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 			Expect(dlgFile).NotTo(BeNil())
 			Expect(dlgFile.Extract()).To(Succeed())
 
-			err = testDlgVerifyer.Verify(source, destination, textVerifier.NewTextExtractionVerificationStrategy())
+			err = testDlgVerifyer.Verify(source, destination, textverify.NewTextExtractionVerificationStrategy())
 			Expect(err).To(BeNil())
 		})
 
@@ -347,7 +347,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 			Expect(dlgFile.Extract()).To(Succeed())
 			Expect(dlgFile.Compress()).To(Succeed())
 
-			err = testDlgVerifyer.Verify(source, destination, textVerifier.NewTextCompressionVerificationStrategy())
+			err = testDlgVerifyer.Verify(source, destination, textverify.NewTextCompressionVerificationStrategy())
 			Expect(err).To(BeNil())
 		})
 	})

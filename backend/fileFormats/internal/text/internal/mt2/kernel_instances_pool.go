@@ -1,7 +1,7 @@
 package mt2
 
 import (
-	"ffxresources/backend/fileFormats/internal/text/textVerifier"
+	"ffxresources/backend/fileFormats/internal/text/textverify"
 	"ffxresources/backend/loggingService"
 	"sync"
 )
@@ -75,16 +75,16 @@ func NewTextVerificationServicePool(logger loggingService.ILoggerService) *TextV
 	}
 
 	tv.pool.New = func() any {
-		return textVerifier.NewTextVerificationService(logger)
+		return textverify.NewTextVerificationService(logger)
 	}
 	return tv
 }
 
-func (tv *TextVerificationServicePool) Rent() textVerifier.ITextVerificationService {
-	return tv.pool.Get().(textVerifier.ITextVerificationService)
+func (tv *TextVerificationServicePool) Rent() textverify.ITextVerificationService {
+	return tv.pool.Get().(textverify.ITextVerificationService)
 }
 
-func (tv *TextVerificationServicePool) Return(textVerifier textVerifier.ITextVerificationService) {
+func (tv *TextVerificationServicePool) Return(textVerifier textverify.ITextVerificationService) {
 	tv.pool.Put(textVerifier)
 }
 
@@ -122,10 +122,10 @@ func ReturnKrnlCompressor(compressor IKrnlCompressor) {
 	compressionServicePool.Return(compressor)
 }
 
-func RentTextVerifier() textVerifier.ITextVerificationService {
+func RentTextVerifier() textverify.ITextVerificationService {
 	return textVerificationServicePool.Rent()
 }
 
-func ReturnTextVerifier(textVerifier textVerifier.ITextVerificationService) {
+func ReturnTextVerifier(textVerifier textverify.ITextVerificationService) {
 	textVerificationServicePool.Return(textVerifier)
 }
