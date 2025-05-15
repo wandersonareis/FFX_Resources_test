@@ -8,12 +8,12 @@ import (
 )
 
 type textExtractionVerificationStrategy struct {
-	FileSegmentCounter ISegmentCounter
+	verifyService ITextVerificationService
 }
 
 func NewTextExtractionVerificationStrategy() ITextVerificationStrategy {
 	return &textExtractionVerificationStrategy{
-		FileSegmentCounter: newSegmentCounter(),
+		verifyService: NewTextVerificationService(),
 	}
 }
 
@@ -22,18 +22,22 @@ func (ev *textExtractionVerificationStrategy) Verify(source interfaces.ISource, 
 	if err := extractLocation.Validate(); err != nil {
 		return err
 	}
-
 	
-	sourceFile := source.GetPath()
-	sourceFileType := source.GetType()
-	sourceFileVersion := source.GetVersion()
-	extractedFile := extractLocation.GetTargetFile()
-
-	if err := ev.FileSegmentCounter.CompareTextSegmentsCount(sourceFile, extractedFile, sourceFileType, sourceFileVersion); err != nil {
+	if err := ev.compareTextSegmentsCount(source, destination); err != nil {
+		extractedFile := extractLocation.GetTargetFile()
 		if err := common.RemoveFileWithRetries(extractedFile, 5, 5); err != nil {
 			return fmt.Errorf("failed to remove broken text file: %s", extractedFile)
 		}
 		return err
+	}
+
+	return nil
+}
+
+func (ev *textExtractionVerificationStrategy) compareTextSegmentsCount(source interfaces.ISource, destination locations.IDestination) error {
+	destinationFile := destination.Extract().GetTargetFile()
+	if err := ev.verifyService.Verify(source, destination, NewTextSegmentsVerificationStrategy(destinationFile)); err != nil {
+		return fmt.Errorf("an error occurred while verifying segments count of the extracted file '%s': %v", destinationFile, err)
 	}
 
 	return nil

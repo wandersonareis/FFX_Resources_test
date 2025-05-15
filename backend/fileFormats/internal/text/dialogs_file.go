@@ -137,7 +137,7 @@ func (d *DialogsFile) ensureTranslatedText() error {
 		return fmt.Errorf("failed to check target file path: %s", err)
 	}
 
-	if err := textVerifierInstance.Verify(d.source, d.destination, textverify.NewTextSegmentsVerificationStrategy()); err != nil {
+	if err := textVerifierInstance.Verify(d.source, d.destination, textverify.NewTextSegmentsVerificationStrategy(targetFile)); err != nil {
 		return fmt.Errorf("translated file segments count mismatch: %s", targetFile)
 	}
 

@@ -102,7 +102,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 		testDlgCompressor = dlg.NewDlgCompressor(log)
 		Expect(testDlgCompressor).NotTo(BeNil())
 
-		testDlgVerifyer = textverify.NewTextVerificationService(log)
+		testDlgVerifyer = textverify.NewTextVerificationService()
 		Expect(testDlgVerifyer).NotTo(BeNil())
 
 		mockNotifierService = testcommon.NewMockNotifier()
@@ -290,7 +290,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 			Expect(dlgFile).NotTo(BeNil())
 			Expect(dlgFile.Extract()).To(Succeed())
 
-			dlgIntegrity := textverify.NewTextVerificationService(log)
+			dlgIntegrity := textverify.NewTextVerificationService()
 			Expect(dlgIntegrity).NotTo(BeNil())
 
 			Expect(testcommon.RemoveFirstNLines(destination.Extract().GetTargetFile(), 4)).To(Succeed())

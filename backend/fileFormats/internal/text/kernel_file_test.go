@@ -196,7 +196,7 @@ var _ = Describe("KrnlFile", Ordered, func() {
 		BeforeEach(func() {
 			krnlExtractor = nil
 			krnlCompressor = nil
-			integrityVerification = textverify.NewTextVerificationService(log)
+			integrityVerification = textverify.NewTextVerificationService()
 			Expect(integrityVerification).NotTo(BeNil())
 			mockNotifierService = testcommon.NewMockNotifier()
 			Expect(mockNotifierService).NotTo(BeNil())
@@ -238,7 +238,7 @@ var _ = Describe("KrnlFile", Ordered, func() {
 		BeforeEach(func() {
 			krnlExtractor = nil
 			krnlCompressor = nil
-			integrityVerification = textverify.NewTextVerificationService(log)
+			integrityVerification = textverify.NewTextVerificationService()
 			Expect(integrityVerification).NotTo(BeNil())
 			mockNotifierService = testcommon.NewMockNotifier()
 			Expect(mockNotifierService).NotTo(BeNil())

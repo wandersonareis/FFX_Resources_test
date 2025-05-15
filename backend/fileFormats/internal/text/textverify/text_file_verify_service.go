@@ -3,7 +3,6 @@ package textverify
 import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/loggingService"
 )
 
 type (
@@ -15,15 +14,11 @@ type (
 		Verify(source interfaces.ISource, destination locations.IDestination, strategy ITextVerificationStrategy) error
 	}
 
-	TextVerificationService struct {
-		log loggingService.ILoggerService
-	}
+	TextVerificationService struct{}
 )
 
-func NewTextVerificationService(logger loggingService.ILoggerService) *TextVerificationService {
-	return &TextVerificationService{
-		log: logger,
-	}
+func NewTextVerificationService() *TextVerificationService {
+	return &TextVerificationService{}
 }
 
 func (svc *TextVerificationService) Verify(source interfaces.ISource, destination locations.IDestination, strategy ITextVerificationStrategy) error {

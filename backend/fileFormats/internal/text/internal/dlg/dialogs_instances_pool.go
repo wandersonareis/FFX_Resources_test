@@ -75,7 +75,7 @@ func NewTextVerifierPool(logger loggingService.ILoggerService) *TextVerifierPool
 	}
 
 	tv.pool.New = func() interface{} {
-		return textverify.NewTextVerificationService(logger)
+		return textverify.NewTextVerificationService()
 	}
 	return tv
 }
