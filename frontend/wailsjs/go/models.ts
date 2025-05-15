@@ -42,15 +42,14 @@ export namespace models {
 	export class SpiraFileInfo {
 	    name: string;
 	    name_prefix: string;
-	    type: number;
-	    size: number;
 	    extension: string;
-	    entry_path: string;
-	    parent: string;
 	    is_dir: boolean;
 	    cloned_items: string[];
 	    path: string;
+	    parent: string;
 	    relative_path: string;
+	    size: number;
+	    type: number;
 	    version: number;
 	
 	    static createFrom(source: any = {}) {
@@ -61,15 +60,14 @@ export namespace models {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
 	        this.name_prefix = source["name_prefix"];
-	        this.type = source["type"];
-	        this.size = source["size"];
 	        this.extension = source["extension"];
-	        this.entry_path = source["entry_path"];
-	        this.parent = source["parent"];
 	        this.is_dir = source["is_dir"];
 	        this.cloned_items = source["cloned_items"];
 	        this.path = source["path"];
+	        this.parent = source["parent"];
 	        this.relative_path = source["relative_path"];
+	        this.size = source["size"];
+	        this.type = source["type"];
 	        this.version = source["version"];
 	    }
 	}

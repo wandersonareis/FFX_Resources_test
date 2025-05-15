@@ -46,10 +46,22 @@ export class FfxContextMenuService {
   async view(): Promise<void> {
     if (!this.file()) return;
 
-    const fileInfo: fileFormats.TreeNodeData | null = getFileInfoFromNode(this.file());
-    if (!fileInfo || !fileInfo.source) return;
+    const fileInfo: fileFormats.TreeNodeData | null = getFileInfoFromNode(
+      this.file()
+    );
 
-    const filePath = fileInfo.source.path;
+    if (!fileInfo || !fileInfo.extract_location) return;
+
+    if (!fileInfo.extract_location.IsExist) {
+      EventsEmit('Notify', {
+        severity: 'error',
+        message: 'Extracted file not found',
+      });
+
+      return;
+    }
+
+    const filePath = fileInfo.extract_location.TargetFile;
 
     showEditorModal.set(true);
 
@@ -60,19 +72,27 @@ export class FfxContextMenuService {
   async extract(): Promise<void> {
     //TODO: Review try catch
     try {
-      const fileInfo: fileFormats.TreeNodeData | null = getFileInfoFromNode(this.file());
-      if (!fileInfo || !fileInfo.source) return;  
+      const fileInfo: fileFormats.TreeNodeData | null = getFileInfoFromNode(
+        this.file()
+      );
+      if (!fileInfo || !fileInfo.source) return;
 
       const filePath = fileInfo.source.path;
 
       await this._extractService.extraction(filePath);
-    } catch (error) {
-      EventsEmit('Notify', error);
+    } catch (err) {
+      const errorMsg = (err as Error)?.message ?? 'Erro desconhecido';
+      EventsEmit('Notify', {
+        severity: 'error',
+        message: errorMsg,
+      });
     }
   }
 
   async compress(): Promise<void> {
-    const fileInfo: fileFormats.TreeNodeData | null = getFileInfoFromNode(this.file());
+    const fileInfo: fileFormats.TreeNodeData | null = getFileInfoFromNode(
+      this.file()
+    );
     if (!fileInfo || !fileInfo.source) return;
 
     const filePath = fileInfo.source.path;
