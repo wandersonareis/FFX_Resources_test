@@ -226,7 +226,7 @@ var _ = Describe("KrnlFile", Ordered, func() {
 
 			err = integrityVerification.Verify(source, destination, textverify.NewTextExtractionVerificationStrategy())
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("source and target segments count mismatch"))
+			Expect(err.Error()).To(ContainSubstring("an error occurred while verifying segments count of the extracted file"))
 
 			err = common.CheckPathExists(destination.Extract().GetTargetFile())
 			Expect(err).To(HaveOccurred())

@@ -184,7 +184,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 			extractFile(`ffx_ps2\ffx2\master\new_uspc\event\obj_ps3\cr\credits\credits.bin`, models.DialogsSpecial)
 		})
 
-		It("should throw error", func() {
+		It("should extract throw an error", func() {
 			file := `ffx_ps2\ffx2\master\new_uspc\battle\btl\bika07_235\bika07_235.bin`
 			testFilePath := filepath.Join(gameLocationPath, file)
 			Expect(common.CheckPathExists(testFilePath)).To(Succeed())
@@ -195,7 +195,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 
 			Expect(destination).NotTo(BeNil())
 
-			destination.InitializeLocations(source, formatter)
+			Expect(destination.InitializeLocations(source, formatter)).To(Succeed())
 
 			m := new(testcommon.MockDlgDecoder)
 			m.On("Decoder", source, destination, mock.Anything).Return(fmt.Errorf("mock error"))
@@ -269,14 +269,19 @@ var _ = Describe("DlgFile", Ordered, func() {
 		})
 	})
 
-	Context("Verifyer Functionality", func() {
+	Context("Verify Functionality", func() {
+		BeforeEach(func() {
+			testDlgVerifyer = textverify.NewTextVerificationService()
+			Expect(testDlgVerifyer).NotTo(BeNil())
+		})
+
 		AfterEach(func() {
 			Expect(common.RemoveDir(temp.TempFilePath)).To(Succeed())
 		})
 
-		It("should verify file integrity binary fail", func() {
-			testPath := `binary\ffx_ps2\ffx2\master\new_uspc\cloudsave\cloud.bin`
-			sourceFile := filepath.Join(testDataPath, testPath)
+		It("should verify extracted file integrity fail", func() {
+			testPath := `ffx_ps2\ffx2\master\new_uspc\cloudsave\cloud.bin`
+			sourceFile := filepath.Join(gameLocationPath, testPath)
 			Expect(common.CheckPathExists(sourceFile)).To(Succeed())
 
 			source, err := locations.NewSource(sourceFile)
@@ -284,20 +289,17 @@ var _ = Describe("DlgFile", Ordered, func() {
 
 			Expect(destination).NotTo(BeNil())
 
-			destination.InitializeLocations(source, formatter)
+			Expect(destination.InitializeLocations(source, formatter)).To(Succeed())
 
 			dlgFile := text.NewDialogs(source, destination)
 			Expect(dlgFile).NotTo(BeNil())
 			Expect(dlgFile.Extract()).To(Succeed())
 
-			dlgIntegrity := textverify.NewTextVerificationService()
-			Expect(dlgIntegrity).NotTo(BeNil())
-
 			Expect(testcommon.RemoveFirstNLines(destination.Extract().GetTargetFile(), 4)).To(Succeed())
 
-			err = dlgIntegrity.Verify(source, destination, textverify.NewTextExtractionVerificationStrategy())
+			err = testDlgVerifyer.Verify(source, destination, textverify.NewTextExtractionVerificationStrategy())
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("source and target segments count mismatch"))
+			Expect(err.Error()).To(ContainSubstring("an error occurred while verifying segments count of the extracted file"))
 
 			err = common.CheckPathExists(destination.Extract().GetTargetFile())
 			Expect(err).To(HaveOccurred())
