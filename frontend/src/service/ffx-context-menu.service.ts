@@ -11,6 +11,7 @@ import { ExtractService } from './extract.service';
 import { CompressService } from './compress.service';
 import { EventsEmit } from '../../wailsjs/runtime';
 import { fileFormats } from '../../wailsjs/go/models';
+import { ErrorHandlerService } from './error-handler.service';
 
 @Injectable({
   providedIn: 'root',
@@ -18,6 +19,8 @@ import { fileFormats } from '../../wailsjs/go/models';
 export class FfxContextMenuService {
   private readonly _extractService: ExtractService = inject(ExtractService);
   private readonly _compressService: CompressService = inject(CompressService);
+  private readonly _errorHandler: ErrorHandlerService =
+    inject(ErrorHandlerService);
 
   readonly items: WritableSignal<MenuItem[]> = signal<MenuItem[]>([]);
   readonly file: WritableSignal<TreeNode | undefined> = selectedFile;
@@ -53,10 +56,9 @@ export class FfxContextMenuService {
     if (!fileInfo || !fileInfo.extract_location) return;
 
     if (!fileInfo.extract_location.IsExist) {
-      EventsEmit('Notify', {
-        severity: 'error',
-        message: 'Extracted file not found',
-      });
+      this._errorHandler.sendErrorNotificationWithMessage(
+        'File not found. Please extract the file first.'
+      );
 
       return;
     }
@@ -70,32 +72,34 @@ export class FfxContextMenuService {
   }
 
   async extract(): Promise<void> {
-    //TODO: Review try catch
     try {
       const fileInfo: fileFormats.TreeNodeData | null = getFileInfoFromNode(
         this.file()
       );
+      
       if (!fileInfo || !fileInfo.source) return;
 
       const filePath = fileInfo.source.path;
 
       await this._extractService.extraction(filePath);
-    } catch (err) {
-      const errorMsg = (err as Error)?.message ?? 'Erro desconhecido';
-      EventsEmit('Notify', {
-        severity: 'error',
-        message: errorMsg,
-      });
+    } catch (error) {
+      this._errorHandler.sendErrorNotification(error);
     }
   }
 
   async compress(): Promise<void> {
-    const fileInfo: fileFormats.TreeNodeData | null = getFileInfoFromNode(
-      this.file()
-    );
-    if (!fileInfo || !fileInfo.source) return;
+    try {
+      const fileInfo: fileFormats.TreeNodeData | null = getFileInfoFromNode(
+        this.file()
+      );
 
-    const filePath = fileInfo.source.path;
-    await this._compressService.compress(filePath);
+      if (!fileInfo || !fileInfo.source) return;
+
+      const filePath = fileInfo.source.path;
+
+      await this._compressService.compress(filePath);
+    } catch (error) {
+      this._errorHandler.sendErrorNotification(error);
+    }
   }
 }
