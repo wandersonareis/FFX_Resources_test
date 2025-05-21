@@ -18,15 +18,15 @@ var spiraFiles = []spiraFilesTypes{
 		spiratype: Tutorial,
 	},
 	{
-		regex:     regexp.MustCompile(`.*macrodic.*\.dcp$`),
+		regex:     regexp.MustCompile(`macrodic\.dcp$`),
 		spiratype: Dcp,
 	},
 	{
-		regex:     regexp.MustCompile(`.*macrodic.*\.00[0-6]$`),
+		regex:     regexp.MustCompile(`macrodic\.(00[0-9]|01[0-5])$`),
 		spiratype: DcpParts,
 	},
 	{
-		regex:     regexp.MustCompile(`.*macrodic.*\.00[0-6].txt$`),
+		regex:     regexp.MustCompile(`macrodic\.(00[0-9]|01[0-5])\.txt$`),
 		spiratype: DcpParts,
 	},
 	{
