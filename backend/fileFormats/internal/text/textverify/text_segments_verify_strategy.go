@@ -7,7 +7,6 @@ import (
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/models"
 	"fmt"
-	"time"
 )
 
 type textSegmentsVerificationStrategy struct {
@@ -34,7 +33,7 @@ func (tsv *textSegmentsVerificationStrategy) Verify(source interfaces.ISource, d
 	}
 
 	if err := tsv.compareTextSegmentsCount(sourceFile, tsv.TargetFile, sourceFileType, sourceFileVersion); err != nil {
-		if err := common.RemoveFileWithRetries(tsv.TargetFile, 5, time.Second); err != nil {
+		if err := common.RemoveFileWithRetries(tsv.TargetFile, 5); err != nil {
 			return fmt.Errorf("failed to remove broken text file %s: %w", tsv.TargetFile, err)
 		}
 		return err

@@ -3,7 +3,6 @@ package locationsBase
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/loggingService"
-	"os"
 	"path/filepath"
 )
 
@@ -35,10 +34,9 @@ func NewLocationBase(targetDirectoryName, targetDirectoryPath, gameVersionDir st
 
 func (lb *LocationBase) Dispose() {
 	if common.IsFileExists(lb.GetTargetFile()) {
-		err := os.Remove(lb.TargetFile)
-		if err != nil {
+		if err := common.RemoveFileWithRetries(lb.TargetFile, 3); err != nil {
 			l := loggingService.Get()
-			l.Error().Msgf("error when removing file: %s", err)
+			l.Error().Msgf("error when removing file: %s with error: %v", lb.TargetFile, err)
 		}
 	}
 }

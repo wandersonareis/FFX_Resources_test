@@ -5,7 +5,6 @@ import (
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/interfaces"
 	"fmt"
-	"time"
 )
 
 type textCompressionVerificationStrategy struct {
@@ -32,7 +31,7 @@ func (cv *textCompressionVerificationStrategy) Verify(source interfaces.ISource,
 	}
 
 	if err := cv.compareFileData(source, destination); err != nil {
-		if err := common.RemoveFileWithRetries(destination.Import().GetTargetFile(), 5, time.Second); err != nil {
+		if err := common.RemoveFileWithRetries(destination.Import().GetTargetFile(), 5); err != nil {
 			return fmt.Errorf("failed to remove broken text file: %s", destination.Import().GetTargetFile())
 		}
 

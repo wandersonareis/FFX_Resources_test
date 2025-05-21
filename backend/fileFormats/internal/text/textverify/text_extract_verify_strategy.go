@@ -25,7 +25,7 @@ func (ev *textExtractionVerificationStrategy) Verify(source interfaces.ISource, 
 	
 	if err := ev.compareTextSegmentsCount(source, destination); err != nil {
 		extractedFile := extractLocation.GetTargetFile()
-		if err := common.RemoveFileWithRetries(extractedFile, 5, 5); err != nil {
+		if err := common.RemoveFileWithRetries(extractedFile, 5); err != nil {
 			return fmt.Errorf("failed to remove broken text file: %s", extractedFile)
 		}
 		return err

@@ -71,7 +71,7 @@ func (kth *kernelTextHandler) ffx2KernelTexthandler() (string, error) {
 
 func (kth *kernelTextHandler) Dispose() {
 	if kth.kernelTextAppFile != "" {
-		if err := common.RemoveFileWithRetries(kth.kernelTextAppFile, 5, 4); err != nil {
+		if err := common.RemoveFileWithRetries(kth.kernelTextAppFile, 5); err != nil {
 			fmt.Println("error when removing texts file handler: %w", err)
 		}
 	}

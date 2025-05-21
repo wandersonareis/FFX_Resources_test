@@ -34,7 +34,7 @@ func (e *ffxTextDlgEncoding) GetDlgHandler() encodingHandler.IDlgEncodingHandler
 }
 
 func (e *ffxTextDlgEncoding) Dispose() {
-	if err := common.RemoveFileWithRetries(e.encoding, 3, 2); err != nil {
+	if err := common.RemoveFileWithRetries(e.encoding, 3); err != nil {
 		l := loggingService.Get().With().Str("module", "ffx_text_dlg_encoding").Logger()
 		l.Error().Err(err).Str("file", e.encoding).Msg("Error on removing encoding file")
 		return
