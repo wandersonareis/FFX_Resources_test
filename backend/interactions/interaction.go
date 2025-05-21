@@ -15,7 +15,7 @@ type InteractionService struct {
 	cancel            context.CancelFunc
 	mu                sync.Mutex
 	ffxAppConfig      IFFXAppConfig
-	ffxGameVersion    models.IFfxGameVersion
+	ffxGameVersion    models.IGameVersionProvider
 	ffxTextFormat     interfaces.ITextFormatter
 	GameLocation      IGameLocation
 	ExtractLocation   IExtractLocation
@@ -36,10 +36,9 @@ func NewInteractionService() *InteractionService {
 			panic(err)
 		}
 
-		gameVersion := models.NewFFXGameVersion()
-		gameVersion.SetGameVersionNumber(ffxAppConfig.FFXGameVersion)
+	gameVersion := models.NewFFXGameVersion(ffxAppConfig.FFXGameVersion)
 
-		ffxAppConfig.FFXGameVersion = gameVersion.GetGameVersionNumber()
+	//ffxAppConfig.FFXGameVersion = gameVersion.GetGameVersionNumber()
 
 		interactionInstance = &InteractionService{
 			Ctx:               context.Background(),
@@ -56,9 +55,7 @@ func NewInteractionService() *InteractionService {
 }
 
 func NewInteractionServiceWithConfig(config *FFXAppConfig) *InteractionService {
-	initOnce.Do(func() {
-		gameVersion := models.NewFFXGameVersion()
-		gameVersion.SetGameVersionNumber(config.FFXGameVersion)
+	gameVersion := models.NewFFXGameVersion(config.FFXGameVersion)
 
 		interactionInstance = &InteractionService{
 			Ctx:               context.Background(),
@@ -103,7 +100,7 @@ func (i *InteractionService) FFXAppConfig() IFFXAppConfig {
 	return i.ffxAppConfig
 }
 
-func (i *InteractionService) FFXGameVersion() models.IFfxGameVersion {
+func (i *InteractionService) FFXGameVersion() models.IGameVersionProvider {
 	return i.ffxGameVersion
 }
 

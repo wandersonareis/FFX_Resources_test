@@ -1,10 +1,9 @@
 package models
 
 type (
-	IFfxGameVersion interface {
+	IGameVersionProvider interface {
 		GetGameVersion() GameVersion
 		GetGameVersionNumber() int
-		SetGameVersion(GameVersion)
 		SetGameVersionNumber(int)
 	}
 
@@ -13,11 +12,10 @@ type (
 	}
 )
 
-// TODO: Implement the methods of the IFfxGameVersion interface
-func NewFFXGameVersion() *FFXGameVersion {
-	return &FFXGameVersion{
-		gameVersion: FFX,
-	}
+func NewFFXGameVersion(version int) *FFXGameVersion {
+	gameVersion := &FFXGameVersion{}
+	gameVersion.SetGameVersionNumber(version)
+	return gameVersion
 }
 
 func (f *FFXGameVersion) GetGameVersion() GameVersion {
@@ -26,10 +24,6 @@ func (f *FFXGameVersion) GetGameVersion() GameVersion {
 
 func (f *FFXGameVersion) GetGameVersionNumber() int {
 	return int(f.gameVersion)
-}
-
-func (f *FFXGameVersion) SetGameVersion(partName GameVersion) {
-	f.gameVersion = partName
 }
 
 func (f *FFXGameVersion) SetGameVersionNumber(partNumber int) {
