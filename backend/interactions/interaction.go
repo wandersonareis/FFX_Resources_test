@@ -23,55 +23,63 @@ type InteractionService struct {
 	ImportLocation    IImportLocation
 }
 
-var interactionInstance *InteractionService
-
-var initOnce sync.Once
+var (
+	interactionInstance *InteractionService
+	mu                  sync.Mutex
+)
 
 func NewInteractionService() *InteractionService {
-	initOnce.Do(func() {
-		filePath := filepath.Join(common.GetExecDir(), "config.json")
+	mu.Lock()
+	defer mu.Unlock()
 
-		ffxAppConfig := NewAppConfig(filePath)
-		if err := ffxAppConfig.FromJson(); err != nil {
-			panic(err)
-		}
+	if interactionInstance != nil {
+		return interactionInstance
+	}
+
+	filePath := filepath.Join(common.GetExecDir(), "config.json")
+	ffxAppConfig := NewAppConfig(filePath)
+	if err := ffxAppConfig.FromJson(); err != nil {
+		panic(err)
+	}
 
 	gameVersion := models.NewFFXGameVersion(ffxAppConfig.FFXGameVersion)
 
-	//ffxAppConfig.FFXGameVersion = gameVersion.GetGameVersionNumber()
-
-		interactionInstance = &InteractionService{
-			Ctx:               context.Background(),
-			ffxAppConfig:      ffxAppConfig,
-			ffxGameVersion:    gameVersion,
-			GameLocation:      newGameLocation(),
-			ExtractLocation:   newExtractLocation(),
-			TranslateLocation: newTranslateLocation(),
-			ImportLocation:    newImportLocation(),
-		}
-	})
+	interactionInstance = &InteractionService{
+		Ctx:               context.Background(),
+		ffxAppConfig:      ffxAppConfig,
+		ffxGameVersion:    gameVersion,
+		GameLocation:      newGameLocation(),
+		ExtractLocation:   newExtractLocation(),
+		TranslateLocation: newTranslateLocation(),
+		ImportLocation:    newImportLocation(),
+	}
 
 	return interactionInstance
 }
 
 func NewInteractionServiceWithConfig(config *FFXAppConfig) *InteractionService {
+	mu.Lock()
+	defer mu.Unlock()
+
 	gameVersion := models.NewFFXGameVersion(config.FFXGameVersion)
 
-		interactionInstance = &InteractionService{
-			Ctx:               context.Background(),
-			ffxAppConfig:      config,
-			ffxGameVersion:    gameVersion,
-			GameLocation:      newGameLocation(),
-			ExtractLocation:   newExtractLocation(),
-			TranslateLocation: newTranslateLocation(),
-			ImportLocation:    newImportLocation(),
-		}
-	})
+	interactionInstance = &InteractionService{
+		Ctx:               context.Background(),
+		ffxAppConfig:      config,
+		ffxGameVersion:    gameVersion,
+		GameLocation:      newGameLocation(),
+		ExtractLocation:   newExtractLocation(),
+		TranslateLocation: newTranslateLocation(),
+		ImportLocation:    newImportLocation(),
+	}
 
 	return interactionInstance
 }
 
 func NewInteractionWithCtx(ctx context.Context) *InteractionService {
+	mu.Lock()
+	defer mu.Unlock()
+
 	if interactionInstance == nil {
 		interactionInstance = NewInteractionService()
 	}
