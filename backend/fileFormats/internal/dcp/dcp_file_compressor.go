@@ -2,7 +2,6 @@ package dcp
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/core"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/locations"
 	dcpCore "ffxresources/backend/fileFormats/internal/dcp/internal/core"
@@ -10,6 +9,7 @@ import (
 	"ffxresources/backend/fileFormats/internal/dcp/internal/lib"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/loggingService"
+	"ffxresources/backend/models"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,12 +21,12 @@ type (
 	}
 
 	dcpFileCompressor struct {
-		source      interfaces.ISource
-		destination locations.IDestination
-		formatter   interfaces.ITextFormatter
-		options     core.IDcpFileOptions
-
-		log loggingService.ILoggerService
+		source            interfaces.ISource
+		destination       locations.IDestination
+		formatter         interfaces.ITextFormatter
+		dcpFileSplitter   dcpCore.IDcpFileSpliter
+		dcpFileProperties models.IDcpFileProperties
+		log               loggingService.ILoggerService
 	}
 )
 
@@ -34,25 +34,24 @@ func NewDcpFileCompressor(
 	source interfaces.ISource,
 	destination locations.IDestination,
 	formatter interfaces.ITextFormatter,
-	options core.IDcpFileOptions,
 	log loggingService.ILoggerService) IDcpFileCompressor {
-	common.CheckArgumentNil(source, "source")
-	common.CheckArgumentNil(destination, "destination")
-	common.CheckArgumentNil(formatter, "formatter")
-	common.CheckArgumentNil(options, "options")
-	common.CheckArgumentNil(log, "log")
-
 	return &dcpFileCompressor{
-		source:      source,
-		destination: destination,
-		formatter:   formatter,
-		options:     options,
-		log:         log,
+		dcpFileSplitter:   dcpCore.NewDcpFileSpliter(),
+		dcpFileProperties: models.NewDcpFileOptions(source.GetVersion()),
+		source:            source,
+		destination:       destination,
+		formatter:         formatter,
+		log:               log,
 	}
 }
 
 func (dfc *dcpFileCompressor) Compress() error {
-	dcpTranslatedTextPartsList := components.NewList[dcpParts.DcpFileParts](dfc.options.GetPartsLength())
+	dcpFilePartsLen := dfc.dcpFileProperties.GetPartsLength()
+	if dcpFilePartsLen == 0 {
+		return fmt.Errorf("dcp file parts length is zero")
+	}
+
+	dcpTranslatedTextPartsList := components.NewList[dcpParts.DcpFileParts](dcpFilePartsLen)
 	defer dcpTranslatedTextPartsList.Clear()
 
 	if err := dfc.populateDcpTranslatedTextFileParts(dcpTranslatedTextPartsList); err != nil {
@@ -63,7 +62,7 @@ func (dfc *dcpFileCompressor) Compress() error {
 		return err
 	}
 
-	dcpExtractedBinaryPartsList := components.NewList[dcpParts.DcpFileParts](dfc.options.GetPartsLength())
+	dcpExtractedBinaryPartsList := components.NewList[dcpParts.DcpFileParts](dcpFilePartsLen)
 	defer dcpExtractedBinaryPartsList.Clear()
 
 	if err := dfc.populateDcpExtractedBinaryFileParts(dcpExtractedBinaryPartsList); err != nil {
@@ -78,7 +77,7 @@ func (dfc *dcpFileCompressor) Compress() error {
 		return err
 	}
 
-	dcpTranslatedBinaryPartsList := components.NewList[dcpParts.DcpFileParts](dfc.options.GetPartsLength())
+	dcpTranslatedBinaryPartsList := components.NewList[dcpParts.DcpFileParts](dcpFilePartsLen)
 	defer dfc.disposePartsList(dcpTranslatedBinaryPartsList)
 
 	if err := dfc.populateDcpTranslatedBinaryFileParts(dcpTranslatedBinaryPartsList); err != nil {
@@ -97,37 +96,67 @@ func (dfc *dcpFileCompressor) Compress() error {
 }
 
 func (dfc *dcpFileCompressor) populateDcpExtractedBinaryFileParts(binaryPartsList components.IList[dcpParts.DcpFileParts]) error {
-	return dcpParts.PopulateDcpBinaryFileParts(
+	err := dcpParts.PopulateDcpBinaryFileParts(
 		binaryPartsList,
 		dfc.destination.Extract().GetTargetPath(),
 		dfc.formatter,
 	)
+	if err != nil {
+		return fmt.Errorf("failed to populate dcp extracted binary file parts: %w", err)
+	}
+
+	if binaryPartsList.IsEmpty() {
+		return fmt.Errorf("no dcp extracted binary file parts found")
+	}
+
+	return nil
 }
 
 func (dfc *dcpFileCompressor) populateDcpTranslatedBinaryFileParts(binaryTranslatedPartsList components.IList[dcpParts.DcpFileParts]) error {
 	dfc.log.Info("Populating dcp translated binary file parts...")
 
-	translatedBinaryPartsPath := filepath.Join(dfc.destination.Import().GetTargetDirectory(), lib.DCP_PARTS_TARGET_DIR_NAME)
+	targetDirectory := dfc.destination.Import().GetTargetDirectory()
+	translatedBinaryPartsPath := filepath.Join(targetDirectory, lib.DCP_PARTS_TARGET_DIR_NAME)
 
-	return dcpParts.PopulateDcpBinaryFileParts(
+	err := dcpParts.PopulateDcpBinaryFileParts(
 		binaryTranslatedPartsList,
 		translatedBinaryPartsPath,
 		dfc.formatter,
 	)
+	if err != nil {
+		return fmt.Errorf("failed to populate dcp translated binary file parts: %w", err)
+	}
+
+	if binaryTranslatedPartsList.IsEmpty() {
+		return fmt.Errorf("no dcp translated binary file parts found")
+	}
+
+	return nil
 }
 
 func (dfc *dcpFileCompressor) populateDcpTranslatedTextFileParts(translatedTextPartsList components.IList[dcpParts.DcpFileParts]) error {
 	dfc.log.Info("Populating dcp translated text file parts...")
 
-	return dcpParts.PopulateDcpTextFileParts(
+	err := dcpParts.PopulateDcpTextFileParts(
 		translatedTextPartsList,
 		dfc.destination.Translate().GetTargetPath(),
 		dfc.formatter,
 	)
+	if err != nil {
+		return fmt.Errorf("failed to populate dcp translated text file parts: %w", err)
+	}
+
+	if translatedTextPartsList.IsEmpty() {
+		return fmt.Errorf("no dcp translated text file parts found")
+	}
+
+	return nil
 }
 
 func (dfc *dcpFileCompressor) ensureAllDcpExtractedBinaryFileParts(binaryExtractedPartsList components.IList[dcpParts.DcpFileParts]) error {
-	if binaryExtractedPartsList.GetLength() == dfc.options.GetPartsLength() {
+	dcpFilePartsLen := dfc.dcpFileProperties.GetPartsLength()
+
+	if binaryExtractedPartsList.GetLength() == dcpFilePartsLen {
 		return nil
 	}
 
@@ -141,7 +170,7 @@ func (dfc *dcpFileCompressor) ensureAllDcpExtractedBinaryFileParts(binaryExtract
 		return err
 	}
 
-	if err := lib.EnsurePartsListCount(dfc.options.GetPartsLength(), binaryExtractedPartsList.GetLength()); err != nil {
+	if err := lib.EnsurePartsListCount(dcpFilePartsLen, binaryExtractedPartsList.GetLength()); err != nil {
 		return err
 	}
 
@@ -149,7 +178,7 @@ func (dfc *dcpFileCompressor) ensureAllDcpExtractedBinaryFileParts(binaryExtract
 }
 
 func (dfc *dcpFileCompressor) ensureAllDcpTranslatedBinaryFileParts(binaryTranslatedPartsList components.IList[dcpParts.DcpFileParts]) error {
-	if err := lib.EnsurePartsListCount(dfc.options.GetPartsLength(), binaryTranslatedPartsList.GetLength()); err != nil {
+	if err := lib.EnsurePartsListCount(dfc.dcpFileProperties.GetPartsLength(), binaryTranslatedPartsList.GetLength()); err != nil {
 		return err
 	}
 
@@ -157,22 +186,29 @@ func (dfc *dcpFileCompressor) ensureAllDcpTranslatedBinaryFileParts(binaryTransl
 
 	binaryTranslatedPartsList.ForEach(func(part dcpParts.DcpFileParts) {
 		if err := common.CheckPathExists(part.GetSource().GetPath()); err != nil {
-			errChan <- err
+			errChan <- fmt.Errorf("error checking path for %s: %w", part.GetSource().GetPath(), err)
 		}
 
 		if part.GetSource().GetSize() <= 0 {
-			errChan <- lib.ErrInvalidFileSize(part.GetSource().GetPath())
+			errChan <- fmt.Errorf("invalid file size for %s", part.GetSource().GetPath())
 		}
 	})
+
+	close(errChan)
+
+	for err := range errChan {
+		if err != nil {
+			return fmt.Errorf("translated binary file part error: %w", err)
+		}
+	}
 
 	return nil
 }
 
 func (dfc *dcpFileCompressor) ensureAllDcpTranslatedTextFileParts(translatedTextPartsList components.IList[dcpParts.DcpFileParts]) error {
-	if err := lib.EnsurePartsListCount(dfc.options.GetPartsLength(), translatedTextPartsList.GetLength()); err != nil {
+	if err := lib.EnsurePartsListCount(dfc.dcpFileProperties.GetPartsLength(), translatedTextPartsList.GetLength()); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -193,7 +229,6 @@ func (dfc *dcpFileCompressor) compressFilesParts(partsList components.IList[dcpP
 	}
 
 	partsList.ForEach(compressor)
-
 	close(errChan)
 
 	var hasError bool
@@ -206,7 +241,6 @@ func (dfc *dcpFileCompressor) compressFilesParts(partsList components.IList[dcpP
 	if hasError {
 		return lib.ErrFailedToCompressFileParts()
 	}
-
 	return nil
 }
 
@@ -221,9 +255,9 @@ func (dfc *dcpFileCompressor) joinFilesParts(dcpTranslatedBinaryPartsList compon
 
 		return fmt.Errorf("error joining macrodic file: %s", outputFile)
 	}
-
 	return nil
 }
+
 func (dfc *dcpFileCompressor) disposePartsList(partsList components.IList[dcpParts.DcpFileParts]) error {
 	if partsList.IsEmpty() {
 		return fmt.Errorf("cannot dispose empty parts list")
