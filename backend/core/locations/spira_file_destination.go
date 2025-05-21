@@ -18,10 +18,8 @@ type Destination struct {
 	ImportLocation    IImportLocation    `json:"import_location"`
 }
 
-func NewDestination() IDestination {
+func NewDestination(gameVersionDir string) IDestination {
 	interactionService := interactions.NewInteractionService()
-
-	gameVersionDir := interactionService.FFXGameVersion().GetGameVersion().String()
 
 	extractPath := interactionService.ExtractLocation.GetTargetDirectory()
 	translatePath := interactionService.TranslateLocation.GetTargetDirectory()
@@ -47,6 +45,7 @@ func (g *Destination) InitializeLocations(source interfaces.ISource, formatter i
 	if err := g.ImportLocation.BuildImportOutput(source, formatter); err != nil {
 		return err
 	}
+
 	return nil
 }
 

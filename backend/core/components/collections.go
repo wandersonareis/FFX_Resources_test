@@ -73,7 +73,7 @@ func PopulateGameFilePartsList[T any](
 			return
 		}
 
-		t := locations.NewDestination()
+		t := locations.NewDestination(s.GetVersion().String())
 		if err := t.InitializeLocations(s, formatters.NewTxtFormatter()); err != nil {
 			return
 		}
@@ -118,7 +118,7 @@ func PopulateFilePartsList[T any](
 			return
 		}
 
-		t := locations.NewDestination()
+		t := locations.NewDestination(s.GetVersion().String())
 
 		part := partsInstance(s, t, formatter)
 		if part == nil {

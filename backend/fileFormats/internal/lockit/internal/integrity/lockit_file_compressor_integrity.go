@@ -191,9 +191,10 @@ func (lfi *lockitFileCompressorIntegrity) createTemporaryFile(file string) (inte
 		return nil, nil
 	}
 
-	destination := locations.NewDestination()
-
-	destination.InitializeLocations(source, lfi.formatter)
+	destination := locations.NewDestination(source.GetVersion().String())
+	if err := destination.InitializeLocations(source, lfi.formatter); err != nil {
+		return nil, nil
+	}
 
 	tmp := common.NewTempProvider("", "")
 	tmpDirectory := filepath.Join(tmp.TempFilePath, "tmpLockit")

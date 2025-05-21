@@ -87,9 +87,9 @@ func prepareSource(src interfaces.ISource) {
 	}
 }
 
-func newDestination(src interfaces.ISource, formatter interfaces.ITextFormatter) (locations.IDestination, error) {
-	dest := locations.NewDestination()
-	if err := dest.InitializeLocations(src, formatter); err != nil {
+func newDestination(source interfaces.ISource, formatter interfaces.ITextFormatter) (locations.IDestination, error) {
+	dest := locations.NewDestination(source.GetVersion().String())
+	if err := dest.InitializeLocations(source, formatter); err != nil {
 		return nil, err
 	}
 	return dest, nil
