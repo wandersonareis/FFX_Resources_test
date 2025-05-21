@@ -2,18 +2,18 @@ package integrity
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/core"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/dcpParts"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/lib"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/loggingService"
+	"ffxresources/backend/models"
 	"fmt"
 )
 
 type (
 	IDcpFileExtractorIntegrity interface {
-		Verify(targetPath string, formatter interfaces.ITextFormatter, fileOptions core.IDcpFileOptions) error
+		Verify(targetPath string, formatter interfaces.ITextFormatter, fileOptions models.IDcpFileProperties) error
 	}
 
 	dcpFileExtractorIntegrity struct {
@@ -22,17 +22,21 @@ type (
 )
 
 func NewDcpFileExtractorIntegrity(logger loggingService.ILoggerService) IDcpFileExtractorIntegrity {
-	common.CheckArgumentNil(logger, "logger")
-
 	return &dcpFileExtractorIntegrity{
 		log: logger,
 	}
 }
 
-func (dfei *dcpFileExtractorIntegrity) Verify(targetPath string, formatter interfaces.ITextFormatter, fileOptions core.IDcpFileOptions) error {
-	common.CheckArgumentNil(targetPath, "targetPath")
-	common.CheckArgumentNil(formatter, "formatter")
-	common.CheckArgumentNil(fileOptions, "fileOptions")
+func (dfei *dcpFileExtractorIntegrity) Verify(targetPath string, formatter interfaces.ITextFormatter, fileOptions models.IDcpFileProperties) error {
+	if err := common.CheckArgumentNil(targetPath, "targetPath"); err != nil {
+		return err
+	}
+	if err := common.CheckArgumentNil(formatter, "formatter"); err != nil {
+		return err
+	}
+	if err := common.CheckArgumentNil(fileOptions, "fileOptions"); err != nil {
+		return err
+	}
 
 	if err := common.CheckPathExists(targetPath); err != nil {
 		return lib.ErrDcpFileExtractIntegrityFailed(err)

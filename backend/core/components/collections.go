@@ -21,18 +21,17 @@ func ListFilesByRegex(list IList[string], path, pattern string) error {
 		return err
 	}
 
-	err = filepath.WalkDir(fullpath, func(path string, d os.DirEntry, err error) error {
+	err = filepath.WalkDir(fullpath, func(path string, info os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if !d.IsDir() && regex.MatchString(d.Name()) {
-			absPath, err := filepath.Abs(path)
-			if err != nil {
-				return err
-			}
+		if info.IsDir() {
+			return nil
+		}
 
-			list.Add(absPath)
+		if regex.MatchString(path) {
+			list.Add(path)
 		}
 
 		return nil
@@ -119,6 +118,9 @@ func PopulateFilePartsList[T any](
 		}
 
 		t := locations.NewDestination(s.GetVersion().String())
+		if err := t.InitializeLocations(s, formatter); err != nil {
+			return
+		}
 
 		part := partsInstance(s, t, formatter)
 		if part == nil {

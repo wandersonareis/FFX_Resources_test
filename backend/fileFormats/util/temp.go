@@ -16,7 +16,9 @@ func CreateTemporaryFileInfo(filePath string, formatter interfaces.ITextFormatte
 
 	destination := locations.NewDestination(source.GetVersion().String())
 
-	destination.InitializeLocations(source, formatter)
+	if err := destination.InitializeLocations(source, formatter); err != nil {
+		return nil, nil
+	}
 
 	destination.Extract().SetTargetPath(tmpDir)
 
