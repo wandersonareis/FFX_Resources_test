@@ -3,7 +3,6 @@ package locationsBase
 import (
 	"ffxresources/backend/common"
 	"fmt"
-	"path/filepath"
 )
 
 type (
@@ -12,6 +11,7 @@ type (
 		TargetFile      string
 		TargetPath      string
 		TargetFileName  string
+		TargetExtension string
 	}
 
 	ITargetFileBase interface {
@@ -42,7 +42,7 @@ func (lb *TargetFileBase) SetTargetPath(targetPath string) {
 }
 
 func (lb *TargetFileBase) GetTargetExtension() string {
-	return filepath.Ext(lb.TargetFile)
+	return lb.TargetExtension
 }
 
 func (lb *TargetFileBase) ProvideTargetPath() error {
@@ -57,7 +57,6 @@ func (t *TargetFileBase) IsTargetFileAvailable() bool {
 	t.IsExist = common.IsFileExists(t.TargetFile)
 	return t.IsExist
 }
-
 
 func (t *TargetFileBase) providerTargetDirectory(targetDirectory string) error {
 	if targetDirectory != "" && common.IsPathExists(targetDirectory) {

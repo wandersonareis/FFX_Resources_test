@@ -77,7 +77,6 @@ var _ = Describe("DlgFile", Ordered, func() {
 		}
 
 		formatter = &formatters.TxtFormatter{
-			TargetExtension: ".txt",
 			GameVersionDir:  gameVersionDir,
 			GameFilesPath:   translatePath,
 		}

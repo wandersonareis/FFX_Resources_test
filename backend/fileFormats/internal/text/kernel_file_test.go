@@ -74,7 +74,6 @@ var _ = Describe("KrnlFile", Ordered, func() {
 		}
 
 		formatter = &formatters.TxtFormatter{
-			TargetExtension: ".txt",
 			GameVersionDir:  gameVersionDir,
 			GameFilesPath:   translatePath,
 		}

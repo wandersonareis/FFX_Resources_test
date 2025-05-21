@@ -10,19 +10,22 @@ import (
 )
 
 type TxtFormatter struct {
-	TargetExtension string
-	GameVersionDir  string
-	GameFilesPath   string
+	GameVersionDir string
+	GameFilesPath  string
 }
+
+const txtExtension = ".txt"
 
 func NewTxtFormatter() *TxtFormatter {
 	return &TxtFormatter{
-		TargetExtension: ".txt",
-		GameVersionDir:  interactions.NewInteractionService().FFXGameVersion().GetGameVersion().String(),
-		GameFilesPath:   interactions.NewInteractionService().GameLocation.GetTargetDirectory(),
+		GameVersionDir: interactions.NewInteractionService().FFXGameVersion().GetGameVersion().String(),
+		GameFilesPath:  interactions.NewInteractionService().GameLocation.GetTargetDirectory(),
 	}
 }
 
+func (t *TxtFormatter) GetTargetExtension() string {
+	return txtExtension
+}
 func (t TxtFormatter) ReadFile(source interfaces.ISource, targetDirectory string) (string, string) {
 	var outputFile, outputPath string
 
@@ -48,14 +51,14 @@ func (t TxtFormatter) ReadFile(source interfaces.ISource, targetDirectory string
 }
 
 func (t TxtFormatter) provideDefaulReadPath(targetDirectory, relativePath string) (string, string) {
-	return provideBasePath(targetDirectory, common.ChangeExtension(relativePath, t.TargetExtension))
+	return provideBasePath(targetDirectory, common.ChangeExtension(relativePath, txtExtension))
 }
 
 func (t *TxtFormatter) provideFolderReadPath(source interfaces.ISource, targetDirectory string) string {
 	relative := common.MakeRelativePath(t.GameFilesPath, source.GetParentPath())
 	source.SetRelativePath(relative)
 
-	outputPath := filepath.Join(targetDirectory, t.GameVersionDir, relative)
+	outputPath := filepath.Join(targetDirectory, t.GameVersionDir, source.GetRelativePath())
 
 	return outputPath
 }
@@ -65,11 +68,11 @@ func (t TxtFormatter) provideDcpReadPath(targetDirectory, fileName string) (stri
 }
 
 func (t TxtFormatter) providePartsReadPath(targetDirectory, dirName, fileName string) (string, string) {
-	return provideBasePath(targetDirectory, dirName, common.AddExtension(fileName, t.TargetExtension))
+	return provideBasePath(targetDirectory, dirName, common.AddExtension(fileName, txtExtension))
 }
 
 func (t TxtFormatter) provideLockitReadPath(targetDirectory, fileName string) (string, string) {
-	return provideBasePath(targetDirectory, util.LOCKIT_TARGET_DIR_NAME, common.AddExtension(fileName, t.TargetExtension))
+	return provideBasePath(targetDirectory, util.LOCKIT_TARGET_DIR_NAME, common.AddExtension(fileName, txtExtension))
 }
 
 func (t TxtFormatter) WriteFile(source interfaces.ISource, targetDirectory string) (string, string) {

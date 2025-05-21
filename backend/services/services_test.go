@@ -72,7 +72,6 @@ var _ = Describe("FFX Services", Ordered, func() {
 		interactions.NewInteractionServiceWithConfig(config)
 
 		formatter = &formatters.TxtFormatter{
-			TargetExtension: ".txt",
 			GameVersionDir:  gameVersionDir,
 			GameFilesPath:   translatePath,
 		}

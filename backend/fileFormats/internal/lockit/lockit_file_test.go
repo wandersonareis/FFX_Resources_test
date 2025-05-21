@@ -77,7 +77,6 @@ var _ = Describe("LockitFile", Ordered, func() {
 		Expect(config).NotTo(BeNil())
 
 		formatter = &formatters.TxtFormatter{
-			TargetExtension: ".txt",
 			GameVersionDir:  gameVersionDir,
 			GameFilesPath:   translatePath,
 		}

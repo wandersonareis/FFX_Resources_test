@@ -8,6 +8,7 @@ import (
 
 type (
 	IBuildTargets interface {
+		GetTargetExtension() string
 		BuildExtractOutput(source interfaces.ISource, formatter interfaces.ITextFormatter) error
 		BuildImportOutput(source interfaces.ISource, formatter interfaces.ITextFormatter) error
 	}
@@ -48,6 +49,7 @@ func (lb *LocationBase) buildTargetOutput(
 	}
 
 	lb.IsExist = lb.IsTargetFileAvailable()
+	lb.TargetExtension = formatter.GetTargetExtension()
 
 	return nil
 }

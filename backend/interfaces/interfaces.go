@@ -35,6 +35,7 @@ type (
 	}
 
 	ITextFormatter interface {
+		GetTargetExtension() string
 		ReadFile(source ISource, targetDirectory string) (string, string)
 		WriteFile(source ISource, targetDirectory string) (string, string)
 	}
