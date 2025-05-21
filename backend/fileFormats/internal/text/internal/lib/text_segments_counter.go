@@ -9,7 +9,7 @@ import (
 
 func TextSegmentsCounter(file string, fileType models.NodeType, gameVersion models.GameVersion) (int, error) {
 	switch fileType {
-	case models.Dialogs, models.DialogsSpecial, models.Tutorial:
+	case models.Dialogs, models.DialogsSpecial, models.Tutorial, models.DcpParts:
 		return dialogsSegmentsCounter(file, fileType)
 	case models.Kernel:
 		return kernelSegmentsCounter(file, gameVersion)
