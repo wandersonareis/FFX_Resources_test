@@ -35,21 +35,40 @@ func NewSpiraFileInfo(path string) (*SpiraFileInfo, error) {
 		return nil, err
 	}
 
+	spiraFileInfo := &SpiraFileInfo{
+		Name:         common.RecursiveRemoveFileExtension(info.Name()),
+		NamePrefix:   common.RemoveOneFileExtension(info.Name()),
+		Extension:    filepath.Ext(path),
+		IsDir:        info.IsDir(),
+		Path:         path,
+		Parent:       filepath.Dir(path),
+		Type:         guessFileType(path),
+	}
+
 	version, err := determineVersion(aPath)
 	if err != nil {
 		return nil, err
 	}
 
+	spiraFileInfo.Version = GameVersion(version)
+
 	relativePath := getRelativePath(aPath, version)
-	if !info.IsDir() {
+	spiraFileInfo.RelativePath = relativePath
+
+	if !info.IsDir() && spiraFileInfo.Type != DcpParts {
 		version, err = common.CheckFFXPath(aPath)
 		if err != nil {
 			return nil, err
 		}
+
+		spiraFileInfo.Version = GameVersion(version)
+
 		relativePath, err = common.RelativePathFromMatch(aPath)
 		if err != nil {
 			return nil, err
 		}
+
+		spiraFileInfo.RelativePath = relativePath
 	}
 
 	size, err := computeSize(path, info)
@@ -57,7 +76,9 @@ func NewSpiraFileInfo(path string) (*SpiraFileInfo, error) {
 		return nil, err
 	}
 
-	return createSpiraFileInfo(info, path, relativePath, size, version), nil
+	spiraFileInfo.Size = size
+
+	return spiraFileInfo, nil
 }
 
 func resolvePath(path string) (string, error) {
@@ -81,21 +102,6 @@ func computeSize(path string, info os.FileInfo) (int64, error) {
 		return getDirSize(path)
 	}
 	return info.Size(), nil
-}
-
-func createSpiraFileInfo(info os.FileInfo, path, relativePath string, size int64, version int) *SpiraFileInfo {
-	return &SpiraFileInfo{
-		Name:         common.RecursiveRemoveFileExtension(info.Name()),
-		NamePrefix:   common.RemoveOneFileExtension(info.Name()),
-		Extension:    filepath.Ext(path),
-		IsDir:        info.IsDir(),
-		Path:         path,
-		Parent:       filepath.Dir(path),
-		RelativePath: relativePath,
-		Size:         size,
-		Version:      GameVersion(version),
-		Type:         guessFileType(path),
-	}
 }
 
 func (s *SpiraFileInfo) SetPath(path string) {
