@@ -30,6 +30,10 @@ func (d *dlgDecoder) Decoder(
 	sourceFile := source.GetPath()
 	extractFile := destination.Extract().GetTargetFile()
 
+	if extractFile == "" {
+		return fmt.Errorf("extract target file path is empty")
+	}
+
 	if err := d.decodeDialog(sourceFile, extractFile, textEncoding); err != nil {
 		return err
 	}

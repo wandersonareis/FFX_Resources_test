@@ -36,7 +36,7 @@ func (d *DialogsFile) Extract() error {
 		return fmt.Errorf("dialog file not found: %s", d.source.GetName())
 	}
 
-	d.log.Info("Initiating extraction of kernel file: %s", d.source.GetName())
+	d.log.Info("Initiating extraction of dialog file: %s", d.source.GetName())
 
 	if err := d.extract(); err != nil {
 		return err
@@ -45,6 +45,7 @@ func (d *DialogsFile) Extract() error {
 	d.log.Info("Verifying the integrity of the extracted dialog file: %s", d.destination.Extract().GetTargetFile())
 
 	if err := d.extractVerify(); err != nil {
+		d.log.Error(err, "Error verifying extracted dialog file")
 		return err
 	}
 
@@ -72,9 +73,7 @@ func (d *DialogsFile) extractVerify() error {
 	defer dlg.ReturnTextVerifier(verifierInstance)
 
 	if err := verifierInstance.Verify(d.source, d.destination, textverify.NewTextExtractionVerificationStrategy()); err != nil {
-		d.log.Error(err, "Error verifying dialog file: %s", d.source.GetName())
-
-		return fmt.Errorf("failed to integrity dialog file: %s", d.source.GetName())
+		return fmt.Errorf("error verifying dialog file at path %s: %v", d.source.GetPath(), err)
 	}
 
 	return nil
