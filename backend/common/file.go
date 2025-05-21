@@ -17,7 +17,12 @@ func IsFileExists(path string) bool {
 	return !os.IsNotExist(err)
 }
 
-func RemoveFileWithRetries(filepath string, maxRetries int, delayBetweenRetries time.Duration) error {
+// RemoveFileWithRetries attempts to remove the file at the specified filepath.
+// It will try up to maxRetries times, pausing for one second between each attempt.
+// If the file is successfully removed, the function returns nil immediately.
+// If the file does not exist, it is considered already removed and nil is returned.
+// If all attempts fail to remove the file, an error detailing the failure is returned.
+func RemoveFileWithRetries(filepath string, maxRetries int) error {
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 		err := os.Remove(filepath)
 		if err == nil {
@@ -26,12 +31,12 @@ func RemoveFileWithRetries(filepath string, maxRetries int, delayBetweenRetries 
 		if os.IsNotExist(err) {
 			return nil
 		}
-				
+
 		if attempt < maxRetries {
-			time.Sleep(delayBetweenRetries)
+			time.Sleep(1 * time.Second)
 		}
 	}
-	
+
 	return fmt.Errorf("failure to remove the %s file after %d attempts", filepath, maxRetries)
 }
 
