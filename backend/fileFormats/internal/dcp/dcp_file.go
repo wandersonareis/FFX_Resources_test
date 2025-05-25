@@ -1,12 +1,9 @@
 package dcp
 
 import (
-	"ffxresources/backend/common"
-	"ffxresources/backend/core"
+	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/locations"
-	"ffxresources/backend/fileFormats/internal/baseFormats"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/integrity"
-	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/loggingService"
@@ -14,23 +11,26 @@ import (
 )
 
 type DcpFile struct {
-	baseFormats.IBaseFileFormat
-
-	formatter   interfaces.ITextFormatter
-	fileOptions core.IDcpFileOptions
+	source                interfaces.ISource
+	destination           locations.IDestination
+	formatter             interfaces.ITextFormatter
+	checkIntegrityService components.IVerificationService
 
 	log loggingService.ILoggerService
 }
 
 func NewDcpFile(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
-	common.CheckArgumentNil(source, "source")
-	common.CheckArgumentNil(destination, "destination")
-
 	return &DcpFile{
-		IBaseFileFormat: baseFormats.NewFormatsBase(source, destination),
-		formatter:       interactions.NewInteractionService().TextFormatter(),
-		log:             loggingService.NewLoggerHandler("dcp_file"),
+		formatter:             interactions.NewInteractionService().TextFormatter(),
+		checkIntegrityService: components.NewVerificationService(),
+		log:                   loggingService.NewLoggerHandler("dcp_file"),
+		source:                source,
+		destination:           destination,
 	}
+}
+
+func (df *DcpFile) GetSource() interfaces.ISource {
+	return df.source
 }
 
 func (df *DcpFile) Extract() error {
@@ -76,43 +76,41 @@ func (df *DcpFile) extractVerify() error {
 	return nil
 }
 
-func (d *DcpFile) Compress() error {
-	d.ensureFileOptions()
-
-	if err := d.compress(); err != nil {
+func (df *DcpFile) Compress() error {
+	if err := df.compress(); err != nil {
 		return err
 	}
 
-	if err := d.compressVerify(); err != nil {
+	if err := df.compressVerify(); err != nil {
 		return err
 	}
 
-	d.log.Info("Macrodic file compressed: %s", d.GetSource().GetName())
+	df.log.Info("Macrodic file compressed: %s", df.GetSource().GetName())
 
 	return nil
 }
 
 func (df *DcpFile) compress() error {
-	df.log.Info("Compressing DCP file inside path: %s", df.GetDestination().Import().GetTargetPath())
+	df.log.Info("Compressing DCP file inside path: %s", df.destination.Import().GetTargetPath())
 
 	compressor := NewDcpFileCompressor(
-		df.GetSource(),
-		df.GetDestination(),
+		df.source,
+		df.destination,
 		df.formatter,
-		df.fileOptions,
 		df.log)
 
 	return compressor.Compress()
 }
 
 func (df *DcpFile) compressVerify() error {
-	targetFile := df.GetDestination().Import().GetTargetFile()
+	targetFile := df.destination.Import().GetTargetFile()
 
 	df.log.Info("Verifying reimported macrodic file: %s", targetFile)
 
-	dcpFileCompressorIntegrity := integrity.NewDcpFileCompressorVerify(df.log)
-
-	if err := dcpFileCompressorIntegrity.Verify(targetFile, formatters.NewTxtFormatter(), df.fileOptions); err != nil {
+	if err := df.checkIntegrityService.Verify(
+		df.source,
+		df.destination,
+		integrity.NewDcpCompressionVerificationStrategy(targetFile)); err != nil {
 		return fmt.Errorf("error verifying system macrodic file: %s", targetFile)
 	}
 

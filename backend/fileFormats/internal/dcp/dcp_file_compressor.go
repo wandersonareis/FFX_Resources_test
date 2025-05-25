@@ -4,7 +4,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/locations"
-	dcpCore "ffxresources/backend/fileFormats/internal/dcp/internal/core"
+	"ffxresources/backend/fileFormats/internal/dcp/internal/dcpFileHandler"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/dcpParts"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/lib"
 	"ffxresources/backend/interfaces"
@@ -24,7 +24,8 @@ type (
 		source            interfaces.ISource
 		destination       locations.IDestination
 		formatter         interfaces.ITextFormatter
-		dcpFileSplitter   dcpCore.IDcpFileSpliter
+		dcpFileSplitter   dcpFileHandler.IDcpFileSplitter
+		dcpFileMerger     dcpFileHandler.IDcpFileMerger
 		dcpFileProperties models.IDcpFileProperties
 		log               loggingService.ILoggerService
 	}
@@ -36,7 +37,8 @@ func NewDcpFileCompressor(
 	formatter interfaces.ITextFormatter,
 	log loggingService.ILoggerService) IDcpFileCompressor {
 	return &dcpFileCompressor{
-		dcpFileSplitter:   dcpCore.NewDcpFileSpliter(),
+		dcpFileSplitter:   dcpFileHandler.NewDcpFileSplitter(),
+		dcpFileMerger:     dcpFileHandler.NewDcpFileMerger(),
 		dcpFileProperties: models.NewDcpFileOptions(source.GetVersion()),
 		source:            source,
 		destination:       destination,
@@ -96,9 +98,11 @@ func (dfc *dcpFileCompressor) Compress() error {
 }
 
 func (dfc *dcpFileCompressor) populateDcpExtractedBinaryFileParts(binaryPartsList components.IList[dcpParts.DcpFileParts]) error {
+	targetPath := dfc.destination.Extract().GetTargetPath()
+
 	err := dcpParts.PopulateDcpBinaryFileParts(
 		binaryPartsList,
-		dfc.destination.Extract().GetTargetPath(),
+		targetPath,
 		dfc.formatter,
 	)
 	if err != nil {
@@ -106,7 +110,7 @@ func (dfc *dcpFileCompressor) populateDcpExtractedBinaryFileParts(binaryPartsLis
 	}
 
 	if binaryPartsList.IsEmpty() {
-		return fmt.Errorf("no dcp extracted binary file parts found")
+		return fmt.Errorf("no dcp extracted binary file parts found in %s", targetPath)
 	}
 
 	return nil
@@ -137,9 +141,11 @@ func (dfc *dcpFileCompressor) populateDcpTranslatedBinaryFileParts(binaryTransla
 func (dfc *dcpFileCompressor) populateDcpTranslatedTextFileParts(translatedTextPartsList components.IList[dcpParts.DcpFileParts]) error {
 	dfc.log.Info("Populating dcp translated text file parts...")
 
+	targetPath := dfc.destination.Translate().GetTargetPath()
+
 	err := dcpParts.PopulateDcpTextFileParts(
 		translatedTextPartsList,
-		dfc.destination.Translate().GetTargetPath(),
+		targetPath,
 		dfc.formatter,
 	)
 	if err != nil {
@@ -147,7 +153,7 @@ func (dfc *dcpFileCompressor) populateDcpTranslatedTextFileParts(translatedTextP
 	}
 
 	if translatedTextPartsList.IsEmpty() {
-		return fmt.Errorf("no dcp translated text file parts found")
+		return fmt.Errorf("no dcp translated text file parts found in %s", targetPath)
 	}
 
 	return nil
@@ -213,8 +219,10 @@ func (dfc *dcpFileCompressor) ensureAllDcpTranslatedTextFileParts(translatedText
 }
 
 func (dfc *dcpFileCompressor) extractMissingDcpFileParts() error {
-	splitter := dcpCore.NewDcpFileSpliter()
-	return splitter.FileSplitter(dfc.source, dfc.destination, dfc.options)
+	if err := dfc.dcpFileSplitter.Split(dfc.source, dfc.destination, dfc.dcpFileProperties); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (dfc *dcpFileCompressor) compressFilesParts(partsList components.IList[dcpParts.DcpFileParts]) error {
@@ -249,10 +257,7 @@ func (dfc *dcpFileCompressor) joinFilesParts(dcpTranslatedBinaryPartsList compon
 
 	outputFile := dfc.destination.Import().GetTargetFile()
 
-	dcpFileJoiner := dcpCore.NewDcpFileJoiner()
-	if err := dcpFileJoiner.DcpFileJoiner(dfc.source, dfc.destination, dcpTranslatedBinaryPartsList, outputFile); err != nil {
-		dfc.log.Error(err, "error joining macrodic file: %s", outputFile)
-
+	if err := dfc.dcpFileMerger.Merge(dfc.source, dfc.destination, dcpTranslatedBinaryPartsList); err != nil {
 		return fmt.Errorf("error joining macrodic file: %s", outputFile)
 	}
 	return nil
