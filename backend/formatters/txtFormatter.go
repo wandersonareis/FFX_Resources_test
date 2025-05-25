@@ -55,12 +55,7 @@ func (t TxtFormatter) provideDefaulReadPath(targetDirectory, relativePath string
 }
 
 func (t *TxtFormatter) provideFolderReadPath(source interfaces.ISource, targetDirectory string) string {
-	relative := common.MakeRelativePath(t.GameFilesPath, source.GetParentPath())
-	source.SetRelativePath(relative)
-
-	outputPath := filepath.Join(targetDirectory, t.GameVersionDir, source.GetRelativePath())
-
-	return outputPath
+	return filepath.Join(targetDirectory, t.GameVersionDir, source.GetRelativePath())
 }
 
 func (t TxtFormatter) provideDcpReadPath(targetDirectory, fileName string) (string, string) {
