@@ -25,83 +25,66 @@ type InteractionService struct {
 
 var (
 	interactionInstance *InteractionService
-	mu                  sync.Mutex
+	once                sync.Once
 )
 
 func NewInteractionService() *InteractionService {
-	mu.Lock()
-	defer mu.Unlock()
+	once.Do(func() {
+		filePath := filepath.Join(common.GetExecDir(), "config.json")
+		ffxAppConfig := NewAppConfig(filePath)
+		if err := ffxAppConfig.FromJson(); err != nil {
+			panic(err)
+		}
 
-	if interactionInstance != nil {
-		return interactionInstance
-	}
+		gameVersion := models.NewFFXGameVersion(ffxAppConfig.FFXGameVersion)
 
-	filePath := filepath.Join(common.GetExecDir(), "config.json")
-	ffxAppConfig := NewAppConfig(filePath)
-	if err := ffxAppConfig.FromJson(); err != nil {
-		panic(err)
-	}
-
-	gameVersion := models.NewFFXGameVersion(ffxAppConfig.FFXGameVersion)
-
-	interactionInstance = &InteractionService{
-		Ctx:               context.Background(),
-		ffxAppConfig:      ffxAppConfig,
-		ffxGameVersion:    gameVersion,
-		GameLocation:      newGameLocation(),
-		ExtractLocation:   newExtractLocation(),
-		TranslateLocation: newTranslateLocation(),
-		ImportLocation:    newImportLocation(),
-	}
-
+		interactionInstance = &InteractionService{
+			Ctx:               context.Background(),
+			ffxAppConfig:      ffxAppConfig,
+			ffxGameVersion:    gameVersion,
+			GameLocation:      newGameLocation(),
+			ExtractLocation:   newExtractLocation(),
+			TranslateLocation: newTranslateLocation(),
+			ImportLocation:    newImportLocation(),
+		}
+	})
 	return interactionInstance
 }
 
 func NewInteractionServiceWithConfig(config *FFXAppConfig) *InteractionService {
-	mu.Lock()
-	defer mu.Unlock()
+	s := NewInteractionService()
 
 	gameVersion := models.NewFFXGameVersion(config.FFXGameVersion)
 
-	interactionInstance = &InteractionService{
-		Ctx:               context.Background(),
-		ffxAppConfig:      config,
-		ffxGameVersion:    gameVersion,
-		GameLocation:      newGameLocation(),
-		ExtractLocation:   newExtractLocation(),
-		TranslateLocation: newTranslateLocation(),
-		ImportLocation:    newImportLocation(),
-	}
+	s.mu.Lock()
+	s.ffxAppConfig = config
+	s.ffxGameVersion = gameVersion
+	s.mu.Unlock()
 
-	return interactionInstance
+	return s
 }
 
 func NewInteractionWithCtx(ctx context.Context) *InteractionService {
-	mu.Lock()
-	defer mu.Unlock()
+	// Não travamos o mutex global novamente, confiamos em NewInteractionService para inicializar.
+	s := NewInteractionService()
 
-	if interactionInstance == nil {
-		interactionInstance = NewInteractionService()
-	}
-
-	interactionInstance.Ctx = ctx
-
+	s.mu.Lock()
+	s.Ctx = ctx
 	activeCtx, cancel := context.WithCancel(ctx)
+	s.activeCtx = activeCtx
+	s.cancel = cancel
+	s.mu.Unlock()
 
-	interactionInstance.activeCtx = activeCtx
-	interactionInstance.cancel = cancel
-
-	return interactionInstance
+	return s
 }
 
 func NewInteractionWithTextFormatter(formatter interfaces.ITextFormatter) *InteractionService {
-	if interactionInstance == nil {
-		interactionInstance = NewInteractionService()
-	}
+	s := NewInteractionService()
 
-	interactionInstance.ffxTextFormat = formatter
-
-	return interactionInstance
+	s.mu.Lock()
+	s.ffxTextFormat = formatter
+	s.mu.Unlock()
+	return s
 }
 
 func (i *InteractionService) FFXAppConfig() IFFXAppConfig {
