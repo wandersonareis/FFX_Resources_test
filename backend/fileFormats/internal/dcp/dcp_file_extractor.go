@@ -2,7 +2,6 @@ package dcp
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/core"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/locations"
 	dcpCore "ffxresources/backend/fileFormats/internal/dcp/internal/core"
@@ -23,7 +22,7 @@ type (
 		destination locations.IDestination
 		formatter   interfaces.ITextFormatter
 		options     core.IDcpFileOptions
-
+		dcpFileProperties models.IDcpFileProperties
 		log loggingService.ILoggerService
 	}
 )
@@ -41,16 +40,12 @@ func NewDcpFileExtractor(
 	common.CheckArgumentNil(log, "log")
 
 	return &dcpFileExtractor{
-		source:      source,
-		destination: destination,
-		formatter:   formatter,
-		options:     options,
-		log:         log,
+		dcpFileProperties: models.NewDcpFileOptions(source.GetVersion()),
 	}
 }
 
 func (d *dcpFileExtractor) Extract() error {
-	dcpBinaryPartsList := components.NewList[dcpParts.DcpFileParts](d.options.GetPartsLength())
+	dcpBinaryPartsList := components.NewList[dcpParts.DcpFileParts](dfe.dcpFileProperties.GetPartsLength())
 	defer dcpBinaryPartsList.Clear()
 
 	if err := d.populateDcpBinaryFileParts(dcpBinaryPartsList); err != nil {
@@ -77,7 +72,7 @@ func (dfe *dcpFileExtractor) populateDcpBinaryFileParts(binaryPartsList componen
 }
 
 func (dfe *dcpFileExtractor) ensureAllDcpBinaryFileParts(binaryPartsList components.IList[dcpParts.DcpFileParts]) error {
-	if binaryPartsList.GetLength() == dfe.options.GetPartsLength() {
+	dcpFilePartsLen := dfe.dcpFileProperties.GetPartsLength()
 		return nil
 	}
 
@@ -91,7 +86,7 @@ func (dfe *dcpFileExtractor) ensureAllDcpBinaryFileParts(binaryPartsList compone
 		return err
 	}
 
-	if err := lib.EnsurePartsListCount(dfe.options.GetPartsLength(), binaryPartsList.GetLength()); err != nil {
+	if err := lib.EnsurePartsListCount(dcpFilePartsLen, binaryPartsList.GetLength()); err != nil {
 		return err
 	}
 
@@ -99,8 +94,11 @@ func (dfe *dcpFileExtractor) ensureAllDcpBinaryFileParts(binaryPartsList compone
 }
 
 func (dfe *dcpFileExtractor) extractMissingDcpFileParts() error {
-	splitter := dcpCore.NewDcpFileSpliter()
-	return splitter.FileSplitter(dfe.source, dfe.destination, dfe.options)
+	if err := dfe.dcpFileSplitter.Split(dfe.source, dfe.destination, dfe.dcpFileProperties); err != nil {
+		return fmt.Errorf("error when extracting dcp file parts: %w", err)
+	}
+
+	return nil
 }
 
 func (dfe *dcpFileExtractor) decodeFilesParts(binaryPartsList components.IList[dcpParts.DcpFileParts]) error {

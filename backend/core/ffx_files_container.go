@@ -1,16 +1,6 @@
 package core
 
 type (
-	IDcpFileOptions interface {
-		GetNameBase() string
-		GetPartsLength() int
-	}
-
-	dcpFileOptions struct {
-		nameBase    string
-		partsLength int
-	}
-
 	lockitFileOptions struct {
 		nameBase        string
 		lineBreaksCount int
@@ -82,60 +72,5 @@ func NewLockitFileOptions(gameVersion int) ILockitFileOptions {
 		return NewFFX2LockitFile()
 	default:
 		return &FFXLockitFile{}
-	}
-}
-
-
-
-type FFXDcpFile struct {
-	dcpFileOptions
-}
-
-func NewFFXDcpFile() IDcpFileOptions {
-	return &FFXDcpFile{
-		dcpFileOptions: dcpFileOptions{
-			nameBase:    "macrodic",
-			partsLength: 5,
-		},
-	}
-}
-
-func (ffxDcp *FFXDcpFile) GetNameBase() string {
-	return ffxDcp.nameBase
-}
-
-func (ffxDcp *FFXDcpFile) GetPartsLength() int {
-	return ffxDcp.partsLength
-}
-
-type FFX2DcpFile struct {
-	dcpFileOptions
-}
-
-func NewFFX2DcpFile() IDcpFileOptions {
-	return &FFX2DcpFile{
-		dcpFileOptions: dcpFileOptions{
-			nameBase:    "macrodic",
-			partsLength: 7,
-		},
-	}
-}
-
-func (ffx2Dcp *FFX2DcpFile) GetNameBase() string {
-	return ffx2Dcp.nameBase
-}
-
-func (ffx2Dcp *FFX2DcpFile) GetPartsLength() int {
-	return ffx2Dcp.partsLength
-}
-
-func NewDcpFileOptions(gameVersion int) IDcpFileOptions {
-	switch gameVersion {
-	case 1:
-		return NewFFXDcpFile()
-	case 2:
-		return NewFFX2DcpFile()
-	default:
-		return NewFFXDcpFile()
 	}
 }
