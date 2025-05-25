@@ -34,43 +34,46 @@ func (df *DcpFile) GetSource() interfaces.ISource {
 }
 
 func (df *DcpFile) Extract() error {
-	df.ensureFileOptions()
+	targetPath := df.destination.Extract().GetTargetPath()
+	df.log.Info("Extracting DCP file inside path: %s", targetPath)
 
 	if err := df.extract(); err != nil {
 		return err
 	}
 
+	df.log.Info("Verifying extracted macrodic file: %s", targetPath)
+
 	if err := df.extractVerify(); err != nil {
 		return err
 	}
 
-	df.log.Info("System macrodic file extracted successfully to: %s", df.GetDestination().Extract().GetTargetPath())
+	df.log.Info("System macrodic file extracted successfully to: %s", targetPath)
 
 	return nil
 }
 
 func (df *DcpFile) extract() error {
-	df.log.Info("Extracting DCP file inside path: %s", df.GetDestination().Extract().GetTargetPath())
-
 	extractor := NewDcpFileExtractor(
-		df.GetSource(),
-		df.GetDestination(),
+		df.source,
+		df.destination,
 		df.formatter,
-		df.fileOptions,
 		df.log)
 
-	return extractor.Extract()
+	if err := extractor.Extract(); err != nil {
+		return fmt.Errorf("error extracting system macrodic file: %s", err.Error())
+	}
+
+	return nil
 }
 
 func (df *DcpFile) extractVerify() error {
-	targetPath := df.GetDestination().Extract().GetTargetPath()
+	targetPath := df.destination.Extract().GetTargetPath()
 
-	df.log.Info("Verifying extracted macrodic file: %s", targetPath)
-
-	dcpFileIntegrity := integrity.NewDcpFileExtractorIntegrity(df.log)
-
-	if err := dcpFileIntegrity.Verify(targetPath, formatters.NewTxtFormatter(), df.fileOptions); err != nil {
-		return fmt.Errorf("error verifying system macrodic file: %s", targetPath)
+	if err := df.checkIntegrityService.Verify(
+		df.source,
+		df.destination,
+		integrity.NewDcpExtractionVerificationStrategy()); err != nil {
+		return fmt.Errorf("error verifying macrodic file: %s", targetPath)
 	}
 
 	return nil
@@ -115,9 +118,4 @@ func (df *DcpFile) compressVerify() error {
 	}
 
 	return nil
-}
-func (df *DcpFile) ensureFileOptions() {
-	if df.fileOptions == nil {
-		df.fileOptions = core.NewDcpFileOptions(interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber())
-	}
 }

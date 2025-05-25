@@ -29,12 +29,19 @@ func PopulateDcpBinaryFileParts(
 	binaryPartsList components.IList[DcpFileParts],
 	path string,
 	formatter interfaces.ITextFormatter) error {
-	return populateDcpPartsList(
+	err := populateDcpPartsList(
 		binaryPartsList,
 		path,
 		lib.DCP_FILE_BINARY_PARTS_PATTERN,
 		formatter,
 	)
+	if err != nil {
+		return fmt.Errorf(
+			"error when finding dcp file parts: %s in path: %s",
+			err.Error(),
+			path)
+	}
+	return nil
 }
 
 func PopulateDcpTextFileParts(

@@ -4,11 +4,12 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/locations"
-	dcpCore "ffxresources/backend/fileFormats/internal/dcp/internal/core"
+	"ffxresources/backend/fileFormats/internal/dcp/internal/dcpFileHandler"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/dcpParts"
 	"ffxresources/backend/fileFormats/internal/dcp/internal/lib"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/loggingService"
+	"ffxresources/backend/models"
 	"fmt"
 )
 
@@ -18,12 +19,12 @@ type (
 	}
 
 	dcpFileExtractor struct {
-		source      interfaces.ISource
-		destination locations.IDestination
-		formatter   interfaces.ITextFormatter
-		options     core.IDcpFileOptions
+		source            interfaces.ISource
+		destination       locations.IDestination
+		formatter         interfaces.ITextFormatter
+		dcpFileSplitter   dcpFileHandler.IDcpFileSplitter
 		dcpFileProperties models.IDcpFileProperties
-		log loggingService.ILoggerService
+		log               loggingService.ILoggerService
 	}
 )
 
@@ -31,32 +32,30 @@ func NewDcpFileExtractor(
 	source interfaces.ISource,
 	destination locations.IDestination,
 	formatter interfaces.ITextFormatter,
-	options core.IDcpFileOptions,
 	log loggingService.ILoggerService) IDcpFileExtractor {
-	common.CheckArgumentNil(source, "source")
-	common.CheckArgumentNil(destination, "destination")
-	common.CheckArgumentNil(formatter, "formatter")
-	common.CheckArgumentNil(options, "options")
-	common.CheckArgumentNil(log, "log")
-
 	return &dcpFileExtractor{
+		dcpFileSplitter:   dcpFileHandler.NewDcpFileSplitter(),
 		dcpFileProperties: models.NewDcpFileOptions(source.GetVersion()),
+		source:            source,
+		destination:       destination,
+		formatter:         formatter,
+		log:               log,
 	}
 }
 
-func (d *dcpFileExtractor) Extract() error {
+func (dfe *dcpFileExtractor) Extract() error {
 	dcpBinaryPartsList := components.NewList[dcpParts.DcpFileParts](dfe.dcpFileProperties.GetPartsLength())
 	defer dcpBinaryPartsList.Clear()
 
-	if err := d.populateDcpBinaryFileParts(dcpBinaryPartsList); err != nil {
+	if err := dfe.populateDcpBinaryFileParts(dcpBinaryPartsList); err != nil {
 		return err
 	}
 
-	if err := d.ensureAllDcpBinaryFileParts(dcpBinaryPartsList); err != nil {
+	if err := dfe.ensureAllDcpBinaryFileParts(dcpBinaryPartsList); err != nil {
 		return err
 	}
 
-	if err := d.decodeFilesParts(dcpBinaryPartsList); err != nil {
+	if err := dfe.decodeFilesParts(dcpBinaryPartsList); err != nil {
 		return err
 	}
 
@@ -64,15 +63,39 @@ func (d *dcpFileExtractor) Extract() error {
 }
 
 func (dfe *dcpFileExtractor) populateDcpBinaryFileParts(binaryPartsList components.IList[dcpParts.DcpFileParts]) error {
-	return dcpParts.PopulateDcpBinaryFileParts(
+	err := dcpParts.PopulateDcpBinaryFileParts(
 		binaryPartsList,
 		dfe.destination.Extract().GetTargetPath(),
 		dfe.formatter,
 	)
+	if err != nil {
+		return fmt.Errorf("failed to populate dcp binary file parts: %w", err)
+	}
+	return nil
+}
+
+func (dfe *dcpFileExtractor) populateMissingDcpBinaryFileParts(binaryPartsList components.IList[dcpParts.DcpFileParts]) error {
+	err := dcpParts.PopulateDcpBinaryFileParts(
+		binaryPartsList,
+		dfe.destination.Extract().GetTargetPath(),
+		dfe.formatter,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to populate dcp binary file parts: %w", err)
+	}
+
+	if binaryPartsList.IsEmpty() {
+		return fmt.Errorf("no dcp binary file parts found")
+	}
+
+	return nil
 }
 
 func (dfe *dcpFileExtractor) ensureAllDcpBinaryFileParts(binaryPartsList components.IList[dcpParts.DcpFileParts]) error {
 	dcpFilePartsLen := dfe.dcpFileProperties.GetPartsLength()
+	binaryPartsListLen := binaryPartsList.GetLength()
+
+	if binaryPartsListLen == dcpFilePartsLen {
 		return nil
 	}
 
@@ -82,7 +105,7 @@ func (dfe *dcpFileExtractor) ensureAllDcpBinaryFileParts(binaryPartsList compone
 		return err
 	}
 
-	if err := dfe.populateDcpBinaryFileParts(binaryPartsList); err != nil {
+	if err := dfe.populateMissingDcpBinaryFileParts(binaryPartsList); err != nil {
 		return err
 	}
 
