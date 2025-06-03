@@ -38,3 +38,4 @@ backend/fileFormats/internal/text/testdata/*
 testdata/FFX/*
 testdata/FFX-2/*
 testData/config.json
+*.txt
