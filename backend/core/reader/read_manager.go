@@ -173,7 +173,7 @@ func InitializeInternals() error {
 	}
 	for idx, strings := range components.MacroLookup {
 		fmt.Printf("MacroLookup[%d] s%dl%d\n", idx, idx/0x100, idx%0x100)
-		for loc, _ := range common.Localizations {
+		for loc := range common.Localizations {
 			content := strings.GetLocalizedContent(loc)
 			if content == nil || content.IsEmpty() {
 				continue

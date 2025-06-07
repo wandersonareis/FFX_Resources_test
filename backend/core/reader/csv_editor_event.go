@@ -598,6 +598,383 @@ type EventStringData struct {
 	Text  map[string]string `json:"text"`
 }
 
+// MacroStringData represents a single macro string with its text variations
+type MacroStringData struct {
+	Index          int    `json:"index"`
+	RegularText    string `json:"regular_text"`
+	SimplifiedText string `json:"simplified_text"`
+	HasDistinct    bool   `json:"has_distinct_simplified"`
+}
+
+// MacroChunkData represents a chunk of macro strings
+type MacroChunkData struct {
+	ChunkIndex int               `json:"chunk_index"`
+	Strings    []MacroStringData `json:"strings"`
+}
+
+// MacroLocalizationData represents macro dictionary data for a specific localization
+type MacroLocalizationData struct {
+	Localization string           `json:"localization"`
+	Chunks       []MacroChunkData `json:"chunks"`
+}
+
+/*
+JSON MACRO DICTIONARY EDITOR FUNCTIONS
+======================================
+
+This section contains JSON equivalents for macro dictionary editor functions.
+These functions process the single JSON file created by WriteMacroDictionaryJSON.
+
+1. EditAndSaveMacroDictJSONFiles(print) - Processes the macro_dictionary_all_localizations.json file
+   - Reads the specific JSON file created by WriteMacroDictionaryJSON
+   - Processes all macro dictionaries from the single JSON file
+   - Applies changes back to the MACRODICTFILE component
+   - Uses internal implementation to avoid circular dependencies
+
+2. editAndSaveMacroDictFromJSON(print, path) - Processes a single JSON file
+   - Reads JSON content and parses it internally
+   - Updates MACRODICTFILE with macro dictionary data
+   - Reconstructs MacroString objects from JSON data
+
+3. EditAndSaveSpecificMacroDictFromJSON(localization, print) - Processes a specific localization
+   - Loads the macro_dictionary_all_localizations.json file
+   - Searches for the specified localization by code
+   - Processes only that localization and applies changes back to MACRODICTFILE
+
+Usage:
+  EditAndSaveMacroDictJSONFiles(true)  // Process macro_dictionary_all_localizations.json with debug output
+  EditAndSaveMacroDictJSONFiles(false) // Process silently
+
+  EditAndSaveSpecificMacroDictFromJSON("us", true)  // Process only US localization with debug output
+  EditAndSaveSpecificMacroDictFromJSON("jp", false) // Process only Japanese localization silently
+*/
+
+func EditAndSaveMacroDictJSONFiles(print bool) error {
+	jsonPath := filepath.Join(components.GameFilesRoot, components.ModsFolder, "edits", "macrodic")
+
+	if !common.IsPathExists(jsonPath) {
+		fmt.Printf("Diretório não encontrado: %s\n", jsonPath)
+		return fmt.Errorf("directory not found: %s", jsonPath)
+	}
+
+	jsonFilePath := filepath.Join(jsonPath, "macro_dictionary_all_localizations.json")
+
+	if !common.IsPathExists(jsonFilePath) {
+		fmt.Printf("Arquivo JSON não encontrado: %s\n", jsonFilePath)
+		return fmt.Errorf("JSON file not found: %s", jsonFilePath)
+	}
+
+	if print {
+		fmt.Printf("Processando arquivo JSON de dicionário de macros: %s\n", jsonFilePath)
+	}
+
+	err := editAndSaveMacroDictFromJSON(print, jsonFilePath)
+	if err != nil {
+		fmt.Printf("Erro ao processar arquivo JSON de dicionário de macros: %v\n", err)
+		return err
+	}
+
+	if print {
+		fmt.Printf("Dicionário de macros processado com sucesso!\n")
+	}
+
+	return nil
+}
+
+func editAndSaveMacroDictFromJSON(print bool, jsonPath string) error {
+	if print {
+		fmt.Printf("Carregando dados do dicionário de macros do arquivo JSON: %s\n", jsonPath)
+	}
+
+	// Read JSON file
+	resolvedFile, err := components.ResolveFile(jsonPath, true)
+	if err != nil {
+		return fmt.Errorf("erro ao resolver caminho do arquivo JSON: %v", err)
+	}
+	jsonData, err := common.ReadFile(resolvedFile)
+	if err != nil {
+		return fmt.Errorf("erro ao ler arquivo JSON: %v", err)
+	}
+
+	// Try to parse as array of localizations first (all localizations file)
+	var allLocalizations []MacroLocalizationData
+	if err := json.Unmarshal(jsonData, &allLocalizations); err != nil {
+		// If that fails, try to parse as single localization
+		var singleLocalization MacroLocalizationData
+		if err := json.Unmarshal(jsonData, &singleLocalization); err != nil {
+			return fmt.Errorf("erro ao fazer parse do JSON: %v", err)
+		}
+		// Convert single localization to array
+		allLocalizations = []MacroLocalizationData{singleLocalization}
+	}
+
+	if print {
+		fmt.Printf("Encontradas %d localizações no arquivo JSON\n", len(allLocalizations))
+	} // Lista para armazenar entradas de debug
+	var debugEntries []DebugMacroDicEntry
+
+	// Process each localization
+	for _, locData := range allLocalizations {
+		/* if locData.Localization != "us" {
+			continue
+		} */
+		if print {
+			fmt.Printf("Processando localização: %s (%d chunks)\n", locData.Localization, len(locData.Chunks))
+		}
+
+		// Clear existing data for this localization
+		//components.MACRODICTFILE[locData.Localization] = make([][]*components.MacroString, 0)
+		macroCharsetStrings := components.MACRODICTFILE[locData.Localization]
+
+		// Find the maximum chunk index to properly size the array
+		maxChunkIndex := 15
+
+		// Initialize the chunks array with proper size
+		chunks := make([][]*components.MacroString, maxChunkIndex+1)
+		for i := range chunks {
+			chunks[i] = make([]*components.MacroString, 0)
+		}
+
+		// Process each chunk
+		for _, chunkData := range locData.Chunks {
+			chunkIndex := chunkData.ChunkIndex
+
+			if print {
+				fmt.Printf("  Processando chunk %d (%d strings)\n", chunkIndex, len(chunkData.Strings))
+			}
+
+			// Find the maximum string index to properly size the chunk
+			maxStringIndex := -1
+			for _, stringData := range chunkData.Strings {
+				if stringData.Index > maxStringIndex {
+					maxStringIndex = stringData.Index
+				}
+			}
+
+			// Initialize the strings array for this chunk
+			if maxStringIndex >= 0 {
+				chunks[chunkIndex] = make([]*components.MacroString, maxStringIndex+1)
+			}
+
+			charset := components.LocalizationToCharset(locData.Localization)
+			for _, stringData := range chunkData.Strings {
+				stringIndex := stringData.Index
+
+				simplifiedText := stringData.SimplifiedText
+				var regularBytes []byte
+				var simplifiedBytes []byte
+			
+				regularBytes = components.StringToBytes(stringData.RegularText, charset)
+				bytesToString := components.BytesToString(regularBytes, charset)
+
+				if stringData.HasDistinct {
+					simplifiedBytes = components.StringToBytes(simplifiedText, charset)
+				}
+
+				// Create MacroString object
+				macroString := &components.MacroString{
+					Charset:          charset,
+					RegularOffset:    0, // These offsets are not relevant when reconstructing from JSON
+					SimplifiedOffset: 0, // They are used during binary parsing only
+					RegularBytes:     regularBytes,
+					SimplifiedBytes:  simplifiedBytes,
+				}
+
+				if stringIndex >= len(chunks[chunkIndex]) {
+					newSize := stringIndex + 1
+					newSlice := make([]*components.MacroString, newSize)
+					copy(newSlice, chunks[chunkIndex])
+					chunks[chunkIndex] = newSlice
+				}
+				chunks[chunkIndex][stringIndex] = macroString
+			}
+			components.RebuildMacroStrings(chunks[chunkIndex], charset, false)
+		}
+
+		// Update the global MACRODICTFILE
+		components.MACRODICTFILE[locData.Localization] = chunks
+
+		if print {
+			fmt.Printf("  ✓ Localização %s atualizada com sucesso\n", locData.Localization)
+		}
+	}
+
+	if print {
+		fmt.Printf("Dados do dicionário de macros carregados com sucesso\n")
+
+		totalLocalizations := len(components.MACRODICTFILE)
+		totalStrings := 0
+
+		for localization, chunks := range components.MACRODICTFILE {
+			localizationStrings := 0
+			for _, chunk := range chunks {
+				for _, macroString := range chunk {
+					if macroString != nil && !macroString.IsEmpty() {
+						localizationStrings++
+					}
+				}
+			}
+			totalStrings += localizationStrings
+			fmt.Printf("  - Localização %s: %d chunks, %d strings\n", localization, len(chunks), localizationStrings)
+		}
+		fmt.Printf("Total: %d localizações, %d strings de macro carregadas\n", totalLocalizations, totalStrings)
+	}
+
+	return nil
+}
+
+// EditAndSaveSpecificMacroDictFromJSON processes a specific localization from the macro_dictionary_all_localizations.json file
+// This function loads the JSON file, finds the specified localization, and applies changes only to that localization
+//
+// Parameters:
+//   - localization: The localization code to process (e.g., "us", "jp", "de", etc.)
+//   - print: If true, prints debug information during processing
+//
+// Returns:
+//   - error: Any error that occurred during processing
+func EditAndSaveSpecificMacroDictFromJSON(localization string, print bool) error {
+	jsonPath := filepath.Join(components.GameFilesRoot, components.ModsFolder, "edits", "macrodic")
+	jsonFilePath := filepath.Join(jsonPath, "macro_dictionary_all_localizations.json")
+
+	if !common.IsPathExists(jsonFilePath) {
+		return fmt.Errorf("arquivo JSON não encontrado: %s", jsonFilePath)
+	}
+
+	if print {
+		fmt.Printf("Processando localização específica %s do arquivo JSON de dicionário de macros: %s\n",
+			localization, jsonFilePath)
+	}
+
+	// Read JSON file
+	resolvedFile, err := components.ResolveFile(jsonFilePath, true)
+	if err != nil {
+		return fmt.Errorf("erro ao resolver caminho do arquivo JSON: %v", err)
+	}
+	jsonData, err := common.ReadFile(resolvedFile)
+	if err != nil {
+		return fmt.Errorf("erro ao ler arquivo JSON: %v", err)
+	}
+
+	// Parse JSON to find all localizations
+	var allLocalizations []MacroLocalizationData
+	if err := json.Unmarshal(jsonData, &allLocalizations); err != nil {
+		// If that fails, try to parse as single localization
+		var singleLocalization MacroLocalizationData
+		if err := json.Unmarshal(jsonData, &singleLocalization); err != nil {
+			return fmt.Errorf("erro ao fazer parse do JSON: %v", err)
+		}
+		// Convert single localization to array
+		allLocalizations = []MacroLocalizationData{singleLocalization}
+	}
+
+	// Find the specific localization
+	var targetLocalization *MacroLocalizationData
+	for i, locData := range allLocalizations {
+		if locData.Localization == localization {
+			targetLocalization = &allLocalizations[i]
+			break
+		}
+	}
+
+	if targetLocalization == nil {
+		return fmt.Errorf("localização %s não encontrada no arquivo JSON", localization)
+	}
+
+	if print {
+		fmt.Printf("Localização %s encontrada com %d chunks\n", localization, len(targetLocalization.Chunks))
+	}
+
+	// Clear existing data for this localization only
+	components.MACRODICTFILE[localization] = make([][]*components.MacroString, 0)
+
+	// Find the maximum chunk index to properly size the array
+	maxChunkIndex := 15
+
+	// Initialize the chunks array with proper size
+	chunks := make([][]*components.MacroString, maxChunkIndex+1)
+	for i := range chunks {
+		chunks[i] = make([]*components.MacroString, 0)
+	}
+
+	// Process each chunk for the target localization
+	for _, chunkData := range targetLocalization.Chunks {
+		chunkIndex := chunkData.ChunkIndex
+
+		if print {
+			fmt.Printf("  Processando chunk %d (%d strings)\n", chunkIndex, len(chunkData.Strings))
+		}
+
+		// Find the maximum string index to properly size the chunk
+		maxStringIndex := -1
+		for _, stringData := range chunkData.Strings {
+			if stringData.Index > maxStringIndex {
+				maxStringIndex = stringData.Index
+			}
+		}
+
+		// Initialize the strings array for this chunk
+		if maxStringIndex >= 0 {
+			chunks[chunkIndex] = make([]*components.MacroString, maxStringIndex+1)
+		}
+
+		// Process each string in the chunk
+		for _, stringData := range chunkData.Strings {
+			stringIndex := stringData.Index
+
+			// Get the text for this localization
+			regularText := stringData.RegularText
+			simplifiedText := stringData.SimplifiedText
+
+			// If no simplified text is provided, use regular text
+			if simplifiedText == "" {
+				simplifiedText = regularText
+			}
+
+			// Convert strings back to bytes using the localization's charset
+			charset := components.LocalizationToCharset(localization)
+			regularBytes := components.StringToBytes(regularText, charset)
+			simplifiedBytes := components.StringToBytes(simplifiedText, charset)
+
+			// Create MacroString object
+			macroString := &components.MacroString{
+				Charset:          charset,
+				RegularOffset:    0, // These offsets are not relevant when reconstructing from JSON
+				SimplifiedOffset: 0, // They are used during binary parsing only
+				RegularBytes:     regularBytes,
+				SimplifiedBytes:  simplifiedBytes,
+			}
+
+			// Add to chunk (ensure the array is large enough)
+			if stringIndex >= len(chunks[chunkIndex]) {
+				// Expand the array to accommodate this index
+				newSize := stringIndex + 1
+				newSlice := make([]*components.MacroString, newSize)
+				copy(newSlice, chunks[chunkIndex])
+				chunks[chunkIndex] = newSlice
+			}
+			chunks[chunkIndex][stringIndex] = macroString
+		}
+	}
+
+	// Update the global MACRODICTFILE for this specific localization only
+	components.MACRODICTFILE[localization] = chunks
+
+	if print {
+		stringCount := 0
+		for _, chunk := range chunks {
+			for _, macroString := range chunk {
+				if macroString != nil && !macroString.IsEmpty() {
+					stringCount++
+				}
+			}
+		}
+		fmt.Printf("✓ Localização %s processada com sucesso: %d chunks, %d strings\n",
+			localization, len(chunks), stringCount)
+	}
+
+	return nil
+}
+
 // ExampleCsvEditorUsage demonstrates how to use the CSV editor functions
 // EditAndSaveEventCsv is a wrapper for EditAndSaveEventCSVFiles for backward compatibility
 // Deprecated: Use EditAndSaveEventCSVFiles instead

@@ -624,7 +624,7 @@ func TestMacroStringReconstruction(print bool) {
 			}
 
 			// Convert back to MacroString objects
-			reconstructed := components.FromStringDataDev(binaryData[2:], charset) // Skip first 2 bytes (count)
+			reconstructed := components.FromStringData(binaryData[2:], charset) // Skip first 2 bytes (count)
 			if print {
 				fmt.Printf("   Reconstructed chunk has %d strings\n", len(reconstructed))
 			}
