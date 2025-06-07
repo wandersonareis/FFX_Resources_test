@@ -97,9 +97,7 @@ func (ef *EventFile) mapChunks(chunks []Chunk) {
 	}
 }
 
-// mapStrings converts byte data to localized string objects
 func (ef *EventFile) mapStrings() {
-	// Map Japanese strings
 	if len(ef.JapaneseTextBytes) > 0 {
 		japaneseStrings, err := FromFieldStringData(ef.JapaneseTextBytes, false, "jp")
 		if err == nil && japaneseStrings != nil {
@@ -112,7 +110,6 @@ func (ef *EventFile) mapStrings() {
 		}
 	}
 
-	// Map English strings
 	if len(ef.EnglishTextBytes) > 0 {
 		englishStrings, err := FromFieldStringData(ef.EnglishTextBytes, false, "us")
 		if err == nil && englishStrings != nil {
@@ -126,7 +123,6 @@ func (ef *EventFile) mapStrings() {
 	}
 }
 
-// AddLocalizations adds or merges localized string objects
 func (ef *EventFile) AddLocalizations(strings []*LocalizedFieldStringObject) {
 	if ef.Strings == nil {
 		ef.Strings = strings
@@ -145,8 +141,6 @@ func (ef *EventFile) AddLocalizations(strings []*LocalizedFieldStringObject) {
 	}
 }
 
-// ToBytes converts the EventFile back to byte format
-// Rebuilds the file in the same chunk order as mapChunks separates it
 func (ef *EventFile) ToBytes() []byte {
 	chunks := make([][]byte, 0, 5)
 
@@ -172,9 +166,6 @@ func (ef *EventFile) ToBytes() []byte {
 	return ef.chunksToBytes(chunks)
 }
 
-// UpdateTextBytes updates the Japanese or English text bytes from current strings
-// Accepts "jp" or "us" to specify which localization to update
-// This function takes the strings array and converts them back to the appropriate text bytes
 func (ef *EventFile) UpdateTextBytes(localization string) {
 	textBytes := ef.stringsToStringFileBytes(localization)
 
@@ -184,19 +175,15 @@ func (ef *EventFile) UpdateTextBytes(localization string) {
 	case "us", "english":
 		ef.EnglishTextBytes = textBytes
 	default:
-		// For other localizations, you might want to handle differently
-		// For now, default to English
 		ef.EnglishTextBytes = textBytes
 	}
 }
 
-// stringsToStringFileBytes converts localized strings to byte format for specific localization
 func (ef *EventFile) stringsToStringFileBytes(localization string) []byte {
 	if len(ef.Strings) == 0 {
 		return []byte{}
 	}
 
-	// Extract FieldString objects for the specified localization
 	fieldStrings := make([]*FieldString, 0, len(ef.Strings))
 	charset := LocalizationToCharset(localization)
 
@@ -206,7 +193,6 @@ func (ef *EventFile) stringsToStringFileBytes(localization string) []byte {
 			if fieldString != nil {
 				fieldStrings = append(fieldStrings, fieldString)
 			} else {
-				// Create empty field string if no content for this localization
 				emptyFieldString := &FieldString{
 					Charset: charset,
 				}
@@ -214,21 +200,16 @@ func (ef *EventFile) stringsToStringFileBytes(localization string) []byte {
 			}
 		}
 	}
-
-	// Use RebuildFieldStrings to convert back to bytes
 	return RebuildFieldStrings(fieldStrings, charset, true)
 }
 
-// chunksToBytes converts chunks back to a single byte array with proper headers
 func (ef *EventFile) chunksToBytes(chunks [][]byte) []byte {
 	if len(chunks) == 0 {
 		return []byte{}
 	}
 
-	// Calculate header size (4 bytes per chunk + 4 bytes for end marker)
 	headerSize := (len(chunks) + 1) * 4
 
-	// Calculate chunk offsets
 	offsets := make([]int, len(chunks)+1)
 	currentOffset := headerSize
 
@@ -240,7 +221,7 @@ func (ef *EventFile) chunksToBytes(chunks [][]byte) []byte {
 			currentOffset += len(chunk)
 		}
 	}
-	offsets[len(chunks)] = currentOffset // End marker
+	offsets[len(chunks)] = currentOffset
 
 	// Build the result
 	result := make([]byte, currentOffset)
@@ -260,7 +241,6 @@ func (ef *EventFile) chunksToBytes(chunks [][]byte) []byte {
 	return result
 }
 
-// write4BytesLE writes a 4-byte integer in little-endian format
 func write4BytesLE(data []byte, offset int, value uint32) {
 	if offset+3 < len(data) {
 		data[offset] = byte(value & 0xFF)
@@ -270,7 +250,6 @@ func write4BytesLE(data []byte, offset int, value uint32) {
 	}
 }
 
-// String returns string representation of the EventFile
 func (ef *EventFile) String() string {
 	var builder strings.Builder
 	builder.WriteString(ef.GetName())
@@ -278,19 +257,16 @@ func (ef *EventFile) String() string {
 	return builder.String()
 }
 
-// GetName returns the name of the event file
 func (ef *EventFile) GetName() string {
 	return ef.ID
 }
 
-// GetNameWithLocalization returns the name with localization-specific area name
 func (ef *EventFile) GetNameWithLocalization(localization string) string {
 	// This would need access to MACRO_LOOKUP and EventScript implementation
 	// For now, return the basic name
 	return ef.GetName()
 }
 
-// AtelScriptObject placeholder - this would need to be implemented based on your needs
 type AtelScriptObject struct {
 	AreaNameIndexes []int
 	// Add other fields as needed

@@ -8,6 +8,7 @@ var (
 	//ENCOUNTERS          = make(map[string]*atel.EncounterFile)
 	//MONSTERS            = make([]*atel.MonsterFile, 0x1000)
 	//MENUMAIN            *atel.AtelScriptObject
+	MACRODICTFILE = make(map[string][][]*MacroString)
 	//ENCOUNTER_TABLES    []*model.FieldEncounterTableDataObject
 	//PLAYER_CHAR_STATS   []*model.PlayerCharStatDataObject
 	//PLAYER_ROM          []*model.PlayerRomDataObject

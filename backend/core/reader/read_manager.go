@@ -71,7 +71,7 @@ func PrepareCharset(charset string) error {
 
 func loadCharReplacements(charset string) map[rune]rune {
 	path := filepath.Join(common.PathOriginalsRoot, "ffx_encoding", "char_replacements.json")
-	resolvedFile , err := components.ResolveFile(path, false)
+	resolvedFile, err := components.ResolveFile(path, false)
 	if err != nil {
 		fmt.Printf("Error resolving char replacements file: %v\n", err)
 		return nil
@@ -94,7 +94,7 @@ func loadCharReplacements(charset string) map[rune]rune {
 	for oldChar, newChar := range charsetReplacements {
 		oldCharRune := []rune(oldChar)
 		newCharRune := []rune(newChar)
-		if len(oldCharRune) == 1 && len(newCharRune) == 1{
+		if len(oldCharRune) == 1 && len(newCharRune) == 1 {
 			replacements[oldCharRune[0]] = newCharRune[0]
 		} else {
 			fmt.Printf("Warning: Invalid replacement for charset %s: %s -> %s\n", charset, oldChar, newChar)
@@ -141,7 +141,6 @@ func ByteToCharLookup(charset string, idx uint) (rune, bool) {
 	return r, exists
 }
 
-// CharToByteLookup returns the byte value (int) mapped to r in the given charset.
 func CharToByteLookup(charset string, r rune) (uint, bool) {
 	m, ok := components.CharToByteMaps[charset]
 	if !ok {
@@ -151,78 +150,41 @@ func CharToByteLookup(charset string, r rune) (uint, bool) {
 	return b, exists
 }
 
-func PrepareStringMacros(filename, localization string, printOutput bool) {
-	// Read the entire file as bytes
+func PrepareStringMacros(filename, localization string) {
 	data := components.FileToBytes(filename, true)
 
-	// Parse chunks and build the MacroDictionaryFile
 	mdf := components.NewMacroDictionaryFile(data, localization)
 
-	// Publish all extracted MacroStrings into the global MacroLookup
 	mdf.PublishStrings()
-
-	// Optionally print the MacroDictionaryFile (uses String() method)
-	if printOutput {
-		fmt.Println(mdf)
-	}
 }
 
-func InitializeInternals() {
-	// 1. Prepare all character maps
+func InitializeInternals() error {
 	for _, cs := range common.Charsets {
-		PrepareCharset(cs)
+		if err := PrepareCharset(cs); err != nil {
+			return err
+		}
 	}
 
-	// 2. Prepare string macros for each localization
 	for loc := range common.Localizations {
 		newVar := GetLocalizationRoot(loc)
 		path := filepath.Join(newVar, "menu", "macrodic.dcp")
 		
-		PrepareStringMacros(path, loc, false)
+		PrepareStringMacros(path, loc)
 	}
-}
-
-func ReadEventFileBasic(filename string) error {
-	// Read the file using the components package
-	data, err := components.ReadFile(filename)
-	if err != nil {
-		return fmt.Errorf("failed to read file: %w", err)
-	}
-
-	// Process the data (this will depend on the structure of your event files and your application's needs)
-	// For demonstration, let's just print the data
-	fmt.Printf("Data from event file %s: %d bytes\n", filename, len(data))
-
-	return nil
-}
-
-func LoadAllEvents(directory string) error {
-	// Read all files in the events directory
-	files, err := os.ReadDir(directory)
-	if err != nil {
-		return fmt.Errorf("failed to read directory: %w", err)
-	}
-
-	// Sort files by name
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].Name() < files[j].Name()
-	})
-	// Iterate over files and read each event file
-	for _, file := range files {
-		if strings.HasSuffix(file.Name(), ".evnt") {
-			filePath := filepath.Join(directory, file.Name())
-			if err := ReadEventFileBasic(filePath); err != nil {
-				return fmt.Errorf("failed to read event file %s: %w", file.Name(), err)
+	for idx, strings := range components.MacroLookup {
+		fmt.Printf("MacroLookup[%d] s%dl%d\n", idx, idx/0x100, idx%0x100)
+		for loc, _ := range common.Localizations {
+			content := strings.GetLocalizedContent(loc)
+			if content == nil || content.IsEmpty() {
+				continue
+			}
+			macro := content.GetString()
+			fmt.Printf("  %s: %s\n", loc, macro)
 			}
 		}
-	}
-
 	return nil
 }
 
-// ReadAllEvents reads all event files from the originals event directory
-// skipBlitzballEvents: if true, skips the "bl" (blitzball) folder
-// print: if true, prints debug information
 func ReadAllEvents(print bool) error {
 	eventsFolder, err := components.ResolveFile(common.PathOriginalsEvent, false)
 	if err != nil {
@@ -259,14 +221,12 @@ func ReadAllEvents(print bool) error {
 			continue
 		}
 
-		// Read subdirectory contents
 		subPath := filepath.Join(eventsFolder, entry.Name())
 		subEntries, err := os.ReadDir(subPath)
 		if err != nil {
 			continue
 		}
 
-		// Process each event directory
 		for _, subEntry := range subEntries {
 			if !subEntry.IsDir() || strings.HasPrefix(subEntry.Name(), ".") {
 				continue
@@ -276,10 +236,8 @@ func ReadAllEvents(print bool) error {
 		}
 	}
 
-	// Sort event files
 	sort.Strings(eventFiles)
 
-	// Process each event file
 	for _, eventId := range eventFiles {
 		eventFile, err := ReadEventFull(eventId, print)
 		if err != nil {
@@ -291,9 +249,6 @@ func ReadAllEvents(print bool) error {
 	return nil
 }
 
-// ReadEventFull reads a complete event file with localized strings
-// eventId: the event identifier (e.g., "0601")
-// print: if true, prints debug information and processes script
 func ReadEventFull(eventId string, print bool) (*components.EventFile, error) {
 	if len(eventId) < 2 {
 		if print {
@@ -302,10 +257,8 @@ func ReadEventFull(eventId string, print bool) (*components.EventFile, error) {
 		return nil, fmt.Errorf("invalid event ID: %s", eventId)
 	}
 
-	// Extract the first two characters for the folder structure
 	shortened := eventId[:2]
 
-	// Build the path: event/obj/XX/XXXX/XXXX.ebp
 	midPath := shortened + "/" + eventId + "/" + eventId
 	eventPath := common.PathOriginalsEvent + midPath + ".ebp"
 	originalsPath, err := components.ResolveFile(eventPath, false)
@@ -313,13 +266,11 @@ func ReadEventFull(eventId string, print bool) (*components.EventFile, error) {
 		return nil, fmt.Errorf("failed to resolve event file path: %w", err)
 	}
 
-	// Read the main event file
 	eventFile := ReadEventFile(eventId, originalsPath, print)
 	if eventFile == nil {
 		return nil, fmt.Errorf("failed to read event file: %s", originalsPath)
 	}
 
-	// Read localized string files
 	localizedStrings := components.ReadLocalizedStringFiles("event/obj_ps3/" + midPath + ".bin")
 	if localizedStrings != nil {
 		eventFile.AddLocalizations(localizedStrings)
@@ -329,7 +280,6 @@ func ReadEventFull(eventId string, print bool) (*components.EventFile, error) {
 		textOutputPath := common.PathTextOutputRoot + "event/obj/" + shortened + "/" + eventId + ".txt"
 		eventFileString := eventFile.String()
 
-		// Ensure output directory exists
 		if err := common.EnsurePathExists(textOutputPath); err != nil {
 			if print {
 				fmt.Printf("Failed to ensure output directory exists: %s\n", err)
@@ -345,10 +295,6 @@ func ReadEventFull(eventId string, print bool) (*components.EventFile, error) {
 	return eventFile, nil
 }
 
-// ReadEventFile reads a single event file from the given path
-// eventId: the event identifier
-// path: the file path to read
-// print: if true, prints debug information
 func ReadEventFile(eventId, path string, print bool) *components.EventFile {
 	// Check if file exists
 	if !common.IsPathExists(path) {

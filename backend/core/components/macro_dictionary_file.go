@@ -14,26 +14,23 @@ func NewMacroDictionaryFile(bytes []byte, localization string) *MacroDictionaryF
 	for _, chunk := range chunks {
 		mdf.AllStrings = append(mdf.AllStrings, mdf.mapStringsForChunk(chunk))
 	}
+	MACRODICTFILE[mdf.Localization] = mdf.AllStrings
 	return mdf
 }
 
-// mapStringsForChunk converts a chunk to a slice of MacroStrings for the file's localization.
 func (mdf *MacroDictionaryFile) mapStringsForChunk(chunk Chunk) []*MacroString {
 	if chunk.Offset == 0 {
 		return []*MacroString{}
 	}
-	// FromStringData returns []*MacroString based on bytes and charset
 	return FromStringDataDev(chunk.Bytes, LocalizationToCharset(mdf.Localization))
 }
 
-// PublishStrings iterates all parsed strings and registers them in MACRO_LOOKUP.
 func (mdf *MacroDictionaryFile) PublishStrings() {
 	for i := range mdf.AllStrings {
 		mdf.publishStringsOfChunk(i)
 	}
 }
 
-// publishStringsOfChunk registers each MacroString of a given chunk index into MACRO_LOOKUP.
 func (mdf *MacroDictionaryFile) publishStringsOfChunk(i int) {
 	list := mdf.AllStrings[i]
 	for j, macroStr := range list {

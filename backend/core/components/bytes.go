@@ -60,9 +60,7 @@ func BytesToChunks(data []byte, assumedChunkCount, chunkOffset int) []Chunk {
 					break
 				}
 			}
-			/* if to == -1 {
-				to = len(data)
-			} */
+
 			chunks = append(chunks, NewChunk(data, offset, to))
 		}
 	}
@@ -139,12 +137,4 @@ func ChunksToBytes(chunks [][]byte, chunkCount, chunkInitialOffset, chunkAlignme
 	}
 
 	return fullBytes, nil
-}
-
-func ConvertBytesToInts(bytes []byte) []uint {
-	ints := make([]uint, len(bytes))
-	for i, b := range bytes {
-		ints[i] = uint(b)
-	}
-	return ints
 }

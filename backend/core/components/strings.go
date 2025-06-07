@@ -83,25 +83,8 @@ var (
 var (
 	ByteToCharMaps = make(map[string]map[uint]rune)
 	CharToByteMaps = make(map[string]map[rune]uint)
-	MacroLookup    = make(map[int]*LocalizedMacroStringObject) // Assuming MacroString is defined elsewhere
+	MacroLookup    = make(map[int]*LocalizedMacroStringObject)
 )
-
-func ToHexString(v any) string {
-	switch val := v.(type) {
-	case uint8:
-		return fmt.Sprintf("%02X", val)
-	case uint16:
-		return fmt.Sprintf("%04X", val)
-	case uint32:
-		return fmt.Sprintf("%08X", val)
-	case uint64:
-		return fmt.Sprintf("%016X", val)
-	case int:
-		return fmt.Sprintf("%X", val)
-	default:
-		return fmt.Sprintf("UNKNOWN:%v", v)
-	}
-}
 
 func CharToBytes(chr rune, charset string) []uint {
 	if chr == '\n' {
@@ -133,7 +116,6 @@ func ByteToChar(hex uint, charset string) (rune, bool) {
 		return 0, false
 	}
 
-	// Check if hex exists in the charset map
 	char, exists := charsetMap[hex]
 	return char, exists
 }
@@ -149,7 +131,7 @@ func ByteToColor(hex byte) string {
 	if color, exists := byteToColorMap[hex]; exists {
 		return color
 	}
-	return ToHexString(hex)
+	return fmt.Sprintf("%02X", hex)
 }
 
 func ColorToByte(color string) byte {
@@ -251,7 +233,7 @@ func FillByteList(s string, buf *bytes.Buffer, charset string) {
 			}
 
 			// Skip to closing brace
-			i = indexRune(runes, '}', i)
+			i = getRunePosition(runes, '}', i)
 		}
 	}
 
@@ -311,7 +293,7 @@ func GetStringBytesAtLookupOffset(table []byte, offset int) []byte {
 }
 
 func readOneByte(buf *bytes.Reader, out *byte) error {
-	return binary.Read(buf, binary.LittleEndian, out);
+	return binary.Read(buf, binary.LittleEndian, out)
 }
 
 func getStringAtLookupOffsetBinary(table []byte, offset int, localization string) string {
@@ -356,7 +338,6 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 			extraFiveSections = true
 		case idx == 0x07:
 			var pixels uint8
-			//if err := binary.Read(buf, binary.LittleEndian, &pixels); err != nil {
 			if err := readOneByte(buf, &pixels); err != nil {
 				out.WriteString("{SPACE:??}")
 				break
@@ -364,7 +345,6 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 			out.WriteString(fmt.Sprintf("{SPACE:%02X}", pixels-0x30))
 		case idx == 0x09:
 			var varIdx uint8
-			//if err := binary.Read(buf, binary.LittleEndian, &varIdx); err != nil {
 			if err := readOneByte(buf, &varIdx); err != nil {
 				out.WriteString("{TIME:??}")
 				break
@@ -372,7 +352,6 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 			out.WriteString(fmt.Sprintf("{TIME:%02X}", varIdx-0x30))
 		case idx == 0x0A:
 			var clr uint8
-			//if err := binary.Read(buf, binary.LittleEndian, &clr); err != nil {
 			if err := readOneByte(buf, &clr); err != nil {
 				out.WriteString("{CLR:??}")
 				break
@@ -380,7 +359,6 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 			out.WriteString(GetColorString(clr))
 		case idx == 0x0B:
 			var ctrlIdx uint8
-			//if err := binary.Read(buf, binary.LittleEndian, &ctrlIdx); err != nil {
 			if err := readOneByte(buf, &ctrlIdx); err != nil {
 				out.WriteString("{CTRL:??}")
 				break
@@ -388,7 +366,6 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 			out.WriteString(fmt.Sprintf("{CTRL:%02X:%s}", ctrlIdx, GetControllerInput(ctrlIdx)))
 		case idx == 0x10:
 			var rawValue uint8
-			//if err := binary.Read(buf, binary.LittleEndian, &rawValue); err != nil {
 			if err := readOneByte(buf, &rawValue); err != nil {
 				out.WriteString("{CHOICE:??}")
 				break
@@ -401,7 +378,6 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 			out.WriteString(fmt.Sprintf("{CHOICE:%02X}", choiceIdx))
 		case idx == 0x12:
 			var varIdx uint8
-			//if err := binary.Read(buf, binary.LittleEndian, &varIdx); err != nil {
 			if err := readOneByte(buf, &varIdx); err != nil {
 				out.WriteString("{VAR:??}")
 				break
@@ -409,7 +385,6 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 			out.WriteString(fmt.Sprintf("{VAR:%02X}", varIdx-0x30))
 		case idx == 0x13 && buf.Len() > 0:
 			var rawValue uint8
-			//if err := binary.Read(buf, binary.LittleEndian, &rawValue); err != nil || rawValue > 0x43 {
 			if err := readOneByte(buf, &rawValue); err != nil || rawValue > 0x43 {
 				out.WriteString("{PC:??}")
 				break
@@ -419,7 +394,6 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 		case idx >= 0x13 && idx <= 0x22:
 			var section uint = uint(idx) - 0x13
 			var line byte
-			//if err := binary.Read(buf, binary.LittleEndian, &line); err != nil {
 			if err := readOneByte(buf, &line); err != nil {
 				fmt.Println("Error reading line number for MCR command:", err)
 				fmt.Println("Byte slice length:", buf.Len())
@@ -442,7 +416,6 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 			out.WriteString("}")
 		case idx == 0x23:
 			var varIdx uint8
-			//if err := binary.Read(buf, binary.LittleEndian, &varIdx); err != nil {
 			if err := readOneByte(buf, &varIdx); err != nil {
 				out.WriteString("{KEY:??}")
 				break
@@ -455,7 +428,6 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 			out.WriteString("}")
 		case idx == 0x28:
 			var val uint8
-			//if err := binary.Read(buf, binary.LittleEndian, &val); err != nil {
 			if err := readOneByte(buf, &val); err != nil {
 				out.WriteString("{CMD:28:??}")
 				break
@@ -463,7 +435,6 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 			out.WriteString(fmt.Sprintf("{CMD:28:%02X}", val-0x30))
 		case idx == 0x2A:
 			var val byte
-			//if err := binary.Read(buf, binary.LittleEndian, &val); err != nil {
 			if err := readOneByte(buf, &val); err != nil {
 				out.WriteString("{CMD:2A:??}")
 				break
@@ -473,7 +444,6 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 		case idx >= 0x2B: // Double-byte character handling
 			section := uint(idx) - 0x2B
 			var low byte
-			//if err := binary.Read(buf, binary.LittleEndian, &low); err != nil {
 			if err := readOneByte(buf, &low); err != nil {
 				out.WriteString(fmt.Sprintf("{UNKDBLCHR:%02X:??}", idx))
 				break
@@ -489,7 +459,6 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 			}
 		default:
 			var nextByte byte
-			//if err := binary.Read(buf, binary.LittleEndian, &nextByte); err != nil {
 			if err := readOneByte(buf, &nextByte); err != nil {
 				out.WriteString(fmt.Sprintf("{CMD:%02X:??}", idx))
 				break
@@ -500,166 +469,6 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 
 	return out.String()
 }
-
-/* func getStringAtLookupOffset(table []byte, offset int, localization string) string {
-	if offset < 0 || offset >= len(table) {
-		return ""
-	}
-
-	var (
-		out               strings.Builder
-		charset           = LocalizationToCharset(localization)
-		uintSlice          = ConvertBytesToInts(table[offset:])
-		extraFiveSections bool
-	)
-
-	for offset < len(uintSlice) && uintSlice[offset] != 0x00 {
-		idx := uintSlice[offset]
-		var extraOffset uint = 0
-		if extraFiveSections {
-			extraOffset = 0x410
-			extraFiveSections = false
-		}
-
-		switch {
-		case idx >= 0x30:
-			if chr, ok := ByteToChar(uint(idx)+extraOffset, charset); ok {
-				out.WriteRune(chr)
-			}
-		case idx == 0x01:
-			out.WriteString("{PAUSE}")
-		case idx == 0x03:
-			if WriteLinebreaksAsCommands {
-				out.WriteString("{\\n}")
-			} else {
-				out.WriteByte('\n')
-			}
-		case idx == 0x04:
-			extraFiveSections = true
-		case idx == 0x07:
-			offset++
-			if offset < len(uintSlice) {
-				pixels := uintSlice[offset] - 0x30
-				str := fmt.Sprintf("{SPACE:%02X}", pixels)
-				out.WriteString(str)
-			} else {
-				out.WriteString("{SPACE:??}")
-			}
-		case idx == 0x09:
-			offset++
-			if offset < len(uintSlice) {
-				varIdx := uintSlice[offset] - 0x30
-				str := fmt.Sprintf("TIME:%02X", varIdx)
-				out.WriteString(str)
-			} else {
-				out.WriteString("TIME:??")
-			}
-		case idx == 0x0A:
-			offset++
-			if offset < len(table) {
-				clr := table[offset]
-				out.WriteString(GetColorString(clr))
-			} else {
-				out.WriteString("{CLR:??}")
-			}
-		case idx == 0x0B:
-			offset++
-			if offset < len(table) {
-				ctrlIdx := table[offset]
-				str := fmt.Sprintf("{CTRL:%02X:%s}", ctrlIdx, GetControllerInput(ctrlIdx))
-				out.WriteString(str)
-			} else {
-				out.WriteString("{CTRL:??}")
-			}
-
-		case idx == 0x10:
-			offset++
-			if offset < len(uintSlice) {
-				rawValue := uintSlice[offset]
-				if rawValue == 0xFF {
-					out.WriteString("{CHOICE-END}")
-				} else {
-					choiceIdx := rawValue - 0x30
-					str := fmt.Sprintf("{CHOICE:%02X}", choiceIdx)
-					out.WriteString(str)
-				}
-			}
-		case idx == 0x12:
-			offset++
-			if offset < len(uintSlice) {
-				varIdx := uintSlice[offset] - 0x30
-				str := fmt.Sprintf("{VAR:%02X}", varIdx)
-				out.WriteString(str)
-			}
-		case idx == 0x13 && offset+1 < len(table) && table[offset+1] <= 0x43:
-			offset++
-			pcIdx := table[offset] - 0x30
-			str := fmt.Sprintf("{PC:%02X:%s}", pcIdx, GetPlayerChar(pcIdx))
-			out.WriteString(str)
-
-		case idx >= 0x13 && idx <= 0x22:
-			section := idx - 0x13
-			offset++
-			if offset < len(uintSlice) {
-				line := uintSlice[offset] - 0x30
-				str := fmt.Sprintf("{MCR:s%02X:l%02X", section, line)
-				out.WriteString(str)
-				if len(MacroLookup) > 0 {
-					out.WriteString(":")
-					index := int(section*0x100 + line)
-					if macro, ok := MacroLookup[index]; ok {
-						out.WriteString(`"`)
-						out.WriteString(macro.GetLocalizedContent(localization).String())
-						out.WriteString(`"`)
-					} else {
-						out.WriteString("<Missing>")
-					}
-				}
-				out.WriteString("}")
-			}
-		case idx == 0x23:
-			offset++
-			varIdx := uintSlice[offset] - 0x30
-			out.WriteString(fmt.Sprintf("{KEY:%s", ToHexString(varIdx)))
-			if keyItem := GetKeyItem(int(varIdx + 0xA000)); keyItem != nil {
-				out.WriteString(fmt.Sprintf(`:"%s"`, keyItem.GetName(localization)))
-			}
-			out.WriteString("}")
-		case idx == 0x28:
-			offset++
-			out.WriteString(fmt.Sprintf("{CMD:28:%s}", ToHexString(uintSlice[offset]-0x30)))
-		case idx == 0x2A:
-			offset++
-			out.WriteString(fmt.Sprintf("{CMD:2A:%s}", ToHexString(uintSlice[offset]-0x30)))
-		case idx >= 0x2B:
-			section := idx - 0x2B
-			offset++
-			if offset < len(uintSlice) {
-				low := uintSlice[offset]
-				actualIdx := section*0xD0 + low
-				newVar := actualIdx + extraOffset
-
-				if chr, ok := ByteToChar(newVar, charset); ok {
-					out.WriteRune(chr)
-				} else {
-					out.WriteString(fmt.Sprintf("{UNKDBLCHR:%s:%s}", ToHexString(idx), ToHexString(low)))
-				}
-			} else {
-				out.WriteString(fmt.Sprintf("{UNKDBLCHR:%s:??}", ToHexString(idx)))
-			}
-		default:
-			offset++
-			if offset < len(table) {
-				out.WriteString(fmt.Sprintf("{CMD:%s:%s}", ToHexString(idx), ToHexString(uintSlice[offset]-0x30)))
-			} else {
-				out.WriteString(fmt.Sprintf("{CMD:%s:??}", ToHexString(idx)))
-			}
-		}
-		offset++
-	}
-
-	return out.String()
-} */
 
 var (
 	reCmd  = regexp.MustCompile(`^CMD:([0-9A-Fa-f]{1,2}):([0-9A-Fa-f]{1,2})`)
@@ -931,7 +740,7 @@ func ParseCommandUint(runes []rune, startIndex int) []uint {
 	}
 }
 
-func indexRune(runes []rune, target rune, start int) int {
+func getRunePosition(runes []rune, target rune, start int) int {
 	for i := start; i < len(runes); i++ {
 		if runes[i] == target {
 			return i
@@ -939,7 +748,6 @@ func indexRune(runes []rune, target rune, start int) int {
 	}
 	return -1
 }
-
 
 // ReadStringFile reads string file(s) from the given filename path
 // If the path is a directory, it recursively reads all files within it

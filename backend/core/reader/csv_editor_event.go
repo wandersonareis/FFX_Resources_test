@@ -65,18 +65,15 @@ Usage:
 func EditAndSaveEventCSVFiles(print bool) error {
 	csvPath := filepath.Join(components.GameFilesRoot, components.ModsFolder, "edits", "events")
 
-	// Check if directory exists
 	if !common.IsPathExists(csvPath) {
 		fmt.Printf("Diretório não encontrado: %s\n", csvPath)
 		return fmt.Errorf("directory not found: %s", csvPath)
 	}
 
-	// Walk through directory and find CSV files
 	err := filepath.Walk(csvPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		// Process only CSV files
 		if !info.IsDir() && strings.HasSuffix(strings.ToLower(path), ".csv") {
 			if print {
 				fmt.Printf("Processando arquivo: %s\n", path)
@@ -225,7 +222,6 @@ func editAndSaveEventFromCSV(print bool, csvPath string) error {
 	return nil
 }
 
-// csvToList reads a CSV file and returns its content as a slice of string slices
 func csvToList(filename string) ([][]string, error) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -234,7 +230,7 @@ func csvToList(filename string) ([][]string, error) {
 	defer file.Close()
 
 	reader := csv.NewReader(file)
-	reader.FieldsPerRecord = -1 // Allow variable number of fields
+	reader.FieldsPerRecord = -1
 
 	records, err := reader.ReadAll()
 	if err != nil {
@@ -244,15 +240,12 @@ func csvToList(filename string) ([][]string, error) {
 	return records, nil
 }
 
-// WriteEventStringsForAllLocalizations writes event strings for all localizations
-// Follows the Java implementation: writes the event strings to files for each localization
 func WriteEventStringsForAllLocalizations(eventID string, print bool) error {
 	eventFile, exists := components.EVENTS[eventID]
 	if !exists || eventFile == nil {
 		return fmt.Errorf("event not found: %s", eventID)
 	}
 
-	// Build path following Java pattern: "event/obj_ps3/" + id.substring(0, 2) + '/' + id + '/' + id + ".bin"
 	if len(eventID) < 2 {
 		return fmt.Errorf("invalid event ID: %s", eventID)
 	}
@@ -262,8 +255,6 @@ func WriteEventStringsForAllLocalizations(eventID string, print bool) error {
 	return writeStringFileForAllLocalizations(pathPattern, eventFile.Strings, print)
 }
 
-// writeStringFileForAllLocalizations writes string file for all localizations
-// Follows Java implementation: writes to each localization directory
 func writeStringFileForAllLocalizations(pathPattern string, localizedStrings []*components.LocalizedFieldStringObject, print bool) error {
 	if print {
 		fmt.Printf("Writing string file: %s\n", pathPattern)
@@ -273,13 +264,10 @@ func writeStringFileForAllLocalizations(pathPattern string, localizedStrings []*
 		localizationRoot := GetLocalizationRoot(localizationKey)
 		localePath := filepath.Join(components.GameFilesRoot, components.ModsFolder, localizationRoot, pathPattern)
 
-		// Convert path separators for the current OS
 		localePath = filepath.FromSlash(localePath)
 
-		// Convert strings to bytes for this localization
 		stringsBytes := stringsToStringFileBytes(localizedStrings, localizationKey)
 
-		// Ensure directory exists
 		dir := filepath.Dir(localePath)
 		if err := common.EnsurePathExists(dir); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
@@ -298,13 +286,11 @@ func writeStringFileForAllLocalizations(pathPattern string, localizedStrings []*
 	return nil
 }
 
-// stringsToStringFileBytes converts localized strings to bytes for a specific localization
 func stringsToStringFileBytes(localizedStrings []*components.LocalizedFieldStringObject, localizationKey string) []byte {
 	if len(localizedStrings) == 0 {
 		return []byte{}
 	}
 
-	// Extract FieldString objects for the specified localization
 	fieldStrings := make([]*components.FieldString, 0, len(localizedStrings))
 	charset := components.LocalizationToCharset(localizationKey)
 
@@ -323,28 +309,14 @@ func stringsToStringFileBytes(localizedStrings []*components.LocalizedFieldStrin
 		}
 	}
 
-	// Use RebuildFieldStrings to get string content bytes
 	stringBytes := components.RebuildFieldStrings(fieldStrings, charset, true)
 
-	// Build bytes array following Java implementation
-	//var bytes []int
 	var buf bytes.Buffer
 
-	// Helper function to add 4 bytes from an integer (little-endian)
-	/* add4Bytes := func(byteList *[]int, value int) {
-		*byteList = append(*byteList, value&0xFF)       // LSB
-		*byteList = append(*byteList, (value>>8)&0xFF)  // 2nd byte
-		*byteList = append(*byteList, (value>>16)&0xFF) // 3rd byte
-		*byteList = append(*byteList, (value>>24)&0xFF) // MSB
-	} */
-
-	// Add header bytes for each string
 	for _, str := range fieldStrings {
 		if str != nil {
-			// Add regular header bytes (4 bytes)
 			buf.Write(str.ToRegularHeaderBytes())
 
-			// Add simplified header bytes (4 bytes)
 			buf.Write(str.ToSimplifiedHeaderBytes())
 		}
 	}
@@ -377,21 +349,16 @@ Usage:
   EditAndSaveEventJSONFiles(false) // Process silently
 */
 
-// EditAndSaveEventJSONFiles processes the events_all_localizations.json file in the edits directory
-// Reads the JSON file created by WriteEventFileForAllLocalizationsJSON and applies changes back to events
 func EditAndSaveEventJSONFiles(print bool) error {
 	jsonPath := filepath.Join(components.GameFilesRoot, components.ModsFolder, "edits", "events")
 
-	// Check if directory exists
 	if !common.IsPathExists(jsonPath) {
 		fmt.Printf("Diretório não encontrado: %s\n", jsonPath)
 		return fmt.Errorf("directory not found: %s", jsonPath)
 	}
 
-	// Process the specific JSON file created by WriteEventFileForAllLocalizationsJSON
 	jsonFilePath := filepath.Join(jsonPath, "events_all_localizations.json")
 
-	// Check if the specific JSON file exists
 	if !common.IsPathExists(jsonFilePath) {
 		fmt.Printf("Arquivo JSON não encontrado: %s\n", jsonFilePath)
 		return fmt.Errorf("JSON file not found: %s", jsonFilePath)
@@ -401,7 +368,6 @@ func EditAndSaveEventJSONFiles(print bool) error {
 		fmt.Printf("Processando arquivo JSON: %s\n", jsonFilePath)
 	}
 
-	// Process the JSON file
 	err := editAndSaveEventFromJSON(print, jsonFilePath)
 	if err != nil {
 		fmt.Printf("Erro ao processar arquivo JSON: %v\n", err)
@@ -411,29 +377,24 @@ func EditAndSaveEventJSONFiles(print bool) error {
 	return nil
 }
 
-// editAndSaveEventFromJSON processes a single JSON file and applies changes to the corresponding event
 func editAndSaveEventFromJSON(print bool, jsonPath string) error {
-	// Read JSON file
 	file, err := os.Open(jsonPath)
 	if err != nil {
 		fmt.Printf("Erro ao abrir arquivo JSON %s: %v\n", jsonPath, err)
 		return err
 	}
 	defer file.Close()
-	// Parse JSON content - expecting array of EventFileDataJSON
+
 	var allEvents []EventFileDataJSON
 	decoder := json.NewDecoder(file)
-	err = decoder.Decode(&allEvents)
-	if err != nil {
+	if err = decoder.Decode(&allEvents); err != nil {
 		fmt.Printf("Erro ao decodificar JSON %s: %v\n", jsonPath, err)
 		return err
 	}
 
 	processedEventIDs := make(map[string]bool)
 
-	// Process each event in the JSON file
 	for _, eventData := range allEvents {
-		// Validate event exists
 		eventFile, exists := components.EVENTS[eventData.ID]
 		if !exists || eventFile == nil {
 			if print {
@@ -442,16 +403,13 @@ func editAndSaveEventFromJSON(print bool, jsonPath string) error {
 			continue
 		}
 
-		// Track processed event
 		processedEventIDs[eventData.ID] = true
 		fmt.Printf("Processando evento %s com %d strings\n", eventData.ID, len(eventData.Strings))
 
-		// Process each event string
 		for _, eventString := range eventData.Strings {
 			stringIndex := eventString.Index
 			fmt.Printf("Processando string %d para evento %s\n", stringIndex, eventData.ID)
 
-			// Validate string index
 			if stringIndex < 0 || stringIndex >= len(eventFile.Strings) {
 				if print {
 					fmt.Printf("Índice de string fora do range para evento %s: %d\n", eventData.ID, stringIndex)
@@ -459,7 +417,6 @@ func editAndSaveEventFromJSON(print bool, jsonPath string) error {
 				continue
 			}
 
-			// Get the string object to edit
 			objToEdit := eventFile.Strings[stringIndex]
 
 			if print {
@@ -518,7 +475,6 @@ func EditAndSaveSpecificEventFromJSON(eventID string, print bool) error {
 		fmt.Printf("Procurando evento: %s\n", eventID)
 	}
 
-	// Read JSON file
 	file, err := os.Open(jsonFilePath)
 	if err != nil {
 		fmt.Printf("Erro ao abrir arquivo JSON %s: %v\n", jsonFilePath, err)
@@ -527,19 +483,18 @@ func EditAndSaveSpecificEventFromJSON(eventID string, print bool) error {
 	defer file.Close()
 
 	// Parse JSON content - expecting array of EventFileDataJSON
-	var allEvents []EventFileDataJSON
+	var allJsonEvents []EventFileDataJSON
 	decoder := json.NewDecoder(file)
-	err = decoder.Decode(&allEvents)
-	if err != nil {
+	if err = decoder.Decode(&allJsonEvents); err != nil {
 		fmt.Printf("Erro ao decodificar JSON %s: %v\n", jsonFilePath, err)
 		return err
 	}
 
 	// Find the specific event in the JSON
 	var targetEventData *EventFileDataJSON
-	for i := range allEvents {
-		if allEvents[i].ID == eventID {
-			targetEventData = &allEvents[i]
+	for i := range allJsonEvents {
+		if allJsonEvents[i].ID == eventID {
+			targetEventData = &allJsonEvents[i]
 			break
 		}
 	}
