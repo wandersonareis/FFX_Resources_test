@@ -90,27 +90,37 @@ func CharToBytes(chr rune, charset string) []uint {
 	if chr == '\n' {
 		return []uint{0x03}
 	}
+
 	indexValue, exists := CharToByteMaps[charset][chr]
 	if !exists {
 		return nil
 	}
-	bytes := []uint{}
-	if indexValue > 1070 {
-		indexValue -= 1040
-		bytes = append(bytes, 0x04)
+
+	if indexValue < 0x100 {
+		return []uint{indexValue}
 	}
-	if indexValue >= 0x100 {
-		byte1 := indexValue/0xD0 + 0x2B
-		byte2 := indexValue % 0xD0
-		bytes = append(bytes, byte1, byte2)
+
+	section := (indexValue - 0x30) / 0xD0
+	byte1 := section + 0x2B
+	byte2 := indexValue - (section * 0xD0)
+
+	if byte1 <= 0x2F {
+		return []uint{uint(byte1), uint(byte2)}
+	}
+
+	adjustedValue := indexValue - 0x410
+
+	if adjustedValue < 0x100 {
+		return []uint{0x04, adjustedValue}
 	} else {
-		bytes = append(bytes, indexValue)
+		adjustedSection := (adjustedValue - 0x30) / 0xD0
+		adjustedByte1 := adjustedSection + 0x2B
+		adjustedByte2 := adjustedValue - (adjustedSection * 0xD0)
+		return []uint{0x04, uint(adjustedByte1), uint(adjustedByte2)}
 	}
-	return bytes
 }
 
 func ByteToChar(hex uint, charset string) (rune, bool) {
-	// Check if charset exists in ByteToCharMaps
 	charsetMap, exists := ByteToCharMaps[charset]
 	if !exists {
 		return 0, false
@@ -215,7 +225,7 @@ func FillByteList(s string, buf *bytes.Buffer, charset string) {
 		var cmdBytes []uint
 
 		if chr == '{' {
-			cmdBytes = ParseCommandUint(runes, i)
+			cmdBytes = ParseCommand(runes, i)
 		}
 
 		if cmdBytes == nil {
@@ -247,7 +257,7 @@ func StringToByteList(runes []rune, charset string) []byte {
 		r := runes[i]
 		var cmdBytes []uint
 		if r == '{' {
-			cmdBytes = ParseCommandUint(runes, i)
+			cmdBytes = ParseCommand(runes, i)
 		}
 		if cmdBytes == nil {
 			charBytes := CharToBytes(r, charset)
@@ -477,145 +487,12 @@ var (
 	reCTRL = regexp.MustCompile(`^CTRL:([0-9A-Fa-f]{1,2}):`)
 )
 
-/* func ParseCommand(runes []rune, startIndex int) []byte {
+func ParseCommand(runes []rune, startIndex int) []uint {
 	if startIndex >= len(runes) {
 		return nil
 	}
 
-	// Find closing brace starting from current position
-	end := -1
-	for i := startIndex; i < len(runes); i++ {
-		if runes[i] == '}' {
-			end = i
-			break
-		}
-	}
-
-	if end < 0 {
-		return nil
-	}
-
-	// Extract command content (skip opening brace)
-	cmd := string(runes[startIndex+1 : end])
-
-	switch {
-	case cmd == "PAUSE":
-		return []byte{0x01}
-	case cmd == "\\n":
-		return []byte{0x03}
-	case cmd == "CMD04":
-		return []byte{0x04}
-	case strings.HasPrefix(cmd, "SPACE:"):
-		val, err := strconv.ParseUint(cmd[6:], 16, 8)
-		if err != nil {
-			return nil
-		}
-		pixels := byte(val) + 0x30
-		return []byte{0x07, pixels}
-	case strings.HasPrefix(cmd, "TIME:"):
-		val, err := strconv.ParseUint(cmd[5:], 16, 8)
-		if err != nil {
-			return nil
-		}
-		boxType := byte(val) + 0x30
-		return []byte{0x09, boxType}
-	case strings.HasPrefix(cmd, "CLR:"):
-		clr := ColorToByte(cmd[4:])
-		return []byte{0x0A, clr}
-	case strings.HasPrefix(cmd, "COLOR:"):
-		clr := ColorToByte(cmd[6:])
-		return []byte{0x0A, clr}
-	case strings.HasPrefix(cmd, "CTRL:"):
-		val, err := strconv.ParseUint(cmd[5:7], 16, 8)
-		if err != nil {
-			return nil
-		}
-		return []byte{0x0B, byte(val)}
-	case cmd == "CHOICE-END":
-		return []byte{0x10, 0xFF}
-	case strings.HasPrefix(cmd, "CHOICE:"):
-		val, err := strconv.ParseUint(cmd[7:], 16, 8)
-		if err != nil {
-			return nil
-		}
-		choiceIdx := byte(val) + 0x30
-		return []byte{0x10, choiceIdx}
-	case strings.HasPrefix(cmd, "VAR:"):
-		val, err := strconv.ParseUint(cmd[4:], 16, 8)
-		if err != nil {
-			return nil
-		}
-		varIdx := byte(val) + 0x30
-		return []byte{0x12, varIdx}
-	case strings.HasPrefix(cmd, "PC:"):
-		val, err := strconv.ParseUint(cmd[3:5], 16, 8)
-		if err != nil {
-			return nil
-		}
-		pc := byte(val) + 0x30
-		return []byte{0x13, pc}
-	case strings.HasPrefix(cmd, "MCR:"):
-		matches := reMCR.FindStringSubmatch(cmd)
-		if len(matches) != 3 {
-			fmt.Printf("Invalid MCR format: %s\n", cmd)
-			return nil
-		}
-		secVal, err1 := strconv.ParseUint(matches[1], 16, 8)
-		lineVal, err2 := strconv.ParseUint(matches[2], 16, 8)
-		if err1 != nil || err2 != nil {
-			return nil
-		}
-		section := byte(secVal) + 0x13
-		line := byte(lineVal) + 0x30
-		return []byte{section, line}
-	case strings.HasPrefix(cmd, "KEY:"):
-		val, err := strconv.ParseUint(cmd[4:6], 16, 8)
-		if err != nil {
-			return nil
-		}
-		keyItemIdx := byte(val) + 0x30
-		return []byte{0x23, keyItemIdx}
-	case strings.HasPrefix(cmd, "CMD:"):
-		matches := reCmd.FindStringSubmatch(cmd)
-		if len(matches) != 3 {
-			fmt.Printf("Invalid CMD format: %s\n", cmd)
-			return nil
-		}
-		cmdIdxVal, err1 := strconv.ParseUint(matches[1], 16, 8)
-		argVal, err2 := strconv.ParseUint(matches[2], 16, 8)
-		if err1 != nil || err2 != nil {
-			return nil
-		}
-		arg := argVal + 0x30
-		if arg > 0xFF {
-			fmt.Printf("CMD argument out of range: %s\n", cmd)
-			return nil
-		}
-		return []byte{byte(cmdIdxVal), byte(arg)}
-	case strings.HasPrefix(cmd, "UNKCHR:"):
-		val, err := strconv.ParseUint(cmd[7:9], 16, 8)
-		if err != nil {
-			return nil
-		}
-		return []byte{byte(val)}
-	case strings.HasPrefix(cmd, "UNKDBLCHR:"):
-		secVal, err1 := strconv.ParseUint(cmd[10:12], 16, 8)
-		idxVal, err2 := strconv.ParseUint(cmd[13:15], 16, 8)
-		if err1 != nil || err2 != nil {
-			return nil
-		}
-		return []byte{byte(secVal), byte(idxVal)}
-	default:
-		return nil
-	}
-} */
-
-func ParseCommandUint(runes []rune, startIndex int) []uint {
-	if startIndex >= len(runes) {
-		return nil
-	}
-
-	end := indexRune(runes, '}', startIndex)
+	end := getRunePosition(runes, '}', startIndex)
 	if end < 0 {
 		return nil
 	}
