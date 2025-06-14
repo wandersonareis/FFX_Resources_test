@@ -2,6 +2,7 @@ package components
 
 import (
 	"encoding/binary"
+	"ffxresources/backend/common"
 	"fmt"
 	"os"
 )
@@ -17,13 +18,8 @@ func write4Bytes(bytes []byte, offset int, value uint32) {
 	binary.LittleEndian.PutUint32(bytes[offset:], value)
 }
 
-func FileToBytes(path string, print bool) []byte {
-	filePath, err := ResolveFile(path, print)
-	if err != nil {
-		return nil
-	}
-
-	data, err := os.ReadFile(filePath)
+func FileToBytes(path common.FileAccessor, print bool) []byte {
+	data, err := os.ReadFile(path.ResolvedPath)
 	if err != nil {
 		return nil
 	}
@@ -138,3 +134,4 @@ func ChunksToBytes(chunks [][]byte, chunkCount, chunkInitialOffset, chunkAlignme
 
 	return fullBytes, nil
 }
+
