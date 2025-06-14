@@ -1,46 +1,44 @@
 package components
 
-import "sort"
+import (
+	"bytes"
+	"encoding/binary"
+)
 
-// KeyedString represents a string with offset and key for lookup tables.
 type KeyedString struct {
 	Charset string
-	Offset  int
-	Key     int
+	Offset  uint16
+	Key     uint16
 	Bytes   []byte
 }
 
-// NewKeyedString constructs a KeyedString by extracting bytes at offset
-func NewKeyedString(charset string, offset, key int, data []byte) *KeyedString {
+func NewKeyedString(charset string, offset, key uint16, data []byte) *KeyedString {
 	ks := &KeyedString{
 		Charset: charset,
 		Offset:  offset,
 		Key:     key,
 	}
-	ks.Bytes = GetStringBytesAtLookupOffset(data, offset)
+	ks.Bytes = GetStringBytesAtLookupOffset(data, int(offset))
 	return ks
 }
 
-// ToHeaderBytes packs offset and key into a single uint32 (offset | key<<16)
-func (ks *KeyedString) ToHeaderBytes() uint32 {
-	return uint32(ks.Offset) | uint32(ks.Key)<<16
+func (ks *KeyedString) GetHeaderBytes(buf *bytes.Buffer) {
+	binary.Write(buf, binary.LittleEndian, uint16(ks.Offset))
+	binary.Write(buf, binary.LittleEndian, uint16(ks.Key))
 }
 
 func (ks *KeyedString) String() string {
 	return ks.GetString()
 }
 
-// GetString decodes the bytes using the charset
 func (ks *KeyedString) GetString() string {
 	return BytesToString(ks.Bytes, ks.Charset)
 }
 
-// IsEmpty returns true if the string is empty
 func (ks *KeyedString) IsEmpty() bool {
 	return ks.GetString() == ""
 }
 
-// SetString updates the string and optionally the charset
 func (ks *KeyedString) SetString(str, newCharset string) {
 	if newCharset != "" && newCharset != ks.Charset {
 		ks.Charset = newCharset
@@ -48,33 +46,27 @@ func (ks *KeyedString) SetString(str, newCharset string) {
 	ks.Bytes = StringToBytes(str, ks.Charset)
 }
 
-// RebuildKeyedStrings rebuilds a lookup table of strings, returning concatenated bytes
-// optimize flag is reserved for future use
-func RebuildKeyedStrings(strings []*KeyedString, charset string, optimize bool) []byte {
-	// sort by length
-	sort.Slice(strings, func(i, j int) bool {
-		return len(strings[i].Bytes) < len(strings[j].Bytes)
-	})
+func RebuildKeyedStrings(strings []*KeyedString, charset string) []byte {
 	lookup := make(map[string]*KeyedString)
-	byteList := []byte{0x00}
+	var buf bytes.Buffer
 
 	for _, ks := range strings {
 		s := ks.GetString()
+
 		if s == "" {
 			ks.Offset, ks.Key = 0, 0
 			continue
 		}
+
 		if existing, ok := lookup[s]; ok {
 			ks.Offset, ks.Key = existing.Offset, existing.Key
 			continue
 		}
 		// new entry
-		ks.Offset = len(byteList)
-		ks.Key = len(lookup)
+		ks.Offset = uint16(buf.Len())
 		lookup[s] = ks
-		// append bytes for s
-		byteList = append(byteList, StringToBytes(s, charset)...) 
+		FillByteList(s, &buf, charset)
 	}
 
-	return byteList
+	return buf.Bytes()
 }
