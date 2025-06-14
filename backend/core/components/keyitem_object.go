@@ -1,28 +1,36 @@
 package components
 
 import (
-	"fmt"
+	"bytes"
+	"encoding/binary"
 )
 
 const KeyItemDataObjectLength = 0x14
 
-type KeyItemDataObject struct {
-	*NameDescriptionTextObject
-	bytes          []byte
-	IsAlBhedPrimer byte
-	AlwaysZero     byte
-	UnknownByte12  byte
-	Ordering       byte
-}
+type (
+	keyItemExtraData struct {
+		IsAlBhedPrimer uint8
+		AlwaysZero     uint8
+		UnknownByte12  uint8
+		Ordering       uint8
+	}
 
-// NewKeyItemDataObject constructs from raw bytes, stringBytes, and localization
+	KeyItemDataObject struct {
+		*DataObjectBase[*KeyItemDataObject]
+		bytes          []byte
+		IsAlBhedPrimer byte
+		AlwaysZero     byte
+		UnknownByte12  byte
+		Ordering       byte
+	}
+)
+
 func NewKeyItemDataObject(bytes, stringBytes []byte, localization string) *KeyItemDataObject {
 	obj := &KeyItemDataObject{
-		NameDescriptionTextObject: NewNameDescriptionTextObject(bytes, stringBytes, localization),
-		bytes:                     bytes,
+		DataObjectBase: NewDataObjectBase[*KeyItemDataObject](bytes, stringBytes, localization),
+		bytes:          bytes,
 	}
 	obj.mapBytes()
-	obj.mapFlags()
 	return obj
 }
 
@@ -35,34 +43,25 @@ func (k *KeyItemDataObject) mapBytes() {
 	}
 }
 
-func (k *KeyItemDataObject) mapFlags() {
-	// No flags to map yet
-}
-
-// GetName returns the localized name
-func (k *KeyItemDataObject) GetName(localization string) string {
-	return k.Name.GetLocalizedString(localization)
-}
-
-// ToBytes serializes the object back to a byte slice
 func (k *KeyItemDataObject) ToBytes(localization string) []byte {
-	out := make([]byte, KeyItemDataObjectLength)
-	copy(out[0:0x10], k.NameDescriptionTextObject.ToBytes(localization))
-	out[0x10] = k.IsAlBhedPrimer
-	out[0x11] = k.AlwaysZero
-	out[0x12] = k.UnknownByte12
-	out[0x13] = k.Ordering
-	return out
-}
+	buf := new(bytes.Buffer)
+	header := k.NameDescriptionTextObject.ToBytes(localization)
+	buf.Write(header)
 
-func ifG0(value byte, prefix, postfix string) string {
-	if value > 0 {
-		return fmt.Sprintf("%s%d%s", prefix, value, postfix)
+	extra := keyItemExtraData{
+		IsAlBhedPrimer: k.IsAlBhedPrimer,
+		AlwaysZero:     k.AlwaysZero,
+		UnknownByte12:  k.UnknownByte12,
+		Ordering:       k.Ordering,
 	}
-	return ""
+
+	binary.Write(buf, binary.LittleEndian, extra)
+
+	return buf.Bytes()
 }
 
-func formatUnknownByte(bt byte) string {
-	bin := fmt.Sprintf("%08b", bt)
-	return fmt.Sprintf("%02X=%03d(%s)", bt, bt, bin)
+func (k *KeyItemDataObject) SetLocalizations(other LocalizationSetter) {
+	if otherKeyItem, ok := other.(*KeyItemDataObject); ok {
+		k.NameDescriptionTextObject.SetLocalizations(otherKeyItem.NameDescriptionTextObject)
+	}
 }
