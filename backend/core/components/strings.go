@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"ffxresources/backend/common"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -63,18 +64,34 @@ var (
 	}
 	controllerInputMap = map[byte]string{
 		0x20: "?L1 (SWITCH)",
+		0x2D: "Dummy",
+		0x2E: "Dummy2",
 		0x30: "TRIANGLE",
 		0x31: "X",
 		0x32: "CIRCLE",
 		0x33: "SQUARE",
 		0x34: "L1",
 		0x35: "R1",
-		0x37: "?R2",
+		0x36: "L2",
+		0x37: "R2",
+		0x38: "START",
 		0x39: "SELECT",
-		0x41: "UP",
-		0x42: "RIGHT",
-		0x44: "DOWN",
-		0x48: "LEFT",
+		0x40: "Direcional",
+		0x41: "Direcional UP",
+		0x42: "Direcional RIGHT",
+		0x43: "Direcional Up+Right",
+		0x44: "Direcional DOWN",
+		0x45: "Direcional Up+Down",
+		0x46: "Direcional Down+Right",
+		0x47: "Direcional Up+Right+Down",
+		0x48: "Direcional LEFT",
+		0x49: "Direcional Up+Left",
+		0x4A: "Direcional Left+Right",
+		0x4B: "Direcional Up+Left+Right",
+		0x4C: "Direcional Left+Down",
+		0x4D: "Direcional Up+Left+Down",
+		0x4E: "Direcional Left+Down+Right",
+		0x4F: "Direcional All",
 	}
 	choiceRegex               = regexp.MustCompile(`\{CHOICE:([0-9A-Fa-f]{2})\}`)
 	WriteLinebreaksAsCommands = true
@@ -294,12 +311,27 @@ func GetStringBytesAtLookupOffset(table []byte, offset int) []byte {
 		return nil
 	}
 
-	var bytes []byte
-	for offset < len(table) && table[offset] != 0x00 {
-		bytes = append(bytes, table[offset])
-		offset++
+	end := bytes.IndexByte(table[offset:], 0x00)
+	if end == -1 {
+		return table[offset:]
 	}
-	return bytes
+	return table[offset : offset+end]
+}
+
+func GetStringBytesAtLookupOffsetDev(table []byte, offset uint16) []byte {
+	if int(offset) >= len(table) {
+		return nil
+	}
+
+	// Find the end of the string (next zero byte)
+	end := offset
+	tableLen := uint16(len(table))
+	for end < tableLen && table[end] != 0x00 {
+		end++
+	}
+
+	// Return the slice directly without append
+	return table[offset:end]
 }
 
 func readOneByte(buf *bytes.Reader, out *byte) error {
@@ -344,6 +376,8 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 			} else {
 				out.WriteByte('\n')
 			}
+		case buf.Len() == 0:
+			out.WriteString(fmt.Sprintf("{HEX:%02X}", idx))
 		case idx == 0x04:
 			extraFiveSections = true
 		case idx == 0x07:
@@ -377,7 +411,11 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 		case idx == 0x10:
 			var rawValue uint8
 			if err := readOneByte(buf, &rawValue); err != nil {
-				out.WriteString("{CHOICE:??}")
+				if err == io.EOF {
+					out.WriteString(fmt.Sprintf("{HEX:%02X}", idx))
+				} else {
+					out.WriteString("{CHOICE:??}")
+				}
 				break
 			}
 			if rawValue == 0xFF {
@@ -396,7 +434,7 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 		case idx == 0x13 && buf.Len() > 0:
 			var rawValue uint8
 			if err := readOneByte(buf, &rawValue); err != nil || rawValue > 0x43 {
-				out.WriteString("{PC:??}")
+				out.WriteString(fmt.Sprintf("{PC:%02X:??}", rawValue))
 				break
 			}
 			pcIdx := rawValue - 0x30
@@ -406,8 +444,7 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 			var line byte
 			if err := readOneByte(buf, &line); err != nil {
 				fmt.Println("Error reading line number for MCR command:", err)
-				fmt.Println("Byte slice length:", buf.Len())
-				out.WriteString(fmt.Sprintf("{MCR:s%02X:l??}", section))
+				out.WriteString(fmt.Sprintf("{HEX:%02X}", idx))
 				break
 			}
 			lineAdjusted := line - 0x30
@@ -483,6 +520,7 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 var (
 	reCmd  = regexp.MustCompile(`^CMD:([0-9A-Fa-f]{1,2}):([0-9A-Fa-f]{1,2})`)
 	reMCR  = regexp.MustCompile(`^MCR:s([0-9A-Fa-f]{1,2}):l([0-9A-Fa-f]{1,2}):`)
+	reHEX  = regexp.MustCompile(`^HEX:(?:[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2})*)$`)
 	rePC   = regexp.MustCompile(`^PC:([0-9A-Fa-f]{1,2}):`)
 	reCTRL = regexp.MustCompile(`^CTRL:([0-9A-Fa-f]{1,2}):`)
 )
@@ -498,6 +536,10 @@ func ParseCommand(runes []rune, startIndex int) []uint {
 	}
 
 	cmd := string(runes[startIndex+1 : end])
+	if strings.Contains(cmd, "??}") {
+		fmt.Printf("Invalid command format: %s\n", cmd)
+		return nil
+	}
 
 	switch {
 	case cmd == "PAUSE":
@@ -612,6 +654,23 @@ func ParseCommand(runes []rune, startIndex int) []uint {
 			return nil
 		}
 		return []uint{uint(secVal), uint(idxVal)}
+	case strings.HasPrefix(cmd, "HEX:"):
+		matches := reHEX.FindStringSubmatch(cmd)
+		if len(matches) != 2 {
+			fmt.Printf("Invalid HEX format: %s\n", cmd)
+			return nil
+		}
+		hexParts := strings.Split(matches[1], ":")
+		result := make([]uint, len(hexParts))
+		for i, part := range hexParts {
+			if len(part) != 2 {
+				fmt.Printf("Invalid HEX part: %s in command %s\n", part, cmd)
+				return nil
+			}
+			val, _ := strconv.ParseUint(part, 16, 8)
+			result[i] = uint(val)
+		}
+		return result
 	default:
 		return nil
 	}
@@ -642,7 +701,7 @@ func getRunePosition(runes []rune, target rune, start int) int {
 //   - For directories: Recursively processes all non-hidden files in sorted order
 //   - For files: Resolves path, reads bytes, and parses as string data using appropriate charset
 func ReadStringFile(filename string, print bool, localization string) []*FieldString {
-	resolvedPath, err := ResolveFile(filename, print)
+	resolvedPath, err := common.NewFileAccessor(filename)
 	if err != nil {
 		if print {
 			fmt.Printf("Error resolving file %s: %v\n", filename, err)
@@ -650,17 +709,8 @@ func ReadStringFile(filename string, print bool, localization string) []*FieldSt
 		return nil
 	}
 
-	info, err := os.Stat(resolvedPath)
-	if err != nil {
-		if print {
-			fmt.Printf("Error accessing path %s: %v\n", resolvedPath, err)
-		}
-		return nil
-	}
-
-	// If it's a directory, recursively process all files
-	if info.IsDir() {
-		entries, err := os.ReadDir(resolvedPath)
+	if resolvedPath.Info.IsDir() {
+		entries, err := os.ReadDir(resolvedPath.ResolvedPath)
 		if err != nil {
 			if print {
 				fmt.Printf("Error reading directory %s: %v\n", resolvedPath, err)
@@ -686,7 +736,7 @@ func ReadStringFile(filename string, print bool, localization string) []*FieldSt
 	bytes := FileToBytes(resolvedPath, print)
 	if bytes == nil {
 		if print {
-			fmt.Printf("Failed to read bytes from file %s\n", resolvedPath)
+			fmt.Printf("Failed to read bytes from file %s\n", resolvedPath.ResolvedPath)
 		}
 		return nil
 	}
@@ -721,21 +771,15 @@ func ReadStringFile(filename string, print bool, localization string) []*FieldSt
 func ReadLocalizedStringFiles(path string) []*LocalizedFieldStringObject {
 	localized := make([]*LocalizedFieldStringObject, 0)
 
-	// Iterate through all available localizations
 	for key := range common.Localizations {
-		// Build full path for this localization
-		fullPath := GetLocalizationRoot(key) + path
-		// Read string file for this localization
+		fullPath := filepath.Join(common.GetLocalizationRoot(key), path)
 		localizedStrings := ReadStringFile(fullPath, false, key)
 
-		// Process each string in the file
 		for i, fieldString := range localizedStrings {
-			// Ensure we have enough LocalizedFieldStringObject instances
 			for len(localized) <= i {
 				localized = append(localized, NewLocalizedFieldStringObject())
 			}
 
-			// Set the localized content for this localization
 			localized[i].SetLocalizedContent(key, fieldString)
 		}
 	}
@@ -743,8 +787,19 @@ func ReadLocalizedStringFiles(path string) []*LocalizedFieldStringObject {
 	return localized
 }
 
-// GetLocalizationRoot returns the root path for a given localization
-// This function needs to be imported from the reader package or implemented here
-func GetLocalizationRoot(localization string) string {
-	return common.PathFfxRoot + "new_" + localization + "pc/"
+func ReadLocalizedEventStrings(eventId string) ([]*LocalizedFieldStringObject, error) {
+	if len(eventId) < 2 {
+		return nil, fmt.Errorf("invalid event ID: %s", eventId)
+	}
+
+	shortened := eventId[:2]
+	midPath := filepath.Join(shortened, eventId, eventId)
+	//localizationPath := filepath.Join(common.GetPathOriginalsEvent(), "event/obj_ps3/"+midPath+".bin")
+
+	localizedStrings := ReadLocalizedStringFiles("event/obj_ps3/" + midPath + ".bin")
+	if localizedStrings == nil {
+		return nil, fmt.Errorf("failed to read localized strings for event %s", eventId)
+	}
+
+	return localizedStrings, nil
 }
