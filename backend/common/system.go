@@ -75,3 +75,15 @@ func SetGameVersion(version int) {
 		os.Setenv("GAME_VERSION", "ffx") // Default to ffx if invalid
 	}
 }
+
+func SetVerboseMode(enabled bool) {
+	if enabled {
+		os.Setenv("VERBOSE_MODE", "1")
+	} else {
+		os.Setenv("VERBOSE_MODE", "0")
+	}
+}
+func IsVerboseMode() bool {
+	verbose := os.Getenv("VERBOSE_MODE")
+	return verbose == "1"
+}
