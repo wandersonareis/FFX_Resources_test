@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 )
 
-const KeyItemDataObjectLength = 0x14
+const KeyItemDataObjectLength int = 0x14
 
 type (
 	keyItemExtraData struct {
@@ -17,17 +17,15 @@ type (
 
 	KeyItemDataObject struct {
 		*DataObjectBase[*KeyItemDataObject]
-		bytes          []byte
-		IsAlBhedPrimer byte
-		AlwaysZero     byte
-		UnknownByte12  byte
-		Ordering       byte
+		keyItemExtraData
+		bytes []byte
 	}
 )
 
 func NewKeyItemDataObject(bytes, stringBytes []byte, localization string) *KeyItemDataObject {
 	obj := &KeyItemDataObject{
 		DataObjectBase: NewDataObjectBase[*KeyItemDataObject](bytes, stringBytes, localization),
+		keyItemExtraData: keyItemExtraData{},
 		bytes:          bytes,
 	}
 	obj.mapBytes()
@@ -35,12 +33,17 @@ func NewKeyItemDataObject(bytes, stringBytes []byte, localization string) *KeyIt
 }
 
 func (k *KeyItemDataObject) mapBytes() {
-	if len(k.bytes) >= KeyItemDataObjectLength {
-		k.IsAlBhedPrimer = k.bytes[0x10]
-		k.AlwaysZero = k.bytes[0x11]
-		k.UnknownByte12 = k.bytes[0x12]
-		k.Ordering = k.bytes[0x13]
+	if len(k.bytes) < KeyItemDataObjectLength {
+		panic("KeyItemDataObject bytes length is less than expected")
 	}
+	extra := keyItemExtraData{}
+	if err := binary.Read(bytes.NewReader(k.bytes[0x10:]), binary.LittleEndian, &extra); err != nil {
+		panic("Failed to read KeyItemDataObject extra data: " + err.Error())
+	}
+	k.IsAlBhedPrimer = extra.IsAlBhedPrimer
+	k.AlwaysZero = extra.AlwaysZero
+	k.UnknownByte12 = extra.UnknownByte12
+	k.Ordering = extra.Ordering
 }
 
 func (k *KeyItemDataObject) ToBytes(localization string) []byte {
