@@ -1,6 +1,7 @@
 package components
 
 import (
+	"bytes"
 	"encoding/binary"
 	"ffxresources/backend/common"
 	"fmt"
@@ -135,3 +136,85 @@ func ChunksToBytes(chunks [][]byte, chunkCount, chunkInitialOffset, chunkAlignme
 	return fullBytes, nil
 }
 
+func ConvertDataCommandsToBytes(objects []interface{}, length int, from, to int, localization string) ([]byte, error) {
+	if len(objects) == 0 {
+		return nil, fmt.Errorf("array de objetos vazio")
+	}
+
+	ffxHeader := []byte{1, 0, 0, 0, 0, 0, 0, 0}
+	ffxUnknownBytesOfHeader := []byte{0x14, 0x00, 0x00, 0x00}
+
+	// Coletar todas as strings com chave dos objetos
+	var allKeyedStrings []*KeyedString
+
+	for _, obj := range objects {
+		var keyedStrings []*KeyedString
+
+		switch v := obj.(type) {
+		case *KeyItemDataObject:
+			if v.NameDescriptionTextObject != nil {
+				keyedStrings = v.NameDescriptionTextObject.GetLocalizedKeyedStrings(localization)
+				fmt.Printf("Rebuilding keyed strings for KeyItemDataObject: %s\n", keyedStrings[0].String())
+			}
+		case *CommandDataObject:
+			if v.NameDescriptionTextObject != nil {
+				keyedStrings = v.NameDescriptionTextObject.GetLocalizedKeyedStrings(localization)
+			}
+		// Adicionar outros tipos conforme necessário
+		default:
+			return nil, fmt.Errorf("tipo de objeto não suportado: %T", obj)
+		}
+
+		// Filtrar strings nulas
+		for _, ks := range keyedStrings {
+			if ks != nil {
+				allKeyedStrings = append(allKeyedStrings, ks)
+			}
+		}
+	}
+
+	// Reconstruir strings com chave
+	charset := LocalizationToCharset(localization)
+	stringBytes := RebuildKeyedStrings(allKeyedStrings, charset)
+
+	var buf bytes.Buffer
+
+	buf.Write(ffxHeader)
+
+	// Adicionar from (2 bytes)
+	binary.Write(&buf, binary.LittleEndian, uint16(from))
+
+	toMinus1 := to - 1
+	binary.Write(&buf, binary.LittleEndian, uint16(toMinus1))
+
+	binary.Write(&buf, binary.LittleEndian, uint16(length))
+
+	totalLength := len(objects) * length
+	binary.Write(&buf, binary.LittleEndian, uint16(totalLength))
+
+	buf.Write(ffxUnknownBytesOfHeader)
+
+	// Adicionar bytes de cada objeto
+	for _, obj := range objects {
+		var objectBytes []byte
+
+		switch v := obj.(type) {
+		case *KeyItemDataObject:
+			str := obj.(*KeyItemDataObject).String()
+			fmt.Printf("Converting object of type %s to bytes\n", str)
+			objectBytes = v.ToBytes(localization)
+		case *CommandDataObject:
+			objectBytes = v.ToBytes(localization)
+		// Adicionar outros tipos conforme necessário
+		default:
+			return nil, fmt.Errorf("tipo de objeto não suportado para ToBytes: %T", obj)
+		}
+
+		buf.Write(objectBytes)
+	}
+
+	// Adicionar string bytes
+	buf.Write(stringBytes)
+
+	return buf.Bytes(), nil
+}
