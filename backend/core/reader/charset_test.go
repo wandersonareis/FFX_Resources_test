@@ -6,7 +6,6 @@ import (
 	"ffxresources/backend/core/reader"
 	testcommon "ffxresources/testData"
 	"fmt"
-	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -44,7 +43,6 @@ var _ = Describe("PrepareCharset", Ordered, func() {
 	Context("when testing FFX (version 1)", func() {
 		BeforeEach(func() {
 			common.SetGameVersion(1)
-			common.SetGameFilesRoot(filepath.Join(rootDir, "FFX", "binary"))
 		})
 
 		It("should prepare charset maps for all expected charsets", func() {
@@ -92,7 +90,6 @@ var _ = Describe("PrepareCharset", Ordered, func() {
 	Context("when testing FFX-2 (version 2)", func() {
 		BeforeEach(func() {
 			common.SetGameVersion(2)
-			common.SetGameFilesRoot(filepath.Join(rootDir, "FFX-2", "binary"))
 		})
 
 		It("should prepare charset maps for all expected charsets", func() {
