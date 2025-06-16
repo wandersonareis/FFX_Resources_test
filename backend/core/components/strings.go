@@ -105,7 +105,7 @@ var (
 	reCmd    = regexp.MustCompile(`^CMD:([0-9A-Fa-f]{1,2}):([0-9A-Fa-f]{1,2})`)
 	reChoice = regexp.MustCompile(`\{CHOICE:([0-9A-Fa-f]{2})\}`)
 	reMCR    = regexp.MustCompile(`^MCR:s([0-9A-Fa-f]{1,2}):l([0-9A-Fa-f]{1,2}):`)
-	reHEX    = regexp.MustCompile(`^HEX:(?:[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2})*)$`)
+	reHEX    = regexp.MustCompile(`^HEX:([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2})*)$`)
 	rePC     = regexp.MustCompile(`^PC:([0-9A-Fa-f]{1,2}):`)
 	reCTRL   = regexp.MustCompile(`^CTRL:([0-9A-Fa-f]{1,2}):`)
 )
