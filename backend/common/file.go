@@ -58,6 +58,15 @@ func ReadFile(path string) ([]byte, error) {
 	return data, nil
 }
 
+func OpenFile(path string) (*os.File, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("error when opening file %s: %s", GetFileName(path), err)
+	}
+
+	return file, nil
+}
+
 func ReadFileAsString(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
