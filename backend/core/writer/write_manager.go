@@ -14,7 +14,7 @@ import (
 // This function returns the localization keys from the common package
 func getLocalizationKeys() []string {
 	var keys []string
-	for key := range common.Localizations {
+	for key := range common.SupportedLanguages {
 		keys = append(keys, key)
 	}
 	return keys
@@ -23,33 +23,36 @@ func getLocalizationKeys() []string {
 func ExampleWriteManagerUsage() {
 	fmt.Println("=== Write Manager Usage Example ===")
 
-	// Ensure events are loaded first
-	err := reader.ReadAllEvents(false) // false = don't skip blitzball
+	eventsFolder, err := common.NewFileAccessor(common.GetPathOriginalsEvent())
 	if err != nil {
+		return
+	}
+	// Ensure events are loaded first
+	if err := reader.ReadAllEvents(eventsFolder); err != nil { // false = don't skip blitzball
 		fmt.Printf("Error loading events: %v\n", err)
 		return
 	}
 
 	// Example 1: Write CSV files for all localizations
 	fmt.Println("\n1. Writing CSV files for all localizations:")
-	WriteEventFileForAllLocalizations(true)
+	ExportAllEventsToCSV()
 
 	// Example 2: Write JSON files for all localizations
 	fmt.Println("\n2. Writing JSON files for all localizations:")
-	WriteEventFileForAllLocalizationsJSON(true)
+	ExportAllLocalizationsToJSON()
 
 	// Example 3: Write CSV files for a specific localization
 	fmt.Println("\n3. Writing CSV files for Japanese localization:")
-	WriteEventFileForLocalization("jp", true)
+	ExportAllEventsToCsvForLocalization("jp")
 
 	// Example 4: Write JSON files for a specific localization
 	fmt.Println("\n4. Writing JSON files for Japanese localization:")
-	WriteEventFileForLocalizationJSON("jp", true)
+	ExportAllEventsToJSONForLocalization("jp")
 
 	// Example 5: Write files for English localization (both formats)
 	fmt.Println("\n5. Writing files for English localization:")
-	WriteEventFileForLocalization("us", true)
-	WriteEventFileForLocalizationJSON("us", true)
+	ExportAllEventsToCsvForLocalization("us")
+	ExportAllEventsToJSONForLocalization("us")
 
 	fmt.Println("\n=== Write operations completed ===")
 }
@@ -82,7 +85,7 @@ type MacroLocalizationData struct {
 //   - Each macro string has regular and simplified text variations
 //   - Only exports localizations that have macro data (skips empty ones)
 func WriteMacroDictionaryJSON(print bool) {
-	path := filepath.Join(components.GameFilesRoot, components.ModsFolder, "edits", "macrodic")
+	path := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "macrodic")
 
 	// Ensure the output directory exists
 	if err := common.EnsurePathExists(path); err != nil {
@@ -175,8 +178,7 @@ func WriteMacroDictionaryJSON(print bool) {
 	fileName := "macro_dictionary_all_localizations.json"
 	filePath := filepath.Join(path, fileName)
 
-	err = components.WriteStringToFile(filePath, string(jsonData))
-	if err != nil {
+	if err = common.WriteStringToFile(filePath, string(jsonData)); err != nil {
 		fmt.Printf("Error writing JSON file %s: %v\n", filePath, err)
 		return
 	}
@@ -193,7 +195,7 @@ func WriteMacroDictionaryJSON(print bool) {
 }
 
 func WriteMacroDictionaryForLocalizationJSON(localization string, print bool) {
-	path := filepath.Join(components.GameFilesRoot, components.ModsFolder, "edits", "macrodic")
+	path := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "macrodic")
 
 	// Ensure the output directory exists
 	if err := common.EnsurePathExists(path); err != nil {
@@ -272,7 +274,7 @@ func WriteMacroDictionaryForLocalizationJSON(localization string, print bool) {
 	fileName := fmt.Sprintf("macro_dictionary_%s.json", localization)
 	filePath := filepath.Join(path, fileName)
 
-	err = components.WriteStringToFile(filePath, string(jsonData))
+	err = common.WriteStringToFile(filePath, string(jsonData))
 	if err != nil {
 		fmt.Printf("Error writing JSON file %s: %v\n", filePath, err)
 		return
@@ -324,11 +326,11 @@ func EditAndSaveMacrodicFromJson(jsonFilePath string, print bool) error {
 		fmt.Printf("Carregando dados do dicionário de macros do arquivo: %s\n", jsonFilePath)
 	}
 	// Read JSON file
-	resolvedFile, err := components.ResolveFile(jsonFilePath, true)
+	resolvedFile, err := common.NewFileAccessor(jsonFilePath)
 	if err != nil {
 		return fmt.Errorf("erro ao resolver caminho do arquivo JSON: %v", err)
 	}
-	jsonData, err := common.ReadFile(resolvedFile)
+	jsonData, err := common.ReadFile(resolvedFile.ResolvedPath)
 	if err != nil {
 		return fmt.Errorf("erro ao ler arquivo JSON: %v", err)
 	}
@@ -401,7 +403,7 @@ func EditAndSaveMacrodicFromJson(jsonFilePath string, print bool) error {
 				}
 
 				// Convert strings back to bytes using the localization's charset
-				charset := components.LocalizationToCharset(locData.Localization)
+				charset := components.GetCharsetForLanguage(locData.Localization)
 				regularBytes := components.StringToBytes(regularText, charset)
 				simplifiedBytes := components.StringToBytes(simplifiedText, charset)
 
@@ -448,7 +450,7 @@ func LoadMacrodicFromJsonExample() {
 	fmt.Println("=== Exemplo de Carregamento de Dicionário de Macros do JSON ===")
 
 	// Path to the JSON files
-	macrodicPath := filepath.Join(components.GameFilesRoot, components.ModsFolder, "edits", "macrodic")
+	macrodicPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "macrodic")
 
 	// Example 1: Load all localizations from the combined JSON file
 	fmt.Println("\n1. Carregando todas as localizações do arquivo JSON combinado:")
@@ -513,7 +515,7 @@ func CompleteMacroDictionaryWorkflowExample() {
 	fmt.Printf("   MACRODICTFILE limpo. Agora contém %d localizações\n", len(components.MACRODICTFILE))
 
 	// Reload from JSON
-	macrodicPath := filepath.Join(components.GameFilesRoot, components.ModsFolder, "edits", "macrodic")
+	macrodicPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "macrodic")
 	allLocalizationsFile := filepath.Join(macrodicPath, "macro_dictionary_all_localizations.json")
 
 	if err := EditAndSaveMacrodicFromJson(allLocalizationsFile, true); err != nil {
@@ -544,7 +546,7 @@ func CompleteMacroDictionaryWorkflowExample() {
 // WriteMacroDictionaryToBinaryFiles writes macro dictionary data back to binary files
 // This function demonstrates how to use the new RebuildMacroStrings functionality
 func WriteMacroDictionaryToBinaryFiles(print bool) {
-	path := filepath.Join(components.GameFilesRoot, components.ModsFolder, "edits", "macrodic", "binary")
+	path := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "macrodic", "binary")
 
 	// Ensure the output directory exists
 	if err := common.EnsurePathExists(path); err != nil {
@@ -569,14 +571,14 @@ func WriteMacroDictionaryToBinaryFiles(print bool) {
 			}
 
 			// Convert MacroString slice to bytes using the new rebuild function
-			charset := components.LocalizationToCharset(localization)
+			charset := components.GetCharsetForLanguage(localization)
 			binaryData := components.MacroStringsToBytes(chunk, charset, true) // true = optimize (deduplicate strings)
 
 			// Write to file
 			fileName := fmt.Sprintf("macrodic_%s_chunk_%02d.dcp", localization, chunkIndex)
 			filePath := filepath.Join(path, fileName)
 
-			err := components.WriteStringToFile(filePath, string(binaryData))
+			err := common.WriteStringToFile(filePath, string(binaryData))
 			if err != nil {
 				fmt.Printf("Error writing binary file %s: %v\n", filePath, err)
 				continue
@@ -600,7 +602,7 @@ func TestMacroStringReconstruction(print bool) {
 
 	// Step 1: Load from JSON
 	fmt.Println("1. Loading macro data from JSON...")
-	macrodicPath := filepath.Join(components.GameFilesRoot, components.ModsFolder, "edits", "macrodic")
+	macrodicPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "macrodic")
 	allLocalizationsFile := filepath.Join(macrodicPath, "macro_dictionary_all_localizations.json")
 
 	if err := EditAndSaveMacrodicFromJson(allLocalizationsFile, false); err != nil {
@@ -614,7 +616,7 @@ func TestMacroStringReconstruction(print bool) {
 	if chunks, exists := components.MACRODICTFILE[testLocalization]; exists && len(chunks) > 0 {
 		chunk := chunks[6] // Test first chunk
 		if len(chunk) > 0 {
-			charset := components.LocalizationToCharset(testLocalization)
+			charset := components.GetCharsetForLanguage(testLocalization)
 
 			// Convert to binary
 			binaryData := components.MacroStringsToBytes(chunk, charset, true)
