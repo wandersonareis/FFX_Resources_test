@@ -9,16 +9,3 @@ const (
 	DefaultLocalization        = "us"
 	SkipBlitzballEvents        = true
 )
-
-var Localizations = map[string]string{
-	"ch": "Chinese",
-	"de": "German",
-	"fr": "French",
-	"it": "Italian",
-	"jp": "Japanese",
-	"kr": "Korean",
-	"sp": "Spanish",
-	"us": "English",
-}
-
-var Charsets = []string{"ch", "cn", "jp", "kr", "us"}
