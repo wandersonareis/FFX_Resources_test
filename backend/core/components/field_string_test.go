@@ -2,10 +2,16 @@ package components_test
 
 import (
 	"ffxresources/backend/core/components"
+	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
+
+func TestFieldString(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "FieldString Suite")
+}
 
 var _ = Describe("FieldString", func() {
 	var (
@@ -34,8 +40,9 @@ var _ = Describe("FieldString", func() {
 			0x1C, 0x00, 0x00, 0x00, // simplified: offset=28 (same as regular)
 
 			// String data starting at offset 16 (0x10)
-			0x41, 0x42, 0x43, 0x00, // "ABC" + null terminator at offset 20 (0x14)
-			0x44, 0x45, 0x00, // "DE" + null terminator at offset 24 (0x18)
+			0x50, 0x51, 0x52, 0x00, // "ABC" + null terminator at offset 20 (0x14)
+			0x53, 0x54, 0x00, // "DE" + null terminator at offset 24 (0x18)
+			0x50, 0x51, 0x52, 0x00, // "ABC" + null terminator at offset 20 (0x14)
 			0x00, // null terminator at offset 28 (0x1C) - empty string
 		}
 	})
@@ -64,8 +71,8 @@ var _ = Describe("FieldString", func() {
 				fs := components.NewFieldString(charset, regularHeader, simplifiedHeader, testBytes)
 
 				// Should extract "ABC" and "DE"
-				Expect(fs.RegularBytes).To(Equal([]byte{0x41, 0x42, 0x43}))
-				Expect(fs.SimplifiedBytes).To(Equal([]byte{0x44, 0x45}))
+				Expect(fs.RegularBytes).To(Equal([]byte{0x50, 0x51, 0x52}))
+				Expect(fs.SimplifiedBytes).To(Equal([]byte{0x53, 0x54}))
 			})
 
 			It("should handle same offset for regular and simplified", func() {
@@ -89,13 +96,13 @@ var _ = Describe("FieldString", func() {
 				Expect(strings).To(HaveLen(2))
 
 				// First string
-				Expect(strings[0].RegularOffset).To(Equal(20))
-				Expect(strings[0].SimplifiedOffset).To(Equal(24))
-				Expect(strings[0].SimplifiedFlags).To(Equal(1))
-				Expect(strings[0].SimplifiedChoices).To(Equal(2))
+				Expect(strings[0].RegularOffset).To(Equal(16))
+				Expect(strings[0].SimplifiedOffset).To(Equal(20))
 
 				// Second string
-				Expect(strings[1].RegularOffset).To(Equal(28))
+				Expect(strings[1].RegularOffset).To(Equal(24))
+				Expect(strings[1].RegularFlags).To(Equal(1))
+				Expect(strings[1].RegularChoices).To(Equal(2))
 				Expect(strings[1].SimplifiedOffset).To(Equal(28))
 			})
 
@@ -132,13 +139,13 @@ var _ = Describe("FieldString", func() {
 
 		It("should convert regular header to bytes correctly", func() {
 			result := fs.ToRegularHeaderBytes()
-			expected := 0x78561234 // choices=0x78, flags=0x56, offset=0x1234
+			expected := []byte{0x34, 0x12, 0x56, 0x78} // little-endian representation of 0x34125678
 			Expect(result).To(Equal(expected))
 		})
 
 		It("should convert simplified header to bytes correctly", func() {
 			result := fs.ToSimplifiedHeaderBytes()
-			expected := 0xF0DE9ABC // choices=0xF0, flags=0xDE, offset=0x9ABC
+			expected := []byte{0xbc, 0x9a, 0xde, 0xf0} // little-endian representation of 0xBC9ADEF0
 			Expect(result).To(Equal(expected))
 		})
 	})
@@ -181,7 +188,7 @@ var _ = Describe("FieldString", func() {
 		})
 
 		It("should detect empty strings", func() {
-			emptyFs := components.NewFieldString(charset, 0x0000001C, 0x0000001C, testBytes)
+			emptyFs := components.NewFieldString(charset, 0x0000001E, 0x0000001E, testBytes)
 			Expect(emptyFs.IsEmpty()).To(BeTrue())
 		})
 	})
@@ -281,11 +288,11 @@ var _ = Describe("FieldString", func() {
 			// Create test field strings
 			testFS1 = &components.FieldString{
 				Charset:      "us",
-				RegularBytes: []byte{0x41, 0x42, 0x43}, // "ABC"
+				RegularBytes: []byte{0x50, 0x51, 0x52}, // "ABC"
 			}
 			testFS2 = &components.FieldString{
-				Charset:      "jp",
-				RegularBytes: []byte{0x44, 0x45, 0x46}, // "DEF"
+				Charset:      "us",
+				RegularBytes: []byte{0x53, 0x54, 0x55}, // "DEF"
 			}
 		})
 
@@ -472,16 +479,16 @@ func setupFieldStringCharMaps() {
 	}
 
 	// Add specific test mappings
-	usMap[0x41] = 'A'
-	usMap[0x42] = 'B'
-	usMap[0x43] = 'C'
-	usMap[0x44] = 'D'
-	usMap[0x45] = 'E'
-	usReverseMap['A'] = 0x41
-	usReverseMap['B'] = 0x42
-	usReverseMap['C'] = 0x43
-	usReverseMap['D'] = 0x44
-	usReverseMap['E'] = 0x45
+	usMap[0x50] = 'A'
+	usMap[0x51] = 'B'
+	usMap[0x52] = 'C'
+	usMap[0x53] = 'D'
+	usMap[0x54] = 'E'
+	usReverseMap['A'] = 0x50
+	usReverseMap['B'] = 0x51
+	usReverseMap['C'] = 0x52
+	usReverseMap['D'] = 0x53
+	usReverseMap['E'] = 0x54
 
 	components.SetCharMap("us", usMap, usReverseMap)
 }

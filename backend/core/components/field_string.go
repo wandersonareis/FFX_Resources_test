@@ -6,7 +6,6 @@ import (
 	"fmt"
 )
 
-// FieldString represents a field string with regular and simplified versions
 type FieldString struct {
 	Charset           string
 	RegularOffset     int
@@ -19,63 +18,7 @@ type FieldString struct {
 	SimplifiedBytes   []byte
 }
 
-/* func NewFieldString(charset string, regularHeader, simplifiedHeader int, data []byte) *FieldString {
-	var regOffset uint16
-	var regFlags uint8
-	var regChoices uint8
-	var simpOffset uint16
-	var simpFlags uint8
-	var simpChoices uint8
-
-	r := bytes.NewReader(data)
-
-	if err := binary.Read(r, binary.LittleEndian, &regOffset); err != nil {
-		fmt.Printf("Error reading regular offset: %v\n", err)
-		return nil
-	}
-	if err := binary.Read(r, binary.LittleEndian, &regFlags); err != nil {
-		fmt.Printf("Error reading regular flags: %v\n", err)
-		return nil
-	}
-	if err := binary.Read(r, binary.LittleEndian, &regChoices); err != nil {
-		fmt.Printf("Error reading regular choices: %v\n", err)
-		return nil
-	}
-	if err := binary.Read(r, binary.LittleEndian, &simpOffset); err != nil {
-		fmt.Printf("Error reading simplified offset: %v\n", err)
-		return nil
-	}
-	if err := binary.Read(r, binary.LittleEndian, &simpFlags); err != nil {
-		fmt.Printf("Error reading simplified flags: %v\n", err)
-		return nil
-	}
-	if err := binary.Read(r, binary.LittleEndian, &simpChoices); err != nil {
-		fmt.Printf("Error reading simplified choices: %v\n", err)
-		return nil
-	}
-	fs := &FieldString{
-		Charset:           charset,
-		RegularOffset:     regOffset,
-		RegularFlags:      regFlags,
-		RegularChoices:    regChoices,
-		SimplifiedOffset:  simpOffset,
-		SimplifiedFlags:   simpFlags,
-		SimplifiedChoices: simpChoices,
-	}
-
-	fs.RegularBytes = GetStringBytesAtLookupOffset(data, fs.RegularOffset)
-
-	if fs.RegularOffset == fs.SimplifiedOffset {
-		fs.SimplifiedBytes = fs.RegularBytes
-	} else {
-		fs.SimplifiedBytes = GetStringBytesAtLookupOffset(data, fs.SimplifiedOffset)
-	}
-
-	return fs
-} */
-
-// NewFieldString creates a new FieldString from header data and bytes
-func NewFieldString(charset string, regularHeader, simplifiedHeader int, bytes []byte) *FieldString {
+func NewFieldString(charset string, regularHeader, simplifiedHeader int, stringBytes []byte) *FieldString {
 	fs := &FieldString{
 		Charset:           charset,
 		RegularOffset:     regularHeader & 0x0000FFFF,
@@ -86,18 +29,17 @@ func NewFieldString(charset string, regularHeader, simplifiedHeader int, bytes [
 		SimplifiedChoices: (simplifiedHeader & 0xFF000000) >> 24,
 	}
 
-	fs.RegularBytes = GetStringBytesAtLookupOffset(bytes, fs.RegularOffset)
+	fs.RegularBytes = GetStringBytesAtLookupOffset(stringBytes, fs.RegularOffset)
 
 	if fs.RegularOffset == fs.SimplifiedOffset {
 		fs.SimplifiedBytes = fs.RegularBytes
 	} else {
-		fs.SimplifiedBytes = GetStringBytesAtLookupOffset(bytes, fs.SimplifiedOffset)
+		fs.SimplifiedBytes = GetStringBytesAtLookupOffset(stringBytes, fs.SimplifiedOffset)
 	}
 
 	return fs
 }
 
-// FromFieldStringData creates a list of FieldString objects from byte data
 func FromFieldStringData(bytes []byte, print bool, charset string) ([]*FieldString, error) {
 	if len(bytes) == 0 {
 		return []*FieldString{}, nil
@@ -125,7 +67,6 @@ func FromFieldStringData(bytes []byte, print bool, charset string) ([]*FieldStri
 	return strings, nil
 }
 
-// RebuildFieldStrings rebuilds field strings into byte array format
 func RebuildFieldStrings(strings []*FieldString, charset string, optimize bool) []byte {
 	count := len(strings)
 	contentOffset := count * 8
@@ -146,7 +87,6 @@ func RebuildFieldStrings(strings []*FieldString, charset string, optimize bool) 
 			FillByteList(regularString, &buf, charset)
 		}
 
-		// Handle simplified string
 		simplifiedString := fieldString.GetSimplifiedString()
 		fieldString.SimplifiedChoices = GetChoicesInString(simplifiedString)
 
@@ -164,7 +104,6 @@ func RebuildFieldStrings(strings []*FieldString, charset string, optimize bool) 
 	return buf.Bytes()
 }
 
-// ToRegularHeaderBytes converts the regular header fields to a 4-byte integer
 func (fs *FieldString) ToRegularHeaderBytes() []byte {
 	buf := make([]byte, 4)
 	binary.LittleEndian.PutUint32(buf, uint32(
@@ -172,7 +111,6 @@ func (fs *FieldString) ToRegularHeaderBytes() []byte {
 	return buf
 }
 
-// ToSimplifiedHeaderBytes converts the simplified header fields to a 4-byte integer
 func (fs *FieldString) ToSimplifiedHeaderBytes() []byte {
 	buf := make([]byte, 4)
 	binary.LittleEndian.PutUint32(buf, uint32(
@@ -180,7 +118,6 @@ func (fs *FieldString) ToSimplifiedHeaderBytes() []byte {
 	return buf
 }
 
-// String returns the string representation of the FieldString
 func (fs *FieldString) String() string {
 	if fs.HasDistinctSimplified() {
 		return fs.GetRegularString() + " (Simplified: " + fs.GetSimplifiedString() + ")"
@@ -188,24 +125,19 @@ func (fs *FieldString) String() string {
 	return fs.GetRegularString()
 }
 
-// IsEmpty returns true if both regular and simplified strings are empty
 func (fs *FieldString) IsEmpty() bool {
 	return fs.GetRegularString() == "" && fs.GetSimplifiedString() == ""
 }
 
-// GetRegularString returns the regular string converted from bytes
 func (fs *FieldString) GetRegularString() string {
 	return BytesToString(fs.RegularBytes, fs.Charset)
 }
 
-// GetSimplifiedString returns the simplified string converted from bytes
 func (fs *FieldString) GetSimplifiedString() string {
 	return BytesToString(fs.SimplifiedBytes, fs.Charset)
 }
 
-// HasDistinctSimplified returns true if simplified string is different from regular string
 func (fs *FieldString) HasDistinctSimplified() bool {
-	// Compare byte slices
 	if len(fs.RegularBytes) != len(fs.SimplifiedBytes) {
 		return true
 	}
@@ -217,7 +149,6 @@ func (fs *FieldString) HasDistinctSimplified() bool {
 	return false
 }
 
-// SetRegularString sets the regular string with optional charset change
 func (fs *FieldString) SetRegularString(str string, newCharset ...string) {
 	if len(newCharset) > 0 && newCharset[0] != "" {
 		fs.SetCharset(newCharset[0])
@@ -232,7 +163,6 @@ func (fs *FieldString) SetRegularString(str string, newCharset ...string) {
 	}
 }
 
-// SetSimplifiedString sets the simplified string with optional charset change
 func (fs *FieldString) SetSimplifiedString(str string, newCharset ...string) {
 	if len(newCharset) > 0 && newCharset[0] != "" {
 		fs.SetCharset(newCharset[0])
@@ -241,24 +171,15 @@ func (fs *FieldString) SetSimplifiedString(str string, newCharset ...string) {
 	fs.SimplifiedBytes = StringToBytes(str, fs.Charset)
 }
 
-// SetCharset updates the charset if different from current
 func (fs *FieldString) SetCharset(newCharset string) {
 	if newCharset != "" && newCharset != fs.Charset {
 		fs.Charset = newCharset
 	}
 }
 
-// Helper functions that need to be implemented or already exist in the project
-
-// Read4Bytes reads 4 bytes from the byte array at the given offset as little-endian integer
 func Read4Bytes(bytes []byte, offset int) int {
 	if offset+3 >= len(bytes) {
 		return 0
 	}
 	return int(read4BytesLE(bytes, offset))
-}
-
-// Hex2WithSuffix formats an integer as a 2-digit hex string with suffix
-func Hex2WithSuffix(value int) string {
-	return fmt.Sprintf("%02X", value)
 }
