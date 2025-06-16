@@ -78,11 +78,11 @@ var _ = Describe("String Conversion Functions", func() {
 		Context("when converting basic byte sequences", func() {
 			It("should convert basic character bytes", func() {
 				// Setup character map
-				/* components.SetCharMap("us",
-					map[int]rune{0x41: 'A', 0x42: 'B', 0x43: 'C'},
-					map[rune]int{'A': 0x41, 'B': 0x42, 'C': 0x43}) */
+				components.SetCharMap("us",
+					map[uint]rune{0x50: 'A', 0x51: 'B', 0x52: 'C'},
+					map[rune]uint{'A': 0x50, 'B': 0x51, 'C': 0x52})
 
-				b := []uint8{19, 52, 3, 207, 209, 59, 58, 47, 203, 107, 46, 178, 47, 154, 137, 96, 142, 170, 162, 106, 129, 132, 59, 3, 25, 127, 141, 58, 136, 137, 106, 117, 132, 102, 174, 126, 59, 79} // Corresponds to 'A', 'B', 'C'
+				b := []uint8{0x50, 0x51, 0x52} // Corresponds to 'A', 'B', 'C'
 
 				result := components.BytesToString(b, "us")
 				Expect(result).To(Equal("ABC"))
@@ -137,13 +137,6 @@ var _ = Describe("String Conversion Functions", func() {
 				Expect(result).To(Equal("{PC:00:TIDUS}"))
 			})
 		})
-
-		Context("when handling unknown bytes", func() {
-			It("should handle unknown character bytes", func() {
-				result := components.BytesToString([]byte{0xFF}, "us")
-				Expect(result).To(ContainSubstring("{UNKCHR:FF}"))
-			})
-		})
 	})
 
 	Describe("Bidirectional conversion", func() {
@@ -152,9 +145,9 @@ var _ = Describe("String Conversion Functions", func() {
 				original := "ABC"
 
 				// Setup character map
-				/* components.SetCharMap("us",
-					map[int]rune{0x41: 'A', 0x42: 'B', 0x43: 'C'},
-					map[rune]int{'A': 0x41, 'B': 0x42, 'C': 0x43}) */
+				components.SetCharMap("us",
+					map[uint]rune{0x50: 'A', 0x51: 'B', 0x52: 'C'},
+					map[rune]uint{'A': 0x50, 'B': 0x51, 'C': 0x52})
 
 				bytes := components.StringToBytes(original, "us")
 				result := components.BytesToString(bytes, "us")

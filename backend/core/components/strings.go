@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -93,7 +92,6 @@ var (
 		0x4E: "Direcional Left+Down+Right",
 		0x4F: "Direcional All",
 	}
-	choiceRegex               = regexp.MustCompile(`\{CHOICE:([0-9A-Fa-f]{2})\}`)
 	WriteLinebreaksAsCommands = true
 )
 
@@ -101,6 +99,15 @@ var (
 	ByteToCharMaps = make(map[string]map[uint]rune)
 	CharToByteMaps = make(map[string]map[rune]uint)
 	MacroLookup    = make(map[int]*LocalizedMacroStringObject)
+)
+
+var (
+	reCmd    = regexp.MustCompile(`^CMD:([0-9A-Fa-f]{1,2}):([0-9A-Fa-f]{1,2})`)
+	reChoice = regexp.MustCompile(`\{CHOICE:([0-9A-Fa-f]{2})\}`)
+	reMCR    = regexp.MustCompile(`^MCR:s([0-9A-Fa-f]{1,2}):l([0-9A-Fa-f]{1,2}):`)
+	reHEX    = regexp.MustCompile(`^HEX:(?:[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2})*)$`)
+	rePC     = regexp.MustCompile(`^PC:([0-9A-Fa-f]{1,2}):`)
+	reCTRL   = regexp.MustCompile(`^CTRL:([0-9A-Fa-f]{1,2}):`)
 )
 
 func CharToBytes(chr rune, charset string) []uint {
@@ -147,8 +154,8 @@ func ByteToChar(hex uint, charset string) (rune, bool) {
 	return char, exists
 }
 
-func LocalizationToCharset(localization string) string {
-	if charset, ok := localizationMap[localization]; ok {
+func GetCharsetForLanguage(languageCode string) string {
+	if charset, ok := localizationMap[languageCode]; ok {
 		return charset
 	}
 	return "us"
@@ -202,7 +209,7 @@ func GetChoicesInString(s string) int {
 }
 
 func GetFirstChoiceInString(s string) (uint16, bool) {
-	match := choiceRegex.FindStringSubmatch(s)
+	match := reChoice.FindStringSubmatch(s)
 	if len(match) > 1 {
 		if val, err := strconv.ParseUint(match[1], 16, 16); err == nil {
 			return uint16(val), true
@@ -216,8 +223,8 @@ func SetCharMap(charset string, byteToCharMap map[uint]rune, charToByteMap map[r
 	CharToByteMaps[charset] = charToByteMap
 }
 
-func BytesToString(bytes []byte, localization string) string {
-	return getStringAtLookupOffsetBinary(bytes, 0, localization)
+func BytesToString(rawData []byte, localization string) string {
+	return getStringAtLookupOffsetBinary(rawData, 0, localization)
 }
 
 // FillByteList processes a string and fills the provided byte list with the converted bytes
@@ -258,16 +265,28 @@ func FillByteList(s string, buf *bytes.Buffer, charset string) {
 			for _, b := range cmdBytes {
 				buf.WriteByte(byte(b))
 			}
-
-			// Skip to closing brace
 			i = getRunePosition(runes, '}', i)
 		}
 	}
-
-	// Add null terminator
 	buf.WriteByte(0x00)
 }
 
+// StringToByteList converts a slice of runes to a byte slice using the specified character encoding.
+// It processes each rune in the input slice, handling special command sequences enclosed in curly braces.
+//
+// Parameters:
+//   - runes: slice of runes to be converted to bytes
+//   - charset: string specifying the character encoding to use for conversion
+//
+// Returns:
+//   - []byte: the resulting byte slice after conversion
+//
+// Behavior:
+//   - Regular runes are converted to bytes using the specified charset via CharToBytes
+//   - Command sequences starting with '{' are parsed using ParseCommand and their resulting bytes are included
+//   - When a command is found, the function skips to the closing '}' using getRunePosition
+//   - Unknown characters that cannot be converted are reported to stderr with their position and context
+//   - All resulting bytes are accumulated in a buffer and returned as a single byte slice
 func StringToByteList(runes []rune, charset string) []byte {
 	var buf bytes.Buffer
 	for i := 0; i < len(runes); i++ {
@@ -289,13 +308,7 @@ func StringToByteList(runes []rune, charset string) []byte {
 			for _, b := range cmdBytes {
 				buf.WriteByte(byte(b))
 			}
-			// Skip to closing brace
-			for j := i + 1; j < len(runes); j++ {
-				if runes[j] == '}' {
-					i = j
-					break
-				}
-			}
+			i = getRunePosition(runes, '}', i)
 		}
 	}
 	return buf.Bytes()
@@ -306,6 +319,20 @@ func StringToBytes(s, charset string) []byte {
 	return StringToByteList(runes, charset)
 }
 
+// GetStringBytesAtLookupOffset retrieves a null-terminated string from a byte table
+// starting at the specified offset. The function reads bytes from the offset position
+// until it encounters a null byte (0x00) or reaches the end of the table.
+//
+// Parameters:
+//   - table: The byte slice containing the string data
+//   - offset: The starting position in the table to begin reading from
+//
+// Returns:
+//   - []byte: The string bytes without the null terminator, or nil if offset is invalid
+//   - If no null terminator is found, returns all bytes from offset to end of table
+//   - Returns nil if offset is negative or beyond the table length
+//   - For directories: Recursively processes all non-hidden files in sorted order
+//   - For files: Resolves path, reads bytes, and parses as string data using appropriate charset
 func GetStringBytesAtLookupOffset(table []byte, offset int) []byte {
 	if offset < 0 || offset >= len(table) {
 		return nil
@@ -322,15 +349,11 @@ func GetStringBytesAtLookupOffsetDev(table []byte, offset uint16) []byte {
 	if int(offset) >= len(table) {
 		return nil
 	}
-
-	// Find the end of the string (next zero byte)
 	end := offset
 	tableLen := uint16(len(table))
 	for end < tableLen && table[end] != 0x00 {
 		end++
 	}
-
-	// Return the slice directly without append
 	return table[offset:end]
 }
 
@@ -345,7 +368,7 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 
 	var (
 		out               strings.Builder
-		charset           = LocalizationToCharset(localization)
+		charset           = GetCharsetForLanguage(localization)
 		extraFiveSections bool
 		buf               = bytes.NewReader(table[offset:])
 	)
@@ -517,14 +540,6 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 	return out.String()
 }
 
-var (
-	reCmd  = regexp.MustCompile(`^CMD:([0-9A-Fa-f]{1,2}):([0-9A-Fa-f]{1,2})`)
-	reMCR  = regexp.MustCompile(`^MCR:s([0-9A-Fa-f]{1,2}):l([0-9A-Fa-f]{1,2}):`)
-	reHEX  = regexp.MustCompile(`^HEX:(?:[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2})*)$`)
-	rePC   = regexp.MustCompile(`^PC:([0-9A-Fa-f]{1,2}):`)
-	reCTRL = regexp.MustCompile(`^CTRL:([0-9A-Fa-f]{1,2}):`)
-)
-
 func ParseCommand(runes []rune, startIndex int) []uint {
 	if startIndex >= len(runes) {
 		return nil
@@ -691,7 +706,6 @@ func getRunePosition(runes []rune, target rune, start int) int {
 //
 // Parameters:
 //   - filename: Path to file or directory to read
-//   - print: If true, prints debug information during processing
 //   - localization: Localization code (e.g., "jp", "us", "kr") for charset conversion
 //
 // Returns:
@@ -700,56 +714,31 @@ func getRunePosition(runes []rune, target rune, start int) int {
 // Behavior:
 //   - For directories: Recursively processes all non-hidden files in sorted order
 //   - For files: Resolves path, reads bytes, and parses as string data using appropriate charset
-func ReadStringFile(filename string, print bool, localization string) []*FieldString {
+func ReadStringFile(filename string, languageCode string) []*FieldString {
 	resolvedPath, err := common.NewFileAccessor(filename)
 	if err != nil {
-		if print {
+		if common.IsVerboseMode() {
 			fmt.Printf("Error resolving file %s: %v\n", filename, err)
 		}
 		return nil
 	}
 
-	if resolvedPath.Info.IsDir() {
-		entries, err := os.ReadDir(resolvedPath.ResolvedPath)
-		if err != nil {
-			if print {
-				fmt.Printf("Error reading directory %s: %v\n", resolvedPath, err)
-			}
-			return nil
-		}
-
-		var validFiles []string
-		for _, entry := range entries {
-			if !strings.HasPrefix(entry.Name(), ".") {
-				validFiles = append(validFiles, entry.Name())
-			}
-		}
-		sort.Strings(validFiles)
-
-		for _, file := range validFiles {
-			fullPath := filepath.Join(filename, file)
-			ReadStringFile(fullPath, print, localization)
-		}
-		return nil
-	}
-
-	bytes := FileToBytes(resolvedPath, print)
+	bytes := FileToBytes(resolvedPath)
 	if bytes == nil {
-		if print {
+		if common.IsVerboseMode() {
 			fmt.Printf("Failed to read bytes from file %s\n", resolvedPath.ResolvedPath)
 		}
 		return nil
 	}
 
-	charset := LocalizationToCharset(localization)
-	fieldStrings, err := FromFieldStringData(bytes, print, charset)
+	charset := GetCharsetForLanguage(languageCode)
+	fieldStrings, err := FromFieldStringData(bytes, charset)
 	if err != nil {
-		if print {
+		if common.IsVerboseMode() {
 			fmt.Printf("Error parsing string data from %s: %v\n", filename, err)
 		}
 		return nil
 	}
-
 	return fieldStrings
 }
 
@@ -771,9 +760,9 @@ func ReadStringFile(filename string, print bool, localization string) []*FieldSt
 func ReadLocalizedStringFiles(path string) []*LocalizedFieldStringObject {
 	localized := make([]*LocalizedFieldStringObject, 0)
 
-	for key := range common.Localizations {
+	for key := range common.SupportedLanguages {
 		fullPath := filepath.Join(common.GetLocalizationRoot(key), path)
-		localizedStrings := ReadStringFile(fullPath, false, key)
+		localizedStrings := ReadStringFile(fullPath, key)
 
 		for i, fieldString := range localizedStrings {
 			for len(localized) <= i {
@@ -791,11 +780,8 @@ func ReadLocalizedEventStrings(eventId string) ([]*LocalizedFieldStringObject, e
 	if len(eventId) < 2 {
 		return nil, fmt.Errorf("invalid event ID: %s", eventId)
 	}
-
 	shortened := eventId[:2]
 	midPath := filepath.Join(shortened, eventId, eventId)
-	//localizationPath := filepath.Join(common.GetPathOriginalsEvent(), "event/obj_ps3/"+midPath+".bin")
-
 	localizedStrings := ReadLocalizedStringFiles("event/obj_ps3/" + midPath + ".bin")
 	if localizedStrings == nil {
 		return nil, fmt.Errorf("failed to read localized strings for event %s", eventId)

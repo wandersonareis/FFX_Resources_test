@@ -90,7 +90,7 @@ var _ = Describe("FieldString", func() {
 	Describe("FromFieldStringData", func() {
 		Context("when parsing field string data", func() {
 			It("should correctly parse multiple field strings", func() {
-				strings, err := components.FromFieldStringData(testBytes, false, charset)
+				strings, err := components.FromFieldStringData(testBytes, charset)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(strings).To(HaveLen(2))
@@ -107,7 +107,7 @@ var _ = Describe("FieldString", func() {
 			})
 
 			It("should handle empty byte arrays", func() {
-				strings, err := components.FromFieldStringData([]byte{}, false, charset)
+				strings, err := components.FromFieldStringData([]byte{}, charset)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(strings).To(BeEmpty())
@@ -115,7 +115,7 @@ var _ = Describe("FieldString", func() {
 
 			It("should support print option", func() {
 				// This mainly tests that print doesn't cause errors
-				strings, err := components.FromFieldStringData(testBytes, true, charset)
+				strings, err := components.FromFieldStringData(testBytes, charset)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(strings).To(HaveLen(2))
@@ -260,7 +260,7 @@ var _ = Describe("FieldString", func() {
 			})
 
 			It("should rebuild strings into byte format", func() {
-				result := components.RebuildFieldStrings(fieldStrings, charset, false)
+				result := components.RebuildFieldStrings(fieldStrings, charset)
 
 				// Should contain the string bytes
 				Expect(result).ToNot(BeEmpty())
@@ -268,7 +268,7 @@ var _ = Describe("FieldString", func() {
 			})
 
 			It("should handle empty field strings list", func() {
-				result := components.RebuildFieldStrings([]*components.FieldString{}, charset, false)
+				result := components.RebuildFieldStrings([]*components.FieldString{}, charset)
 				Expect(result).To(BeEmpty())
 			})
 		})

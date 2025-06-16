@@ -3,6 +3,7 @@ package components
 import (
 	"bytes"
 	"encoding/binary"
+	"ffxresources/backend/common"
 	"fmt"
 )
 
@@ -40,12 +41,11 @@ func NewFieldString(charset string, regularHeader, simplifiedHeader int, stringB
 	return fs
 }
 
-func FromFieldStringData(bytes []byte, print bool, charset string) ([]*FieldString, error) {
+func FromFieldStringData(bytes []byte, charset string) ([]*FieldString, error) {
 	if len(bytes) == 0 {
 		return []*FieldString{}, nil
 	}
 
-	// Read first two bytes to get count
 	first := int(bytes[0x00]) + int(bytes[0x01])*0x100
 	count := first / 0x08
 
@@ -54,20 +54,18 @@ func FromFieldStringData(bytes []byte, print bool, charset string) ([]*FieldStri
 	for i := 0; i < count; i++ {
 		regularHeader := Read4Bytes(bytes, i*0x08)
 		simplifiedHeader := Read4Bytes(bytes, i*0x08+0x04)
-
 		fieldString := NewFieldString(charset, regularHeader, simplifiedHeader, bytes)
 
-		if print {
+		if common.IsVerboseMode() {
 			fmt.Printf("String %02X: %s\n", i, fieldString.String())
 		}
-
 		strings = append(strings, fieldString)
 	}
 
 	return strings, nil
 }
 
-func RebuildFieldStrings(strings []*FieldString, charset string, optimize bool) []byte {
+func RebuildFieldStrings(strings []*FieldString, charset string) []byte {
 	count := len(strings)
 	contentOffset := count * 8
 	offsetMap := make(map[string]int)
