@@ -19,7 +19,7 @@ func write4Bytes(bytes []byte, offset int, value uint32) {
 	binary.LittleEndian.PutUint32(bytes[offset:], value)
 }
 
-func FileToBytes(path common.FileAccessor, print bool) []byte {
+func FileToBytes(path common.FileAccessor) []byte {
 	data, err := os.ReadFile(path.ResolvedPath)
 	if err != nil {
 		return nil
@@ -174,7 +174,7 @@ func ConvertDataCommandsToBytes(objects []interface{}, length int, from, to int,
 	}
 
 	// Reconstruir strings com chave
-	charset := LocalizationToCharset(localization)
+	charset := GetCharsetForLanguage(localization)
 	stringBytes := RebuildKeyedStrings(allKeyedStrings, charset)
 
 	var buf bytes.Buffer
