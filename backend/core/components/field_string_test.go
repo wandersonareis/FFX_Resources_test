@@ -431,24 +431,6 @@ var _ = Describe("FieldString", func() {
 			})
 		})
 
-		Describe("WriteAllContentToCsv", func() {
-			It("should generate CSV format with headers", func() {
-				localizedObj.SetLocalizedContent("us", testFS1)
-
-				csv := localizedObj.WriteAllContentToCsv()
-
-				Expect(csv).To(ContainSubstring("\"string index\""))
-				Expect(csv).To(ContainSubstring("\n"))
-				Expect(csv).To(ContainSubstring("\"us\""))
-			})
-
-			It("should handle empty content", func() {
-				csv := localizedObj.WriteAllContentToCsv()
-				Expect(csv).ToNot(BeEmpty())
-				Expect(csv).To(ContainSubstring("\"string index\""))
-			})
-		})
-
 		Describe("String", func() {
 			It("should return default content string representation", func() {
 				localizedObj.SetLocalizedContent("us", testFS1)

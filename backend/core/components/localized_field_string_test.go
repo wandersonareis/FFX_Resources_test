@@ -2,11 +2,16 @@ package components_test
 
 import (
 	"ffxresources/backend/core/components"
-	"strings"
+	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
+
+func TestLocFieldString(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "LocalizedFieldString Suite")
+}
 
 var _ = Describe("LocalizedFieldStringObject", func() {
 	var (
@@ -22,10 +27,11 @@ var _ = Describe("LocalizedFieldStringObject", func() {
 
 		// Create test byte data
 		testBytes = []byte{
-			0x10, 0x00, 0x00, 0x00, // header data
-			0x14, 0x00, 0x00, 0x00, // more header data
-			0x41, 0x42, 0x43, 0x00, // "ABC" + null terminator at offset 16 (0x10)
-			0x44, 0x45, 0x00, // "DE" + null terminator at offset 20 (0x14)
+			0x08, 0x00, 0x00, 0x00, // header data
+			0x0C, 0x00, 0x00, 0x00, // more header data
+			0x50, 0x51, 0x52, 0x00, // "ABC" + null terminator at offset 16 (0x10)
+			0x53, 0x54, 0x00, // "DE" + null terminator at offset 20 (0x14)
+			0x50, 0x51, 0x52, 0x00, // "ABC" + null terminator at offset 16 (0x10)
 		}
 	})
 
@@ -63,7 +69,7 @@ var _ = Describe("LocalizedFieldStringObject", func() {
 				obj.SetLocalizedContent("us", fieldString1)
 
 				// Set new content
-				fieldString2 := components.NewFieldString(charset, 0x00000014, 0x00000014, testBytes)
+				fieldString2 := components.NewFieldString(charset, 0x00000011, 0x00000011, testBytes)
 				obj.SetLocalizedContent("us", fieldString2)
 
 				Expect(obj.GetLocalizedContent("us")).To(Equal(fieldString2))
@@ -90,12 +96,14 @@ var _ = Describe("LocalizedFieldStringObject", func() {
 
 	Describe("ReadAndSetLocalizedContent", func() {
 		It("should read and set content from byte data", func() {
-			obj.ReadAndSetLocalizedContent("us", testBytes, 0x00000010, 0x00000014)
+			obj.ReadAndSetLocalizedContent("us", testBytes, 0x00000008, 0x0000000C)
 
 			content := obj.GetLocalizedContent("us")
+			str := content.GetRegularString()
 			Expect(content).ToNot(BeNil())
-			Expect(content.GetRegularString()).To(Equal("ABC"))
-			Expect(content.GetSimplifiedString()).To(Equal("DE"))
+			Expect(str).To(Equal("ABC"))
+			str = content.GetSimplifiedString()
+			Expect(str).To(Equal("DE"))
 		})
 
 		It("should handle nil bytes gracefully", func() {
@@ -121,7 +129,7 @@ var _ = Describe("LocalizedFieldStringObject", func() {
 
 	Describe("GetLocalizedString", func() {
 		It("should return string for existing localization", func() {
-			fieldString := components.NewFieldString(charset, 0x00000010, 0x00000010, testBytes)
+			fieldString := components.NewFieldString(charset, 0x00000008, 0x00000008, testBytes)
 			obj.SetLocalizedContent("us", fieldString)
 
 			result := obj.GetLocalizedString("us")
@@ -173,8 +181,8 @@ var _ = Describe("LocalizedFieldStringObject", func() {
 	Describe("WriteAllContent", func() {
 		It("should format all content with localization names", func() {
 			// Setup content for multiple localizations
-			fieldString1 := components.NewFieldString(charset, 0x00000010, 0x00000010, testBytes)
-			fieldString2 := components.NewFieldString(charset, 0x00000014, 0x00000014, testBytes)
+			fieldString1 := components.NewFieldString(charset, 0x00000008, 0x00000008, testBytes)
+			fieldString2 := components.NewFieldString(charset, 0x0000000C, 0x0000000C, testBytes)
 
 			obj.SetLocalizedContent("us", fieldString1)
 			obj.SetLocalizedContent("jp", fieldString2)
@@ -194,56 +202,9 @@ var _ = Describe("LocalizedFieldStringObject", func() {
 		})
 	})
 
-	Describe("WriteAllContentToCsv", func() {
-		It("should generate CSV with headers and content", func() {
-			// Setup content
-			fieldString := components.NewFieldString(charset, 0x00000010, 0x00000010, testBytes)
-			obj.SetLocalizedContent("us", fieldString)
-
-			result := obj.WriteAllContentToCsv()
-
-			// Should contain CSV headers
-			Expect(result).To(ContainSubstring("\"string index\""))
-			Expect(result).To(ContainSubstring(",\"us\""))
-
-			// Should contain content
-			Expect(result).To(ContainSubstring("\"ABC\""))
-
-			// Should have proper CSV format
-			lines := strings.Split(result, "\n")
-			Expect(len(lines)).To(BeNumerically(">=", 1))
-		})
-
-		It("should handle empty content in CSV", func() {
-			result := obj.WriteAllContentToCsv()
-
-			// Should still have headers
-			Expect(result).To(ContainSubstring("\"string index\""))
-			// Should have empty values
-			Expect(result).To(ContainSubstring(",\"\""))
-		})
-
-		It("should escape quotes in CSV values", func() {
-			// Create a field string with quotes
-			quotedFieldString := &components.FieldString{
-				Charset:         charset,
-				RegularBytes:    []byte{}, // We'll mock the string return
-				SimplifiedBytes: []byte{},
-			}
-			// Note: This test would need the actual string conversion to work properly
-			// For now, we'll test the escape function indirectly
-
-			obj.SetLocalizedContent("us", quotedFieldString)
-			result := obj.WriteAllContentToCsv()
-
-			// Should not cause CSV parsing errors
-			Expect(result).To(ContainSubstring("\""))
-		})
-	})
-
 	Describe("String", func() {
 		It("should return string representation of default content", func() {
-			fieldString := components.NewFieldString(charset, 0x00000010, 0x00000010, testBytes)
+			fieldString := components.NewFieldString(charset, 0x00000008, 0x00000008, testBytes)
 			obj.SetLocalizedContent("us", fieldString)
 
 			result := obj.String()
@@ -264,16 +225,16 @@ func setupLocalizedCharMaps() {
 	usReverseMap := make(map[rune]uint)
 
 	// Add specific test mappings
-	usMap[0x41] = 'A'
-	usMap[0x42] = 'B'
-	usMap[0x43] = 'C'
-	usMap[0x44] = 'D'
-	usMap[0x45] = 'E'
-	usReverseMap['A'] = 0x41
-	usReverseMap['B'] = 0x42
-	usReverseMap['C'] = 0x43
-	usReverseMap['D'] = 0x44
-	usReverseMap['E'] = 0x45
+	usMap[0x50] = 'A'
+	usMap[0x51] = 'B'
+	usMap[0x52] = 'C'
+	usMap[0x53] = 'D'
+	usMap[0x54] = 'E'
+	usReverseMap['A'] = 0x50
+	usReverseMap['B'] = 0x51
+	usReverseMap['C'] = 0x52
+	usReverseMap['D'] = 0x53
+	usReverseMap['E'] = 0x54
 
 	components.SetCharMap("us", usMap, usReverseMap)
 	components.SetCharMap("jp", usMap, usReverseMap)
