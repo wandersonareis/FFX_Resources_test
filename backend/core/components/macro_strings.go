@@ -16,14 +16,14 @@ type MacroString struct {
 	SimplifiedBytes  []byte
 }
 
-func NewMacroString(charset string, regularOffset, simplifiedOffset int, bytes []byte) *MacroString {
-	regularBytes := GetStringBytesAtLookupOffset(bytes, regularOffset)
+func NewMacroString(charset string, regularOffset, simplifiedOffset int, data []byte) *MacroString {
+	regularBytes := GetStringBytesAtLookupOffset(data, regularOffset)
 
 	var simplifiedBytes []byte
 	if regularOffset == simplifiedOffset {
 		simplifiedBytes = regularBytes
 	} else {
-		simplifiedBytes = GetStringBytesAtLookupOffset(bytes, simplifiedOffset)
+		simplifiedBytes = GetStringBytesAtLookupOffset(data, simplifiedOffset)
 	}
 
 	return &MacroString{
@@ -72,7 +72,7 @@ func FromStringData(data []byte, charset string) []*MacroString {
 	}
 
 	// Agora, a cada iteração, lemos dois uint16 (4 bytes) em little-endian:
-	for i := 0; i < count; i++ {
+	for i := range count {
 		var regularOffset uint16
 		var simplifiedOffset uint16
 

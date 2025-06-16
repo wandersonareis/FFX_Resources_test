@@ -10,35 +10,38 @@ func NewLocalizedKeyedStringObject() *LocalizedKeyedStringObject {
 	return &LocalizedKeyedStringObject{contents: make(map[string]*KeyedString)}
 }
 
-func NewLocalizedKeyedStringObjectWithContent(localization string, content *KeyedString) *LocalizedKeyedStringObject {
+func NewLocalizedKeyedStringObjectWithContent(languageCode string, content *KeyedString) *LocalizedKeyedStringObject {
 	l := NewLocalizedKeyedStringObject()
-	l.SetLocalizedContent(localization, content)
+	l.SetLocalizedContent(languageCode, content)
 	return l
 }
 
-func (l *LocalizedKeyedStringObject) SetLocalizedContent(localization string, content *KeyedString) {
-	if _, ok := l.contents[localization]; ok && content.IsEmpty() {
+func (l *LocalizedKeyedStringObject) SetLocalizedContent(languageCode string, content *KeyedString) {
+	if _, ok := l.contents[languageCode]; ok && content.IsEmpty() {
 		return
 	} else {
-		l.contents[localization] = content
+		l.contents[languageCode] = content
 	}
 }
 
-func (l *LocalizedKeyedStringObject) ReadAndSetLocalizedContent(localization string, bytes []byte, offset, key uint16) {
+func (l *LocalizedKeyedStringObject) ReadAndSetLocalizedContent(languageCode string, bytes []byte, offset, key uint16) {
 	if bytes == nil {
 		return
 	}
-	charset := LocalizationToCharset(localization)
+	charset := GetCharsetForLanguage(languageCode)
 	ks := NewKeyedString(charset, offset, key, bytes)
-	l.SetLocalizedContent(localization, ks)
+	if ks == nil {
+		return
+	}
+	l.SetLocalizedContent(languageCode, ks)
 }
 
-func (l *LocalizedKeyedStringObject) GetLocalizedContent(localization string) *KeyedString {
-	return l.contents[localization]
+func (l *LocalizedKeyedStringObject) GetLocalizedContent(languageCode string) *KeyedString {
+	return l.contents[languageCode]
 }
 
-func (l *LocalizedKeyedStringObject) GetLocalizedString(localization string) string {
-	if ks := l.GetLocalizedContent(localization); ks != nil {
+func (l *LocalizedKeyedStringObject) GetLocalizedString(languageCode string) string {
+	if ks := l.GetLocalizedContent(languageCode); ks != nil {
 		return ks.GetString()
 	}
 	return ""

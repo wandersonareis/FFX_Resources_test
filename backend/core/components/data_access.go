@@ -15,6 +15,7 @@ var (
 	//WEAPON_NAMES        []*model.WeaponNameDataObject
 	//AUTO_ABILITIES      []*model.AutoAbilityDataObject
 	KEY_ITEMS []*KeyItemDataObject
+	COMMANDS []*CommandDataObject
 	//TREASURES           []*model.TreasureDataObject
 	//MIX_COMBINATIONS    []*model.MixCombinationDataObject
 	//CTB_BASE            []*model.CtbBaseDataObject
@@ -59,10 +60,10 @@ func (f NameableFunc) GetName(locale string) string {
 
 func GetNameableObject(typ string, idx int) Nameable {
 	switch typ {
-	/* case "command":
+	case "command":
 	if cmd := GetCommand(idx); cmd != nil {
 		return cmd
-	} */
+	}
 	/* case "monster":
 	if m := GetMonster(idx); m != nil {
 		return m
@@ -91,12 +92,12 @@ func GetEvent(id string) *EventFile {
 	return ENCOUNTERS[id]
 } */
 
-/* func GetCommand(idx int) *model.CommandDataObject {
-	if MOVES == nil || idx >= len(MOVES) {
+func GetCommand(idx int) *CommandDataObject {
+	if COMMANDS == nil || idx >= len(COMMANDS) {
 		return nil
 	}
-	return MOVES[idx]
-} */
+	return COMMANDS[idx]
+}
 
 /* func GetAutoAbility(idx int) *model.AutoAbilityDataObject {
 	if idx == 0x00FF || AUTO_ABILITIES == nil {

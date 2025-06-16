@@ -22,7 +22,7 @@ func (mdf *MacroDictionaryFile) mapStringsForChunk(chunk Chunk) []*MacroString {
 	if chunk.Offset == 0 {
 		return []*MacroString{}
 	}
-	return FromStringData(chunk.Bytes, LocalizationToCharset(mdf.Localization))
+	return FromStringData(chunk.Bytes, GetCharsetForLanguage(mdf.Localization))
 }
 
 func (mdf *MacroDictionaryFile) PublishStrings() {

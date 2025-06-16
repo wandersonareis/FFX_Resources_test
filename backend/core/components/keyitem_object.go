@@ -63,6 +63,10 @@ func (k *KeyItemDataObject) ToBytes(localization string) []byte {
 	return buf.Bytes()
 }
 
+func (k *KeyItemDataObject) GetNameDescriptionTextObject() *NameDescriptionTextObject {
+	return k.NameDescriptionTextObject
+}
+
 func (k *KeyItemDataObject) SetLocalizations(other LocalizationSetter) {
 	if otherKeyItem, ok := other.(*KeyItemDataObject); ok {
 		k.NameDescriptionTextObject.SetLocalizations(otherKeyItem.NameDescriptionTextObject)

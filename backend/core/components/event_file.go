@@ -99,7 +99,7 @@ func (ef *EventFile) mapChunks(chunks []Chunk) {
 
 func (ef *EventFile) mapStrings() {
 	if len(ef.JapaneseTextBytes) > 0 {
-		japaneseStrings, err := FromFieldStringData(ef.JapaneseTextBytes, false, "jp")
+		japaneseStrings, err := FromFieldStringData(ef.JapaneseTextBytes, "jp")
 		if err == nil && japaneseStrings != nil {
 			localizedJpStringObjects := make([]*LocalizedFieldStringObject, len(japaneseStrings))
 			for i, str := range japaneseStrings {
@@ -111,7 +111,7 @@ func (ef *EventFile) mapStrings() {
 	}
 
 	if len(ef.EnglishTextBytes) > 0 {
-		englishStrings, err := FromFieldStringData(ef.EnglishTextBytes, false, "us")
+		englishStrings, err := FromFieldStringData(ef.EnglishTextBytes, "us")
 		if err == nil && englishStrings != nil {
 			localizedUsStringObjects := make([]*LocalizedFieldStringObject, len(englishStrings))
 			for i, str := range englishStrings {
@@ -185,7 +185,7 @@ func (ef *EventFile) stringsToStringFileBytes(localization string) []byte {
 	}
 
 	fieldStrings := make([]*FieldString, 0, len(ef.Strings))
-	charset := LocalizationToCharset(localization)
+	charset := GetCharsetForLanguage(localization)
 
 	for _, localizedObj := range ef.Strings {
 		if localizedObj != nil {
@@ -200,7 +200,7 @@ func (ef *EventFile) stringsToStringFileBytes(localization string) []byte {
 			}
 		}
 	}
-	return RebuildFieldStrings(fieldStrings, charset, true)
+	return RebuildFieldStrings(fieldStrings, charset)
 }
 
 func (ef *EventFile) chunksToBytes(chunks [][]byte) []byte {

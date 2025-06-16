@@ -35,7 +35,7 @@ func (obj *LocalizedFieldStringObject) ReadAndSetLocalizedContent(localization s
 		return
 	}
 
-	charset := LocalizationToCharset(localization)
+	charset := GetCharsetForLanguage(localization)
 	fieldString := NewFieldString(charset, regularHeader, simplifiedHeader, bytes)
 	obj.SetLocalizedContent(localization, fieldString)
 }
