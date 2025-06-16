@@ -1,207 +1,137 @@
 package writer
 
 import (
-	"encoding/json"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"fmt"
+	"os"
 	"path/filepath"
-	"sort"
 )
 
-type EventStringData struct {
-	Index int               `json:"index"`
-	Text  map[string]string `json:"text"`
+type KeyItemData struct {
+	ID          int               `json:"id"`
+	Name        map[string]string `json:"name"`
+	Description map[string]string `json:"description"`
 }
 
-type EventFileData struct {
-	ID      string            `json:"id"`
-	Strings []EventStringData `json:"strings"`
+// Generic function to export data to JSON
+func exportToJSON(data interface{}, fileName string, verboseMessage string) error {
+	editsPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits")
+	if err := os.MkdirAll(editsPath, 0755); err != nil {
+		return fmt.Errorf("error creating edits directory: %w", err)
+	}
+
+	jsonPath := filepath.Join(editsPath, fileName)
+
+	if err := common.SaveAsJSON(data, jsonPath); err != nil {
+		return fmt.Errorf("error saving JSON data to file %s: %w", jsonPath, err)
+	}
+
+	if common.IsVerboseMode() {
+		fmt.Printf("%s: %s\n", verboseMessage, jsonPath)
+	}
+
+	return nil
 }
 
-// WriteEventFileForAllLocalizationsJSON writes event files as JSON for all localizations
-// Creates JSON files with event strings for each language in the edits/events/ directory
-//
-// Parameters:
-//   - print: If true, prints the exported file paths for debugging
-//
-// JSON Format:
-//   - Array of event objects, each containing ID and strings array
-//   - Each string object has index and localized text for each language
-//   - Only exports events that have string data (skips empty events)
-func WriteEventFileForAllLocalizationsJSON(print bool) {
-	path := filepath.Join(components.GameFilesRoot, components.ModsFolder, "edits", "events")
-
-	// Ensure the output directory exists
-	if err := common.EnsurePathExists(path); err != nil {
-		fmt.Printf("Error creating output directory: %v\n", err)
-		return
+func WriteObjectsDataJSON(objects []*components.NameDescriptionTextObject, jsonFileName string) error {
+	if common.IsVerboseMode() {
+		fmt.Printf("Carregando objetos de dados com todas as localizações...\n")
 	}
 
-	// Get all localization keys and sort them for consistent output
-	localizationKeys := getLocalizationKeys()
-	sort.Strings(localizationKeys)
-
-	// Get sorted list of event IDs for consistent ordering
-	eventIDs := make([]string, 0, len(components.EVENTS))
-	for eventID := range components.EVENTS {
-		eventIDs = append(eventIDs, eventID)
+	if len(objects) == 0 {
+		return fmt.Errorf("no objects loaded or empty")
 	}
-	sort.Strings(eventIDs)
 
-	var allEvents []EventFileData
+	var allKeyItemsData []KeyItemData
 
-	// Iterate through all loaded events in sorted order
-	for _, eventID := range eventIDs {
-		eventFile := components.EVENTS[eventID]
-		if eventFile == nil || eventFile.Strings == nil || len(eventFile.Strings) == 0 {
+	for i, nameDescObj := range objects {
+		if nameDescObj == nil {
+			if common.IsVerboseMode() {
+				fmt.Printf("Key item %d não possui NameDescriptionTextObject\n", i)
+			}
 			continue
 		}
-
-		fmt.Printf("Exporting event file to JSON: %s\n", eventFile.ID)
-
-		// Create event data structure
-		eventData := EventFileData{
-			ID:      eventFile.ID,
-			Strings: make([]EventStringData, 0, len(eventFile.Strings)),
+		keyItemData := KeyItemData{
+			ID:          i,
+			Name:        make(map[string]string),
+			Description: make(map[string]string),
 		}
 
-		// Process each string with its localizations
-		for i, str := range eventFile.Strings {
-			stringData := EventStringData{
-				Index: i,
-				Text:  make(map[string]string),
-			}
-
-			// Add localized text for each language
-			for _, langKey := range localizationKeys {
-				value := str.GetLocalizedString(langKey)
-				if value != "" {
-					stringData.Text[langKey] = value
-				} else {
-					stringData.Text[langKey] = ""
+		for locKey := range common.SupportedLanguages {
+			if nameDescObj.Name != nil {
+				nameText := nameDescObj.Name.GetLocalizedString(locKey)
+				if nameText != "" {
+					keyItemData.Name[locKey] = nameText
 				}
 			}
 
-			eventData.Strings = append(eventData.Strings, stringData)
+			if nameDescObj.Description != nil {
+				descText := nameDescObj.Description.GetLocalizedString(locKey)
+				if descText != "" {
+					keyItemData.Description[locKey] = descText
+				}
+			}
 		}
 
-		// Skip if no strings were added
-		if len(eventData.Strings) == 0 {
-			continue
+		if len(keyItemData.Name) > 0 || len(keyItemData.Description) > 0 {
+			allKeyItemsData = append(allKeyItemsData, keyItemData)
 		}
-
-		allEvents = append(allEvents, eventData)
 	}
 
-	// Skip if no events were processed
-	if len(allEvents) == 0 {
-		fmt.Println("No events with string data found to export to JSON")
-		return
-	}
-
-	// Marshal to JSON with proper formatting
-	jsonData, err := json.MarshalIndent(allEvents, "", "  ")
-	if err != nil {
-		fmt.Printf("Error marshaling events to JSON: %v\n", err)
-		return
-	}
-
-	// Write JSON file
-	fileName := "events_all_localizations.json"
-	filePath := filepath.Join(path, fileName)
-
-	err = components.WriteStringToFile(filePath, string(jsonData))
-	if err != nil {
-		fmt.Printf("Error writing JSON file %s: %v\n", filePath, err)
-		return
-	}
-
-	if print {
-		fmt.Printf("Arquivo JSON de eventos exportado: %s\n", filePath)
-		fmt.Printf("Total de eventos exportados: %d\n", len(allEvents))
-	}
+	return exportToJSON(allKeyItemsData, jsonFileName, "Arquivo JSON de key items salvo em")
 }
 
-// WriteEventFileForLocalizationJSON writes event file JSON for a specific localization
-// Similar to WriteEventFileForAllLocalizationsJSON but for a single language
-func WriteEventFileForLocalizationJSON(localization string, print bool) {
-	path := filepath.Join(components.GameFilesRoot, components.ModsFolder, "edits", "events")
-
-	// Ensure the output directory exists
-	if err := common.EnsurePathExists(path); err != nil {
-		fmt.Printf("Error creating output directory: %v\n", err)
-		return
+func WriteKeyItemsJSON() error {
+	if common.IsVerboseMode() {
+		fmt.Printf("Carregando key items com todas as localizações...\n")
 	}
 
-	// Get sorted list of event IDs for consistent ordering
-	eventIDs := make([]string, 0, len(components.EVENTS))
-	for eventID := range components.EVENTS {
-		eventIDs = append(eventIDs, eventID)
-	}
-	sort.Strings(eventIDs)
-
-	var allEvents []EventFileData
-
-	// Iterate through all loaded events in sorted order
-	for _, eventID := range eventIDs {
-		fmt.Printf("Processing event file: %s\n", eventID)
-		eventFile := components.EVENTS[eventID]
-		if eventFile == nil || eventFile.Strings == nil || len(eventFile.Strings) == 0 {
-			continue
-		}
-
-		// Create event data structure for single localization
-		eventData := EventFileData{
-			ID:      eventFile.ID,
-			Strings: make([]EventStringData, 0, len(eventFile.Strings)),
-		}
-
-		// Process each string for this localization
-		for i, str := range eventFile.Strings {
-			value := str.GetLocalizedString(localization)
-
-			stringData := EventStringData{
-				Index: i,
-				Text:  map[string]string{localization: value},
-			}
-
-			eventData.Strings = append(eventData.Strings, stringData)
-		}
-
-		// Skip if no strings were added
-		if len(eventData.Strings) == 0 {
-			continue
-		}
-
-		allEvents = append(allEvents, eventData)
+	if len(components.KEY_ITEMS) == 0 {
+		return fmt.Errorf("key items not loaded or empty")
 	}
 
-	// Skip if no events were processed
-	if len(allEvents) == 0 {
-		fmt.Printf("No events with string data found for localization %s\n", localization)
-		return
+	allNameDescObjects := make([]*components.NameDescriptionTextObject, 0, len(components.KEY_ITEMS))
+	for _, keyItem := range components.KEY_ITEMS {
+		if keyItem != nil && keyItem.NameDescriptionTextObject != nil {
+			allNameDescObjects = append(allNameDescObjects, keyItem.NameDescriptionTextObject)
+		}
 	}
 
-	// Marshal to JSON with proper formatting
-	jsonData, err := json.MarshalIndent(allEvents, "", "  ")
+	err := WriteObjectsDataJSON(
+		allNameDescObjects,
+		"key_items_all_localizations.json",
+	)
 	if err != nil {
-		fmt.Printf("Error marshaling events to JSON: %v\n", err)
-		return
+		return fmt.Errorf("error writing key items JSON: %w", err)
 	}
 
-	// Write JSON file
-	fileName := fmt.Sprintf("events_%s.json", localization)
-	filePath := filepath.Join(path, fileName)
+	return nil
+}
 
-	err = components.WriteStringToFile(filePath, string(jsonData))
+func WriteCommandJSON() error {
+	if common.IsVerboseMode() {
+		fmt.Printf("Carregando comandos com todas as localizações...\n")
+	}
+
+	if len(components.COMMANDS) == 0 {
+		return fmt.Errorf("commands not loaded or empty")
+	}
+
+	allNameDescObjects := make([]*components.NameDescriptionTextObject, 0, len(components.COMMANDS))
+	for _, command := range components.COMMANDS {
+		if command != nil && command.NameDescriptionTextObject != nil {
+			allNameDescObjects = append(allNameDescObjects, command.NameDescriptionTextObject)
+		}
+	}
+
+	err := WriteObjectsDataJSON(
+		allNameDescObjects,
+		"commands_all_localizations.json",
+	)
 	if err != nil {
-		fmt.Printf("Error writing JSON file %s: %v\n", filePath, err)
-		return
+		return fmt.Errorf("error writing commands JSON: %w", err)
 	}
 
-	if print {
-		fmt.Printf("Arquivo JSON de eventos exportado (%s): %s\n", localization, filePath)
-		fmt.Printf("Total de eventos exportados: %d\n", len(allEvents))
-	}
+	return nil
 }
