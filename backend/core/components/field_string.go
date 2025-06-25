@@ -3,8 +3,6 @@ package components
 import (
 	"bytes"
 	"encoding/binary"
-	"ffxresources/backend/common"
-	"fmt"
 )
 
 type FieldString struct {
@@ -55,10 +53,6 @@ func FromFieldStringData(bytes []byte, charset string) ([]*FieldString, error) {
 		regularHeader := Read4Bytes(bytes, i*0x08)
 		simplifiedHeader := Read4Bytes(bytes, i*0x08+0x04)
 		fieldString := NewFieldString(charset, regularHeader, simplifiedHeader, bytes)
-
-		if common.IsVerboseMode() {
-			fmt.Printf("String %02X: %s\n", i, fieldString.String())
-		}
 		strings = append(strings, fieldString)
 	}
 
@@ -154,7 +148,6 @@ func (fs *FieldString) SetRegularString(str string, newCharset ...string) {
 
 	keepSimplifiedSynced := !fs.HasDistinctSimplified()
 	fs.RegularBytes = StringToBytes(str, fs.Charset)
-	fmt.Println("Setting regular string:", fs.GetRegularString(), "with charset:", fs.Charset)
 
 	if keepSimplifiedSynced {
 		fs.SimplifiedBytes = fs.RegularBytes
