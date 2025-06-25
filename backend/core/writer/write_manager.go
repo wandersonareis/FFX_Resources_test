@@ -41,7 +41,6 @@ func ExampleWriteManagerUsage() {
 
 	fmt.Println("\n5. Writing files for English localization:")
 	ExportAllEventsToCsvForLocalization("us")
-	ExportAllEventsToJSONForLocalization("us")
 
 	fmt.Println("\n=== Write operations completed ===")
 }
@@ -183,7 +182,7 @@ func WriteMacroDictionaryJSON(print bool) {
 	}
 }
 
-func WriteMacroDictionaryForLocalizationJSON(localization string, print bool) {
+func WriteMacroDictionaryForLocalizationJSON(localization string) {
 	path := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "macrodic")
 
 	// Ensure the output directory exists
@@ -199,7 +198,7 @@ func WriteMacroDictionaryForLocalizationJSON(localization string, print bool) {
 		return
 	}
 
-	if print {
+	if common.IsVerboseMode() {
 		fmt.Printf("Processing macro dictionary for localization: %s\n", localization)
 	}
 
@@ -269,7 +268,7 @@ func WriteMacroDictionaryForLocalizationJSON(localization string, print bool) {
 		return
 	}
 
-	if print {
+	if common.IsVerboseMode() {
 		fmt.Printf("Arquivo JSON de dicionário de macros exportado (%s): %s\n", localization, filePath)
 		fmt.Printf("Total de chunks exportados: %d\n", len(localizationData.Chunks))
 	}
@@ -285,11 +284,11 @@ func ExampleMacroDictionaryUsage() {
 
 	// Example 2: Export macro dictionary for a specific localization
 	fmt.Println("\n2. Exportando dicionário de macros para localização japonesa:")
-	WriteMacroDictionaryForLocalizationJSON("jp", true)
+	WriteMacroDictionaryForLocalizationJSON("jp")
 
 	// Example 3: Export macro dictionary for English localization
 	fmt.Println("\n3. Exportando dicionário de macros para localização inglesa:")
-	WriteMacroDictionaryForLocalizationJSON("us", true)
+	WriteMacroDictionaryForLocalizationJSON("us")
 
 	fmt.Println("\n=== Exportação de dicionário de macros concluída ===")
 }
@@ -310,8 +309,8 @@ func ExampleMacroDictionaryUsage() {
 //  2. Clear existing MACRODICTFILE data for the localizations being updated
 //  3. Reconstruct MacroString objects from JSON data
 //  4. Update the global MACRODICTFILE with the new data
-func EditAndSaveMacrodicFromJson(jsonFilePath string, print bool) error {
-	if print {
+func EditAndSaveMacrodicFromJson(jsonFilePath string) error {
+	if common.IsVerboseMode() {
 		fmt.Printf("Carregando dados do dicionário de macros do arquivo: %s\n", jsonFilePath)
 	}
 	// Read JSON file
@@ -335,7 +334,7 @@ func EditAndSaveMacrodicFromJson(jsonFilePath string, print bool) error {
 		allLocalizations = []MacroLocalizationData{singleLocalization}
 	}
 
-	if print {
+	if common.IsVerboseMode() {
 		fmt.Printf("Encontradas %d localizações no arquivo JSON\n", len(allLocalizations))
 	}
 
@@ -343,7 +342,7 @@ func EditAndSaveMacrodicFromJson(jsonFilePath string, print bool) error {
 
 	// Process each localization
 	for _, locData := range allLocalizations {
-		if print {
+		if common.IsVerboseMode() {
 			fmt.Printf("Processando localização: %s (%d chunks)\n", locData.Localization, len(locData.Chunks))
 		}
 
@@ -363,7 +362,7 @@ func EditAndSaveMacrodicFromJson(jsonFilePath string, print bool) error {
 		for _, chunkData := range locData.Chunks {
 			chunkIndex := chunkData.ChunkIndex
 
-			if print {
+			if common.IsVerboseMode() {
 				fmt.Printf("  Processando chunk %d (%d strings)\n", chunkIndex, len(chunkData.Strings))
 			}
 
@@ -421,12 +420,12 @@ func EditAndSaveMacrodicFromJson(jsonFilePath string, print bool) error {
 		MacroDic[locData.Localization] = chunks
 		components.MACRODICTFILE[locData.Localization] = chunks
 
-		if print {
+		if common.IsVerboseMode() {
 			fmt.Printf("  ✓ Localização %s atualizada com sucesso\n", locData.Localization)
 		}
 	}
 
-	if print {
+	if common.IsVerboseMode() {
 		fmt.Printf("Dicionário de macros reconstruído com sucesso!\n")
 		fmt.Printf("MACRODICTFILE agora contém %d localizações\n", len(MacroDic))
 	}
@@ -444,7 +443,7 @@ func LoadMacrodicFromJsonExample() {
 	// Example 1: Load all localizations from the combined JSON file
 	fmt.Println("\n1. Carregando todas as localizações do arquivo JSON combinado:")
 	allLocalizationsFile := filepath.Join(macrodicPath, "macro_dictionary_all_localizations.json")
-	if err := EditAndSaveMacrodicFromJson(allLocalizationsFile, true); err != nil {
+	if err := EditAndSaveMacrodicFromJson(allLocalizationsFile); err != nil {
 		fmt.Printf("Erro ao carregar arquivo de todas as localizações: %v\n", err)
 	}
 
@@ -457,7 +456,7 @@ func LoadMacrodicFromJsonExample() {
 		filePath := filepath.Join(macrodicPath, fileName)
 
 		fmt.Printf("   - Carregando %s...\n", loc)
-		if err := EditAndSaveMacrodicFromJson(filePath, false); err != nil {
+		if err := EditAndSaveMacrodicFromJson(filePath); err != nil {
 			fmt.Printf("     Erro ao carregar %s: %v\n", loc, err)
 		} else {
 			fmt.Printf("     ✓ %s carregado com sucesso\n", loc)
@@ -489,7 +488,7 @@ func CompleteMacroDictionaryWorkflowExample() {
 	// Also export individual localizations
 	localizations := []string{"us", "jp"}
 	for _, loc := range localizations {
-		WriteMacroDictionaryForLocalizationJSON(loc, false)
+		WriteMacroDictionaryForLocalizationJSON(loc)
 	}
 
 	// Step 3: Simulate JSON modification (in real use, user would edit the JSON files)
@@ -507,7 +506,7 @@ func CompleteMacroDictionaryWorkflowExample() {
 	macrodicPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "macrodic")
 	allLocalizationsFile := filepath.Join(macrodicPath, "macro_dictionary_all_localizations.json")
 
-	if err := EditAndSaveMacrodicFromJson(allLocalizationsFile, true); err != nil {
+	if err := EditAndSaveMacrodicFromJson(allLocalizationsFile); err != nil {
 		fmt.Printf("Erro ao recarregar do JSON: %v\n", err)
 		return
 	}
@@ -534,7 +533,7 @@ func CompleteMacroDictionaryWorkflowExample() {
 
 // WriteMacroDictionaryToBinaryFiles writes macro dictionary data back to binary files
 // This function demonstrates how to use the new RebuildMacroStrings functionality
-func WriteMacroDictionaryToBinaryFiles(print bool) {
+func WriteMacroDictionaryToBinaryFiles() {
 	path := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "macrodic", "binary")
 
 	// Ensure the output directory exists
@@ -543,13 +542,13 @@ func WriteMacroDictionaryToBinaryFiles(print bool) {
 		return
 	}
 
-	if print {
+	if common.IsVerboseMode() {
 		fmt.Println("Writing macro dictionary to binary files...")
 	}
 
 	// Process each localization
 	for localization, chunks := range components.MACRODICTFILE {
-		if print {
+		if common.IsVerboseMode() {
 			fmt.Printf("Processing localization: %s\n", localization)
 		}
 
@@ -573,20 +572,20 @@ func WriteMacroDictionaryToBinaryFiles(print bool) {
 				continue
 			}
 
-			if print {
+			if common.IsVerboseMode() {
 				fmt.Printf("  Written chunk %d: %s (%d bytes, %d strings)\n",
 					chunkIndex, fileName, len(binaryData), len(chunk))
 			}
 		}
 	}
 
-	if print {
+	if common.IsVerboseMode() {
 		fmt.Println("Macro dictionary binary files written successfully!")
 	}
 }
 
 // TestMacroStringReconstruction tests the round-trip conversion: JSON → MacroString → Binary → MacroString
-func TestMacroStringReconstruction(print bool) {
+func TestMacroStringReconstruction() {
 	fmt.Println("=== Testing Macro String Reconstruction ===")
 
 	// Step 1: Load from JSON
@@ -594,7 +593,7 @@ func TestMacroStringReconstruction(print bool) {
 	macrodicPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "macrodic")
 	allLocalizationsFile := filepath.Join(macrodicPath, "macro_dictionary_all_localizations.json")
 
-	if err := EditAndSaveMacrodicFromJson(allLocalizationsFile, false); err != nil {
+	if err := EditAndSaveMacrodicFromJson(allLocalizationsFile); err != nil {
 		fmt.Printf("Error loading from JSON: %v\n", err)
 		return
 	}
@@ -609,14 +608,14 @@ func TestMacroStringReconstruction(print bool) {
 
 			// Convert to binary
 			binaryData := components.MacroStringsToBytes(chunk, charset, true)
-			if print {
+			if common.IsVerboseMode() {
 				fmt.Printf("   Original chunk had %d strings\n", len(chunk))
 				fmt.Printf("   Binary data size: %d bytes\n", len(binaryData))
 			}
 
 			// Convert back to MacroString objects
 			reconstructed := components.FromStringData(binaryData[2:], charset) // Skip first 2 bytes (count)
-			if print {
+			if common.IsVerboseMode() {
 				fmt.Printf("   Reconstructed chunk has %d strings\n", len(reconstructed))
 			}
 
@@ -642,7 +641,7 @@ func TestMacroStringReconstruction(print bool) {
 						fmt.Printf("      Original: '%s' / '%s'\n", originalRegular, originalSimplified)
 						fmt.Printf("      Reconstructed: '%s' / '%s'\n", reconstructedRegular, reconstructedSimplified)
 						success = false
-					} else if print {
+					} else if common.IsVerboseMode() {
 						fmt.Printf("   ✓ String %d matches: '%s'\n", i, originalRegular)
 					}
 				}
@@ -658,7 +657,7 @@ func TestMacroStringReconstruction(print bool) {
 
 	// Step 3: Write binary files
 	fmt.Println("3. Writing binary files...")
-	WriteMacroDictionaryToBinaryFiles(print)
+	WriteMacroDictionaryToBinaryFiles()
 
 	fmt.Println("=== Macro String Reconstruction Test Complete ===")
 }
