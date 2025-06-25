@@ -19,107 +19,13 @@ type (
 		ToString(languageCode string) string
 		String() string
 	}
-	NameOnlyTextObject struct {
-		Bytes          []byte
-		Name           *LocalizedKeyedStringObject
-		FirstSeparator *LocalizedKeyedStringObject
-		HeaderLength   int
-	}
-	nameOnlyHeaderData struct {
-		NameOffset           uint16
-		NameKey              uint16
-		FirstSeparatorOffset uint16
-		FirstSeparatorKey    uint16
-	}
 )
-
-const NameOnlyTextObjectLength = 0x10
 
 func getLocalizedBytes(keyedObject *KeyedString) []uint16 {
 	if keyedObject == nil {
 		return []uint16{0, 0}
 	}
 	return []uint16{keyedObject.Offset, keyedObject.Key}
-}
-
-func NewNameOnlyTextObject(bytes []byte, stringBytes []byte, headerLength int, languageCode string) *NameOnlyTextObject {
-	n := &NameOnlyTextObject{
-		Bytes:          bytes,
-		Name:           NewLocalizedKeyedStringObject(),
-		FirstSeparator: NewLocalizedKeyedStringObject(),
-		HeaderLength:   headerLength,
-	}
-	n.mapBytes(stringBytes, languageCode)
-	return n
-}
-
-func (n *NameOnlyTextObject) mapBytes(stringBytes []byte, languageCode string) {
-	var hd nameOnlyHeaderData
-
-	r := bytes.NewReader(n.Bytes[:NameOnlyTextObjectLength])
-	if err := binary.Read(r, binary.LittleEndian, &hd); err != nil {
-		fmt.Printf("Error reading NameOnlyTextObject: %v\n", err)
-		return
-	}
-	n.Name.ReadAndSetLocalizedContent(languageCode, stringBytes, hd.NameOffset, hd.NameKey)
-	n.FirstSeparator.ReadAndSetLocalizedContent(languageCode, stringBytes, hd.FirstSeparatorOffset, hd.FirstSeparatorKey)
-}
-
-func (n *NameOnlyTextObject) GetName(languageCode string) string {
-	return n.Name.GetLocalizedString(languageCode)
-}
-
-func (d *NameOnlyTextObject) GetKeyedString(title string) *LocalizedKeyedStringObject {
-	switch title {
-	case "name":
-		return d.Name
-	default:
-		return nil
-	}
-}
-
-func (n *NameOnlyTextObject) GetHeaderLength() int {
-	return n.HeaderLength
-}
-
-func (n *NameOnlyTextObject) ToBytes(languageCode string) []byte {
-	var buf bytes.Buffer
-	binary.Write(&buf, binary.LittleEndian, getLocalizedBytes(n.Name.GetLocalizedContent(languageCode)))
-	binary.Write(&buf, binary.LittleEndian, getLocalizedBytes(n.FirstSeparator.GetLocalizedContent(languageCode)))
-
-	return buf.Bytes()
-}
-
-func (n *NameOnlyTextObject) GetTextObject() ILocalizedTextObject {
-	return n
-}
-
-func (n *NameOnlyTextObject) SetLocalizations(other LocalizationSetter) {
-	if otherName, ok := other.(*NameOnlyTextObject); ok {
-		otherName.Name.CopyInto(n.Name)
-		otherName.FirstSeparator.CopyInto(n.FirstSeparator)
-	}
-}
-
-func (n *NameOnlyTextObject) GetLocalizedKeyedStrings(languageCode string) []*KeyedString {
-	return []*KeyedString{
-		n.Name.GetLocalizedContent(languageCode),
-		n.FirstSeparator.GetLocalizedContent(languageCode),
-	}
-}
-
-func (d *NameOnlyTextObject) ToString(languageCode string) string {
-	nameStr := d.GetName(languageCode)
-	firstSepStr := ""
-	if firstSepContent := d.FirstSeparator.GetLocalizedContent(languageCode); firstSepContent != nil {
-		firstSepStr = firstSepContent.GetString()
-	}
-
-	return fmt.Sprintf("%s %s", nameStr, firstSepStr)
-}
-
-func (n *NameOnlyTextObject) String() string {
-	return n.ToString(common.DefaultLocalization)
 }
 
 type (
@@ -147,6 +53,11 @@ type (
 const NameDescriptionTextObjectLength = 0x10
 
 func NewNameDescriptionTextObject(bytes []byte, stringBytes []byte, headerLength int, localization string) *NameDescriptionTextObject {
+	if len(bytes) < 8 {
+		common.LogVerbose("Insufficient data to create NameDescriptionTextObject!")
+		return nil
+	}
+
 	n := &NameDescriptionTextObject{
 		Bytes:           bytes,
 		Name:            NewLocalizedKeyedStringObject(),
@@ -162,7 +73,7 @@ func NewNameDescriptionTextObject(bytes []byte, stringBytes []byte, headerLength
 func (n *NameDescriptionTextObject) mapBytes(stringBytes []byte, localization string) {
 	var hd nameDescriptionHeaderData
 
-	r := bytes.NewReader(n.Bytes[:NameDescriptionTextObjectLength])
+	r := bytes.NewReader(getValidHeader(n.Bytes, NameDescriptionTextObjectLength))
 	if err := binary.Read(r, binary.LittleEndian, &hd); err != nil {
 		fmt.Printf("Error reading NameDescriptionTextObject: %v\n", err)
 		return

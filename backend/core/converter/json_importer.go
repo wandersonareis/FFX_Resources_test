@@ -367,13 +367,8 @@ func updateObjectByType(jsonEntry NameDescriptionData, obj components.ILocalized
 	case *components.NameDescriptionTextObject:
 		updateNameEntry(jsonEntry, typed)
 		updateDescriptionEntry(jsonEntry, typed)
-	case *components.NameOnlyTextObject:
-		updateNameOnlyFromObjectsData(jsonEntry, typed)
 	case *components.NameOnlyDataObject:
-		nameOnly := typed.GetNameOnlyTextObject()
-		if nameOnly != nil {
-			updateNameOnlyFromObjectsData(jsonEntry, nameOnly)
-		}
+		updateNameOnlyFromObjectsData(jsonEntry, typed)
 	default:
 		common.LogVerbose("Object type not recognized for ID %d", jsonEntry.ID)
 		return fmt.Errorf("unknown type for ID object %d", jsonEntry.ID)
@@ -475,7 +470,7 @@ func updateDescriptionEntry(sourceData NameDescriptionData, targetObject *compon
 // Parameters:
 //   - sourceData: JSON data containing name translations
 //   - targetObject: The name-only object to update
-func updateNameOnlyFromObjectsData(sourceData NameDescriptionData, targetObject *components.NameOnlyTextObject) {
+func updateNameOnlyFromObjectsData(sourceData NameDescriptionData, targetObject *components.NameOnlyDataObject) {
 	if len(sourceData.Name) == 0 || targetObject.Name == nil {
 		common.LogVerbose("No name found for item %d, skipping...", sourceData.ID)
 		return
@@ -550,13 +545,13 @@ func updateOrCreateDescription(target *components.NameDescriptionTextObject, lan
 	common.LogVerbose("Description updated (%s): %s", languageCode, text)
 }
 
-// updateOrCreateNameOnly updates or creates a name entry for a NameOnlyTextObject.
+// updateOrCreateNameOnly updates or creates a name entry for a NameOnlyDataObject.
 //
 // Parameters:
 //   - target: The object to update
 //   - languageCode: Language code (e.g., "us", "sp")
 //   - text: The new text content
-func updateOrCreateNameOnly(target *components.NameOnlyTextObject, languageCode, text string) {
+func updateOrCreateNameOnly(target *components.NameOnlyDataObject, languageCode, text string) {
 	existingContent := target.Name.GetLocalizedContent(languageCode)
 	charset := common.LanguageCodeToCharset(languageCode)
 
