@@ -33,23 +33,12 @@ func ExampleWriteManagerUsage() {
 		return
 	}
 
-	// Example 1: Write CSV files for all localizations
 	fmt.Println("\n1. Writing CSV files for all localizations:")
 	ExportAllEventsToCSV()
 
-	// Example 2: Write JSON files for all localizations
-	fmt.Println("\n2. Writing JSON files for all localizations:")
-	ExportAllLocalizationsToJSON()
-
-	// Example 3: Write CSV files for a specific localization
 	fmt.Println("\n3. Writing CSV files for Japanese localization:")
 	ExportAllEventsToCsvForLocalization("jp")
 
-	// Example 4: Write JSON files for a specific localization
-	fmt.Println("\n4. Writing JSON files for Japanese localization:")
-	ExportAllEventsToJSONForLocalization("jp")
-
-	// Example 5: Write files for English localization (both formats)
 	fmt.Println("\n5. Writing files for English localization:")
 	ExportAllEventsToCsvForLocalization("us")
 	ExportAllEventsToJSONForLocalization("us")

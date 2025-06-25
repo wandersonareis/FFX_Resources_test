@@ -342,7 +342,10 @@ func GetStringBytesAtLookupOffset(table []byte, offset int) []byte {
 	if end == -1 {
 		return table[offset:]
 	}
-	return table[offset : offset+end]
+	subArray := table[offset : offset+end]
+	var newArray = make([]byte, len(subArray))
+	copy(newArray, subArray)
+	return newArray
 }
 
 func GetStringBytesAtLookupOffsetDev(table []byte, offset uint16) []byte {

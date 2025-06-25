@@ -14,8 +14,11 @@ var (
 	//PLAYER_ROM          []*model.PlayerRomDataObject
 	//WEAPON_NAMES        []*model.WeaponNameDataObject
 	//AUTO_ABILITIES      []*model.AutoAbilityDataObject
-	KEY_ITEMS []*KeyItemDataObject
-	COMMANDS []*CommandDataObject
+	KEY_ITEMS IList[ILocalizedTextObject]
+	COMMANDS  IList[ILocalizedTextObject]
+	ITEMS     IList[ILocalizedTextObject]
+	MONMAGIC1 IList[ILocalizedTextObject]
+	MONMAGIC2 IList[ILocalizedTextObject]
 	//TREASURES           []*model.TreasureDataObject
 	//MIX_COMBINATIONS    []*model.MixCombinationDataObject
 	//CTB_BASE            []*model.CtbBaseDataObject
@@ -30,40 +33,41 @@ var (
 	//ESG_LAYOUT          *spheregrid.SphereGridLayoutDataObject
 	//GEAR_CUSTOMIZATIONS []*model.CustomizationDataObject
 	//AEON_CUSTOMIZATIONS []*model.CustomizationDataObject
-
-	ARMS_TEXT   []*NameDescriptionTextObject
-	BTLEND_TEXT []*NameDescriptionTextObject
-	BUILD_TEXT  []*NameDescriptionTextObject
-	CONFIG_TEXT []*NameDescriptionTextObject
-	ITEM_TEXT   []*NameDescriptionTextObject
-	MENU_TEXT   []*NameDescriptionTextObject
-	MMAIN_TEXT  []*NameDescriptionTextObject
-	NAME_TEXT   []*NameDescriptionTextObject
-	SAVE_TEXT   []*NameDescriptionTextObject
-	STATS_TEXT  []*NameDescriptionTextObject
-	SUMMON_TEXT []*NameDescriptionTextObject
+	ARMS_TEXT   IList[ILocalizedTextObject]
+	BTL_TEXT    IList[ILocalizedTextObject]
+	BTLEND_TEXT IList[ILocalizedTextObject]
+	BUILD_TEXT  IList[ILocalizedTextObject]
+	CONFIG_TEXT IList[ILocalizedTextObject]
+	ITEM_TEXT   IList[ILocalizedTextObject]
+	MENU_TEXT   IList[ILocalizedTextObject]
+	MMAIN_TEXT  IList[ILocalizedTextObject]
+	NAME_TEXT   IList[ILocalizedTextObject]
+	PLAYER_ROOM IList[ILocalizedTextObject]
+	SAVE_TEXT   IList[ILocalizedTextObject]
+	STATS_TEXT  IList[ILocalizedTextObject]
+	SUMMON_TEXT IList[ILocalizedTextObject]
 )
 
-var dummyObject = NameableFunc(func(string) string {
+/* var dummyObject = NameableFunc(func(string) string {
 	return "null"
-})
+}) */
 
 type Nameable interface {
 	GetName(string) string
 }
 
-type NameableFunc func(string) string
+/* type NameableFunc func(string) string */
 
-func (f NameableFunc) GetName(locale string) string {
+/* func (f NameableFunc) GetName(locale string) string {
 	return f(locale)
-}
+} */
 
 func GetNameableObject(typ string, idx int) Nameable {
 	switch typ {
 	case "command":
-	if cmd := GetCommand(idx); cmd != nil {
-		return cmd
-	}
+		if cmd := GetCommand(idx); cmd != nil {
+			return cmd
+		}
 	/* case "monster":
 	if m := GetMonster(idx); m != nil {
 		return m
@@ -92,11 +96,11 @@ func GetEvent(id string) *EventFile {
 	return ENCOUNTERS[id]
 } */
 
-func GetCommand(idx int) *CommandDataObject {
-	if COMMANDS == nil || idx >= len(COMMANDS) {
+func GetCommand(idx int) ILocalizedTextObject {
+	if COMMANDS == nil || idx >= COMMANDS.GetLength() {
 		return nil
 	}
-	return COMMANDS[idx]
+	return COMMANDS.Get(idx)
 }
 
 /* func GetAutoAbility(idx int) *model.AutoAbilityDataObject {
@@ -117,13 +121,13 @@ func GetCommand(idx int) *CommandDataObject {
 	return SG_NODE_TYPES[idx]
 } */
 
-func GetKeyItem(idx int) *KeyItemDataObject {
-	if KEY_ITEMS == nil {
+func GetKeyItem(idx int) ILocalizedTextObject {
+	if KEY_ITEMS.IsEmpty() {
 		return nil
 	}
 	actual := idx - 0xA000
-	if actual >= 0 && actual < len(KEY_ITEMS) {
-		return KEY_ITEMS[actual]
+	if actual >= 0 && actual < KEY_ITEMS.GetLength() {
+		return KEY_ITEMS.Get(actual)
 	}
 	return nil
 }
