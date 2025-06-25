@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -76,4 +77,18 @@ func SetVerboseMode(enabled bool) {
 func IsVerboseMode() bool {
 	verbose := os.Getenv("VERBOSE_MODE")
 	return verbose == "1"
+}
+
+func LogVerbose(format string, args ...any) {
+	if IsVerboseMode() {
+		fmt.Printf(format+"\n", args...)
+	}
+}
+
+func SetModsEnabled(enabled bool) {
+	DisableMods = !enabled
+}
+
+func AreModsEnabled() bool {
+	return !DisableMods
 }
