@@ -26,6 +26,13 @@ func (l *List[T]) Add(item T) {
 	l.Items = append(l.Items, item)
 }
 
+func (l *List[T]) AddAll(items []T) {
+	if items == nil {
+		return
+	}
+	l.Items = append(l.Items, items...)
+}
+
 func (l *List[T]) Clip() {
 	l.Items = slices.Clip(l.Items)
 }
@@ -53,12 +60,20 @@ func (l *List[T]) Filter(f func(item T) bool) *List[T] {
 	return result
 }
 
+func (l *List[T]) Get(index int) T {
+	var zero T
+	if l.IsEmpty() || index < 0 || index >= len(l.Items) {
+		return zero
+	}
+	return l.Items[index]
+}
+
 func (l *List[T]) GetLength() int {
 	return len(l.Items)
 }
 
 func (l *List[T]) IsEmpty() bool {
-	return len(l.Items) == 0
+	return l.Items != nil && len(l.Items) == 0
 }
 
 func (l *List[T]) Clear() {
