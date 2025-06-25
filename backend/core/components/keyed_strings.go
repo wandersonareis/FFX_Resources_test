@@ -18,6 +18,9 @@ func NewKeyedString(charset string, offset, key uint16, data []byte) *KeyedStrin
 		Offset:  offset,
 		Key:     key,
 	}
+	if offset == 0 && key == 0 {
+		return nil
+	}
 	ks.Bytes = GetStringBytesAtLookupOffset(data, int(offset))
 	return ks
 }
@@ -47,24 +50,12 @@ func (ks *KeyedString) SetString(str, newCharset string) {
 }
 
 func RebuildKeyedStrings(strings []*KeyedString, charset string) []byte {
-	lookup := make(map[string]*KeyedString)
 	var buf bytes.Buffer
 
 	for _, ks := range strings {
 		s := ks.GetString()
-
-		if s == "" {
-			ks.Offset, ks.Key = 0, 0
-			continue
-		}
-
-		if existing, ok := lookup[s]; ok {
-			ks.Offset, ks.Key = existing.Offset, existing.Key
-			continue
-		}
-		// new entry
+		
 		ks.Offset = uint16(buf.Len())
-		lookup[s] = ks
 		FillByteList(s, &buf, charset)
 	}
 
