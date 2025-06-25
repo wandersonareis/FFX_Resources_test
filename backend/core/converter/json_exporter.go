@@ -60,7 +60,7 @@ func createNameOnlyJSON(data []*NameOnlyData, fileName string) error {
 //
 // Returns: error if serialization fails
 func serializeNameDescriptionToJSON(objects components.IList[components.ILocalizedTextObject], jsonFileName string) error {
-	if objects.IsEmpty() {
+	if objects == nil || objects.IsEmpty() {
 		return fmt.Errorf("no objects loaded or empty")
 	}
 
@@ -115,7 +115,7 @@ func serializeNameDescriptionToJSON(objects components.IList[components.ILocaliz
 //
 // Returns: error if serialization fails
 func serializeNameOnlyToJSON(objects components.IList[components.ILocalizedTextObject], jsonFileName string) error {
-	if objects.IsEmpty() {
+	if objects == nil || objects.IsEmpty() {
 		return fmt.Errorf("no objects loaded or empty")
 	}
 
@@ -158,7 +158,7 @@ func serializeNameOnlyToJSON(objects components.IList[components.ILocalizedTextO
 //
 // Returns: error if export fails or data is not loaded
 func ExportKeyItemsToJSON() error {
-	if components.KEY_ITEMS.IsEmpty() {
+	if components.KEY_ITEMS == nil || components.KEY_ITEMS.IsEmpty() {
 		return fmt.Errorf("KEY_ITEMS data not loaded or empty")
 	}
 
@@ -172,7 +172,7 @@ func ExportKeyItemsToJSON() error {
 //
 // Returns: error if export fails or data is not loaded
 func ExportCommandsToJSON() error {
-	if components.COMMANDS.IsEmpty() {
+	if components.COMMANDS == nil || components.COMMANDS.IsEmpty() {
 		return fmt.Errorf("COMMANDS data not loaded or empty")
 	}
 
@@ -186,7 +186,7 @@ func ExportCommandsToJSON() error {
 //
 // Returns: error if export fails or data is not loaded
 func ExportItemsToJSON() error {
-	if components.ITEMS.IsEmpty() {
+	if components.ITEMS == nil || components.ITEMS.IsEmpty() {
 		return fmt.Errorf("ITEMS data not loaded or empty")
 	}
 
@@ -200,7 +200,7 @@ func ExportItemsToJSON() error {
 //
 // Returns: error if export fails or data is not loaded
 func ExportArmsToJSON() error {
-	if components.ARMS_TEXT.IsEmpty() {
+	if components.ARMS_TEXT == nil || components.ARMS_TEXT.IsEmpty() {
 		return fmt.Errorf("ARMS_TEXT data not loaded or empty")
 	}
 
@@ -214,7 +214,7 @@ func ExportArmsToJSON() error {
 //
 // Returns: error if export fails or data is not loaded
 func ExportConfigToJSON() error {
-	if components.CONFIG_TEXT.IsEmpty() {
+	if components.CONFIG_TEXT == nil || components.CONFIG_TEXT.IsEmpty() {
 		return fmt.Errorf("CONFIG_TEXT data not loaded or empty")
 	}
 
@@ -228,7 +228,7 @@ func ExportConfigToJSON() error {
 //
 // Returns: error if export fails or data is not loaded
 func ExportItemCommandsToJSON() error {
-	if components.ITEM_TEXT.IsEmpty() {
+	if components.ITEM_TEXT == nil || components.ITEM_TEXT.IsEmpty() {
 		return fmt.Errorf("ITEM_TEXT data not loaded or empty")
 	}
 
@@ -242,7 +242,7 @@ func ExportItemCommandsToJSON() error {
 //
 // Returns: error if export fails or data is not loaded
 func ExportMainMenuToJSON() error {
-	if components.MMAIN_TEXT.IsEmpty() {
+	if components.MMAIN_TEXT == nil || components.MMAIN_TEXT.IsEmpty() {
 		return fmt.Errorf("MMAIN_TEXT data not loaded or empty")
 	}
 
@@ -256,7 +256,7 @@ func ExportMainMenuToJSON() error {
 //
 // Returns: error if export fails or data is not loaded
 func ExportPlayerRoomToJSON() error {
-	if components.PLAYER_ROOM.IsEmpty() {
+	if components.PLAYER_ROOM == nil || components.PLAYER_ROOM.IsEmpty() {
 		return fmt.Errorf("PLAYER_ROOM data not loaded or empty")
 	}
 
@@ -270,7 +270,7 @@ func ExportPlayerRoomToJSON() error {
 //
 // Returns: error if export fails or data is not loaded
 func ExportBuildToJSON() error {
-	if components.BUILD_TEXT.IsEmpty() {
+	if components.BUILD_TEXT == nil || components.BUILD_TEXT.IsEmpty() {
 		return fmt.Errorf("BUILD_TEXT data not loaded or empty")
 	}
 
@@ -284,7 +284,7 @@ func ExportBuildToJSON() error {
 //
 // Returns: error if export fails or data is not loaded
 func ExportBattleToJSON() error {
-	if components.BTL_TEXT.IsEmpty() {
+	if components.BTL_TEXT == nil || components.BTL_TEXT.IsEmpty() {
 		return fmt.Errorf("BTL_TEXT data not loaded or empty")
 	}
 
@@ -298,7 +298,7 @@ func ExportBattleToJSON() error {
 //
 // Returns: error if export fails or data is not loaded
 func ExportBattleEndToJSON() error {
-	if components.BTLEND_TEXT.IsEmpty() {
+	if components.BTLEND_TEXT == nil || components.BTLEND_TEXT.IsEmpty() {
 		return fmt.Errorf("BTLEND_TEXT data not loaded or empty")
 	}
 
@@ -312,7 +312,7 @@ func ExportBattleEndToJSON() error {
 //
 // Returns: error if export fails or data is not loaded
 func ExportMonsterMagic1ToJSON() error {
-	if components.MONMAGIC1.IsEmpty() {
+	if components.MONMAGIC1 == nil || components.MONMAGIC1.IsEmpty() {
 		return fmt.Errorf("MONMAGIC1 data not loaded or empty")
 	}
 
@@ -326,7 +326,7 @@ func ExportMonsterMagic1ToJSON() error {
 //
 // Returns: error if export fails or data is not loaded
 func ExportMonsterMagic2ToJSON() error {
-	if components.MONMAGIC2.IsEmpty() {
+	if components.MONMAGIC2 == nil || components.MONMAGIC2.IsEmpty() {
 		return fmt.Errorf("MONMAGIC2 data not loaded or empty")
 	}
 
@@ -340,7 +340,7 @@ func ExportMonsterMagic2ToJSON() error {
 //
 // Returns: error if export fails or data is not loaded
 func ExportNameToJSON() error {
-	if components.NAME_TEXT.IsEmpty() {
+	if components.NAME_TEXT == nil || components.NAME_TEXT.IsEmpty() {
 		return fmt.Errorf("NAME_TEXT data not loaded or empty")
 	}
 

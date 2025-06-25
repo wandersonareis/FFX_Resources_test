@@ -122,7 +122,7 @@ func GetCommand(idx int) ILocalizedTextObject {
 } */
 
 func GetKeyItem(idx int) ILocalizedTextObject {
-	if KEY_ITEMS.IsEmpty() {
+	if KEY_ITEMS == nil || KEY_ITEMS.IsEmpty() {
 		return nil
 	}
 	actual := idx - 0xA000

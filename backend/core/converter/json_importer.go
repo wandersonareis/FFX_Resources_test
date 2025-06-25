@@ -336,7 +336,7 @@ func updateEventStringLocalization(objToEdit *components.LocalizedFieldStringObj
 //
 // Returns: Slice of ILocalizedTextObject instances, or nil if the list is empty
 func extractLocalizedObjects(objectsList components.IList[components.ILocalizedTextObject]) []components.ILocalizedTextObject {
-	if objectsList.IsEmpty() {
+	if objectsList == nil || objectsList.IsEmpty() {
 		return nil
 	}
 
