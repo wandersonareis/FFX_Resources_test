@@ -7,6 +7,9 @@ import (
 	"encoding/json"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/converter"
+	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/fileFormats/macrodic"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -96,8 +99,8 @@ func editAndSaveEventFromCSV(csvPath string) error {
 			continue
 		}
 
-		eventFile, exists := components.EVENTS[eventID]
-		if !exists || eventFile == nil {
+		eventFile := event.GetEvent(eventID)
+		if eventFile == nil {
 			common.LogVerbose("Event not found: %s", eventID)
 			continue
 		}
@@ -164,8 +167,8 @@ func csvToList(filename string) ([][]string, error) {
 }
 
 func ExportEventStringsToLocalizations(eventID string) error {
-	eventFile, exists := components.EVENTS[eventID]
-	if !exists || eventFile == nil {
+	eventFile := event.GetEvent(eventID)
+	if eventFile == nil {
 		return fmt.Errorf("event not found: %s", eventID)
 	}
 
@@ -178,7 +181,7 @@ func ExportEventStringsToLocalizations(eventID string) error {
 	return writeStringsToStringToFileForAllLocalizations(pathPattern, eventFile.Strings)
 }
 
-func writeStringsToStringToFileForAllLocalizations(pathPattern string, localizedStrings []*components.LocalizedFieldStringObject) error {
+func writeStringsToStringToFileForAllLocalizations(pathPattern string, localizedStrings []*event.LocalizedFieldStringObject) error {
 	common.LogVerbose("Writing string file: %s", pathPattern)
 
 	for localizationKey := range common.SupportedLanguages {
@@ -202,13 +205,13 @@ func writeStringsToStringToFileForAllLocalizations(pathPattern string, localized
 	return nil
 }
 
-func stringsToStringFileBytes(localizedStrings []*components.LocalizedFieldStringObject, languageCode string) []byte {
+func stringsToStringFileBytes(localizedStrings []*event.LocalizedFieldStringObject, languageCode string) []byte {
 	if len(localizedStrings) == 0 {
 		return []byte{}
 	}
 
 	charset := components.GetCharsetForLanguage(languageCode)
-	fieldStrings := make([]*components.FieldString, 0, len(localizedStrings))
+	fieldStrings := make([]*event.FieldString, 0, len(localizedStrings))
 
 	for _, localizedObj := range localizedStrings {
 		if localizedObj == nil {
@@ -216,12 +219,12 @@ func stringsToStringFileBytes(localizedStrings []*components.LocalizedFieldStrin
 		}
 		fieldString := localizedObj.GetLocalizedContent(languageCode)
 		if fieldString == nil {
-			fieldString = &components.FieldString{Charset: charset}
+			fieldString = &event.FieldString{Charset: charset}
 		}
 		fieldStrings = append(fieldStrings, fieldString)
 	}
 
-	stringBytes := components.RebuildFieldStrings(fieldStrings, charset)
+	stringBytes := event.RebuildFieldStrings(fieldStrings, charset)
 
 	var buf bytes.Buffer
 	for _, str := range fieldStrings {
@@ -268,8 +271,8 @@ func editAndSaveEventFromJSON(jsonPath string) error {
 	processedEventIDs := make(map[string]bool)
 
 	for _, eventData := range allEvents {
-		eventFile, exists := components.EVENTS[eventData.ID]
-		if !exists || eventFile == nil {
+		eventFile := event.GetEvent(eventData.ID)
+		if eventFile == nil {
 			common.LogVerbose("Event not found: %s", eventData.ID)
 			continue
 		}
@@ -364,8 +367,8 @@ func EditAndSaveSpecificEventFromJSON(eventID string) error {
 	common.LogVerbose("Event %s found in JSON with %d strings", eventID, len(targetEventData.Strings))
 
 	// Validate event exists in memory
-	eventFile, exists := components.EVENTS[eventID]
-	if !exists || eventFile == nil {
+	eventFile := event.GetEvent(eventID)
+	if eventFile == nil {
 		return fmt.Errorf("event not found in memory: %s", eventID)
 	}
 
@@ -457,27 +460,28 @@ This section contains JSON equivalents for macro dictionary editor functions.
 These functions process the single JSON file created by WriteMacroDictionaryJSON.
 
 1. EditAndSaveMacroDictJSONFiles(print) - Processes the macro_dictionary_all_localizations.json file
-   - Reads the specific JSON file created by WriteMacroDictionaryJSON
-   - Processes all macro dictionaries from the single JSON file
-   - Applies changes back to the MACRODICTFILE component
-   - Uses internal implementation to avoid circular dependencies
+  - Reads the specific JSON file created by WriteMacroDictionaryJSON
+  - Processes all macro dictionaries from the single JSON file
+  - Applies changes back to the MACRODICTFILE component
+  - Uses internal implementation to avoid circular dependencies
 
 2. editAndSaveMacroDictFromJSON(print, path) - Processes a single JSON file
-   - Reads JSON content and parses it internally
-   - Updates MACRODICTFILE with macro dictionary data
-   - Reconstructs MacroString objects from JSON data
+  - Reads JSON content and parses it internally
+  - Updates MACRODICTFILE with macro dictionary data
+  - Reconstructs MacroString objects from JSON data
 
 3. EditAndSaveSpecificMacroDictFromJSON(localization, print) - Processes a specific localization
-   - Loads the macro_dictionary_all_localizations.json file
-   - Searches for the specified localization by code
-   - Processes only that localization and applies changes back to MACRODICTFILE
+  - Loads the macro_dictionary_all_localizations.json file
+  - Searches for the specified localization by code
+  - Processes only that localization and applies changes back to MACRODICTFILE
 
 Usage:
-  EditAndSaveMacroDictJSONFiles(true)  // Process macro_dictionary_all_localizations.json with debug output
-  EditAndSaveMacroDictJSONFiles(false) // Process silently
 
-  EditAndSaveSpecificMacroDictFromJSON("us", true)  // Process only US localization with debug output
-  EditAndSaveSpecificMacroDictFromJSON("jp", false) // Process only Japanese localization silently
+	EditAndSaveMacroDictJSONFiles(true)  // Process macro_dictionary_all_localizations.json with debug output
+	EditAndSaveMacroDictJSONFiles(false) // Process silently
+
+	EditAndSaveSpecificMacroDictFromJSON("us", true)  // Process only US localization with debug output
+	EditAndSaveSpecificMacroDictFromJSON("jp", false) // Process only Japanese localization silently
 */
 func EditAndSaveMacroDictJSONFiles() error {
 	jsonPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "macrodic")
@@ -541,16 +545,16 @@ func editAndSaveMacroDictFromJSON(jsonPath string) error {
 		common.LogVerbose("Processing localization: %s (%d chunks)", locData.Localization, len(locData.Chunks))
 
 		// Clear existing data for this localization
-		//components.MACRODICTFILE[locData.Localization] = make([][]*components.MacroString, 0)
-		macroCharsetStrings := components.MACRODICTFILE[locData.Localization]
+		//macrodic.MACRODICTFILE[locData.Localization] = make([][]*components.MacroString, 0)
+		macroCharsetStrings := macrodic.MACRODICTFILE[locData.Localization]
 
 		// Find the maximum chunk index to properly size the array
 		maxChunkIndex := 15
 
 		// Initialize the chunks array with proper size
-		chunks := make([][]*components.MacroString, maxChunkIndex+1)
+		chunks := make([][]*macrodic.MacroString, maxChunkIndex+1)
 		for i := range chunks {
-			chunks[i] = make([]*components.MacroString, 0)
+			chunks[i] = make([]*macrodic.MacroString, 0)
 		}
 
 		// Process each chunk
@@ -569,7 +573,7 @@ func editAndSaveMacroDictFromJSON(jsonPath string) error {
 
 			// Initialize the strings array for this chunk
 			if maxStringIndex >= 0 {
-				chunks[chunkIndex] = make([]*components.MacroString, maxStringIndex+1)
+				chunks[chunkIndex] = make([]*macrodic.MacroString, maxStringIndex+1)
 			}
 
 			charset := components.GetCharsetForLanguage(locData.Localization)
@@ -581,7 +585,7 @@ func editAndSaveMacroDictFromJSON(jsonPath string) error {
 				var simplifiedBytes []byte
 
 				regularBytes = components.StringToBytes(stringData.RegularText, charset)
-				bytesToString := components.BytesToString(regularBytes, charset)
+				bytesToString := converter.BytesToString(regularBytes, charset)
 
 				// Verificar se bytesToString é diferente de stringData.RegularText
 				if bytesToString != stringData.RegularText {
@@ -613,7 +617,7 @@ func editAndSaveMacroDictFromJSON(jsonPath string) error {
 				}
 
 				// Create MacroString object
-				macroString := &components.MacroString{
+				macroString := &macrodic.MacroString{
 					Charset:          charset,
 					RegularOffset:    0, // These offsets are not relevant when reconstructing from JSON
 					SimplifiedOffset: 0, // They are used during binary parsing only
@@ -623,27 +627,27 @@ func editAndSaveMacroDictFromJSON(jsonPath string) error {
 
 				if stringIndex >= len(chunks[chunkIndex]) {
 					newSize := stringIndex + 1
-					newSlice := make([]*components.MacroString, newSize)
+					newSlice := make([]*macrodic.MacroString, newSize)
 					copy(newSlice, chunks[chunkIndex])
 					chunks[chunkIndex] = newSlice
 				}
 				chunks[chunkIndex][stringIndex] = macroString
 			}
-			components.RebuildMacroStrings(chunks[chunkIndex], charset, false)
+			macrodic.RebuildMacroStrings(chunks[chunkIndex], charset, false)
 		}
 
 		// Update the global MACRODICTFILE
-		components.MACRODICTFILE[locData.Localization] = chunks
+		macrodic.MACRODICTFILE[locData.Localization] = chunks
 		common.LogVerbose("Localization %s updated successfully with %d chunks", locData.Localization, len(chunks))
 	}
 
 	if common.IsVerboseMode() {
 		common.LogVerbose("Macro dictionary data loaded successfully")
 
-		totalLocalizations := len(components.MACRODICTFILE)
+		totalLocalizations := len(macrodic.MACRODICTFILE)
 		totalStrings := 0
 
-		for localization, chunks := range components.MACRODICTFILE {
+		for localization, chunks := range macrodic.MACRODICTFILE {
 			localizationStrings := 0
 			for _, chunk := range chunks {
 				for _, macroString := range chunk {
@@ -730,15 +734,15 @@ func EditAndSaveSpecificMacroDictFromJSON(localization string) error {
 	common.LogVerbose("Location %s found with %d chunks", localization, len(targetLocalization.Chunks))
 
 	// Clear existing data for this localization only
-	components.MACRODICTFILE[localization] = make([][]*components.MacroString, 0)
+	macrodic.MACRODICTFILE[localization] = make([][]*macrodic.MacroString, 0)
 
 	// Find the maximum chunk index to properly size the array
 	maxChunkIndex := 15
 
 	// Initialize the chunks array with proper size
-	chunks := make([][]*components.MacroString, maxChunkIndex+1)
+	chunks := make([][]*macrodic.MacroString, maxChunkIndex+1)
 	for i := range chunks {
-		chunks[i] = make([]*components.MacroString, 0)
+		chunks[i] = make([]*macrodic.MacroString, 0)
 	}
 
 	// Process each chunk for the target localization
@@ -774,7 +778,7 @@ func EditAndSaveSpecificMacroDictFromJSON(localization string) error {
 			simplifiedBytes := components.StringToBytes(simplifiedText, charset)
 
 			// Create MacroString object
-			macroString := &components.MacroString{
+			macroString := &macrodic.MacroString{
 				Charset:          charset,
 				RegularOffset:    0, // These offsets are not relevant when reconstructing from JSON
 				SimplifiedOffset: 0, // They are used during binary parsing only
@@ -786,7 +790,7 @@ func EditAndSaveSpecificMacroDictFromJSON(localization string) error {
 			if stringIndex >= len(chunks[chunkIndex]) {
 				// Expand the array to accommodate this index
 				newSize := stringIndex + 1
-				newSlice := make([]*components.MacroString, newSize)
+				newSlice := make([]*macrodic.MacroString, newSize)
 				copy(newSlice, chunks[chunkIndex])
 				chunks[chunkIndex] = newSlice
 			}
@@ -795,7 +799,7 @@ func EditAndSaveSpecificMacroDictFromJSON(localization string) error {
 	}
 
 	// Update the global MACRODICTFILE for this specific localization only
-	components.MACRODICTFILE[localization] = chunks
+	macrodic.MACRODICTFILE[localization] = chunks
 
 	if common.IsVerboseMode() {
 		stringCount := 0

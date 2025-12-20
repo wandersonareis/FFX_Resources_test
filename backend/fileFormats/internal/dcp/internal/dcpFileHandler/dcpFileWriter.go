@@ -19,7 +19,7 @@ func newDcpFileWriter() *dcpFileWriter {
 }
 
 func (h *dcpFileWriter) UpdateChunks(originalChunks []*Chunk, parts components.IList[dcpParts.DcpFileParts]) ([]*Chunk, error) {
-	partsItems := parts.GetItems()
+	partsItems := parts.Items()
 	if len(partsItems) == 0 {
 		return nil, fmt.Errorf("no parts provided")
 	}

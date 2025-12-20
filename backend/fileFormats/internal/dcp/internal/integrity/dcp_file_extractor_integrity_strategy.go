@@ -20,7 +20,7 @@ type dcpExtractionVerificationStrategy struct {
 func NewDcpExtractionVerificationStrategy() components.IVerificationStrategy {
 	return &dcpExtractionVerificationStrategy{
 		formatterFactory: formatters.NewFormatterFactory(),
-		verifyService: components.NewVerificationService(),
+		verifyService:    components.NewVerificationService(),
 	}
 }
 
@@ -113,7 +113,7 @@ func (dev *dcpExtractionVerificationStrategy) populateTextPartsList(
 }
 
 func (dev *dcpExtractionVerificationStrategy) ensureAllDcpBinaryFileParts(binaryPartsList components.IList[dcpParts.DcpFileParts], expectedCount int) error {
-	if err := lib.EnsurePartsListCount(binaryPartsList.GetLength(), expectedCount); err != nil {
+	if err := lib.EnsurePartsListCount(binaryPartsList.Len(), expectedCount); err != nil {
 		return fmt.Errorf("failed to validate of all DCP binary file parts: %w", err)
 	}
 
@@ -121,7 +121,7 @@ func (dev *dcpExtractionVerificationStrategy) ensureAllDcpBinaryFileParts(binary
 }
 
 func (dev *dcpExtractionVerificationStrategy) ensureAllDcpTextFileParts(textPartsList components.IList[dcpParts.DcpFileParts], expectedCount int) error {
-	if err := lib.EnsurePartsListCount(textPartsList.GetLength(), expectedCount); err != nil {
+	if err := lib.EnsurePartsListCount(textPartsList.Len(), expectedCount); err != nil {
 		return fmt.Errorf("failed to validate of all DCP text parts: %w", err)
 	}
 

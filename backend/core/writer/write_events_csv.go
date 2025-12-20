@@ -2,7 +2,7 @@ package writer
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/core/components"
+	"ffxresources/backend/fileFormats/event"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -18,10 +18,7 @@ func prepareOutputDirectoryCSV() (string, error) {
 }
 
 func getSortedEventIDsCSV() []string {
-	eventIDs := make([]string, 0, len(components.EVENTS))
-	for eventID := range components.EVENTS {
-		eventIDs = append(eventIDs, eventID)
-	}
+	eventIDs := event.GetAllEventIDs()
 	sort.Strings(eventIDs)
 	return eventIDs
 }
@@ -43,7 +40,7 @@ func buildCSVHeader(localizationKeys []string) string {
 	return header.String()
 }
 
-func buildCSVRowForEvent(eventFile *components.EventFile, localizationKeys []string) string {
+func buildCSVRowForEvent(eventFile *event.EventFile, localizationKeys []string) string {
 	var csvBuilder strings.Builder
 
 	for i, str := range eventFile.Strings {
@@ -67,7 +64,7 @@ func buildCSVRowForEvent(eventFile *components.EventFile, localizationKeys []str
 }
 
 func processEventFromMemoryCSV(eventID string, localizationKeys []string) string {
-	eventFile := components.EVENTS[eventID]
+	eventFile := event.GetEvent(eventID)
 	if eventFile == nil || eventFile.Strings == nil || len(eventFile.Strings) == 0 {
 		return ""
 	}
@@ -84,7 +81,7 @@ func processEventFromFileCSV(eventID string, localizationKeys []string) string {
 		fmt.Printf("Exporting event file to CSV: %s\n", eventID)
 	}
 
-	eventFileStrings, err := components.ReadLocalizedEventStrings(eventID)
+	eventFileStrings, err := event.ReadLocalizedEventStrings(eventID)
 	if err != nil {
 		fmt.Printf("Erro ao carregar strings localizadas: %v\n", err)
 		return ""
@@ -95,7 +92,7 @@ func processEventFromFileCSV(eventID string, localizationKeys []string) string {
 	}
 
 	// Create a temporary event file structure
-	eventFile := &components.EventFile{
+	eventFile := &event.EventFile{
 		ID:      eventID,
 		Strings: eventFileStrings,
 	}

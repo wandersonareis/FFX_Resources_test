@@ -2,9 +2,11 @@ package reader_test
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/core/writer"
+	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/fileFormats/macrodic"
+	"ffxresources/backend/sharedutils"
 	testcommon "ffxresources/testData"
 	"os"
 	"path/filepath"
@@ -44,9 +46,9 @@ var _ = Describe("ReadManager", Ordered, func() {
 		common.ResourcesRoot = originalResourcesRoot
 
 		// Clear any global state that might have been set
-		components.ByteToCharMaps = make(map[string]map[uint]rune)
-		components.CharToByteMaps = make(map[string]map[rune]uint)
-		components.MacroLookup = make(map[int]*components.LocalizedMacroStringObject)
+		sharedutils.ByteToCharMaps = make(map[string]map[uint]rune)
+		sharedutils.CharToByteMaps = make(map[string]map[rune]uint)
+		macrodic.MacroLookup = make(map[int]*macrodic.LocalizedMacroStringObject)
 	})
 	Context("when testing FFX (version 1)", func() {
 		BeforeEach(func() {
@@ -60,11 +62,11 @@ var _ = Describe("ReadManager", Ordered, func() {
 
 				// Verify that character maps were created for each charset
 				for _, charset := range common.Charsets {
-					byteToChar, exists := components.ByteToCharMaps[charset]
+					byteToChar, exists := sharedutils.ByteToCharMaps[charset]
 					Expect(exists).To(BeTrue(), "ByteToChar map should exist for charset %s", charset)
 					Expect(byteToChar).ToNot(BeEmpty(), "ByteToChar map should be populated for charset %s", charset)
 
-					charToByte, exists := components.CharToByteMaps[charset]
+					charToByte, exists := sharedutils.CharToByteMaps[charset]
 					Expect(exists).To(BeTrue(), "CharToByte map should exist for charset %s", charset)
 					Expect(charToByte).ToNot(BeEmpty(), "CharToByte map should be populated for charset %s", charset)
 				}
@@ -76,7 +78,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 				// Verify that macro lookups were created
 				// Since we can't access specific macros by localization directly,
 				// we'll check that the global MacroLookup was populated
-				Expect(components.MacroLookup).ToNot(BeEmpty(), "MacroLookup should be populated")
+				Expect(macrodic.MacroLookup).ToNot(BeEmpty(), "MacroLookup should be populated")
 			})
 			It("should handle Korean and Chinese localizations without output", func() {
 				// This test verifies that kr and ch localizations are processed
@@ -85,7 +87,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 
 				// We can't directly test the printOutput behavior in unit tests,
 				// but we can verify the function completes without error
-				Expect(components.MacroLookup).ToNot(BeNil())
+				Expect(macrodic.MacroLookup).ToNot(BeNil())
 			})
 		})
 	})
@@ -102,11 +104,11 @@ var _ = Describe("ReadManager", Ordered, func() {
 
 				// Verify that character maps were created for each charset
 				for _, charset := range common.Charsets {
-					byteToChar, exists := components.ByteToCharMaps[charset]
+					byteToChar, exists := sharedutils.ByteToCharMaps[charset]
 					Expect(exists).To(BeTrue(), "ByteToChar map should exist for charset %s", charset)
 					Expect(byteToChar).ToNot(BeEmpty(), "ByteToChar map should be populated for charset %s", charset)
 
-					charToByte, exists := components.CharToByteMaps[charset]
+					charToByte, exists := sharedutils.CharToByteMaps[charset]
 					Expect(exists).To(BeTrue(), "CharToByte map should exist for charset %s", charset)
 					Expect(charToByte).ToNot(BeEmpty(), "CharToByte map should be populated for charset %s", charset)
 				}
@@ -118,7 +120,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 				// Verify that macro lookups were created
 				// Since we can't access specific macros by localization directly,
 				// we'll check that the global MacroLookup was populated
-				Expect(components.MacroLookup).ToNot(BeEmpty(), "MacroLookup should be populated")
+				Expect(macrodic.MacroLookup).ToNot(BeEmpty(), "MacroLookup should be populated")
 			})
 			It("should handle Korean and Chinese localizations without output", func() {
 				// This test verifies that kr and ch localizations are processed
@@ -127,7 +129,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 
 				// We can't directly test the printOutput behavior in unit tests,
 				// but we can verify the function completes without error
-				Expect(components.MacroLookup).ToNot(BeNil())
+				Expect(macrodic.MacroLookup).ToNot(BeNil())
 			})
 		})
 	})
@@ -177,7 +179,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 			Expect(reader.ReadAllEvents(resolvedPath)).To(Succeed(), "Reading all events should not return an error")
 
 			// Verify that EventFiles map is populated
-			Expect(components.EVENTS).ToNot(BeEmpty(), "EventFiles should be populated")
+			Expect(event.HasEvents()).To(BeTrue(), "Events should be populated in datastore")
 			writer.ExportAllEventsToCSV()
 			Expect(reader.EditAndSaveEventCSVFiles()).To(Succeed())
 		})
@@ -194,7 +196,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 			Expect(err).ToNot(HaveOccurred(), "Reading all events should not return an error")
 
 			// Verify that EventFiles map is populated
-			Expect(components.EVENTS).ToNot(BeEmpty(), "EventFiles should be populated")
+			Expect(event.HasEvents()).To(BeTrue(), "Events should be populated in datastore")
 			writer.ExportAllLocalizationsToJSON()
 			Expect(reader.EditAndSaveEventJSONFiles()).To(Succeed())
 		})

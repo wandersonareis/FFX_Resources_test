@@ -29,13 +29,13 @@ func NewLockitFilePartsEncoder(logger loggingService.ILoggerService) ILockitFile
 }
 
 func (le *LockitFilePartsEncoder) EncodeFilesParts(partsList components.IList[LockitFileParts], lockitEncoding ffxencoding.IFFXTextLockitEncoding, gameVersion models.GameVersion) error {
-	if partsList.GetLength() == 0 {
+	if partsList.Len() == 0 {
 		return fmt.Errorf("lockit file parts list is empty")
 	}
 
-	errChan := make(chan error, partsList.GetLength())
+	errChan := make(chan error, partsList.Len())
 
-	partsList.ForIndex(func(index int, part LockitFileParts) {
+	partsList.RangeIndex(func(index int, part LockitFileParts) {
 		errChan <- part.Compress(lockitEncoding, le.chooseStrategy(index, gameVersion))
 	})
 

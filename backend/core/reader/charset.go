@@ -3,7 +3,7 @@ package reader
 import (
 	"encoding/json"
 	"ffxresources/backend/common"
-	"ffxresources/backend/core/components"
+	"ffxresources/backend/sharedutils"
 	"fmt"
 	"path/filepath"
 )
@@ -16,8 +16,8 @@ func PrepareCharset(charset string) error {
 	if err != nil {
 		return err
 	}
-	data, err := common.ReadFile(filePath.ResolvedPath)
-	if err != nil {
+	data := filePath.ReadBytes()
+	if data == nil {
 		return err
 	}
 
@@ -28,7 +28,7 @@ func PrepareCharset(charset string) error {
 	}
 
 	byteToChar, charToByte := buildMappings(runes)
-	components.SetCharMap(charset, byteToChar, charToByte)
+	sharedutils.SetCharMap(charset, byteToChar, charToByte)
 	return nil
 }
 

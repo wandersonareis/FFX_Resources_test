@@ -125,9 +125,9 @@ func (lfi *lockitFileCompressorIntegrity) populateTemporaryBinaryPartsList(tempP
 		return fmt.Errorf("error when checking lockit file integrity:: %w", err)
 	}
 
-	if tempPartsList.GetLength() != fileOptions.GetPartsLength() {
+	if tempPartsList.Len() != fileOptions.GetPartsLength() {
 		return fmt.Errorf("error checking lockit parts integrity: expected %d, got %d",
-			fileOptions.GetPartsLength(), tempPartsList.GetLength())
+			fileOptions.GetPartsLength(), tempPartsList.Len())
 	}
 
 	setExtractTemporaryDirectory := func(part lockitParts.LockitFileParts) {
@@ -137,7 +137,7 @@ func (lfi *lockitFileCompressorIntegrity) populateTemporaryBinaryPartsList(tempP
 		part.GetDestination().Extract().SetTargetPath(tempDir)
 	}
 
-	tempPartsList.ForEach(setExtractTemporaryDirectory)
+	tempPartsList.Range(setExtractTemporaryDirectory)
 
 	return nil
 }
@@ -166,10 +166,10 @@ func (lfi *lockitFileCompressorIntegrity) temporaryPartsComparer(partsList compo
 		return fmt.Errorf("error when checking lockit file integrity")
 	}
 
-	compareFilesList := components.NewList[models.FileComparisonEntry](partsList.GetLength())
+	compareFilesList := components.NewList[models.FileComparisonEntry](partsList.Len())
 	defer compareFilesList.Clear()
 
-	partsList.ForEach(func(part lockitParts.LockitFileParts) {
+	partsList.Range(func(part lockitParts.LockitFileParts) {
 		compareFilesList.Add(models.FileComparisonEntry{
 			FromFile: part.GetDestination().Translate().GetTargetFile(),
 			ToFile:   part.GetDestination().Extract().GetTargetFile(),

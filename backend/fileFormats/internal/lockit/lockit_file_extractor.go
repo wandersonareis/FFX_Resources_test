@@ -86,7 +86,7 @@ func (lfe *LockitFileExtractor) populateLockitBinaryFileParts(partsList componen
 func (lfe *LockitFileExtractor) ensureAllLockitBinaryFileParts(partsList components.IList[lockitParts.LockitFileParts], partsLength int) error {
 	lfe.log.Info("Ensuring all lockit binary file parts...")
 
-	if partsList.GetLength() == partsLength {
+	if partsList.Len() == partsLength {
 		return nil
 	}
 
@@ -98,9 +98,9 @@ func (lfe *LockitFileExtractor) ensureAllLockitBinaryFileParts(partsList compone
 		return err
 	}
 
-	if partsList.GetLength() != partsLength {
+	if partsList.Len() != partsLength {
 		return fmt.Errorf("error ensuring splitted lockit parts: expected %d, got %d on path: %s",
-			partsLength, partsList.GetLength(), lfe.GetDestination().Extract().GetTargetPath())
+			partsLength, partsList.Len(), lfe.GetDestination().Extract().GetTargetPath())
 	}
 
 	return nil

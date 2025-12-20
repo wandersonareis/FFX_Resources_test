@@ -5,6 +5,8 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/reader"
+	"ffxresources/backend/fileFormats/macrodic"
+	"ffxresources/backend/sharedutils"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -94,7 +96,7 @@ func WriteMacroDictionaryJSON(print bool) {
 		}
 
 		// Check if this localization has macro data
-		chunks, exists := components.MACRODICTFILE[localizationKey]
+		chunks, exists := macrodic.MACRODICTFILE[localizationKey]
 		if !exists || len(chunks) == 0 {
 			if print {
 				fmt.Printf("No macro data found for localization: %s\n", localizationKey)
@@ -192,7 +194,7 @@ func WriteMacroDictionaryForLocalizationJSON(localization string) {
 	}
 
 	// Check if this localization has macro data
-	chunks, exists := components.MACRODICTFILE[localization]
+	chunks, exists := macrodic.MACRODICTFILE[localization]
 	if !exists || len(chunks) == 0 {
 		fmt.Printf("No macro data found for localization: %s\n", localization)
 		return
@@ -338,7 +340,7 @@ func EditAndSaveMacrodicFromJson(jsonFilePath string) error {
 		fmt.Printf("Encontradas %d localizações no arquivo JSON\n", len(allLocalizations))
 	}
 
-	MacroDic := map[string][][]*components.MacroString{}
+	MacroDic := map[string][][]*macrodic.MacroString{}
 
 	// Process each localization
 	for _, locData := range allLocalizations {
@@ -347,15 +349,15 @@ func EditAndSaveMacrodicFromJson(jsonFilePath string) error {
 		}
 
 		// Clear existing data for this localization
-		components.MACRODICTFILE[locData.Localization] = make([][]*components.MacroString, 0)
+		macrodic.MACRODICTFILE[locData.Localization] = make([][]*macrodic.MacroString, 0)
 
 		// Find the maximum chunk index to properly size the array
 		maxChunkIndex := 15
 
 		// Initialize the chunks array with proper size
-		chunks := make([][]*components.MacroString, maxChunkIndex+1)
+		chunks := make([][]*macrodic.MacroString, maxChunkIndex+1)
 		for i := range chunks {
-			chunks[i] = make([]*components.MacroString, 0)
+			chunks[i] = make([]*macrodic.MacroString, 0)
 		}
 
 		// Process each chunk
@@ -376,7 +378,7 @@ func EditAndSaveMacrodicFromJson(jsonFilePath string) error {
 
 			// Initialize the strings array for this chunk
 			if maxStringIndex >= 0 {
-				chunks[chunkIndex] = make([]*components.MacroString, maxStringIndex+1)
+				chunks[chunkIndex] = make([]*macrodic.MacroString, maxStringIndex+1)
 			} // Process each string in the chunk
 			for _, stringData := range chunkData.Strings {
 				stringIndex := stringData.Index
@@ -396,7 +398,7 @@ func EditAndSaveMacrodicFromJson(jsonFilePath string) error {
 				simplifiedBytes := components.StringToBytes(simplifiedText, charset)
 
 				// Create MacroString object
-				macroString := &components.MacroString{
+				macroString := &macrodic.MacroString{
 					Charset:          charset,
 					RegularOffset:    0, // These offsets are not relevant when reconstructing from JSON
 					SimplifiedOffset: 0, // They are used during binary parsing only
@@ -408,7 +410,7 @@ func EditAndSaveMacrodicFromJson(jsonFilePath string) error {
 				if stringIndex >= len(chunks[chunkIndex]) {
 					// Expand the array to accommodate this index
 					newSize := stringIndex + 1
-					newSlice := make([]*components.MacroString, newSize)
+					newSlice := make([]*macrodic.MacroString, newSize)
 					copy(newSlice, chunks[chunkIndex])
 					chunks[chunkIndex] = newSlice
 				}
@@ -418,7 +420,7 @@ func EditAndSaveMacrodicFromJson(jsonFilePath string) error {
 
 		// Update the global MACRODICTFILE
 		MacroDic[locData.Localization] = chunks
-		components.MACRODICTFILE[locData.Localization] = chunks
+		macrodic.MACRODICTFILE[locData.Localization] = chunks
 
 		if common.IsVerboseMode() {
 			fmt.Printf("  ✓ Localização %s atualizada com sucesso\n", locData.Localization)
@@ -480,7 +482,7 @@ func CompleteMacroDictionaryWorkflowExample() {
 		fmt.Printf("Erro ao inicializar dados: %v\n", err)
 		return
 	}
-	fmt.Printf("   ✓ Dados inicializados. MACRODICTFILE contém %d localizações\n", len(components.MACRODICTFILE))
+	fmt.Printf("   ✓ Dados inicializados. MACRODICTFILE contém %d localizações\n", len(macrodic.MACRODICTFILE))
 	// Step 2: Export to JSON
 	fmt.Println("\n2. Exportando para JSON...")
 	WriteMacroDictionaryJSON(true)
@@ -499,8 +501,8 @@ func CompleteMacroDictionaryWorkflowExample() {
 	fmt.Println("\n4. Limpando dados atuais e recarregando do JSON...")
 
 	// Clear existing data to simulate a fresh start
-	components.MACRODICTFILE = make(map[string][][]*components.MacroString)
-	fmt.Printf("   MACRODICTFILE limpo. Agora contém %d localizações\n", len(components.MACRODICTFILE))
+	macrodic.MACRODICTFILE = make(map[string][][]*macrodic.MacroString)
+	fmt.Printf("   MACRODICTFILE limpo. Agora contém %d localizações\n", len(macrodic.MACRODICTFILE))
 
 	// Reload from JSON
 	macrodicPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "macrodic")
@@ -514,7 +516,7 @@ func CompleteMacroDictionaryWorkflowExample() {
 	// Step 5: Verify the data was loaded correctly
 	fmt.Println("\n5. Verificando integridade dos dados recarregados...")
 	totalStrings := 0
-	for localization, chunks := range components.MACRODICTFILE {
+	for localization, chunks := range macrodic.MACRODICTFILE {
 		localizationStrings := 0
 		for _, chunk := range chunks {
 			for _, macroString := range chunk {
@@ -547,7 +549,7 @@ func WriteMacroDictionaryToBinaryFiles() {
 	}
 
 	// Process each localization
-	for localization, chunks := range components.MACRODICTFILE {
+	for localization, chunks := range macrodic.MACRODICTFILE {
 		if common.IsVerboseMode() {
 			fmt.Printf("Processing localization: %s\n", localization)
 		}
@@ -560,7 +562,7 @@ func WriteMacroDictionaryToBinaryFiles() {
 
 			// Convert MacroString slice to bytes using the new rebuild function
 			charset := components.GetCharsetForLanguage(localization)
-			binaryData := components.MacroStringsToBytes(chunk, charset, true) // true = optimize (deduplicate strings)
+			binaryData := macrodic.MacroStringsToBytes(chunk, charset, true) // true = optimize (deduplicate strings)
 
 			// Write to file
 			fileName := fmt.Sprintf("macrodic_%s_chunk_%02d.dcp", localization, chunkIndex)
@@ -601,20 +603,20 @@ func TestMacroStringReconstruction() {
 	// Step 2: Convert to binary and back for testing
 	fmt.Println("2. Testing round-trip conversion...")
 	testLocalization := "us"
-	if chunks, exists := components.MACRODICTFILE[testLocalization]; exists && len(chunks) > 0 {
+	if chunks, exists := macrodic.MACRODICTFILE[testLocalization]; exists && len(chunks) > 0 {
 		chunk := chunks[6] // Test first chunk
 		if len(chunk) > 0 {
-			charset := components.GetCharsetForLanguage(testLocalization)
+			charset := sharedutils.GetCharsetForLanguage(testLocalization)
 
 			// Convert to binary
-			binaryData := components.MacroStringsToBytes(chunk, charset, true)
+			binaryData := macrodic.MacroStringsToBytes(chunk, charset, true)
 			if common.IsVerboseMode() {
 				fmt.Printf("   Original chunk had %d strings\n", len(chunk))
 				fmt.Printf("   Binary data size: %d bytes\n", len(binaryData))
 			}
 
 			// Convert back to MacroString objects
-			reconstructed := components.FromStringData(binaryData[2:], charset) // Skip first 2 bytes (count)
+			reconstructed := macrodic.FromStringData(binaryData[2:], charset) // Skip first 2 bytes (count)
 			if common.IsVerboseMode() {
 				fmt.Printf("   Reconstructed chunk has %d strings\n", len(reconstructed))
 			}

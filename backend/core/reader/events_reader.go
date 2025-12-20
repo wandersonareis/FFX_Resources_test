@@ -2,7 +2,7 @@ package reader
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/core/converter"
+	"ffxresources/backend/fileFormats/event"
 )
 
 // ReadAllEvents reads all event files from the specified events directory.
@@ -14,7 +14,7 @@ import (
 //
 // Returns: error if the operation fails
 func ReadAllEvents(eventsFolder common.FileAccessor) error {
-	return converter.ReadAllEventFiles(eventsFolder)
+	return event.ReadAllEventFiles(eventsFolder)
 }
 
 // ReadEventFull reads a complete event file with all localizations.

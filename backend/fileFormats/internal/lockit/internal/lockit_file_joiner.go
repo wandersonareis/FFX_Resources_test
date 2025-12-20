@@ -27,13 +27,13 @@ func NewLockitFileJoiner(logger loggingService.ILoggerService) ILockitPartsJoine
 func (lj *lockitFileJoiner) JoinFileParts(destination locations.IDestination, lockitPartsList components.IList[lockitParts.LockitFileParts], fileOptions core.ILockitFileOptions) error {
 	importLocation := destination.Import()
 
-	if lockitPartsList.GetLength() != fileOptions.GetPartsLength() {
-		return fmt.Errorf("invalid number of parts: %d expected: %d", lockitPartsList.GetLength(), fileOptions.GetPartsLength())
+	if lockitPartsList.Len() != fileOptions.GetPartsLength() {
+		return fmt.Errorf("invalid number of parts: %d expected: %d", lockitPartsList.Len(), fileOptions.GetPartsLength())
 	}
 
 	var combinedBuffer bytes.Buffer
 
-	errChan := make(chan error, lockitPartsList.GetLength())
+	errChan := make(chan error, lockitPartsList.Len())
 
 	combineFilesFunc := func(part lockitParts.LockitFileParts) {
 		translatedTextFile := part.GetDestination().Translate().GetTargetFile()
@@ -48,7 +48,7 @@ func (lj *lockitFileJoiner) JoinFileParts(destination locations.IDestination, lo
 		combinedBuffer.Write(partData)
 	}
 
-	lockitPartsList.ForEach(combineFilesFunc)
+	lockitPartsList.Range(combineFilesFunc)
 
 	close(errChan)
 	if err := <-errChan; err != nil {

@@ -41,7 +41,7 @@ func ListFilesByRegex(list IList[string], path, pattern string) error {
 		return err
 	}
 
-	list.Clip()
+	list.TrimToSize()
 
 	return nil
 }
@@ -55,14 +55,14 @@ func PopulateGameFilePartsList[T any](
 		return err
 	}
 
-	filesList := NewList[string](parts.GetLength())
+	filesList := NewList[string](parts.Len())
 
 	err := ListFilesByRegex(filesList, targetPath, pattern)
 	if err != nil {
 		return err
 	}
 
-	filesList.ForEach(func(item string) {
+	filesList.Range(func(item string) {
 		s, err := locations.NewSource(item)
 		if err != nil {
 			return
@@ -85,7 +85,7 @@ func PopulateGameFilePartsList[T any](
 		parts.Add(*part)
 	})
 
-	parts.Clip()
+	parts.TrimToSize()
 
 	return nil
 }
@@ -100,14 +100,14 @@ func PopulateFilePartsList[T any](
 		return err
 	}
 
-	filesList := NewList[string](parts.GetLength())
+	filesList := NewList[string](parts.Len())
 
 	err := ListFilesByRegex(filesList, targetPath, pattern)
 	if err != nil {
 		return err
 	}
 
-	filesList.ForEach(func(item string) {
+	filesList.Range(func(item string) {
 		s, err := locations.NewSource(item)
 		if err != nil {
 			return
@@ -130,7 +130,7 @@ func PopulateFilePartsList[T any](
 		parts.Add(*part)
 	})
 
-	parts.Clip()
+	parts.TrimToSize()
 
 	return nil
 }

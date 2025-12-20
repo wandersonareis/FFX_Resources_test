@@ -107,10 +107,10 @@ func (d *directoryService) processDirectory(targetPath string, pathMap *NodeStor
 	}
 
 	d.progressService.Stop()
-	d.progressService.SetMax(filesProcessorList.GetLength())
+	d.progressService.SetMax(filesProcessorList.Len())
 	d.progressService.Start()
 
-	filesProcessorList.ForEach(func(processor interfaces.IFileProcessor) {
+	filesProcessorList.Range(func(processor interfaces.IFileProcessor) {
 		if e := operation(processor); e != nil {
 			d.notifierService.NotifyError(e)
 			return

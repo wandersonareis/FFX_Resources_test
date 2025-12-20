@@ -30,7 +30,7 @@ func (lc *lineBreakCounter) VerifyLineBreaks(partsList components.IList[string],
 }
 
 func (lc *lineBreakCounter) verify(pathList components.IList[string], partsSizes []int) error {
-	errChan := make(chan error, pathList.GetLength())
+	errChan := make(chan error, pathList.Len())
 
 	comparerOcorrencesFunc := func(index int, part string) {
 		ocorrencesExpected := partsSizes[index]
@@ -49,7 +49,7 @@ func (lc *lineBreakCounter) verify(pathList components.IList[string], partsSizes
 		}
 	}
 
-	pathList.ForIndex(comparerOcorrencesFunc)
+	pathList.RangeIndex(comparerOcorrencesFunc)
 
 	close(errChan)
 

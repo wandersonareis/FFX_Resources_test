@@ -2,8 +2,8 @@ package reader_test
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/reader"
+	"ffxresources/backend/sharedutils"
 	testcommon "ffxresources/testData"
 	"fmt"
 	"testing"
@@ -52,21 +52,21 @@ var _ = Describe("PrepareCharset", Ordered, func() {
 				Expect(err).ToNot(HaveOccurred(), "PrepareCharset should succeed for charset: %s", charset)
 
 				// Verify that ByteToCharMaps contains the charset
-				_, exists := components.ByteToCharMaps[charset]
+				_, exists := sharedutils.ByteToCharMaps[charset]
 				Expect(exists).To(BeTrue(), "ByteToCharMaps should contain charset: %s", charset)
 
 				// Verify that CharToByteMaps contains the charset
-				_, exists = components.CharToByteMaps[charset]
+				_, exists = sharedutils.CharToByteMaps[charset]
 				Expect(exists).To(BeTrue(), "CharToByteMaps should contain charset: %s", charset)
 
 				// Verify that the maps are not empty
-				Expect(len(components.ByteToCharMaps[charset])).To(BeNumerically(">", 0),
+				Expect(len(sharedutils.ByteToCharMaps[charset])).To(BeNumerically(">", 0),
 					"ByteToCharMaps[%s] should not be empty", charset)
-				Expect(len(components.CharToByteMaps[charset])).To(BeNumerically(">", 0),
+				Expect(len(sharedutils.CharToByteMaps[charset])).To(BeNumerically(">", 0),
 					"CharToByteMaps[%s] should not be empty", charset) // Verify mapping consistency understanding duplicate characters
 				// Forward mapping (char->byte->char) should always work
-				for char, byteVal := range components.CharToByteMaps[charset] {
-					mappedChar, exists := components.ByteToCharMaps[charset][byteVal]
+				for char, byteVal := range sharedutils.CharToByteMaps[charset] {
+					mappedChar, exists := sharedutils.ByteToCharMaps[charset][byteVal]
 					Expect(exists).To(BeTrue(), "ByteToCharMaps should contain mapping for byte %d from charset %s", byteVal, charset)
 					Expect(mappedChar).To(Equal(char), "Forward mapping should be consistent for byte %d in charset %s", byteVal, charset)
 				}
@@ -78,10 +78,10 @@ var _ = Describe("PrepareCharset", Ordered, func() {
 
 			// Verify all expected charsets are present
 			for _, expectedCharset := range common.Charsets {
-				_, exists := components.ByteToCharMaps[expectedCharset]
+				_, exists := sharedutils.ByteToCharMaps[expectedCharset]
 				Expect(exists).To(BeTrue(), "ByteToCharMaps should contain expected charset: %s", expectedCharset)
 
-				_, exists = components.CharToByteMaps[expectedCharset]
+				_, exists = sharedutils.CharToByteMaps[expectedCharset]
 				Expect(exists).To(BeTrue(), "CharToByteMaps should contain expected charset: %s", expectedCharset)
 			}
 		})
@@ -99,23 +99,23 @@ var _ = Describe("PrepareCharset", Ordered, func() {
 				Expect(err).ToNot(HaveOccurred(), "PrepareCharset should succeed for charset: %s", charset)
 
 				// Verify that ByteToCharMaps contains the charset
-				_, exists := components.ByteToCharMaps[charset]
+				_, exists := sharedutils.ByteToCharMaps[charset]
 				Expect(exists).To(BeTrue(), "ByteToCharMaps should contain charset: %s", charset)
 
 				// Verify that CharToByteMaps contains the charset
-				_, exists = components.CharToByteMaps[charset]
+				_, exists = sharedutils.CharToByteMaps[charset]
 				Expect(exists).To(BeTrue(), "CharToByteMaps should contain charset: %s", charset)
 
 				// Verify that the maps are not empty
-				Expect(len(components.ByteToCharMaps[charset])).To(BeNumerically(">", 0),
+				Expect(len(sharedutils.ByteToCharMaps[charset])).To(BeNumerically(">", 0),
 					"ByteToCharMaps[%s] should not be empty", charset)
-				Expect(len(components.CharToByteMaps[charset])).To(BeNumerically(">", 0),
+				Expect(len(sharedutils.CharToByteMaps[charset])).To(BeNumerically(">", 0),
 					"CharToByteMaps[%s] should not be empty", charset)
 
 				// Verify mapping consistency understanding duplicate characters
 				// Forward mapping (char->byte->char) should always work
-				for char, byteVal := range components.CharToByteMaps[charset] {
-					mappedChar, exists := components.ByteToCharMaps[charset][byteVal]
+				for char, byteVal := range sharedutils.CharToByteMaps[charset] {
+					mappedChar, exists := sharedutils.ByteToCharMaps[charset][byteVal]
 					if mappedChar != char {
 						fmt.Printf("Mismatch for charset %s, char %c: byte %d maps to %c instead of %c\n",
 							charset, char, byteVal, mappedChar, char)
@@ -125,10 +125,10 @@ var _ = Describe("PrepareCharset", Ordered, func() {
 				}
 				// Verify all expected charsets are present
 				for _, expectedCharset := range common.Charsets {
-					_, exists := components.ByteToCharMaps[expectedCharset]
+					_, exists := sharedutils.ByteToCharMaps[expectedCharset]
 					Expect(exists).To(BeTrue(), "ByteToCharMaps should contain expected charset: %s", expectedCharset)
 
-					_, exists = components.CharToByteMaps[expectedCharset]
+					_, exists = sharedutils.CharToByteMaps[expectedCharset]
 					Expect(exists).To(BeTrue(), "CharToByteMaps should contain expected charset: %s", expectedCharset)
 				}
 				// Note: Reverse mapping (byte->char->byte) may not work for duplicate characters
@@ -138,10 +138,10 @@ var _ = Describe("PrepareCharset", Ordered, func() {
 
 			// Verify all expected charsets are present
 			for _, expectedCharset := range common.Charsets {
-				_, exists := components.ByteToCharMaps[expectedCharset]
+				_, exists := sharedutils.ByteToCharMaps[expectedCharset]
 				Expect(exists).To(BeTrue(), "ByteToCharMaps should contain expected charset: %s", expectedCharset)
 
-				_, exists = components.CharToByteMaps[expectedCharset]
+				_, exists = sharedutils.CharToByteMaps[expectedCharset]
 				Expect(exists).To(BeTrue(), "CharToByteMaps should contain expected charset: %s", expectedCharset)
 			}
 		})

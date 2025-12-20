@@ -2,7 +2,7 @@ package writer
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/core/components"
+	"ffxresources/backend/fileFormats/event"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -27,10 +27,7 @@ func prepareOutputDirectory() (string, error) {
 }
 
 func getSortedEventIDs() []string {
-	eventIDs := make([]string, 0, len(components.EVENTS))
-	for eventID := range components.EVENTS {
-		eventIDs = append(eventIDs, eventID)
-	}
+	eventIDs := event.GetAllEventIDs()
 	sort.Strings(eventIDs)
 	return eventIDs
 }
@@ -56,7 +53,7 @@ func buildEventStringData(index int, str interface{ GetLocalizedString(string) s
 }
 
 func processEventFromMemory(eventID string, localizationKeys []string) *EventFileData {
-	eventFile := components.EVENTS[eventID]
+	eventFile := event.GetEvent(eventID)
 	if eventFile == nil || eventFile.Strings == nil || len(eventFile.Strings) == 0 {
 		return nil
 	}

@@ -1,20 +1,13 @@
 package components
 
-import (
-	"encoding/binary"
-	"ffxresources/backend/common"
-	"fmt"
-	"os"
-)
-
-type Stringer interface {
+/* type Stringer interface {
 	String() string
-}
+} */
 
-type DataObject interface {
+/* type DataObject interface {
 	Stringer
 	ToString(localization string) string
-}
+} */
 
 type LocalizationSetter interface {
 	SetLocalizations(other LocalizationSetter)
@@ -25,7 +18,7 @@ type LocalizationSetter interface {
 	LocalizationSetter
 } */
 
-func ReadDataList[T ILocalizedTextObject](filename string, languageCode string, creator func([]byte, []byte, int, string) T) IList[T] {
+/* func ReadDataList[T ILocalizedTextObject](filename string, languageCode string, creator func([]byte, []byte, int, string) T) IList[T] {
 	fileAccessor, err := common.NewFileAccessor(filename)
 	if err != nil {
 		if common.IsVerboseMode() {
@@ -111,7 +104,7 @@ func ReadDataList[T ILocalizedTextObject](filename string, languageCode string, 
 	}
 
 	return objects
-}
+} */
 
 // Nova função compatível com IList usando interfaces
 /* func ReadDataArrayWithIlist(filename string, languageCode string, creator func([]byte, []byte, int, string) ILocalizedTextObject) IList[ILocalizedTextObject] {

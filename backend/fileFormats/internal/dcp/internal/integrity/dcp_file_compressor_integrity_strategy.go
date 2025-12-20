@@ -97,7 +97,7 @@ func (dcv *dcpCompressionVerificationStrategy) populateTemporaryBinaryPartsList(
 		return fmt.Errorf("error when checking lockit file integrity:: %w", err)
 	}
 
-	if err := lib.EnsurePartsListCount(tempPartsList.GetLength(), dcpFileProperties.GetPartsLength()); err != nil {
+	if err := lib.EnsurePartsListCount(tempPartsList.Len(), dcpFileProperties.GetPartsLength()); err != nil {
 		return err
 	}
 
@@ -110,7 +110,7 @@ func (dcv *dcpCompressionVerificationStrategy) populateTemporaryBinaryPartsList(
 		part.GetDestination().Extract().SetTargetPath(tempDir)
 	}
 
-	tempPartsList.ForEach(setExtractTemporaryDirectory)
+	tempPartsList.Range(setExtractTemporaryDirectory)
 
 	return nil
 }
@@ -120,9 +120,9 @@ func (dcv *dcpCompressionVerificationStrategy) temporaryPartsDecoder(tempPartsLi
 		return fmt.Errorf("error when checking dcp file integrity")
 	}
 
-	errChan := make(chan error, tempPartsList.GetLength())
+	errChan := make(chan error, tempPartsList.Len())
 
-	tempPartsList.ForEach(func(part dcpParts.DcpFileParts) {
+	tempPartsList.Range(func(part dcpParts.DcpFileParts) {
 		if err := common.CheckPathExists(part.GetSource().GetPath()); err != nil {
 			errChan <- err
 			return
@@ -151,9 +151,9 @@ func (dcv *dcpCompressionVerificationStrategy) temporaryPartsIntegrity(tempParts
 	}
 	defer filesToCompareList.Clear()
 
-	errorChan := make(chan error, filesToCompareList.GetLength())
+	errorChan := make(chan error, filesToCompareList.Len())
 
-	filesToCompareList.ForEach(func(item components.IFileComparer) {
+	filesToCompareList.Range(func(item components.IFileComparer) {
 		if err := item.CompareFiles(); err != nil {
 			errorChan <- fmt.Errorf("failed to compare parts: %w", err)
 		}
@@ -198,11 +198,11 @@ func (dcv *dcpCompressionVerificationStrategy) temporaryFileSplitter(source inte
 	return nil
 }
 func (dcv *dcpCompressionVerificationStrategy) createCompareTextList(partsList components.IList[dcpParts.DcpFileParts]) (components.IList[components.IFileComparer], error) {
-	filesToCompareList := components.NewList[components.IFileComparer](partsList.GetLength())
+	filesToCompareList := components.NewList[components.IFileComparer](partsList.Len())
 
-	errorChan := make(chan error, partsList.GetLength())
+	errorChan := make(chan error, partsList.Len())
 
-	partsList.ForEach(func(item dcpParts.DcpFileParts) {
+	partsList.Range(func(item dcpParts.DcpFileParts) {
 		if item.GetDestination().Translate().GetTargetExtension() != ".txt" ||
 			item.GetDestination().Extract().GetTargetExtension() != ".txt" {
 			return

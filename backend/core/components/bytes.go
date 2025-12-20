@@ -3,11 +3,12 @@ package components
 import (
 	"encoding/binary"
 	"ffxresources/backend/common"
+	"ffxresources/backend/models"
 	"fmt"
 	"os"
 )
 
-func read4BytesLE(data []byte, offset int) uint32 {
+func Read4BytesLE(data []byte, offset int) uint32 {
 	if offset+4 > len(data) {
 		return 0xFFFFFFFF // fallback se o slice for inválido
 	}
@@ -26,7 +27,7 @@ func FileToBytes(path common.FileAccessor) []byte {
 	return data
 }
 
-func BytesToChunks(data []byte, assumedChunkCount, chunkOffset int) []Chunk {
+func BytesToChunks(data []byte, assumedChunkCount, chunkOffset int) []models.Chunk {
 	if data == nil {
 		return nil
 	}
@@ -35,7 +36,7 @@ func BytesToChunks(data []byte, assumedChunkCount, chunkOffset int) []Chunk {
 	offsets := make([]int, chunkCount+1)
 
 	for i := 0; i < chunkCount; i++ {
-		offset := int(read4BytesLE(data, i*4+chunkOffset))
+		offset := int(Read4BytesLE(data, i*4+chunkOffset))
 		if offset == 0xFFFFFFFF {
 			chunkCount = i - 1
 			break
@@ -43,11 +44,11 @@ func BytesToChunks(data []byte, assumedChunkCount, chunkOffset int) []Chunk {
 		offsets[i] = offset
 	}
 
-	chunks := make([]Chunk, 0, chunkCount)
+	chunks := make([]models.Chunk, 0, chunkCount)
 	for i := 0; i < chunkCount; i++ {
 		offset := offsets[i]
 		if offset == 0 {
-			chunks = append(chunks, NewEmptyChunk())
+			chunks = append(chunks, models.NewEmptyChunk())
 		} else {
 			to := len(data)
 			for j := i + 1; j <= chunkCount; j++ {
@@ -57,7 +58,7 @@ func BytesToChunks(data []byte, assumedChunkCount, chunkOffset int) []Chunk {
 				}
 			}
 
-			chunks = append(chunks, NewChunk(data, offset, to))
+			chunks = append(chunks, models.NewChunk(data, offset, to))
 		}
 	}
 	return chunks

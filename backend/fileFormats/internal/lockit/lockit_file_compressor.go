@@ -142,15 +142,15 @@ func (lfc *LockitFileCompressor) populateLockitTranslatedBinaryFileParts(transla
 }
 
 func (lfc *LockitFileCompressor) ensureAllLockitTranslatedTextFileParts(translatedTextPartsList components.IList[lockitParts.LockitFileParts], partsLength int) error {
-	if translatedTextPartsList.GetLength() != partsLength {
+	if translatedTextPartsList.Len() != partsLength {
 		return fmt.Errorf("error ensuring translated lockit text parts: expected %d, got %d on path: %s",
-			partsLength, translatedTextPartsList.GetLength(), lfc.GetDestination().Translate().GetTargetPath())
+			partsLength, translatedTextPartsList.Len(), lfc.GetDestination().Translate().GetTargetPath())
 	}
 
 	translatedTextList := components.NewList[string](partsLength)
 	defer translatedTextList.Clear()
 
-	translatedTextPartsList.ForEach(func(part lockitParts.LockitFileParts) {
+	translatedTextPartsList.Range(func(part lockitParts.LockitFileParts) {
 		translatedTextList.Add(
 			part.GetSource().GetPath())
 	})
@@ -165,15 +165,15 @@ func (lfc *LockitFileCompressor) ensureAllLockitTranslatedTextFileParts(translat
 }
 
 func (lfc *LockitFileCompressor) ensureAllLockitTranslatedBinaryFileParts(translatedBinaryPartsList components.IList[lockitParts.LockitFileParts], partsLength int) error {
-	if translatedBinaryPartsList.GetLength() != partsLength {
+	if translatedBinaryPartsList.Len() != partsLength {
 		return fmt.Errorf("error ensuring translated lockit binary parts: expected %d, got %d on path: %s",
-			partsLength, translatedBinaryPartsList.GetLength(), lfc.GetDestination().Translate().GetTargetPath())
+			partsLength, translatedBinaryPartsList.Len(), lfc.GetDestination().Translate().GetTargetPath())
 	}
 
 	translatedBinaryList := components.NewList[string](partsLength)
 	defer translatedBinaryList.Clear()
 
-	translatedBinaryPartsList.ForEach(func(part lockitParts.LockitFileParts) {
+	translatedBinaryPartsList.Range(func(part lockitParts.LockitFileParts) {
 		translatedBinaryList.Add(
 			part.GetSource().GetPath())
 	})
@@ -190,7 +190,7 @@ func (lfc *LockitFileCompressor) ensureAllLockitTranslatedBinaryFileParts(transl
 func (lfc *LockitFileCompressor) ensureAllLockitExtractedBinaryFileParts(extractedBinaryPartsList components.IList[lockitParts.LockitFileParts], partsLength int) error {
 	maxAttempts := 3
 	for range maxAttempts {
-		if extractedBinaryPartsList.GetLength() == partsLength {
+		if extractedBinaryPartsList.Len() == partsLength {
 			break
 		}
 
@@ -205,15 +205,15 @@ func (lfc *LockitFileCompressor) ensureAllLockitExtractedBinaryFileParts(extract
 		}
 	}
 
-	if extractedBinaryPartsList.GetLength() != partsLength {
+	if extractedBinaryPartsList.Len() != partsLength {
 		return fmt.Errorf("error ensuring extracted lockit binary parts: expected %d, got %d on path: %s",
-			partsLength, extractedBinaryPartsList.GetLength(), lfc.GetDestination().Extract().GetTargetPath())
+			partsLength, extractedBinaryPartsList.Len(), lfc.GetDestination().Extract().GetTargetPath())
 	}
 
 	extractedBinaryList := components.NewList[string](partsLength)
 	defer extractedBinaryList.Clear()
 
-	extractedBinaryPartsList.ForEach(func(part lockitParts.LockitFileParts) {
+	extractedBinaryPartsList.Range(func(part lockitParts.LockitFileParts) {
 		extractedBinaryList.Add(
 			part.GetSource().GetPath())
 	})
@@ -280,7 +280,7 @@ func (lfc *LockitFileCompressor) validateLineBreaksCount(filesList components.IL
 }
 
 func (lfc *LockitFileCompressor) disposeList(list components.IList[lockitParts.LockitFileParts]) {
-	list.ForEach(func(part lockitParts.LockitFileParts) {
+	list.Range(func(part lockitParts.LockitFileParts) {
 		os.Remove(part.GetSource().GetPath())
 	})
 

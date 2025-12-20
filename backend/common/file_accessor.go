@@ -126,8 +126,14 @@ func NewFileAccessor(path string) (FileAccessor, error) {
 	}, nil
 }
 
-// resolvePath resolves the given path using the same logic as ResolveFile
-// but without checking if the file exists
+func (f *FileAccessor) ReadBytes() []byte {
+	data, err := os.ReadFile(f.ResolvedPath)
+	if err != nil {
+		return nil
+	}
+	return data
+}
+
 func resolvePath(path string) (string, error) {
 	if filepath.IsAbs(path) {
 		return filepath.Clean(path), nil
@@ -140,7 +146,6 @@ func resolvePath(path string) (string, error) {
 	return resolveModdedPath(path), nil
 }
 
-// resolveModdedPath checks for modded version first, then falls back to original
 func resolveModdedPath(path string) string {
 	moddedPath := getModdedFile(path)
 	if fileExists(moddedPath) {
@@ -149,7 +154,6 @@ func resolveModdedPath(path string) string {
 	return getRealFile(path)
 }
 
-// getFileInfo attempts to get file info, returns nil if file doesn't exist
 func getFileInfo(path string) (os.FileInfo, bool) {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -158,7 +162,6 @@ func getFileInfo(path string) (os.FileInfo, bool) {
 	return info, true
 }
 
-// getFileSize safely extracts file size from FileInfo
 func getFileSize(info os.FileInfo) int64 {
 	if info == nil {
 		return 0
@@ -166,8 +169,14 @@ func getFileSize(info os.FileInfo) int64 {
 	return info.Size()
 }
 
-// fileExists checks if a file exists without returning detailed error info
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+func (f *FileAccessor) String() string {
+	if f.Exists {
+		return fmt.Sprintf("FileAccessor{RootPath: %s, ResolvedPath: %s, Size: %d bytes}", f.RootPath, f.ResolvedPath, f.Size)
+	}
+	return fmt.Sprintf("FileAccessor{RootPath: %s, ResolvedPath: %s, Exists: false}", f.RootPath, f.ResolvedPath)
 }

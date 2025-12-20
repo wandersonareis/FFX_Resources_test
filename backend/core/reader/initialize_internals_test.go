@@ -2,7 +2,6 @@ package reader_test
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/reader"
 	"os"
 	"path/filepath"
@@ -16,14 +15,14 @@ var _ = Describe("ReadManager", func() {
 
 	BeforeEach(func() {
 		// Save original ResourcesRoot
-		originalResourcesRoot = components.ResourcesRoot
+		originalResourcesRoot = common.ResourcesRoot
 
 		// Create temporary directory structure that mimics real structure
 		tempDir, err := os.MkdirTemp("", "ffx_test")
 		Expect(err).ToNot(HaveOccurred())
 
 		// Set ResourcesRoot to our test directory
-		components.ResourcesRoot = tempDir
+		common.ResourcesRoot = tempDir
 		// Create test directory structure
 		createInternalTestDirectories(tempDir)
 		createInternalTestFiles(tempDir)
@@ -31,11 +30,11 @@ var _ = Describe("ReadManager", func() {
 
 	AfterEach(func() {
 		// Restore original ResourcesRoot
-		components.ResourcesRoot = originalResourcesRoot
+		common.ResourcesRoot = originalResourcesRoot
 
 		// Clean up test directory
-		if components.ResourcesRoot != originalResourcesRoot {
-			os.RemoveAll(components.ResourcesRoot)
+		if common.ResourcesRoot != originalResourcesRoot {
+			os.RemoveAll(common.ResourcesRoot)
 		}
 	})
 
@@ -78,8 +77,8 @@ var _ = Describe("ReadManager", func() {
 	Describe("GetLocalizationRoot", func() {
 		It("should return correct localization root path format", func() {
 			// Test the function logic with current PathFfxRoot
-			result := reader.GetLocalizationRoot("en")
-			expected := common.PathFfxRoot + "new_enpc/"
+			result := common.GetLocalizationRoot("us")
+			expected := filepath.Join(common.GetPathRoot(), "new_uspc")
 			Expect(result).To(Equal(expected))
 		})
 
@@ -96,8 +95,8 @@ var _ = Describe("ReadManager", func() {
 			}
 
 			for _, tc := range testCases {
-				result := reader.GetLocalizationRoot(tc.localization)
-				expected := common.PathFfxRoot + tc.suffix
+				result := common.GetLocalizationRoot(tc.localization)
+				expected := filepath.Join(common.GetPathRoot(), tc.suffix)
 				Expect(result).To(Equal(expected), "Localization root for %s should be correct", tc.localization)
 			}
 		})
@@ -164,7 +163,7 @@ func createInternalTestDirectories(tempDir string) {
 	os.MkdirAll(encodingDir, 0755)
 
 	// Create localization directories for each locale in common.Localizations
-	for loc := range common.Localizations {
+	for loc := range common.SupportedLanguages {
 		locDir := filepath.Join(tempDir, "new_"+loc+"pc", "menu")
 		os.MkdirAll(locDir, 0755)
 	}
@@ -180,7 +179,7 @@ func createInternalTestFiles(tempDir string) {
 	}
 
 	// Create test macro dictionary files for each localization
-	for loc := range common.Localizations {
+	for loc := range common.SupportedLanguages {
 		macroFile := filepath.Join(tempDir, "new_"+loc+"pc", "menu", "macrodic.dcp")
 		// Create a simple test macro file with basic DCP structure
 		testMacroData := []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07} // Simple test data

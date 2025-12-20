@@ -67,9 +67,9 @@ func (lfei *lockitFileExtractorIntegrity) populateLockitExtractedTextFileParts(t
 }
 
 func (lfei *lockitFileExtractorIntegrity) ensureAllLockitExtractedBinaryFileParts(lockitBinaryPartsList components.IList[lockitParts.LockitFileParts]) error {
-	if lockitBinaryPartsList.GetLength() != lfei.options.GetPartsLength() {
+	if lockitBinaryPartsList.Len() != lfei.options.GetPartsLength() {
 		return fmt.Errorf("extracted lockit binary file parts list length mismatch: expected %d, got %d",
-			lfei.options.GetPartsLength(), lockitBinaryPartsList.GetLength())
+			lfei.options.GetPartsLength(), lockitBinaryPartsList.Len())
 	}
 
 	lockitBinaryPaths, err := lfei.createPartsPathsList(lockitBinaryPartsList)
@@ -90,9 +90,9 @@ func (lfei *lockitFileExtractorIntegrity) ensureAllLockitExtractedBinaryFilePart
 }
 
 func (lfei *lockitFileExtractorIntegrity) ensureAllLockitExtractedTextFileParts(lockitTextPartsList components.IList[lockitParts.LockitFileParts]) error {
-	if lockitTextPartsList.GetLength() != lfei.options.GetPartsLength() {
+	if lockitTextPartsList.Len() != lfei.options.GetPartsLength() {
 		return fmt.Errorf("extracted lockit text file parts list length mismatch: expected %d, got %d",
-			lfei.options.GetPartsLength(), lockitTextPartsList.GetLength())
+			lfei.options.GetPartsLength(), lockitTextPartsList.Len())
 	}
 
 	translatedTextList, err := lfei.createPartsPathsList(lockitTextPartsList)
@@ -115,7 +115,7 @@ func (lfei *lockitFileExtractorIntegrity) createPartsPathsList(lockitFilePartsLi
 
 	pathsList := components.NewList[string](lfei.options.GetPartsLength())
 
-	lockitFilePartsList.ForEach(func(part lockitParts.LockitFileParts) {
+	lockitFilePartsList.Range(func(part lockitParts.LockitFileParts) {
 		pathsList.Add(part.GetSource().GetPath())
 	})
 

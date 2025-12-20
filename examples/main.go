@@ -2,10 +2,12 @@ package main
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/core/components"
-	"ffxresources/backend/core/converter"
+	"ffxresources/backend/core/exporters"
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/core/writer"
+	"ffxresources/backend/datastore"
+	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/fileFormats/objectsfile"
 	"fmt"
 )
 
@@ -33,159 +35,159 @@ func main() {
 
 	// key items
 	// ok
-	converter.ReadKeyItemsWithAllLocalizations()
-	fmt.Printf("✓ Itens-chave carregados: %d\n", components.KEY_ITEMS.GetLength())
-	converter.ExportKeyItemsToJSON()
+	objectsfile.ReadKeyItemsWithAllLocalizations()
+	fmt.Printf("✓ Itens-chave carregados: %d\n", datastore.KeyItems.Len())
+	exporters.ExportKeyItemsToJSON()
 	fmt.Println("✓ Itens-chave exportados para JSON")
-	converter.ProcessKeyItemsJsonFile()
+	objectsfile.ProcessKeyItemsJsonFile()
 	fmt.Println("✓ Itens-chave editados e salvos com sucesso")
-	converter.WriteAllKeyItemsData()
+	objectsfile.WriteAllKeyItemsData()
 	fmt.Println("✓ Itens-chave salvos com sucesso")
 
 	// commands
 	fmt.Println("Carregando comandos...")
-	converter.ReadCommandsWithAllLocalizations()
-	fmt.Printf("✓ Habilidades carregadas: %d\n", components.COMMANDS.GetLength())
-	converter.ExportCommandsToJSON()
+	objectsfile.ReadCommandsWithAllLocalizations()
+	fmt.Printf("✓ Habilidades carregadas: %d\n", datastore.Commands.Len())
+	exporters.ExportCommandsToJSON()
 	fmt.Println("✓ Habilidades exportadas para JSON")
-	converter.ProcessCommandsJsonFile()
+	objectsfile.ProcessCommandsJsonFile()
 	fmt.Println("✓ Comandos editados e salvos com sucesso")
-	converter.WriteAllCommandsData()
+	objectsfile.WriteAllCommandsData()
 	fmt.Println("✓ Comandos salvos com sucesso")
 
 	// items
 	// ok
 	fmt.Println("Carregando itens...")
-	converter.ReadItemsWithAllLocalizations()
-	fmt.Printf("✓ Itens carregados: %d\n", components.ITEMS.GetLength())
-	converter.ExportItemsToJSON()
+	objectsfile.ReadItemsWithAllLocalizations()
+	fmt.Printf("✓ Itens carregados: %d\n", datastore.Items.Len())
+	exporters.ExportItemsToJSON()
 	fmt.Println("✓ Itens exportados para JSON")
-	converter.ProcessItemsJsonFile()
+	objectsfile.ProcessItemsJsonFile()
 	fmt.Println("✓ Itens editados e salvos com sucesso")
-	converter.WriteAllItemsData()
+	objectsfile.WriteAllItemsData()
 	fmt.Println("✓ Itens salvos com sucesso")
 
 	// arms text
 	// ok
 	fmt.Println("Carregando textos de armas...")
-	converter.ReadArmsTextWithAllLocalizations()
-	fmt.Printf("✓ Textos de armas carregados: %d\n", components.ARMS_TEXT.GetLength())
-	converter.ExportArmsToJSON()
+	objectsfile.ReadArmsTextWithAllLocalizations()
+	fmt.Printf("✓ Textos de armas carregados: %d\n", datastore.ArmsTxt.Len())
+	exporters.ExportArmsToJSON()
 	fmt.Println("✓ Textos de armas exportados para JSON")
-	converter.ProcessArmsJsonFile()
+	objectsfile.ProcessArmsJsonFile()
 	fmt.Println("✓ Textos de armas editados e salvos com sucesso")
-	converter.WriteAllArmsTextData()
+	objectsfile.WriteAllArmsTextData()
 	fmt.Println("✓ Textos de armas salvos com sucesso")
 
 	// battle text
 	// ok
-	converter.ReadBattleTextWithAllLocalizations()
-	fmt.Printf("✓ Textos de batalha carregados: %d\n", components.BTL_TEXT.GetLength())
-	converter.ExportBattleToJSON()
+	objectsfile.ReadBattleTextWithAllLocalizations()
+	fmt.Printf("✓ Textos de batalha carregados: %d\n", datastore.BattleTxt.Len())
+	exporters.ExportBattleToJSON()
 	fmt.Println("✓ Textos de batalha exportados para JSON")
-	converter.ProcessBattleTextJsonFile()
+	objectsfile.ProcessBattleTextJsonFile()
 	fmt.Println("✓ Textos de batalha editados e salvos com sucesso")
-	converter.WriteAllBattleTextData()
+	objectsfile.WriteAllBattleTextData()
 	fmt.Println("✓ Textos de batalha salvos com sucesso")
 
 	// battle end text
 	// ok
-	converter.ReadBattleEndTextWithAllLocalizations()
-	fmt.Printf("✓ Textos de fim de batalha carregados: %d\n", components.BTLEND_TEXT.GetLength())
-	converter.ExportBattleEndToJSON()
+	objectsfile.ReadBattleEndTextWithAllLocalizations()
+	fmt.Printf("✓ Textos de fim de batalha carregados: %d\n", datastore.BattleEndTxt.Len())
+	exporters.ExportBattleEndToJSON()
 	fmt.Println("✓ Textos de fim de batalha exportados para JSON")
-	converter.ProcessBattleEndTextJsonFile()
+	objectsfile.ProcessBattleEndTextJsonFile()
 	fmt.Println("✓ Textos de fim de batalha editados e salvos com sucesso")
-	converter.WriteAllBattleEndTextData()
+	objectsfile.WriteAllBattleEndTextData()
 	fmt.Println("✓ Textos de fim de batalha salvos com sucesso")
 
 	// monster magic 1
 	// ok
 	fmt.Println("Carregando itens mágicos...")
-	converter.ReadMonsterMagic1WithAllLocalizations()
-	fmt.Printf("✓ Itens carregados: %d\n", components.MONMAGIC1.GetLength())
-	converter.ExportMonsterMagic1ToJSON()
+	objectsfile.ReadMonsterMagic1WithAllLocalizations()
+	fmt.Printf("✓ Itens carregados: %d\n", objectsfile.MONMAGIC1.Len())
+	exporters.ExportMonsterMagic1ToJSON()
 	fmt.Println("✓ Itens exportados para JSON")
-	converter.ProcessMonsterMagic1JsonFile()
+	objectsfile.ProcessMonsterMagic1JsonFile()
 	fmt.Println("✓ Comandos editados e salvos com sucesso")
-	converter.WriteAllMonsterMagic1Data()
+	objectsfile.WriteAllMonsterMagic1Data()
 	fmt.Println("✓ Itens mágicos salvos com sucesso")
 
 	// monster magic 2
 	// ok
-	converter.ReadMonsterMagic2WithAllLocalizations()
-	fmt.Printf("✓ Itens carregados: %d\n", components.MONMAGIC2.GetLength())
-	converter.ExportMonsterMagic2ToJSON()
+	objectsfile.ReadMonsterMagic2WithAllLocalizations()
+	fmt.Printf("✓ Itens carregados: %d\n", objectsfile.MONMAGIC2.Len())
+	exporters.ExportMonsterMagic2ToJSON()
 	fmt.Println("✓ Itens exportados para JSON")
-	converter.ProcessMonsterMagic2JsonFile()
+	objectsfile.ProcessMonsterMagic2JsonFile()
 	fmt.Println("✓ Comandos editados e salvos com sucesso")
-	converter.WriteAllMonsterMagic2Data()
+	objectsfile.WriteAllMonsterMagic2Data()
 	fmt.Println("✓ Itens mágicos salvos com sucesso")
 
 	// build text
 	fmt.Println("Carregando textos de build...")
-	converter.ReadBuildTextWithAllLocalizations()
-	fmt.Printf("✓ Textos de build carregados: %d\n", components.BUILD_TEXT.GetLength())
-	converter.ExportBuildToJSON()
+	objectsfile.ReadBuildTextWithAllLocalizations()
+	fmt.Printf("✓ Textos de build carregados: %d\n", objectsfile.BUILD_TEXT.Len())
+	exporters.ExportBuildToJSON()
 	fmt.Println("✓ Textos de build exportados para JSON")
-	converter.ProcessBuildTextJsonFile()
+	objectsfile.ProcessBuildTextJsonFile()
 	fmt.Println("✓ Textos de build editados e salvos com sucesso")
-	converter.WriteAllBuildTextData()
+	objectsfile.WriteAllBuildTextData()
 	fmt.Println("✓ Textos de build salvos com sucesso")
 
 	// config text
 	fmt.Println("Carregando textos de configuração...")
-	converter.ReadConfigTextWithAllLocalizations()
-	fmt.Printf("✓ Textos de configuração carregados: %d\n", components.CONFIG_TEXT.GetLength())
-	converter.ExportConfigToJSON()
+	objectsfile.ReadConfigTextWithAllLocalizations()
+	fmt.Printf("✓ Textos de configuração carregados: %d\n", objectsfile.CONFIG_TEXT.Len())
+	exporters.ExportConfigToJSON()
 	fmt.Println("✓ Textos de configuração exportados para JSON")
-	converter.ProcessConfigTextJsonFile()
+	objectsfile.ProcessConfigTextJsonFile()
 	fmt.Println("✓ Textos de configuração editados e salvos com sucesso")
-	converter.WriteAllConfigTextData()
+	objectsfile.WriteAllConfigTextData()
 	fmt.Println("✓ Textos de configuração salvos com sucesso")
 
 	// item text
 	fmt.Println("Carregando textos de itens...")
-	converter.ReadItemCommandsWithAllLocalizations()
-	fmt.Printf("✓ Textos de itens carregados: %d\n", components.ITEM_TEXT.GetLength())
-	converter.ExportItemCommandsToJSON()
+	objectsfile.ReadItemCommandsWithAllLocalizations()
+	fmt.Printf("✓ Textos de itens carregados: %d\n", objectsfile.ITEM_TEXT.Len())
+	exporters.ExportItemCommandsToJSON()
 	fmt.Println("✓ Textos de itens exportados para JSON")
-	converter.ProcessItemCommandsJsonFile()
+	objectsfile.ProcessItemCommandsJsonFile()
 	fmt.Println("✓ Textos de itens editados e salvos com sucesso")
-	converter.WriteAllItemCommandsData()
+	objectsfile.WriteAllItemCommandsData()
 	fmt.Println("✓ Textos de itens salvos com sucesso")
 
 	// main menu text
 	fmt.Println("Carregando textos do menu principal...")
-	converter.ReadMainMenuTextWithAllLocalizations()
-	fmt.Printf("✓ Textos do menu principal carregados: %d\n", components.MMAIN_TEXT.GetLength())
-	converter.ExportMainMenuToJSON()
+	objectsfile.ReadMainMenuTextWithAllLocalizations()
+	fmt.Printf("✓ Textos do menu principal carregados: %d\n", objectsfile.MMAIN_TEXT.Len())
+	exporters.ExportMainMenuToJSON()
 	fmt.Println("✓ Textos do menu principal exportados para JSON")
-	converter.ProcessMainMenuTextJsonFile()
+	objectsfile.ProcessMainMenuTextJsonFile()
 	fmt.Println("✓ Textos do menu principal editados e salvos com sucesso")
-	converter.WriteAllMainMenuTextData()
+	objectsfile.WriteAllMainMenuTextData()
 	fmt.Println("✓ Textos do menu principal salvos com sucesso")
 
 	// player blitsball text
 	fmt.Println("Carregando textos de jogador de blitsball...")
-	converter.ReadPlayerRomTextWithAllLocalizations()
-	fmt.Printf("✓ Textos de jogador de blitsball carregados: %d\n", components.PLAYER_ROOM.GetLength())
-	converter.ExportPlayerRoomToJSON()
+	objectsfile.ReadPlayerRomTextWithAllLocalizations()
+	fmt.Printf("✓ Textos de jogador de blitsball carregados: %d\n", objectsfile.PLAYER_ROOM.Len())
+	exporters.ExportPlayerRoomToJSON()
 	fmt.Println("✓ Textos de jogador de blitsball exportados para JSON")
-	converter.ProcessPlayerRoomTextJsonFile()
+	objectsfile.ProcessPlayerRoomTextJsonFile()
 	fmt.Println("✓ Textos de jogador de blitsball editados e salvos com sucesso")
-	converter.WriteAllPlayerRoomTextData()
+	objectsfile.WriteAllPlayerRoomTextData()
 	fmt.Println("✓ Textos de jogador de blitsball salvos com sucesso")
 
 	// name text
 	fmt.Println("Carregando textos de nomes...")
-	converter.ReadNameTextWithAllLocalizations()
-	fmt.Printf("✓ Textos de nomes carregados: %d\n", components.NAME_TEXT.GetLength())
-	converter.ExportNameToJSON()
+	objectsfile.ReadNameTextWithAllLocalizations()
+	fmt.Printf("✓ Textos de nomes carregados: %d\n", objectsfile.NAME_TEXT.Len())
+	exporters.ExportNameToJSON()
 	fmt.Println("✓ Textos de nomes exportados para JSON")
-	converter.ProcessNameTextJsonFile()
+	objectsfile.ProcessNameTextJsonFile()
 	fmt.Println("✓ Textos de nomes editados e salvos com sucesso")
-	converter.WriteAllNameTextData()
+	objectsfile.WriteAllNameTextData()
 	fmt.Println("✓ Textos de nomes salvos com sucesso")
 
 	// Carregar eventos primeiro
@@ -196,9 +198,9 @@ func main() {
 
 	//converter.ExportAllEventsToJSON()
 	fmt.Println("✓ Eventos exportados para JSON")
-	converter.ImportEventsDataFromJsonFile()
+	event.ImportEventsDataFromJsonFile()
 	fmt.Println("✓ Eventos editados e salvos com sucesso")
-	converter.ExportAllEventsForLocalizations()
+	event.ExportAllEventsForLocalizations()
 	fmt.Println("✓ Eventos salvos com sucesso")
 
 	showMainMenu()
@@ -210,11 +212,14 @@ func readEvents() error {
 	if err != nil {
 		return fmt.Errorf("failed to resolve events directory: %w", err)
 	}
-	if err := converter.ReadAllEventFiles(eventsFolder); err != nil {
+	if err := event.ReadAllEventFiles(eventsFolder); err != nil {
 		fmt.Printf("Erro ao carregar eventos: %v\n", err)
 		return err
 	}
-	fmt.Printf("✓ Carregados %d eventos\n", len(components.EVENTS))
+
+	// Contar eventos carregados no datastore
+	eventIDs := event.GetAllEventIDs()
+	fmt.Printf("✓ Carregados %d eventos no datastore\n", len(eventIDs))
 	return nil
 }
 

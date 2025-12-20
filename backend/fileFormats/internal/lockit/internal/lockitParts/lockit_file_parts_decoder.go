@@ -21,13 +21,13 @@ func NewLockitFilePartsDecoder() ILockitFilePartsDecoder {
 }
 
 func (ld *LockitFilePartsDecoder) DecodeFileParts(partsList components.IList[LockitFileParts], lockitEncoding ffxencoding.IFFXTextLockitEncoding, gameVersion models.GameVersion) error {
-	if partsList.GetLength() == 0 {
+	if partsList.Len() == 0 {
 		return fmt.Errorf("lockit file parts list is empty")
 	}
 
-	errChan := make(chan error, partsList.GetLength())
+	errChan := make(chan error, partsList.Len())
 
-	partsList.ForIndex(func(index int, part LockitFileParts) {
+	partsList.RangeIndex(func(index int, part LockitFileParts) {
 		errChan <- part.Extract(lockitEncoding, ld.chooseDecodingStrategy(index, gameVersion))
 	})
 
