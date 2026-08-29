@@ -1,4 +1,4 @@
-import { TreeNode } from "primeng/api/treenode";
+import { TreeNode } from "primeng/api";
 
 export function findAndModifyNode(nodes: TreeNode[], targetNode: TreeNode) {
     const openedFolderIcon = "pi pi-folder-open";

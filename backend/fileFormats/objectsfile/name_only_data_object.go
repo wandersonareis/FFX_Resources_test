@@ -50,10 +50,7 @@ func getValidHeader(data []byte, max int) []byte {
 		return nil
 	}
 
-	end := max
-	if end > len(data) {
-		end = len(data)
-	}
+	end := min(max, len(data))
 
 	return data[:end:end]
 }

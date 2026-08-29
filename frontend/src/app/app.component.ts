@@ -11,9 +11,8 @@ import { CommonModule } from '@angular/common';
 import { FfxTreeComponent } from './components/tree/tree.component';
 import { ConfigModalComponent } from './components/config-modal/config-modal.component';
 import { EventsEmit, EventsOn } from '../../wailsjs/runtime/runtime';
-import { ToggleButton } from 'primeng/togglebutton';
+import { ToggleButton, type ToggleButtonChangeEvent } from 'primeng/togglebutton';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { type ToggleButtonChangeEvent } from 'primeng/togglebutton/togglebutton.interface';
 
 const imports = [
   CommonModule,

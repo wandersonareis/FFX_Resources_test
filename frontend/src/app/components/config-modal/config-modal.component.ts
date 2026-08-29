@@ -1,4 +1,4 @@
-import { Component, OnInit, Signal, signal, WritableSignal } from '@angular/core';
+import { Component, OnInit, Signal, signal, WritableSignal, ChangeDetectionStrategy } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -17,6 +17,7 @@ import { gameDirectory } from '../signals/signals.signal';
     ReactiveFormsModule,
     FloatLabelModule,
   ],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './config-modal.component.html'
 })
 export class ConfigModalComponent implements OnInit {

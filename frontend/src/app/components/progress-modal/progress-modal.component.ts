@@ -26,7 +26,7 @@ const imports = [
     styleUrl: './progress-modal.component.css',
     template: `
     <p-dialog [modal]="true" [(visible)]="visible" [style]="{ width: '20rem' }">
-      <p-progressBar [value]="value()" />
+      <p-progressbar [value]="value()" />
     </p-dialog>
   `
 })

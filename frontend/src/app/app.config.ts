@@ -1,20 +1,19 @@
-import { ApplicationConfig, provideExperimentalZonelessChangeDetection } from "@angular/core"
+import { ApplicationConfig } from "@angular/core"
 import { provideRouter } from "@angular/router"
-import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { providePrimeNG } from 'primeng/config';
 import { routes } from "./app.routes"
 
 import { FFXPreset } from "../theme/ffx.theme";
+import { environment } from "../environments/environment";
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
-    provideAnimationsAsync(),
-    provideExperimentalZonelessChangeDetection(),
     providePrimeNG({
       theme: {
         preset: FFXPreset
-      }
+      },
+      license: environment.PRIMENG_LICENSE_KEY
     })
   ]
 }
