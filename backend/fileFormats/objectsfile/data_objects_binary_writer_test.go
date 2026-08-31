@@ -152,7 +152,7 @@ var _ = Describe("Data Objects Binary Writer", Ordered, func() {
 
 			// Create JSON file for modification
 			jsonFileName := "test_btl_txt.json"
-			jsonFilePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", jsonFileName)
+			jsonFilePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", common.WithVersionSuffix(jsonFileName))
 			editsDir := filepath.Dir(jsonFilePath)
 			Expect(common.EnsurePathExists(editsDir)).To(Succeed())
 

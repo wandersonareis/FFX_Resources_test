@@ -101,7 +101,7 @@ var _ = Describe("Data Writers", Ordered, func() {
 			}
 
 			// Import JSON to modify memory
-			jsonPath := filepath.Join(tempEditDir, "key_items_all_localizations.json")
+			jsonPath := filepath.Join(tempEditDir, common.WithVersionSuffix("key_items_all_localizations.json"))
 			jsonData, err := json.MarshalIndent(testData, "", "  ")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(os.WriteFile(jsonPath, jsonData, 0644)).To(Succeed())
@@ -149,7 +149,7 @@ var _ = Describe("Data Writers", Ordered, func() {
 		})
 
 		It("should write commands data to binary and verify persistence", func() {
-			Expect(datastore.Commands.Len()).To(HaveLen(320))
+			Expect(datastore.Commands.Len()).To(Equal(320))
 
 			// Create test JSON with modified content
 			testData := []objectsfile.NameDescriptionData{
@@ -167,7 +167,7 @@ var _ = Describe("Data Writers", Ordered, func() {
 			}
 
 			// Import JSON to modify memory
-			jsonPath := filepath.Join(tempEditDir, "commands_all_localizations.json")
+			jsonPath := filepath.Join(tempEditDir, common.WithVersionSuffix("commands_all_localizations.json"))
 			jsonData, err := json.MarshalIndent(testData, "", "  ")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(os.WriteFile(jsonPath, jsonData, 0644)).To(Succeed())
@@ -226,7 +226,7 @@ var _ = Describe("Data Writers", Ordered, func() {
 			}
 
 			// Import JSON to modify memory
-			jsonPath := filepath.Join(tempEditDir, "items_all_localizations.json")
+			jsonPath := filepath.Join(tempEditDir, common.WithVersionSuffix("items_all_localizations.json"))
 			jsonData, err := json.MarshalIndent(testData, "", "  ")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(os.WriteFile(jsonPath, jsonData, 0644)).To(Succeed())

@@ -123,7 +123,7 @@ func (c *FFXAppConfig) FromJson() error {
 	return err
 }
 
-func (c *FFXAppConfig) GetField(field ConfigField) (interface{}, error) {
+func (c *FFXAppConfig) GetField(field ConfigField) (any, error) {
 	if err := c.validateConfig(); err != nil {
 		return nil, err
 	}
@@ -145,8 +145,8 @@ func (c *FFXAppConfig) GetField(field ConfigField) (interface{}, error) {
 }
 
 // TODO: Add a method to update the config file
-func (c *FFXAppConfig) UpdateField(field ConfigField, value interface{}) error {
-	changed := false
+func (c *FFXAppConfig) UpdateField(field ConfigField, value any) error {
+	var changed bool
 
 	switch field {
 	case ConfigGameVersion:

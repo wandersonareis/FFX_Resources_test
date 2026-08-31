@@ -3,6 +3,7 @@ package writer
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/models"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -88,10 +89,23 @@ func writeJSONFile(events []EventFileData, fileName, outputPath string) error {
 		return nil
 	}
 
-	filePath := filepath.Join(outputPath, fileName)
+	filePath := filepath.Join(outputPath, common.WithVersionSuffix(fileName))
 
-	if err := common.SaveAsJSON(events, filePath); err != nil {
-		return fmt.Errorf("error writing JSON file %s: %v", filePath, err)
+	export := make([]models.EventFileExport, 0, len(events))
+	for _, e := range events {
+		strings := make([]models.EventStringDataExport, 0, len(e.Strings))
+		for _, s := range e.Strings {
+			strings = append(strings, models.EventStringDataExport{Index: s.Index, Text: s.Text})
+		}
+		export = append(export, models.EventFileExport{
+			Metadata: models.NewFileMetadata(models.NewFileInfoFromPath(models.EventBinaryPath(e.ID))),
+			ID:       e.ID,
+			Strings:  strings,
+		})
+	}
+
+	if err := models.SaveDataFile(export, filePath); err != nil {
+		return fmt.Errorf("error writing JSON file %s: %w", filePath, err)
 	}
 
 	if common.IsVerboseMode() {

@@ -3,6 +3,7 @@ package writer
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/models"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -100,20 +101,32 @@ func processEventFromFileCSV(eventID string, localizationKeys []string) string {
 	return buildCSVRowForEvent(eventFile, localizationKeys)
 }
 
-func writeCSVFile(csvContent, fileName, outputPath string, eventsWritten int) error {
-	if eventsWritten == 0 {
+func writeCSVFile(csvContent, fileName, outputPath string, eventIDs []string) error {
+	if len(eventIDs) == 0 {
 		fmt.Printf("No events with string data found to export\n")
 		return nil
 	}
 
-	filePath := filepath.Join(outputPath, fileName)
+	filePath := filepath.Join(outputPath, common.WithVersionSuffix(fileName))
 
 	err := common.WriteStringToFile(filePath, csvContent)
 	if err != nil {
 		return fmt.Errorf("error writing consolidated CSV file %s: %v", filePath, err)
 	}
 
-	fmt.Printf("Successfully exported %d events to consolidated CSV: %s\n", eventsWritten, filePath)
+	entries := make([]models.EventMetadataEntry, 0, len(eventIDs))
+	for _, id := range eventIDs {
+		entries = append(entries, models.EventMetadataEntry{
+			ID:       id,
+			Metadata: models.NewFileMetadata(models.NewFileInfoFromPath(models.EventBinaryPath(id))),
+		})
+	}
+
+	if sideErr := models.WriteEventsSidecar(entries, filePath); sideErr != nil {
+		common.LogVerbose("Warning: could not write metadata sidecar for %s: %v", filePath, sideErr)
+	}
+
+	fmt.Printf("Successfully exported %d events to consolidated CSV: %s\n", len(eventIDs), filePath)
 	if common.IsVerboseMode() {
 		fmt.Printf("Arquivo CSV consolidado de eventos exportado: %s\n", filePath)
 	}
@@ -144,8 +157,7 @@ func ExportAllEventsToCSV() {
 	var csvBuilder strings.Builder
 	csvBuilder.WriteString(buildCSVHeader(localizationKeys))
 
-	eventsWritten := 0
-
+	writtenIDs := make([]string, 0, len(eventIDs))
 	for _, eventID := range eventIDs {
 		csvRow := processEventFromMemoryCSV(eventID, localizationKeys)
 		if csvRow == "" {
@@ -153,11 +165,11 @@ func ExportAllEventsToCSV() {
 		}
 
 		csvBuilder.WriteString(csvRow)
-		eventsWritten++
+		writtenIDs = append(writtenIDs, eventID)
 	}
 
 	fileName := "events_all_localizations.csv"
-	if err := writeCSVFile(csvBuilder.String(), fileName, outputPath, eventsWritten); err != nil {
+	if err := writeCSVFile(csvBuilder.String(), fileName, outputPath, writtenIDs); err != nil {
 		fmt.Printf("%v\n", err)
 	}
 }
@@ -191,8 +203,7 @@ func ExportAllEventsToCsvForLocalization(localization string) {
 	var csvBuilder strings.Builder
 	csvBuilder.WriteString(buildCSVHeader(localizationKeys))
 
-	eventsWritten := 0
-
+	writtenIDs := make([]string, 0, len(eventIDs))
 	for _, eventID := range eventIDs {
 		csvRow := processEventFromMemoryCSV(eventID, localizationKeys)
 		if csvRow == "" {
@@ -200,16 +211,16 @@ func ExportAllEventsToCsvForLocalization(localization string) {
 		}
 
 		csvBuilder.WriteString(csvRow)
-		eventsWritten++
+		writtenIDs = append(writtenIDs, eventID)
 	}
 
-	if eventsWritten == 0 {
+	if len(writtenIDs) == 0 {
 		fmt.Printf("No events with string data found to export for localization: %s\n", localization)
 		return
 	}
 
 	fileName := "events_all_" + localization + "_localization.csv"
-	if err := writeCSVFile(csvBuilder.String(), fileName, outputPath, eventsWritten); err != nil {
+	if err := writeCSVFile(csvBuilder.String(), fileName, outputPath, writtenIDs); err != nil {
 		fmt.Printf("%v\n", err)
 	}
 }
@@ -259,7 +270,7 @@ func ExportEventLocalizationToCSV(eventId string) {
 	csvBuilder.WriteString(csvRow)
 
 	fileName := "event_" + eventId + "_all_localizations.csv"
-	if err := writeCSVFile(csvBuilder.String(), fileName, outputPath, 1); err != nil {
+	if err := writeCSVFile(csvBuilder.String(), fileName, outputPath, []string{eventId}); err != nil {
 		fmt.Printf("%v\n", err)
 	}
 }

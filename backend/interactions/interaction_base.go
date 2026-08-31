@@ -10,7 +10,7 @@ type interactionBase struct {
 	defaultDirName string
 }
 
-func (e *interactionBase) GetTargetDirectoryBase(field ConfigField) (interface{}, error) {
+func (e *interactionBase) GetTargetDirectoryBase(field ConfigField) (any, error) {
 	return NewInteractionService().FFXAppConfig().GetField(field)
 }
 

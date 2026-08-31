@@ -10,6 +10,7 @@ import (
 	"ffxresources/backend/core/converter"
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/fileFormats/macrodic"
+	"ffxresources/backend/models"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -47,6 +48,17 @@ func EditAndSaveEventCSVFiles() error {
 }
 
 func editAndSaveEventFromCSV(csvPath string) error {
+	// Best-effort reconstruction of the exported per-event metadata sidecar, if present.
+	if entries, metaErr := models.ReadEventsSidecar(csvPath); metaErr == nil {
+		for _, entry := range entries {
+		if entry.Metadata != nil && entry.Metadata.FileInfo.Path != "" {
+			common.LogVerbose("Reconstructed metadata for event %s: %s", entry.ID, entry.Metadata.FileInfo.Path)
+		}
+		}
+	} else {
+		common.LogVerbose("No metadata sidecar for %s: %v", csvPath, metaErr)
+	}
+
 	lines, err := csvToList(csvPath)
 	if err != nil {
 		common.LogVerbose("Error reading CSV file %s: %v", csvPath, err)
@@ -245,7 +257,7 @@ func EditAndSaveEventJSONFiles() error {
 		return fmt.Errorf("directory not found: %s", jsonPath)
 	}
 
-	jsonFilePath := filepath.Join(jsonPath, "events_all_localizations.json")
+	jsonFilePath := filepath.Join(jsonPath, common.WithVersionSuffix("events_all_localizations.json"))
 
 	if !common.IsPathExists(jsonFilePath) {
 		return fmt.Errorf("JSON file not found: %s", jsonFilePath)
@@ -262,10 +274,20 @@ func EditAndSaveEventJSONFiles() error {
 }
 
 func editAndSaveEventFromJSON(jsonPath string) error {
-	allEvents, err := common.ReadJsonFile[[]EventFileDataJSON](jsonPath)
-	if err != nil {
-		fmt.Printf("Erro ao ler arquivo JSON %s: %v\n", jsonPath, err)
-		return err
+	loaded, loadErr := models.LoadDataFile[[]models.EventFileExport](jsonPath)
+	var allEvents []EventFileData
+	if loadErr != nil {
+		raw, rawErr := common.ReadFile(jsonPath)
+		if rawErr != nil {
+			fmt.Printf("Erro ao ler arquivo JSON %s: %v\n", jsonPath, rawErr)
+			return rawErr
+		}
+		if uErr := json.Unmarshal(raw, &allEvents); uErr != nil {
+			fmt.Printf("Erro ao ler arquivo JSON %s: %v\n", jsonPath, uErr)
+			return uErr
+		}
+	} else {
+		allEvents = convertEventExports(loaded)
 	}
 
 	processedEventIDs := make(map[string]bool)
@@ -326,7 +348,7 @@ func editAndSaveEventFromJSON(jsonPath string) error {
 //   - error: nil if successful, error if the event is not found or processing fails
 func EditAndSaveSpecificEventFromJSON(eventID string) error {
 	jsonPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits")
-	jsonFilePath := filepath.Join(jsonPath, "events_all_localizations.json")
+	jsonFilePath := filepath.Join(jsonPath, common.WithVersionSuffix("events_all_localizations.json"))
 
 	if !common.IsPathExists(jsonFilePath) {
 		return fmt.Errorf("JSON file not found: %s", jsonFilePath)
@@ -335,19 +357,21 @@ func EditAndSaveSpecificEventFromJSON(eventID string) error {
 	common.LogVerbose("Loading JSON file: %s", jsonFilePath)
 	common.LogVerbose("Looking for event: %s", eventID)
 
-	file, err := os.Open(jsonFilePath)
-	if err != nil {
-		common.LogVerbose("Error opening JSON file %s: %v", jsonFilePath, err)
-		return err
-	}
-	defer file.Close()
-
-	// Parse JSON content - expecting array of EventFileDataJSON
-	var allJsonEvents []EventFileDataJSON
-	decoder := json.NewDecoder(file)
-	if err = decoder.Decode(&allJsonEvents); err != nil {
-		common.LogVerbose("Error decoding JSON %s: %v", jsonFilePath, err)
-		return err
+	loaded, loadErr := models.LoadDataFile[[]models.EventFileExport](jsonFilePath)
+	var allJsonEvents []EventFileData
+	if loadErr != nil {
+		raw, rawErr := common.ReadFile(jsonFilePath)
+		if rawErr != nil {
+			common.LogVerbose("Error opening JSON file %s: %v", jsonFilePath, rawErr)
+			return rawErr
+		}
+		// Parse JSON content - expecting array of EventFileDataJSON
+		if uErr := json.Unmarshal(raw, &allJsonEvents); uErr != nil {
+			common.LogVerbose("Error decoding JSON %s: %v", jsonFilePath, uErr)
+			return uErr
+		}
+	} else {
+		allJsonEvents = convertEventExports(loaded)
 	}
 
 	// Find the specific event in the JSON
@@ -452,6 +476,46 @@ type MacroLocalizationData struct {
 	Chunks       []MacroChunkData `json:"chunks"`
 }
 
+// convertEventExports maps the wrapped export payload back into the reader-internal
+// EventFileData representation used by the CSV/JSON editors.
+func convertEventExports(loaded []models.EventFileExport) []EventFileData {
+	events := make([]EventFileData, 0, len(loaded))
+	for _, e := range loaded {
+		strings := make([]EventStringData, 0, len(e.Strings))
+		for _, s := range e.Strings {
+			strings = append(strings, EventStringData{Index: s.Index, Text: s.Text})
+		}
+		events = append(events, EventFileData{ID: e.ID, Strings: strings})
+	}
+	return events
+}
+
+// convertMacroExports maps the wrapped export payload back into the reader-internal
+// MacroLocalizationData representation used by the macro editors.
+func convertMacroExports(loaded []models.MacroLocalizationExport) []MacroLocalizationData {
+	localizations := make([]MacroLocalizationData, 0, len(loaded))
+	for _, loc := range loaded {
+		chunks := make([]MacroChunkData, 0, len(loc.Chunks))
+		for _, c := range loc.Chunks {
+			strings := make([]MacroStringData, 0, len(c.Strings))
+			for _, s := range c.Strings {
+				strings = append(strings, MacroStringData{
+					Index:          s.Index,
+					RegularText:    s.RegularText,
+					SimplifiedText: s.SimplifiedText,
+					HasDistinct:    s.HasDistinct,
+				})
+			}
+			chunks = append(chunks, MacroChunkData{ChunkIndex: c.ChunkIndex, Strings: strings})
+		}
+		localizations = append(localizations, MacroLocalizationData{
+			Localization: loc.Localization,
+			Chunks:       chunks,
+		})
+	}
+	return localizations
+}
+
 /*
 JSON MACRO DICTIONARY EDITOR FUNCTIONS
 ======================================
@@ -490,7 +554,7 @@ func EditAndSaveMacroDictJSONFiles() error {
 		return fmt.Errorf("directory not found: %s", jsonPath)
 	}
 
-	jsonFilePath := filepath.Join(jsonPath, "macro_dictionary_all_localizations.json")
+	jsonFilePath := filepath.Join(jsonPath, common.WithVersionSuffix("macro_dictionary_all_localizations.json"))
 
 	if !common.IsPathExists(jsonFilePath) {
 		return fmt.Errorf("JSON file not found: %s", jsonFilePath)
@@ -522,17 +586,19 @@ func editAndSaveMacroDictFromJSON(jsonPath string) error {
 	} */
 
 	// Try to parse as array of localizations first (all localizations file)
-	allLocalizations, err := common.ReadJsonFile[[]MacroLocalizationData](resolvedFile.ResolvedPath)
-	/* var allLocalizations []MacroLocalizationData
-	if err := json.Unmarshal(jsonData, &allLocalizations); err != nil {
-		// If that fails, try to parse as single localization
-		var singleLocalization MacroLocalizationData
-		if err := json.Unmarshal(jsonData, &singleLocalization); err != nil {
+	loaded, loadErr := models.LoadDataFile[[]models.MacroLocalizationExport](resolvedFile.ResolvedPath)
+	var allLocalizations []MacroLocalizationData
+	if loadErr != nil {
+		raw, rawErr := common.ReadFile(resolvedFile.ResolvedPath)
+		if rawErr != nil {
+			return fmt.Errorf("error reading JSON file: %v", rawErr)
+		}
+		if err := json.Unmarshal(raw, &allLocalizations); err != nil {
 			return fmt.Errorf("error parsing JSON: %v", err)
 		}
-		// Convert single localization to array
-		allLocalizations = []MacroLocalizationData{singleLocalization}
-	} */
+	} else {
+		allLocalizations = convertMacroExports(loaded)
+	}
 
 	common.LogVerbose("Found %d localizations in JSON file", len(allLocalizations))
 	var debugEntries []DebugMacroDicEntry
@@ -682,7 +748,7 @@ func editAndSaveMacroDictFromJSON(jsonPath string) error {
 //   - error: Any error that occurred during processing
 func EditAndSaveSpecificMacroDictFromJSON(localization string) error {
 	jsonPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits")
-	jsonFilePath := filepath.Join(jsonPath, "macro_dictionary_all_localizations.json")
+	jsonFilePath := filepath.Join(jsonPath, common.WithVersionSuffix("macro_dictionary_all_localizations.json"))
 
 	if !common.IsPathExists(jsonFilePath) {
 		return fmt.Errorf("arquivo JSON não encontrado: %s", jsonFilePath)
@@ -696,9 +762,18 @@ func EditAndSaveSpecificMacroDictFromJSON(localization string) error {
 	if err != nil {
 		return fmt.Errorf("error resolving JSON file path: %v", err)
 	}
-	allLocalizations, err := common.ReadJsonFile[[]MacroLocalizationData](resolvedFile.ResolvedPath)
-	if err != nil {
-		return fmt.Errorf("error on reading JSON file: %v", err)
+	loaded, loadErr := models.LoadDataFile[[]models.MacroLocalizationExport](resolvedFile.ResolvedPath)
+	var allLocalizations []MacroLocalizationData
+	if loadErr != nil {
+		raw, rawErr := common.ReadFile(resolvedFile.ResolvedPath)
+		if rawErr != nil {
+			return fmt.Errorf("error on reading JSON file: %v", rawErr)
+		}
+		if err := json.Unmarshal(raw, &allLocalizations); err != nil {
+			return fmt.Errorf("error on parsing JSON file: %v", err)
+		}
+	} else {
+		allLocalizations = convertMacroExports(loaded)
 	}
 
 	/* jsonData, err := common.ReadFile(resolvedFile.ResolvedPath)

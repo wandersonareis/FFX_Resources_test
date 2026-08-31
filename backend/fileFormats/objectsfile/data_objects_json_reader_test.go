@@ -88,7 +88,7 @@ var _ = Describe("Data Objects JSON Readers", Ordered, func() {
 		})
 
 		It("should process key items JSON file without error", func() {
-			Expect(datastore.KeyItems.Len()).To(HaveLen(64))
+			Expect(datastore.KeyItems.Len()).To(Equal(64))
 
 			// Create test JSON file
 			testData := []ObjectsData{
@@ -171,7 +171,7 @@ var _ = Describe("Data Objects JSON Readers", Ordered, func() {
 		})
 
 		It("should process commands JSON file without error", func() {
-			Expect(datastore.Commands.Len()).To(HaveLen(320))
+			Expect(datastore.Commands.Len()).To(Equal(320))
 
 			testData := []ObjectsData{
 				{
@@ -194,7 +194,7 @@ var _ = Describe("Data Objects JSON Readers", Ordered, func() {
 		})
 
 		It("should edit and validate array has edited item", func() {
-			Expect(datastore.Commands.Len()).To(HaveLen(320))
+			Expect(datastore.Commands.Len()).To(Equal(320))
 
 			testData := []ObjectsData{
 				{

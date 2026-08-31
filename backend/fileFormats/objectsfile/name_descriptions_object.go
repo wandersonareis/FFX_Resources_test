@@ -29,6 +29,18 @@ var (
 	//ITEMS     components.IList[datastore.IGlobalLocalizedTextObject]
 	MONMAGIC1 components.IList[datastore.IGlobalLocalizedTextObject]
 	MONMAGIC2 components.IList[datastore.IGlobalLocalizedTextObject]
+
+	// FFX-2 (v2) kernel objects (name+description format).
+	A_ABILITY   components.IList[datastore.IGlobalLocalizedTextObject]
+	ACCESSORY   components.IList[datastore.IGlobalLocalizedTextObject]
+	BATTLE_TEXT   components.IList[datastore.IGlobalLocalizedTextObject]
+	JOB         components.IList[datastore.IGlobalLocalizedTextObject]
+	MONMAGIC    components.IList[datastore.IGlobalLocalizedTextObject]
+	MONSTER     components.IList[datastore.IGlobalLocalizedTextObject]
+	MONSTER2    components.IList[datastore.IGlobalLocalizedTextObject]
+	OVERSOUL    components.IList[datastore.IGlobalLocalizedTextObject]
+	PLATE       components.IList[datastore.IGlobalLocalizedTextObject]
+	PLAYER_SAVE components.IList[datastore.IGlobalLocalizedTextObject]
 )
 
 func GetCommand(idx int) datastore.IGlobalLocalizedTextObject {
@@ -75,16 +87,6 @@ func GetNameableObject(typ string, idx int) Nameable {
 	return nil
 }
 
-/* func getLocalizedBytes(keyedObject datastore.IGlobalKeyedString) []uint16 {
-	if keyedObject == nil {
-		return []uint16{0, 0}
-	}
-	if ks, ok := keyedObject.(*KeyedString); ok {
-		return []uint16{ks.Segment.Offset, ks.Segment.Key}
-	}
-	return []uint16{0, 0}
-} */
-
 func getSegment(keyedObj datastore.IGlobalKeyedString) models.Segment {
 	if keyedObj == nil {
 		return models.Segment{Offset: 0, Key: 0}
@@ -105,16 +107,6 @@ type (
 		headerParameters []byte
 		HeaderLength     int
 	}
-	/* nameDescriptionHeaderData struct {
-		NameOffset            uint16
-		NameKey               uint16
-		FirstSeparatorOffset  uint16
-		FirstSeparatorKey     uint16
-		DescriptionOffset     uint16
-		DescriptionKey        uint16
-		SecondSeparatorOffset uint16
-		SecondSeparatorKey    uint16
-	} */
 )
 
 const NameDescriptionTextObjectLength = 0x10
@@ -187,11 +179,7 @@ func (n *NameDescriptionTextObject) mapBytes(stringBytes []byte, languageCode st
 
 func (n *NameDescriptionTextObject) ToBytes(languageCode string) []byte {
 	var buf bytes.Buffer
-/* 	binary.Write(&buf, binary.LittleEndian, getLocalizedBytes(n.Name.GetLocalizedContent(languageCode)))
-	binary.Write(&buf, binary.LittleEndian, getLocalizedBytes(n.FirstSeparator.GetLocalizedContent(languageCode)))
-	binary.Write(&buf, binary.LittleEndian, getLocalizedBytes(n.Description.GetLocalizedContent(languageCode)))
-	binary.Write(&buf, binary.LittleEndian, getLocalizedBytes(n.SecondSeparator.GetLocalizedContent(languageCode))) */
-	models.WriteSegment(&buf, getSegment(n.Name.GetLocalizedContent(languageCode)))
+ 	models.WriteSegment(&buf, getSegment(n.Name.GetLocalizedContent(languageCode)))
 	models.WriteSegment(&buf, getSegment(n.FirstSeparator.GetLocalizedContent(languageCode)))
 	models.WriteSegment(&buf, getSegment(n.Description.GetLocalizedContent(languageCode)))
 	models.WriteSegment(&buf, getSegment(n.SecondSeparator.GetLocalizedContent(languageCode)))
@@ -265,3 +253,5 @@ func (d *NameDescriptionTextObject) ToString(languageCode string) string {
 func (n *NameDescriptionTextObject) String() string {
 	return n.ToString(common.DefaultLocalization)
 }
+
+

@@ -239,3 +239,20 @@ func ProcessNameTextJsonFile() error {
 		NAME_TEXT,
 	)
 }
+
+// ProcessPlateJsonFile reads a JSON file and updates plate data in PLATE.
+//
+// This function imports localized text data from "plate_all_localizations.json" and
+// applies the translations directly to the PLATE variable. The JSON file should
+// contain name, description, abilities, and effect information for all supported languages.
+//
+// JSON file: plate_all_localizations.json
+// Target: PLATE
+//
+// Returns: error if import fails or file cannot be read
+func ProcessPlateJsonFile() error {
+	return ImportPlateDataFromJsonFile(
+		"plate_all_localizations.json",
+		PLATE,
+	)
+}

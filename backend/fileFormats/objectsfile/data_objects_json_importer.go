@@ -1,6 +1,7 @@
 package objectsfile
 
 import (
+	"encoding/json"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/datastore"
@@ -18,6 +19,19 @@ type (
 	NameDescriptionData struct {
 		NameOnlyData
 		Description map[string]string `json:"description"`
+	}
+
+	JobTextData struct {
+		NameOnlyData
+		Description map[string]string `json:"description"`
+		Effect      map[string]string `json:"effect"`
+	}
+
+	PlateTextData struct {
+		NameOnlyData
+		Description map[string]string     `json:"description"`
+		Abilities   []map[string]string   `json:"abilities"`
+		Effect      map[string]string     `json:"effect"`
 	}
 )
 
@@ -44,17 +58,37 @@ func ImportLocalizedDataFromJsonFile(
 	jsonFileName string,
 	objectsList components.IList[datastore.IGlobalLocalizedTextObject],
 ) error {
-	jsonFilePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", jsonFileName)
+	jsonFilePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", common.WithVersionSuffix(jsonFileName))
 	if !common.IsPathExists(jsonFilePath) {
-		return fmt.Errorf("JSON file not found: %s", jsonFilePath)
+		// Fallback to a non-versioned filename for backward compatibility and tests
+		// that were written before the per-game version suffix was introduced.
+		plainPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", jsonFileName)
+		if !common.IsPathExists(plainPath) {
+			return fmt.Errorf("JSON file not found: %s", jsonFilePath)
+		}
+		jsonFilePath = plainPath
 	}
 
 	common.LogVerbose("Processing JSON file with IList: %s", jsonFilePath)
 
-	jsonData, err := common.ReadJsonFile[[]NameDescriptionData](jsonFilePath)
-	if err != nil {
-		common.LogVerbose("Error reading JSON file %s: %v", jsonFilePath, err)
-		return err
+	loaded, loadErr := models.LoadDataFile[models.ObjectsFileExport](jsonFilePath)
+	var jsonData []NameDescriptionData
+	if loadErr != nil {
+		// Fallback to a raw JSON array (legacy format without wrapper).
+		raw, rawErr := common.ReadFile(jsonFilePath)
+		if rawErr != nil {
+			common.LogVerbose("Error reading JSON file %s: %v", jsonFilePath, rawErr)
+			return rawErr
+		}
+		if err := json.Unmarshal(raw, &jsonData); err != nil {
+			common.LogVerbose("Error parsing JSON file %s: %v", jsonFilePath, err)
+			return err
+		}
+	} else {
+		if err := json.Unmarshal(loaded.Strings, &jsonData); err != nil {
+			common.LogVerbose("Error parsing strings in JSON file %s: %v", jsonFilePath, err)
+			return err
+		}
 	}
 
 	common.LogVerbose("Found %d objects in JSON file", len(jsonData))
@@ -109,6 +143,9 @@ func updateObjectByType(jsonEntry NameDescriptionData, obj datastore.IGlobalLoca
 	case *NameDescriptionTextObject:
 		updateNameEntry(jsonEntry, typed)
 		updateDescriptionEntry(jsonEntry, typed)
+	case *NameDescriptionTextObjectV2:
+		updateNameEntryV2(jsonEntry, typed)
+		updateDescriptionEntryV2(jsonEntry, typed)
 	case *NameOnlyDataObject:
 		updateNameOnlyFromObjectsData(jsonEntry, typed)
 	default:
@@ -207,6 +244,58 @@ func updateDescriptionEntry(sourceData NameDescriptionData, targetObject *NameDe
 	}
 }
 
+// updateNameEntryV2 applies name updates to a NameDescriptionTextObjectV2.
+//
+// Parameters:
+//   - sourceData: JSON data containing name translations
+//   - targetObject: The object to update
+func updateNameEntryV2(sourceData NameDescriptionData, targetObject *NameDescriptionTextObjectV2) {
+	if len(sourceData.Name) == 0 || targetObject.NameSegment == nil {
+		common.LogVerbose("No name found for item %d, skipping...", sourceData.ID)
+		return
+	}
+
+	for languageCode, nameText := range sourceData.Name {
+		if nameText == "" {
+			common.LogVerbose("Empty name for language %s, ignoring...", languageCode)
+			continue
+		}
+
+		if !common.IsSupportedLanguage(languageCode) {
+			common.LogVerbose("Not recognized location for name: %s", languageCode)
+			continue
+		}
+
+		updateOrCreateSegment(targetObject.NameSegment, languageCode, nameText)
+	}
+}
+
+// updateDescriptionEntryV2 applies description updates to a NameDescriptionTextObjectV2.
+//
+// Parameters:
+//   - sourceData: JSON data containing description translations
+//   - targetObject: The object to update
+func updateDescriptionEntryV2(sourceData NameDescriptionData, targetObject *NameDescriptionTextObjectV2) {
+	if len(sourceData.Description) == 0 || targetObject.DescriptionSegment == nil {
+		common.LogVerbose("No description found for item %d, skipping...", sourceData.ID)
+		return
+	}
+
+	for languageCode, descriptionText := range sourceData.Description {
+		if descriptionText == "" {
+			common.LogVerbose("Empty description for language %s, ignoring...", languageCode)
+			continue
+		}
+
+		if !common.IsSupportedLanguage(languageCode) {
+			common.LogVerbose("Not recognized location for description: %s", languageCode)
+			continue
+		}
+
+		updateOrCreateSegment(targetObject.DescriptionSegment, languageCode, descriptionText)
+	}
+}
+
 // updateNameOnlyFromObjectsData applies name updates to a NameOnlyTextObject.
 //
 // Parameters:
@@ -243,11 +332,31 @@ func updateNameOnlyFromObjectsData(sourceData NameDescriptionData, targetObject 
 func createNewKeyedString(text string, charset string) *KeyedString {
 	return &KeyedString{
 		Charset: charset,
-/* 		Offset:  0,
-		Key:     0, */
+		/* 		Offset:  0,
+		   		Key:     0, */
 		Segment: models.Segment{Offset: 0, Key: 0},
 		Bytes:   components.StringToBytes(text, charset),
 	}
+}
+
+// updateOrCreateSegment updates or creates the localized content of a single keyed-string
+// segment (name or description), shared between the V1 and V2 name+description objects.
+//
+// Parameters:
+//   - segment: The keyed-string segment to update (Name/Description of either version)
+//   - languageCode: Language code (e.g., "us", "sp")
+//   - text: The new text content
+func updateOrCreateSegment(segment datastore.IGlobalLocalizedKeyedStringObject, languageCode, newText string) {
+	existingContent := segment.GetLocalizedContent(languageCode)
+	charset := common.LanguageCodeToCharset(languageCode)
+
+	if existingContent != nil {
+		existingContent.SetString(newText, charset)
+	} else {
+		segment.SetLocalizedContent(languageCode, createNewKeyedString(newText, charset))
+	}
+
+	common.LogVerbose("Segment updated (%s): %s", languageCode, newText)
 }
 
 // updateOrCreateName updates or creates a name entry for a NameDescriptionTextObject.
@@ -257,16 +366,7 @@ func createNewKeyedString(text string, charset string) *KeyedString {
 //   - languageCode: Language code (e.g., "us", "sp")
 //   - text: The new text content
 func updateOrCreateName(target *NameDescriptionTextObject, languageCode, newText string) {
-	existingContent := target.Name.GetLocalizedContent(languageCode)
-	charset := common.LanguageCodeToCharset(languageCode)
-
-	if existingContent != nil {
-		existingContent.SetString(newText, charset)
-	} else {
-		target.Name.SetLocalizedContent(languageCode, createNewKeyedString(newText, charset))
-	}
-
-	common.LogVerbose("Name updated (%s): %s", languageCode, newText)
+	updateOrCreateSegment(target.Name, languageCode, newText)
 }
 
 // updateOrCreateDescription updates or creates a description entry for a NameDescriptionTextObject.
@@ -276,16 +376,7 @@ func updateOrCreateName(target *NameDescriptionTextObject, languageCode, newText
 //   - languageCode: Language code (e.g., "us", "sp")
 //   - text: The new text content
 func updateOrCreateDescription(target *NameDescriptionTextObject, languageCode, text string) {
-	existingContent := target.Description.GetLocalizedContent(languageCode)
-	charset := common.LanguageCodeToCharset(languageCode)
-
-	if existingContent != nil {
-		existingContent.SetString(text, charset)
-	} else {
-		target.Description.SetLocalizedContent(languageCode, createNewKeyedString(text, charset))
-	}
-
-	common.LogVerbose("Description updated (%s): %s", languageCode, text)
+	updateOrCreateSegment(target.Description, languageCode, text)
 }
 
 // updateOrCreateNameOnly updates or creates a name entry for a NameOnlyDataObject.
@@ -305,4 +396,140 @@ func updateOrCreateNameOnly(target *NameOnlyDataObject, languageCode, text strin
 	}
 
 	common.LogVerbose("Name updated (%s): %s", languageCode, text)
+}
+
+// updatePlateEntry applies plate updates to a PlateTextObject.
+func updatePlateEntry(sourceData PlateTextData, targetObject *PlateTextObject) {
+	if len(sourceData.Name) > 0 && targetObject.NameSegment != nil {
+		for languageCode, nameText := range sourceData.Name {
+			if nameText == "" {
+				continue
+			}
+			updateOrCreateSegment(targetObject.NameSegment, languageCode, nameText)
+		}
+	}
+
+	if len(sourceData.Description) > 0 && targetObject.DescriptionSegment != nil {
+		for languageCode, descText := range sourceData.Description {
+			if descText == "" {
+				continue
+			}
+			updateOrCreateSegment(targetObject.DescriptionSegment, languageCode, descText)
+		}
+	}
+
+	for i, abMap := range sourceData.Abilities {
+		if i >= len(targetObject.AbilitySegments) {
+			break
+		}
+		for languageCode, abilityText := range abMap {
+			if abilityText == "" {
+				continue
+			}
+			updateOrCreateSegment(targetObject.AbilitySegments[i], languageCode, abilityText)
+		}
+	}
+
+	if len(sourceData.Effect) > 0 && targetObject.EffectSegment != nil {
+		for languageCode, effectText := range sourceData.Effect {
+			if effectText == "" {
+				continue
+			}
+			updateOrCreateSegment(targetObject.EffectSegment, languageCode, effectText)
+		}
+	}
+}
+
+// serializePlateTextToJSON serializes a PlateTextObject to JSON-friendly data.
+// Returns a PlateTextData struct with name, description, abilities, and effect for all supported languages.
+func serializePlateTextToJSON(obj *PlateTextObject, languageCode string) PlateTextData {
+	name := obj.GetName(languageCode)
+	description := ""
+	if descContent := obj.DescriptionSegment.GetLocalizedContent(languageCode); descContent != nil {
+		description = descContent.GetString()
+	}
+
+	// AbilityData is a single []byte containing 4 × 30 bytes
+	ability := ""
+	if len(obj.AbilityData) > 0 {
+		ability = string(obj.AbilityData)
+	}
+
+	effect := ""
+	if effContent := obj.EffectSegment.GetLocalizedContent(languageCode); effContent != nil {
+		effect = effContent.GetString()
+	}
+
+	return PlateTextData{
+		NameOnlyData: NameOnlyData{
+			ID: 0,
+			Name: map[string]string{
+				languageCode: name,
+			},
+		},
+		Description: map[string]string{
+			languageCode: description,
+		},
+		Abilities: []map[string]string{
+			{languageCode: ability},
+		},
+		Effect: map[string]string{
+			languageCode: effect,
+		},
+	}
+}
+
+// ImportPlateDataFromJsonFile imports plate data from a JSON file and applies
+// translations to the corresponding PlateTextObject entries.
+func ImportPlateDataFromJsonFile(jsonFileName string, objectsList components.IList[datastore.IGlobalLocalizedTextObject]) error {
+	jsonFilePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", common.WithVersionSuffix(jsonFileName))
+	if !common.IsPathExists(jsonFilePath) {
+		plainPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", jsonFileName)
+		if !common.IsPathExists(plainPath) {
+			return fmt.Errorf("JSON file not found: %s", jsonFilePath)
+		}
+		jsonFilePath = plainPath
+	}
+
+	common.LogVerbose("Processing plate JSON file: %s", jsonFilePath)
+
+	var jsonData []PlateTextData
+
+	loaded, loadErr := models.LoadDataFile[models.ObjectsFileExport](jsonFilePath)
+	if loadErr != nil {
+		raw, rawErr := common.ReadFile(jsonFilePath)
+		if rawErr != nil {
+			return rawErr
+		}
+		if err := json.Unmarshal(raw, &jsonData); err != nil {
+			return err
+		}
+	} else {
+		if err := json.Unmarshal(loaded.Strings, &jsonData); err != nil {
+			return err
+		}
+	}
+
+	if objectsList == nil || objectsList.IsEmpty() {
+		return fmt.Errorf("no plate objects loaded")
+	}
+
+	objects := objectsList.Items()
+
+	for _, jsonEntry := range jsonData {
+		id := jsonEntry.ID
+		if !isValidID(id, len(objects)) {
+			continue
+		}
+
+		plateObj, ok := objects[id].(*PlateTextObject)
+		if !ok {
+			continue
+		}
+
+		updatePlateEntry(jsonEntry, plateObj)
+	}
+
+	common.LogVerbose("Plate objects updated from JSON: %s", jsonFileName)
+	return nil
 }

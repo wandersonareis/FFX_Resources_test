@@ -6,6 +6,7 @@ import (
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/fileFormats/macrodic"
+	"ffxresources/backend/models"
 	"ffxresources/backend/sharedutils"
 	"fmt"
 	"path/filepath"
@@ -157,18 +158,34 @@ func WriteMacroDictionaryJSON(print bool) {
 		return
 	}
 
-	// Marshal to JSON with proper formatting
-	jsonData, err := json.MarshalIndent(allLocalizations, "", "  ")
-	if err != nil {
-		fmt.Printf("Error marshaling macro dictionary to JSON: %v\n", err)
-		return
+	// Build the export payload with per-localization binary metadata
+	export := make([]models.MacroLocalizationExport, 0, len(allLocalizations))
+	for _, loc := range allLocalizations {
+		chunks := make([]models.MacroChunkExport, 0, len(loc.Chunks))
+		for _, c := range loc.Chunks {
+			strings := make([]models.MacroStringExport, 0, len(c.Strings))
+			for _, s := range c.Strings {
+				strings = append(strings, models.MacroStringExport{
+					Index:         s.Index,
+					RegularText:   s.RegularText,
+					HasDistinct:   s.HasDistinct,
+					SimplifiedText: s.SimplifiedText,
+				})
+			}
+			chunks = append(chunks, models.MacroChunkExport{ChunkIndex: c.ChunkIndex, Strings: strings})
+		}
+		export = append(export, models.MacroLocalizationExport{
+			Metadata:     models.NewFileMetadata(models.NewFileInfoFromPath(models.MacroBinaryPath(loc.Localization))),
+			Localization: loc.Localization,
+			Chunks:       chunks,
+		})
 	}
 
 	// Write JSON file
-	fileName := "macro_dictionary_all_localizations.json"
+	fileName := common.WithVersionSuffix("macro_dictionary_all_localizations.json")
 	filePath := filepath.Join(path, fileName)
 
-	if err = common.WriteStringToFile(filePath, string(jsonData)); err != nil {
+	if err := models.SaveDataFile(export, filePath); err != nil {
 		fmt.Printf("Error writing JSON file %s: %v\n", filePath, err)
 		return
 	}
@@ -253,19 +270,32 @@ func WriteMacroDictionaryForLocalizationJSON(localization string) {
 		return
 	}
 
-	// Marshal to JSON with proper formatting
-	jsonData, err := json.MarshalIndent(localizationData, "", "  ")
-	if err != nil {
-		fmt.Printf("Error marshaling macro dictionary to JSON: %v\n", err)
-		return
+	// Build the export payload with per-localization binary metadata
+	exportChunks := make([]models.MacroChunkExport, 0, len(localizationData.Chunks))
+	for _, c := range localizationData.Chunks {
+		strings := make([]models.MacroStringExport, 0, len(c.Strings))
+		for _, s := range c.Strings {
+			strings = append(strings, models.MacroStringExport{
+				Index:         s.Index,
+				RegularText:   s.RegularText,
+				HasDistinct:   s.HasDistinct,
+				SimplifiedText: s.SimplifiedText,
+			})
+		}
+		exportChunks = append(exportChunks, models.MacroChunkExport{ChunkIndex: c.ChunkIndex, Strings: strings})
 	}
 
+	export := []models.MacroLocalizationExport{{
+		Metadata:     models.NewFileMetadata(models.NewFileInfoFromPath(models.MacroBinaryPath(localizationData.Localization))),
+		Localization: localizationData.Localization,
+		Chunks:       exportChunks,
+	}}
+
 	// Write JSON file
-	fileName := fmt.Sprintf("macro_dictionary_%s.json", localization)
+	fileName := common.WithVersionSuffix(fmt.Sprintf("macro_dictionary_%s.json", localization))
 	filePath := filepath.Join(path, fileName)
 
-	err = common.WriteStringToFile(filePath, string(jsonData))
-	if err != nil {
+	if err := models.SaveDataFile(export, filePath); err != nil {
 		fmt.Printf("Error writing JSON file %s: %v\n", filePath, err)
 		return
 	}
@@ -324,16 +354,39 @@ func EditAndSaveMacrodicFromJson(jsonFilePath string) error {
 	if err != nil {
 		return fmt.Errorf("erro ao ler arquivo JSON: %v", err)
 	}
-	// Try to parse as array of localizations first (all localizations file)
+	// Read the file through the metadata wrapper (legacy files are returned as-is).
+	loaded, loadErr := models.LoadDataFile[[]models.MacroLocalizationExport](resolvedFile.ResolvedPath)
 	var allLocalizations []MacroLocalizationData
-	if err := json.Unmarshal(jsonData, &allLocalizations); err != nil {
-		// If that fails, try to parse as single localization
-		var singleLocalization MacroLocalizationData
-		if err := json.Unmarshal(jsonData, &singleLocalization); err != nil {
-			return fmt.Errorf("erro ao fazer parse do JSON: %v", err)
+	if loadErr != nil {
+		// Fallback to raw JSON for very old formats.
+		if err := json.Unmarshal(jsonData, &allLocalizations); err != nil {
+			var single MacroLocalizationData
+			if err2 := json.Unmarshal(jsonData, &single); err2 != nil {
+				return fmt.Errorf("erro ao fazer parse do JSON: %v", err)
+			}
+			allLocalizations = []MacroLocalizationData{single}
 		}
-		// Convert single localization to array
-		allLocalizations = []MacroLocalizationData{singleLocalization}
+	} else {
+		allLocalizations = make([]MacroLocalizationData, 0, len(loaded))
+		for _, loc := range loaded {
+			chunks := make([]MacroChunkData, 0, len(loc.Chunks))
+			for _, c := range loc.Chunks {
+				strings := make([]MacroStringData, 0, len(c.Strings))
+				for _, s := range c.Strings {
+					strings = append(strings, MacroStringData{
+						Index:         s.Index,
+						RegularText:   s.RegularText,
+						HasDistinct:   s.HasDistinct,
+						SimplifiedText: s.SimplifiedText,
+					})
+				}
+				chunks = append(chunks, MacroChunkData{ChunkIndex: c.ChunkIndex, Strings: strings})
+			}
+			allLocalizations = append(allLocalizations, MacroLocalizationData{
+				Localization: loc.Localization,
+				Chunks:       chunks,
+			})
+		}
 	}
 
 	if common.IsVerboseMode() {
@@ -444,7 +497,7 @@ func LoadMacrodicFromJsonExample() {
 
 	// Example 1: Load all localizations from the combined JSON file
 	fmt.Println("\n1. Carregando todas as localizações do arquivo JSON combinado:")
-	allLocalizationsFile := filepath.Join(macrodicPath, "macro_dictionary_all_localizations.json")
+	allLocalizationsFile := filepath.Join(macrodicPath, common.WithVersionSuffix("macro_dictionary_all_localizations.json"))
 	if err := EditAndSaveMacrodicFromJson(allLocalizationsFile); err != nil {
 		fmt.Printf("Erro ao carregar arquivo de todas as localizações: %v\n", err)
 	}
@@ -454,7 +507,7 @@ func LoadMacrodicFromJsonExample() {
 
 	localizations := []string{"us", "jp", "de", "fr", "it", "sp"}
 	for _, loc := range localizations {
-		fileName := fmt.Sprintf("macro_dictionary_%s.json", loc)
+		fileName := common.WithVersionSuffix(fmt.Sprintf("macro_dictionary_%s.json", loc))
 		filePath := filepath.Join(macrodicPath, fileName)
 
 		fmt.Printf("   - Carregando %s...\n", loc)
@@ -506,7 +559,7 @@ func CompleteMacroDictionaryWorkflowExample() {
 
 	// Reload from JSON
 	macrodicPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "macrodic")
-	allLocalizationsFile := filepath.Join(macrodicPath, "macro_dictionary_all_localizations.json")
+	allLocalizationsFile := filepath.Join(macrodicPath, common.WithVersionSuffix("macro_dictionary_all_localizations.json"))
 
 	if err := EditAndSaveMacrodicFromJson(allLocalizationsFile); err != nil {
 		fmt.Printf("Erro ao recarregar do JSON: %v\n", err)
@@ -593,7 +646,7 @@ func TestMacroStringReconstruction() {
 	// Step 1: Load from JSON
 	fmt.Println("1. Loading macro data from JSON...")
 	macrodicPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "macrodic")
-	allLocalizationsFile := filepath.Join(macrodicPath, "macro_dictionary_all_localizations.json")
+	allLocalizationsFile := filepath.Join(macrodicPath, common.WithVersionSuffix("macro_dictionary_all_localizations.json"))
 
 	if err := EditAndSaveMacrodicFromJson(allLocalizationsFile); err != nil {
 		fmt.Printf("Error loading from JSON: %v\n", err)

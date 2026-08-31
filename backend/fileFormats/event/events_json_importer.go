@@ -1,7 +1,9 @@
 package event
 
 import (
+	"encoding/json"
 	"ffxresources/backend/common"
+	"ffxresources/backend/models"
 	"fmt"
 	"path/filepath"
 )
@@ -92,7 +94,7 @@ func getEventsJsonFilePath() (string, error) {
 		return "", fmt.Errorf("edits directory not found: %s", jsonPath)
 	}
 
-	jsonFilePath := filepath.Join(jsonPath, "events_all_localizations.json")
+	jsonFilePath := filepath.Join(jsonPath, common.WithVersionSuffix("events_all_localizations.json"))
 	if !common.IsPathExists(jsonFilePath) {
 		return "", fmt.Errorf("events JSON file not found: %s", jsonFilePath)
 	}
@@ -110,10 +112,28 @@ func getEventsJsonFilePath() (string, error) {
 func loadEventJsonData(jsonFilePath string) ([]EventFileData, error) {
 	common.LogVerbose("Loading events JSON file: %s", jsonFilePath)
 
-	eventDataList, err := common.ReadJsonFile[[]EventFileData](jsonFilePath)
-	if err != nil {
-		common.LogVerbose("Error reading events JSON file %s: %v", jsonFilePath, err)
-		return nil, fmt.Errorf("failed to read events JSON file: %w", err)
+	loaded, loadErr := models.LoadDataFile[[]models.EventFileExport](jsonFilePath)
+	var eventDataList []EventFileData
+	if loadErr != nil {
+		// Fallback to a raw JSON array (legacy format without wrapper).
+		raw, rawErr := common.ReadFile(jsonFilePath)
+		if rawErr != nil {
+			common.LogVerbose("Error reading events JSON file %s: %v", jsonFilePath, rawErr)
+			return nil, fmt.Errorf("failed to read events JSON file: %w", rawErr)
+		}
+		if err := json.Unmarshal(raw, &eventDataList); err != nil {
+			common.LogVerbose("Error parsing events JSON file %s: %v", jsonFilePath, err)
+			return nil, fmt.Errorf("failed to parse events JSON file: %w", err)
+		}
+	} else {
+		eventDataList = make([]EventFileData, 0, len(loaded))
+		for _, e := range loaded {
+			strings := make([]EventStringData, 0, len(e.Strings))
+			for _, s := range e.Strings {
+				strings = append(strings, EventStringData{Index: s.Index, Text: s.Text})
+			}
+			eventDataList = append(eventDataList, EventFileData{ID: e.ID, Strings: strings})
+		}
 	}
 
 	common.LogVerbose("Successfully loaded %d events from JSON", len(eventDataList))

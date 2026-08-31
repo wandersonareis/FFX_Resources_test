@@ -105,7 +105,8 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 
 			result := objectsfile.ReadNameOnlyDataObjectsWithIlist(patternPath)
 
-			Expect(result).To(BeNil())
+			Expect(result).ToNot(BeNil())
+			Expect(result.IsEmpty()).To(BeTrue())
 		})
 
 		It("should handle empty pattern path gracefully", func() {
@@ -113,7 +114,8 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 
 			result := objectsfile.ReadNameOnlyDataObjectsWithIlist(patternPath)
 
-			Expect(result).To(BeNil())
+			Expect(result).ToNot(BeNil())
+			Expect(result.IsEmpty()).To(BeTrue())
 		})
 	})
 
@@ -176,7 +178,8 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 
 			result := objectsfile.ReadNameDescriptionObjectsWithIlist(patternPath)
 
-			Expect(result).To(BeNil())
+			Expect(result).ToNot(BeNil())
+			Expect(result.IsEmpty()).To(BeTrue())
 		})
 
 		It("should handle empty pattern path gracefully", func() {
@@ -184,7 +187,8 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 
 			result := objectsfile.ReadNameDescriptionObjectsWithIlist(patternPath)
 
-			Expect(result).To(BeNil())
+			Expect(result).ToNot(BeNil())
+			Expect(result.IsEmpty()).To(BeTrue())
 		})
 	})
 
@@ -238,7 +242,8 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 
 			result := objectsfile.ReadDataListWithIlist(filename, common.DefaultLocalization, creator)
 
-			Expect(result).To(BeNil())
+			Expect(result).ToNot(BeNil())
+			Expect(result.IsEmpty()).To(BeTrue())
 		})
 
 		It("should handle different language codes", func() {
@@ -274,7 +279,8 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 
 			result := objectsfile.ReadDataListWithIlist(corruptedFile, common.DefaultLocalization, creator)
 
-			Expect(result).To(BeNil())
+			Expect(result).ToNot(BeNil())
+			Expect(result.IsEmpty()).To(BeTrue())
 		})
 	})
 

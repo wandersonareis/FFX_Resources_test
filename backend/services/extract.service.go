@@ -28,8 +28,10 @@ func (e *ExtractService) Extract(path string) error {
 	if err := common.CheckArgumentNil(NodeDataStore, "nodeStore"); err != nil {
 		return err
 	}
+	println("Extracting path:", path)
 
 	node, ok := NodeDataStore.Get(path)
+	println("Node found:", node, "Exists:", ok, "NodeDataStore length:", path)
 	if !ok {
 		return fmt.Errorf("node not found for path: %s", path)
 	}
