@@ -1,8 +1,12 @@
 package services
 
-import "maps"
+import (
+	"path/filepath"
 
-import "ffxresources/backend/fileFormats"
+	"maps"
+
+	"ffxresources/backend/fileFormats"
+)
 
 type NodeStore struct {
 	nodes fileFormats.TreeMapNode
@@ -12,12 +16,22 @@ var NodeDataStore *NodeStore
 
 func NewNodeStore(nodes fileFormats.TreeMapNode) *NodeStore {
 	cloned := maps.Clone(nodes)
-	return &NodeStore{nodes: cloned}
+	store := &NodeStore{nodes: cloned}
+
+	return store
 }
 
+// Merge adds all entries from another node map into the store. It is used to
+// accumulate the NodeDataStore across multiple game versions (e.g. FFX and
+// FFX-2) into a single lookup table, since their absolute paths are disjoint.
+func (ns *NodeStore) Merge(other fileFormats.TreeMapNode) {
+	for k, v := range other {
+		ns.nodes[k] = v
+	}
+}
 
 func (ns *NodeStore) Get(path string) (*fileFormats.MapNode, bool) {
-	node, ok := ns.nodes[path]
+	node, ok := ns.nodes[filepath.Clean(path)]
 	return node, ok
 }
 
@@ -36,6 +50,6 @@ func (ns *NodeStore) IsNode(node *fileFormats.MapNode) bool {
 	if node.Data == nil {
 		return false
 	}
-	
+
 	return true
 }
