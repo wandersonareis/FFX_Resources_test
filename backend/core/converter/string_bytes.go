@@ -19,7 +19,7 @@ var (
 	reMCR    = regexp.MustCompile(`^MCR:s([0-9A-Fa-f]{1,2}):l([0-9A-Fa-f]{1,2}):`)
 	reHEX    = regexp.MustCompile(`^HEX:([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2})*)$`)
 	rePC     = regexp.MustCompile(`^PC:([0-9A-Fa-f]{1,2}):`)
-	reCTRL   = regexp.MustCompile(`^CTRL:([0-9A-Fa-f]{1,2}):`)
+	reICON   = regexp.MustCompile(`^ICON:([0-9A-Fa-f]{1,2}):`)
 )
 
 func readOneByte(buf *bytes.Reader, out *byte) error {
@@ -78,10 +78,10 @@ func ParseCommand(runes []rune, startIndex int) []uint {
 	case strings.HasPrefix(cmd, "COLOR:"):
 		clr := sharedutils.ColorToByte(cmd[6:])
 		return []uint{0x0A, uint(clr)}
-	case strings.HasPrefix(cmd, "CTRL:"):
-		matches := reCTRL.FindStringSubmatch(cmd)
+	case strings.HasPrefix(cmd, "ICON:"):
+		matches := reICON.FindStringSubmatch(cmd)
 		if len(matches) != 2 {
-			fmt.Printf("Invalid CTRL format: %s\n", cmd)
+			fmt.Printf("Invalid ICON format: %s\n", cmd)
 			return nil
 		}
 		ctrlIdx, err := strconv.ParseUint(matches[1], 16, 8)
@@ -298,12 +298,12 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 			}
 			out.WriteString(sharedutils.GetColorString(clr))
 		case idx == 0x0B:
-			var ctrlIdx uint8
-			if err := readOneByte(buf, &ctrlIdx); err != nil {
-				out.WriteString("{CTRL:??}")
+			var icon uint8
+			if err := readOneByte(buf, &icon); err != nil {
+				out.WriteString("{ICON:??}")
 				break
 			}
-			out.WriteString(fmt.Sprintf("{CTRL:%02X:%s}", ctrlIdx, sharedutils.GetControllerInput(ctrlIdx)))
+			out.WriteString(fmt.Sprintf("{ICON:%02X:%s}", icon, sharedutils.GetIconName(icon)))
 		case idx == 0x10:
 			var rawValue uint8
 			if err := readOneByte(buf, &rawValue); err != nil {

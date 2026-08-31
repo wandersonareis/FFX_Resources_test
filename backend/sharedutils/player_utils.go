@@ -23,7 +23,7 @@ var (
 		0x12: "DUMMY",
 		0x13: "DUMMY2",
 	}
-	controllerInputMap = map[byte]string{
+	iconMap = map[byte]string{
 		0x20: "?L1 (SWITCH)",
 		0x2D: "Dummy",
 		0x2E: "Dummy2",
@@ -53,6 +53,10 @@ var (
 		0x4D: "Direcional Up+Left+Down",
 		0x4E: "Direcional Left+Down+Right",
 		0x4F: "Direcional All",
+		0x80: "Red Gate",
+		0x81: "Green Gate",
+		0x82: "Yellow Gate",
+		0x83: "Blue Gate",
 	}
 )
 
@@ -63,9 +67,9 @@ func GetPlayerChar(pc byte) string {
 	return "?"
 }
 
-func GetControllerInput(ctrlIdx byte) string {
-	if input, ok := controllerInputMap[ctrlIdx]; ok {
-		return input
+func GetIconName(iconIdx byte) string {
+	if name, ok := iconMap[iconIdx]; ok {
+		return name
 	}
 	return "?"
 }
