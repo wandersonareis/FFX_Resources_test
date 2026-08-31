@@ -22,8 +22,6 @@ const (
 	DefaultAssumedChunkCount = 10
 )
 
-// EVENTS map removido - usar apenas datastore como fonte única da verdade
-
 func NewEventFile(id string, bytes []byte) *EventFile {
 	ef := &EventFile{
 		ID: id,

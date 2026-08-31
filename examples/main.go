@@ -13,7 +13,7 @@ import (
 
 /*
 MENU PRINCIPAL DE EXEMPLOS
-==========================
+=========================
 
 Este arquivo contém o main() principal que organiza e executa todas as funções de exemplo
 dos editores de eventos CSV e JSON.
@@ -23,15 +23,32 @@ func main() {
 	fmt.Println("=== EXEMPLOS DO SISTEMA DE EVENTOS FFX ===")
 	fmt.Println()
 
+	// ===== FFX (v1) =====
 	common.SetGameVersion(1)
 	common.SetVerboseMode(true) // Ativa o modo verboso para depuração
 
 	// Inicialização obrigatória
-	fmt.Println("Inicializando sistema...")
+	fmt.Println("=== FFX (v1) ===")
+	fmt.Println("Inicializando sistema (FFX v1)...")
 	if err := reader.InitializeInternals(); err != nil {
 		fmt.Printf("Erro ao inicializar sistema: %v\n", err)
 		return
 	}
+	// Executa os exemplos para FFX v1
+	//runFFXv1Examples()
+
+	// ===== FFX-2 (v2) =====
+	common.SetGameVersion(2)
+	fmt.Println("\n=== FFX-2 (v2) ===")
+	fmt.Println("Reinicializando dicionários para FFX-2...")
+	if err := reader.InitializeInternals(); err != nil {
+		fmt.Printf("Erro ao inicializar sistema: %v\n", err)
+		return
+	}
+	runFFX2Examples()
+}
+
+func runFFXv1Examples() {
 
 	// key items
 	// ok
@@ -206,6 +223,138 @@ func main() {
 	showMainMenu()
 }
 
+func runFFX2Examples() {
+	fmt.Println("Extraindo arquivos de name+description do FFX-2 (v2) para JSON...")
+
+	// Arquivos em comum com a v1 (mesmos nomes existem no FFX-2).
+	objectsfile.ReadKeyItemsWithAllLocalizations()
+	fmt.Printf("[FFX-2] key items: %d\n", datastore.KeyItems.Len())
+	if datastore.KeyItems.Len() > 0 {
+		exporters.ExportKeyItemsToJSON()
+	}
+
+	objectsfile.ReadCommandsWithAllLocalizations()
+	fmt.Printf("[FFX-2] commands: %d\n", datastore.Commands.Len())
+	if datastore.Commands.Len() > 0 {
+		exporters.ExportCommandsToJSON()
+	}
+
+	objectsfile.ReadItemsWithAllLocalizations()
+	fmt.Printf("[FFX-2] items: %d\n", datastore.Items.Len())
+	if datastore.Items.Len() > 0 {
+		exporters.ExportItemsToJSON()
+	}
+
+	objectsfile.ReadMenuTextWithAllLocalizations()
+	fmt.Printf("[FFX-2] menu text: %d\n", objectsfile.MENU_TEXT.Len())
+	if datastore.MenuTxt.Len() > 0 {
+		exporters.ExportItemsToJSON()
+	}
+
+	objectsfile.ReadOversoulWithAllLocalizations()
+	fmt.Printf("[FFX-2] oversoul: %d\n", objectsfile.OVERSOUL.Len())
+	if objectsfile.OVERSOUL.Len() > 0 {
+		exporters.ExportOversoulToJSON()
+	}
+
+	objectsfile.ReadBattleTextWithAllLocalizations()
+	fmt.Printf("[FFX-2] battle text: %d\n", datastore.BattleTxt.Len())
+	if datastore.BattleTxt.Len() > 0 {
+		exporters.ExportBattleToJSON()
+	}
+
+	objectsfile.ReadBattleEndTextWithAllLocalizations()
+	fmt.Printf("[FFX-2] battle end text: %d\n", datastore.BattleEndTxt.Len())
+	if datastore.BattleEndTxt.Len() > 0 {
+		exporters.ExportBattleEndToJSON()
+	}
+
+	objectsfile.ReadPlayerRomTextWithAllLocalizations()
+	fmt.Printf("[FFX-2] player room: %d\n", objectsfile.PLAYER_ROOM.Len())
+	if objectsfile.PLAYER_ROOM.Len() > 0 {
+		exporters.ExportPlayerRoomToJSON()
+	}
+
+	// Exclusivos do FFX-2 (retornam cedo se a versão não for FFX-2).
+	objectsfile.ReadAAbilityWithAllLocalizations()
+	fmt.Printf("[FFX-2] a-ability: %d\n", objectsfile.A_ABILITY.Len())
+	if objectsfile.A_ABILITY.Len() > 0 {
+		exporters.ExportAAbilityToJSON()
+	}
+
+	objectsfile.ReadAccessoriesWithAllLocalizations()
+	fmt.Printf("[FFX-2] accessory: %d\n", objectsfile.ACCESSORY.Len())
+	if objectsfile.ACCESSORY.Len() > 0 {
+		exporters.ExportAccessoriesToJSON()
+	}
+
+	objectsfile.ReadJobsWithAllLocalizations()
+	fmt.Printf("[FFX-2] job: %d\n", objectsfile.JOB.Len())
+	if objectsfile.JOB.Len() > 0 {
+		exporters.ExportJobsToJSON()
+	}
+
+	objectsfile.ReadMenuTextWithAllLocalizations()
+	fmt.Printf("[FFX-2] menu text: %d\n", objectsfile.MENU_TEXT.Len())
+	if objectsfile.MENU_TEXT.Len() > 0 {
+		exporters.ExportMenuTextToJSON()
+	}
+
+	objectsfile.ReadMonsterMagicWithAllLocalizations()
+	fmt.Printf("[FFX-2] monster magic: %d\n", objectsfile.MONMAGIC.Len())
+	if objectsfile.MONMAGIC.Len() > 0 {
+		exporters.ExportMonsterMagicToJSON()
+	}
+
+	objectsfile.ReadMonstersWithAllLocalizations()
+	fmt.Printf("[FFX-2] monster: %d\n", objectsfile.MONSTER.Len())
+	if objectsfile.MONSTER.Len() > 0 {
+		exporters.ExportMonstersToJSON()
+	}
+
+	objectsfile.ReadMonsters2WithAllLocalizations()
+	fmt.Printf("[FFX-2] monster2: %d\n", objectsfile.MONSTER2.Len())
+	if objectsfile.MONSTER2.Len() > 0 {
+		exporters.ExportMonsters2ToJSON()
+	}
+
+
+	objectsfile.ReadPlateWithAllLocalizations()
+	fmt.Printf("[FFX-2] plate: %d\n", objectsfile.PLATE.Len())
+	if objectsfile.PLATE.Len() > 0 {
+		exporters.ExportPlateToJSON()
+	}
+
+	objectsfile.ReadPlayerSaveWithAllLocalizations()
+	fmt.Printf("[FFX-2] player save: %d\n", objectsfile.PLAYER_SAVE.Len())
+	if objectsfile.PLAYER_SAVE.Len() > 0 {
+		exporters.ExportPlayerSaveToJSON()
+	}
+
+	objectsfile.ReadSaveTextWithAllLocalizations()
+	fmt.Printf("[FFX-2] save text: %d\n", objectsfile.SAVE_TEXT.Len())
+	if objectsfile.SAVE_TEXT.Len() > 0 {
+		exporters.ExportSaveTextToJSON()
+	}
+
+	// Carregar eventos
+	if err := readEvents(); err != nil {
+		fmt.Printf("Erro ao carregar eventos: %v\n", err)
+		return
+	}
+
+	//converter.ExportAllEventsToJSON()
+	fmt.Println("✓ Eventos exportados para JSON")
+	event.ImportEventsDataFromJsonFile()
+	fmt.Println("✓ Eventos editados e salvos com sucesso")
+	event.ExportAllEventsForLocalizations()
+	fmt.Println("✓ Eventos salvos com sucesso")
+
+	fmt.Println("✓ FFX-2 (v2) extraído para JSON (arquivos *_v2_*.json)")
+
+	showMainMenu()
+}
+
 func readEvents() error {
 	fmt.Println("Carregando eventos...")
 	eventsFolder, err := common.NewFileAccessor(common.GetPathOriginalsEvent())
@@ -226,6 +375,7 @@ func readEvents() error {
 func showMainMenu() {
 	// ===== EXEMPLOS BÁSICOS =====
 	writer.ExampleWriteManagerUsage()
+	ExportMacroDictionaryExample() // Exemplo de exportação de dicionário de macros (JSON com metadados)
 	// ExampleCsvEditorUsage()
 	// ExampleJSONEditorUsage()
 
@@ -237,7 +387,7 @@ func showMainMenu() {
 	//ExportMacroDictionaryExample()           // Exemplo de exportação de dicionário de macros
 	writer.ExportAllLocalizationsToJSON() // Exporta todos os eventos para JSON
 	//writer.WriteStringsEventForAllLocalizationsJSON("akagi0100", true) // Exporta o evento "akagi0100" para JSON
-	//writer.WriteMacroDictionaryJSON(true)
+	writer.WriteMacroDictionaryJSON(true)
 	//reader.EditAndSaveMacroDictJSONFiles(true) // Exemplo de fluxo completo de exportação/importação
 	reader.EditAndSaveSpecificEventFromJSON("znkd1500") // Edita e salva o evento "znkd1500" do JSON
 	// ===== COMPARAÇÃO CSV vs JSON =====
