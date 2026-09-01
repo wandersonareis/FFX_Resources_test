@@ -5,7 +5,7 @@ import (
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/fileFormats/objectsfile"
-	"ffxresources/backend/sharedutils"
+	"ffxresources/backend/core/components"
 	testcommon "ffxresources/testData"
 	"os"
 	"path/filepath"
@@ -389,7 +389,7 @@ var _ = Describe("Data Objects Binary Writer", Ordered, func() {
 			firstObj := originalObjects.Get(0)
 			nameString := firstObj.GetTextObject().GetKeyedString("name")
 			nameContent := nameString.GetLocalizedContent(common.DefaultLocalization)
-			charset := sharedutils.GetCharsetForLanguage(common.DefaultLocalization)
+			charset := components.GetCharsetForLanguage(common.DefaultLocalization)
 			nameContent.SetString(testName, charset)
 
 			descString := firstObj.GetTextObject().GetKeyedString("description")

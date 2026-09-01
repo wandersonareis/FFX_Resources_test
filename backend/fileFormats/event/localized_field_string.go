@@ -2,7 +2,7 @@ package event
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/sharedutils"
+	"ffxresources/backend/core/components"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -37,7 +37,7 @@ func (obj *LocalizedFieldStringObject) ReadAndSetLocalizedContent(localization s
 		return
 	}
 
-	charset := sharedutils.GetCharsetForLanguage(localization)
+	charset := components.GetCharsetForLanguage(localization)
 	fieldString := NewFieldString(charset, regularHeader, simplifiedHeader, bytes)
 	obj.SetLocalizedContent(localization, fieldString)
 }
@@ -113,7 +113,7 @@ func ReadStringFile(filename string, languageCode string) []*FieldString {
 		return nil
 	}
 
-	charset := sharedutils.GetCharsetForLanguage(languageCode)
+	charset := components.GetCharsetForLanguage(languageCode)
 	fieldStrings, err := FromFieldStringData(bytes, charset)
 	if err != nil {
 		if common.IsVerboseMode() {

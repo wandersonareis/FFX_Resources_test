@@ -18,14 +18,14 @@ MENU PRINCIPAL DE EXEMPLOS
 Este arquivo contém o main() principal que organiza e executa todas as funções de exemplo
 dos editores de eventos CSV e JSON.
 */
-
 func main() {
 	fmt.Println("=== EXEMPLOS DO SISTEMA DE EVENTOS FFX ===")
 	fmt.Println()
 
 	// ===== FFX (v1) =====
 	common.SetGameVersion(1)
-	common.SetVerboseMode(true) // Ativa o modo verboso para depuração
+	common.SetGameFilesRoot("/home/mestre/FFX_Resources/build/bin/data/") // Defina o caminho correto para os arquivos do jogo
+	common.SetVerboseMode(true)                                           // Ativa o modo verboso para depuração
 
 	// Inicialização obrigatória
 	fmt.Println("=== FFX (v1) ===")
@@ -39,6 +39,8 @@ func main() {
 
 	// ===== FFX-2 (v2) =====
 	common.SetGameVersion(2)
+	common.SetGameFilesRoot("/home/mestre/FFX_Resources/build/bin/data/") // Defina o caminho correto para os arquivos do jogo
+
 	fmt.Println("\n=== FFX-2 (v2) ===")
 	fmt.Println("Reinicializando dicionários para FFX-2...")
 	if err := reader.InitializeInternals(); err != nil {
@@ -317,7 +319,6 @@ func runFFX2Examples() {
 	if objectsfile.MONSTER2.Len() > 0 {
 		exporters.ExportMonsters2ToJSON()
 	}
-
 
 	objectsfile.ReadPlateWithAllLocalizations()
 	fmt.Printf("[FFX-2] plate: %d\n", objectsfile.PLATE.Len())

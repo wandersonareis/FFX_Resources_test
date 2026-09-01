@@ -1,4 +1,4 @@
-package sharedutils
+package components
 
 var localizationMap = map[string]string{
 	"ch": "ch",

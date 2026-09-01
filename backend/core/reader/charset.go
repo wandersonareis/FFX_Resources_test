@@ -3,7 +3,7 @@ package reader
 import (
 	"encoding/json"
 	"ffxresources/backend/common"
-	"ffxresources/backend/sharedutils"
+	"ffxresources/backend/core/components"
 	"fmt"
 	"path/filepath"
 )
@@ -28,12 +28,12 @@ func PrepareCharset(charset string) error {
 	}
 
 	byteToChar, charToByte := buildMappings(runes)
-	sharedutils.SetCharMap(charset, byteToChar, charToByte)
+	components.SetCharMap(charset, byteToChar, charToByte)
 	return nil
 }
 
 func loadCharReplacements(charset string) map[rune]rune {
-	path := filepath.Join(common.GetPathOriginalsRoot(), "ffx2_encoding", "char_replacements.json")
+	path := filepath.Join(common.GetPathOriginalsRoot(), common.GetEncodingDir(), "char_replacements.json")
 	resolvedFile, err := common.NewFileAccessor(path)
 	if err != nil {
 		fmt.Printf("Error resolving char replacements file: %v\n", err)

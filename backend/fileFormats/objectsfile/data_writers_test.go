@@ -6,7 +6,7 @@ import (
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/fileFormats/objectsfile"
-	"ffxresources/backend/sharedutils"
+	"ffxresources/backend/core/components"
 	testcommon "ffxresources/testData"
 	"os"
 	"path/filepath"
@@ -72,8 +72,8 @@ var _ = Describe("Data Writers", Ordered, func() {
 		objectsfile.MMAIN_TEXT = nil
 		objectsfile.PLAYER_ROOM = nil
 		objectsfile.NAME_TEXT = nil
-		sharedutils.ByteToCharMaps = make(map[string]map[uint]rune)
-		sharedutils.CharToByteMaps = make(map[string]map[rune]uint)
+		components.ByteToCharMaps = make(map[string]map[uint]rune)
+		components.CharToByteMaps = make(map[string]map[rune]uint)
 	})
 
 	Context("WriteAllKeyItemsData", func() {

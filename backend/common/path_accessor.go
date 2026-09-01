@@ -2,21 +2,25 @@ package common
 
 import "path/filepath"
 
-func GetEncodingPath(charset string) string {
+func GetEncodingDir() string {
 	gameVersion := GetGameVersionString()
 	switch gameVersion {
-	case "ffx":
-		return filepath.Join("ffx_encoding", "ffxsjistbl_"+charset+".bin")
 	case "ffx2":
-		return filepath.Join("ffx2_encoding", "ffx2sjistbl_"+charset+".bin")
+		return "ffx2_encoding"
 	default:
-		return filepath.Join("ffx_encoding", "ffxsjistbl_"+charset+".bin")
+		return "ffx_encoding"
 	}
+}
+
+func GetEncodingPath(charset string) string {
+	encodingDir := GetEncodingDir()
+	gameVersion := GetGameVersionString()
+	return filepath.Join(encodingDir, gameVersion+"sjistbl_"+charset+".bin")
 }
 
 func GetPathRoot() string {
 	gameVersion := GetGameVersionString()
-	return  filepath.Join("ffx_ps2", gameVersion, "master")
+	return filepath.Join("ffx_ps2", gameVersion, "master")
 }
 
 func GetPathOriginalsRoot() string {

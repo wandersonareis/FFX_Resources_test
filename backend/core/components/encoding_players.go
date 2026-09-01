@@ -1,4 +1,4 @@
-package sharedutils
+package components
 
 var (
 	playerCharMap = map[byte]string{

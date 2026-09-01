@@ -7,7 +7,7 @@ import (
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/fileFormats/macrodic"
 	"ffxresources/backend/models"
-	"ffxresources/backend/sharedutils"
+
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -659,7 +659,7 @@ func TestMacroStringReconstruction() {
 	if chunks, exists := macrodic.MACRODICTFILE[testLocalization]; exists && len(chunks) > 0 {
 		chunk := chunks[6] // Test first chunk
 		if len(chunk) > 0 {
-			charset := sharedutils.GetCharsetForLanguage(testLocalization)
+			charset := components.GetCharsetForLanguage(testLocalization)
 
 			// Convert to binary
 			binaryData := macrodic.MacroStringsToBytes(chunk, charset, true)

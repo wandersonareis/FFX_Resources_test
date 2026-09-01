@@ -3,7 +3,6 @@ package event
 import (
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/models"
-	"ffxresources/backend/sharedutils"
 	"strings"
 )
 
@@ -187,7 +186,7 @@ func (ef *EventFile) stringsToStringFileBytes(localization string) []byte {
 	}
 
 	fieldStrings := make([]*FieldString, 0, len(ef.Strings))
-	charset := sharedutils.GetCharsetForLanguage(localization)
+	charset := components.GetCharsetForLanguage(localization)
 
 	for _, localizedObj := range ef.Strings {
 		if localizedObj != nil {

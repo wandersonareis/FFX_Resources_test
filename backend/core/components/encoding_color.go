@@ -1,4 +1,4 @@
-package sharedutils
+package components
 
 import (
 	"fmt"

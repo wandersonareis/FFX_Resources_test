@@ -1,8 +1,8 @@
 package event_test
 
 import (
+	"ffxresources/backend/core/components"
 	"ffxresources/backend/fileFormats/event"
-	"ffxresources/backend/sharedutils"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -473,5 +473,5 @@ func setupFieldStringCharMaps() {
 	usReverseMap['D'] = 0x53
 	usReverseMap['E'] = 0x54
 
-	sharedutils.SetCharMap("us", usMap, usReverseMap)
+	components.SetCharMap("us", usMap, usReverseMap)
 }

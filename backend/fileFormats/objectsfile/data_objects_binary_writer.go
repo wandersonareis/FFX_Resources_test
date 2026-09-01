@@ -6,7 +6,6 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/datastore"
-	"ffxresources/backend/sharedutils"
 	"fmt"
 	"path/filepath"
 )
@@ -130,7 +129,7 @@ func ConvertFFXLocalizedDataToBytes(objects []datastore.IGlobalLocalizedTextObje
 		}
 	}
 
-	charset := sharedutils.GetCharsetForLanguage(languageCode)
+	charset := components.GetCharsetForLanguage(languageCode)
 	stringBytes := RebuildKeyedStrings(allKeyedStrings, charset)
 
 	var buf bytes.Buffer

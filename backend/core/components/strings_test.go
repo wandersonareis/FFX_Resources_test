@@ -4,7 +4,6 @@ import (
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/converter"
 	"ffxresources/backend/core/reader"
-	"ffxresources/backend/sharedutils"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -80,7 +79,7 @@ var _ = Describe("String Conversion Functions", func() {
 		Context("when converting basic byte sequences", func() {
 			It("should convert basic character bytes", func() {
 				// Setup character map
-				sharedutils.SetCharMap("us",
+				components.SetCharMap("us",
 					map[uint]rune{0x50: 'A', 0x51: 'B', 0x52: 'C'},
 					map[rune]uint{'A': 0x50, 'B': 0x51, 'C': 0x52})
 
@@ -147,7 +146,7 @@ var _ = Describe("String Conversion Functions", func() {
 				original := "ABC"
 
 				// Setup character map
-				sharedutils.SetCharMap("us",
+				components.SetCharMap("us",
 					map[uint]rune{0x50: 'A', 0x51: 'B', 0x52: 'C'},
 					map[rune]uint{'A': 0x50, 'B': 0x51, 'C': 0x52})
 

@@ -2,8 +2,6 @@ package components
 
 import (
 	"bytes"
-	"encoding/binary"
-	"ffxresources/backend/sharedutils"
 	"fmt"
 	"os"
 	"regexp"
@@ -12,91 +10,7 @@ import (
 )
 
 var (
-	localizationMap = map[string]string{
-		"ch": "ch",
-		"kr": "kr",
-		"jp": "jp",
-	}
-	colorToByteMap = map[string]byte{
-		"WHITE":     0x41,
-		"YELLOW":    0x43,
-		"GREY":      0x52,
-		"BLUE":      0x88,
-		"RED":       0x94,
-		"PINK":      0x97,
-		"OL_PURPLE": 0xA1,
-		"OL_CYAN":   0xB1,
-	}
-	byteToColorMap = map[byte]string{
-		0x41: "WHITE",
-		0x43: "YELLOW",
-		0x52: "GREY",
-		0x88: "BLUE",
-		0x94: "RED",
-		0x97: "PINK",
-		0xA1: "OL_PURPLE",
-		0xB1: "OL_CYAN",
-	}
-	playerCharMap = map[byte]string{
-		0x00: "TIDUS",
-		0x01: "YUNA",
-		0x02: "AURON",
-		0x03: "KIMAHRI",
-		0x04: "WAKKA",
-		0x05: "LULU",
-		0x06: "RIKKU",
-		0x07: "SEYMOUR",
-		0x08: "VALEFOR",
-		0x09: "IFRIT",
-		0x0A: "IXION",
-		0x0B: "SHIVA",
-		0x0C: "BAHAMUT",
-		0x0D: "ANIMA",
-		0x0E: "YOJIMBO",
-		0x0F: "CINDY",
-		0x10: "SANDY",
-		0x11: "MINDY",
-		0x12: "DUMMY",
-		0x13: "DUMMY2",
-	}
-	controllerInputMap = map[byte]string{
-		0x20: "?L1 (SWITCH)",
-		0x2D: "Dummy",
-		0x2E: "Dummy2",
-		0x30: "TRIANGLE",
-		0x31: "X",
-		0x32: "CIRCLE",
-		0x33: "SQUARE",
-		0x34: "L1",
-		0x35: "R1",
-		0x36: "L2",
-		0x37: "R2",
-		0x38: "START",
-		0x39: "SELECT",
-		0x40: "Direcional",
-		0x41: "Direcional UP",
-		0x42: "Direcional RIGHT",
-		0x43: "Direcional Up+Right",
-		0x44: "Direcional DOWN",
-		0x45: "Direcional Up+Down",
-		0x46: "Direcional Down+Right",
-		0x47: "Direcional Up+Right+Down",
-		0x48: "Direcional LEFT",
-		0x49: "Direcional Up+Left",
-		0x4A: "Direcional Left+Right",
-		0x4B: "Direcional Up+Left+Right",
-		0x4C: "Direcional Left+Down",
-		0x4D: "Direcional Up+Left+Down",
-		0x4E: "Direcional Left+Down+Right",
-		0x4F: "Direcional All",
-	}
 	WriteLinebreaksAsCommands = true
-)
-
-var (
-	/* ByteToCharMaps = make(map[string]map[uint]rune)
-	CharToByteMaps = make(map[string]map[rune]uint) */
-	//MacroLookup    = make(map[int]*macrodic.LocalizedMacroStringObject)
 )
 
 var (
@@ -113,7 +27,7 @@ func CharToBytes(chr rune, charset string) []uint {
 		return []uint{0x03}
 	}
 
-	indexValue, exists := sharedutils.CharToByteMaps[charset][chr]
+	indexValue, exists := CharToByteMaps[charset][chr]
 	if !exists {
 		return nil
 	}
@@ -142,58 +56,6 @@ func CharToBytes(chr rune, charset string) []uint {
 	}
 }
 
-/* func ByteToChar(hex uint, charset string) (rune, bool) {
-	charsetMap, exists := ByteToCharMaps[charset]
-	if !exists {
-		return 0, false
-	}
-
-	char, exists := charsetMap[hex]
-	return char, exists
-} */
-
-func GetCharsetForLanguage(languageCode string) string {
-	if charset, ok := localizationMap[languageCode]; ok {
-		return charset
-	}
-	return "us"
-}
-
-func ByteToColor(hex byte) string {
-	if color, exists := byteToColorMap[hex]; exists {
-		return color
-	}
-	return fmt.Sprintf("%02X", hex)
-}
-
-func ColorToByte(color string) byte {
-	if val, exists := colorToByteMap[strings.ToUpper(color)]; exists {
-		return val
-	}
-	if parsed, err := strconv.ParseUint(color, 16, 16); err == nil {
-		return byte(parsed)
-	}
-	return 0
-}
-
-func GetPlayerChar(pc byte) string {
-	if name, ok := playerCharMap[pc]; ok {
-		return name
-	}
-	return "?"
-}
-
-func GetControllerInput(ctrlIdx byte) string {
-	if input, ok := controllerInputMap[ctrlIdx]; ok {
-		return input
-	}
-	return "?"
-}
-
-func GetColorString(hex uint8) string {
-	return fmt.Sprintf("{CLR:%s}", ByteToColor(hex))
-}
-
 func GetChoicesInString(s string) int {
 	choices := 0
 	for {
@@ -215,15 +77,6 @@ func GetFirstChoiceInString(s string) (uint16, bool) {
 	}
 	return 0, false
 }
-/* 
-func SetCharMap(charset string, byteToCharMap map[uint]rune, charToByteMap map[rune]uint) {
-	ByteToCharMaps[charset] = byteToCharMap
-	CharToByteMaps[charset] = charToByteMap
-} */
-
-/* func BytesToString(rawData []byte, localization string) string {
-	return getStringAtLookupOffsetBinary(rawData, 0, localization)
-} */
 
 // FillByteList processes a string and fills the provided byte list with the converted bytes
 // This function appends to the existing byte list if it has content, or starts fresh if empty
@@ -344,22 +197,6 @@ func GetStringBytesAtLookupOffset(table []byte, offset int) []byte {
 	var newArray = make([]byte, len(subArray))
 	copy(newArray, subArray)
 	return newArray
-}
-
-func GetStringBytesAtLookupOffsetDev(table []byte, offset uint16) []byte {
-	if int(offset) >= len(table) {
-		return nil
-	}
-	end := offset
-	tableLen := uint16(len(table))
-	for end < tableLen && table[end] != 0x00 {
-		end++
-	}
-	return table[offset:end]
-}
-
-func readOneByte(buf *bytes.Reader, out *byte) error {
-	return binary.Read(buf, binary.LittleEndian, out)
 }
 
 /* func getStringAtLookupOffsetBinary(table []byte, offset int, localization string) string {

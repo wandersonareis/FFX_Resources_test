@@ -360,11 +360,9 @@ func ReadMonsterMagicWithAllLocalizations() {
 	}
 }
 
-// ReadMonstersWithAllLocalizations reads monster data from the monster.bin file (FFX-2 only).
+// ReadMonstersWithAllLocalizations reads monster data from the monster.bin file
+// and loads all available localizations for each monster entry directly into MONSTER.
 func ReadMonstersWithAllLocalizations() {
-	if common.GetGameVersionString() != "ffx2" {
-		return
-	}
 	patternPath := "battle/kernel/monster.bin"
 	MONSTER = ReadNameDescriptionObjectsWithIlist(patternPath)
 
