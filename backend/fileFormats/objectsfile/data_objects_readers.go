@@ -32,7 +32,9 @@ func ReadCommandsWithAllLocalizations() {
 //
 // File format: name and description data
 // Pattern path: "battle/kernel/important.bin"
-func ReadKeyItemsWithAllLocalizations() {
+//
+// Deprecated: Use the new version that returns datastore.IBinaryFile for better lifecycle management.
+/* func ReadKeyItemsWithAllLocalizations() {
 	patternPath := "battle/kernel/important.bin"
 	keyItems := ReadNameDescriptionObjectsWithIlist(patternPath)
 
@@ -40,6 +42,48 @@ func ReadKeyItemsWithAllLocalizations() {
 		common.LogVerbose("Loaded %d key items with all localizations", keyItems.Len())
 		datastore.KeyItems = keyItems
 	}
+} */
+
+// ReadKeyItemsWithAllLocalizations reads key item data from the important.bin file
+// using the BinaryFile orchestrator for lifecycle management.
+//
+// This function creates a BinaryFile with the appropriate creator function for
+// NameDescriptionTextObjectV2 chunks, reads the binary data, and populates the
+// global datastore.KeyItems with the parsed objects.
+//
+// File format: name and description data (V2 format)
+// Pattern path: "battle/kernel/important.bin"
+func ReadKeyItemsWithAllLocalizations() datastore.IBinaryFile {
+	patternPath := "battle/kernel/important.bin"
+
+	keyItemsFile := NewBinaryFile(
+		func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
+			return NewNameDescriptionTextObjectV2(cBytes, sBytes, hLen, lang)
+		},
+		nil,
+		func(fileName string, objectsList components.IList[datastore.IGlobalLocalizedTextObject]) error {
+			return ImportLocalizedDataFromJsonFile(fileName, objectsList)
+		},
+	)
+
+	filePath := filepath.Join(common.GetLocalizationRoot(common.DefaultLocalization), patternPath)
+	binaryData, err := common.ReadFile(filePath)
+	if err != nil {
+		common.LogVerbose("Error reading key items binary file: %v", err)
+		return keyItemsFile
+	}
+
+	if err := keyItemsFile.LoadFromBinary(binaryData); err != nil {
+		common.LogVerbose("Error loading key items binary data: %v", err)
+		return keyItemsFile
+	}
+
+	if keyItemsFile.Objects != nil && !keyItemsFile.Objects.IsEmpty() {
+		common.LogVerbose("Loaded %d key items with all localizations", keyItemsFile.Objects.Len())
+		datastore.KeyItems = keyItemsFile.GetObjects()
+	}
+
+	return keyItemsFile
 }
 
 // ReadItemsWithAllLocalizations reads item data from the item.bin file

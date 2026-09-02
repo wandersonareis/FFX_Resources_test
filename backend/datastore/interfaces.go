@@ -2,6 +2,7 @@ package datastore
 
 import (
 	"bytes"
+	"ffxresources/backend/core/components"
 	"ffxresources/backend/models"
 )
 
@@ -90,4 +91,13 @@ type IGlobalMacroString interface {
 	GetString() string
 	IsEmpty() bool
 	String() string
+}
+
+// IBinaryFile orquestra todo o ciclo de vida de um arquivo binário de localização
+type IBinaryFile interface {
+	LoadFromBinary(data []byte) error
+	ExportToJson(filePath string) error
+	ImportFromJson(filePath string) error
+	SaveToBinary(filePath string) error
+	GetObjects() components.IList[IGlobalLocalizedTextObject]
 }
