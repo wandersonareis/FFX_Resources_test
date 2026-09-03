@@ -19,7 +19,7 @@ var Instance = &GlobalDataStore{
 	//KeyItems: components.NewEmptyList[IGlobalLocalizedTextObject](),
 	macros: components.NewEmptyMap[int, IGlobalLocalizedMacroStringObject](),
 	events: make(map[string]IEventObject),
-	lists:  make(map[string]interface{}),
+	lists:  make(map[string]any),
 }
 
 var (

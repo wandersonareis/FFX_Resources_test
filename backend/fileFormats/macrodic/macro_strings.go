@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/converter"
 	"fmt"
 	"io"
@@ -173,13 +174,13 @@ func RebuildMacroStrings(strings []*MacroString, charset string, optimize bool) 
 			} else {
 				macroString.RegularOffset = contentOffset + buf.Len()
 				offsetMap[regularString] = buf.Len()
-				regularBytes := converter.StringToBytes(regularString, charset)
+				regularBytes := components.StringToBytes(regularString, charset)
 				buf.Write(regularBytes)
 				buf.WriteByte(0x00) // null terminator
 			}
 		} else {
 			macroString.RegularOffset = contentOffset + buf.Len()
-			regularBytes := converter.StringToBytes(regularString, charset)
+			regularBytes := components.StringToBytes(regularString, charset)
 			buf.Write(regularBytes)
 			buf.WriteByte(0x00) // null terminator
 		}
@@ -197,13 +198,13 @@ func RebuildMacroStrings(strings []*MacroString, charset string, optimize bool) 
 			} else {
 				macroString.SimplifiedOffset = contentOffset + buf.Len()
 				offsetMap[simplifiedString] = buf.Len()
-				simplifiedBytes := converter.StringToBytes(simplifiedString, charset)
+				simplifiedBytes := components.StringToBytes(simplifiedString, charset)
 				buf.Write(simplifiedBytes)
 				buf.WriteByte(0x00) // null terminator
 			}
 		} else {
 			macroString.SimplifiedOffset = contentOffset + buf.Len()
-			simplifiedBytes := converter.StringToBytes(simplifiedString, charset)
+			simplifiedBytes := components.StringToBytes(simplifiedString, charset)
 			buf.Write(simplifiedBytes)
 			buf.WriteByte(0x00) // null terminator
 		}
@@ -231,13 +232,13 @@ func GenerateMacroStringData(strings []*MacroString, charset string, optimize bo
 			} else {
 				macroString.RegularOffset = contentOffset + buf.Len()
 				offsetMap[regularString] = buf.Len()
-				regularBytes := converter.StringToBytes(regularString, charset)
+				regularBytes := components.StringToBytes(regularString, charset)
 				buf.Write(regularBytes)
 				buf.WriteByte(0x00) // null terminator
 			}
 		} else {
 			macroString.RegularOffset = contentOffset + buf.Len()
-			regularBytes := converter.StringToBytes(regularString, charset)
+			regularBytes := components.StringToBytes(regularString, charset)
 			buf.Write(regularBytes)
 			buf.WriteByte(0x00) // null terminator
 		}
@@ -255,13 +256,13 @@ func GenerateMacroStringData(strings []*MacroString, charset string, optimize bo
 			} else {
 				macroString.SimplifiedOffset = contentOffset + buf.Len()
 				offsetMap[simplifiedString] = buf.Len()
-				simplifiedBytes := converter.StringToBytes(simplifiedString, charset)
+				simplifiedBytes := components.StringToBytes(simplifiedString, charset)
 				buf.Write(simplifiedBytes)
 				buf.WriteByte(0x00) // null terminator
 			}
 		} else {
 			macroString.SimplifiedOffset = contentOffset + buf.Len()
-			simplifiedBytes := converter.StringToBytes(simplifiedString, charset)
+			simplifiedBytes := components.StringToBytes(simplifiedString, charset)
 			buf.Write(simplifiedBytes)
 			buf.WriteByte(0x00) // null terminator
 		}
@@ -326,7 +327,7 @@ func (m *MacroString) SetRegularString(str string, newCharset ...string) {
 	}
 
 	keepSimplifiedSynced := !m.HasDistinctSimplified()
-	m.RegularBytes = converter.StringToBytes(str, m.Charset)
+	m.RegularBytes = components.StringToBytes(str, m.Charset)
 
 	if keepSimplifiedSynced {
 		m.SimplifiedBytes = m.RegularBytes
@@ -338,7 +339,7 @@ func (m *MacroString) SetSimplifiedString(str string, newCharset ...string) {
 		m.SetCharset(newCharset[0])
 	}
 
-	m.SimplifiedBytes = converter.StringToBytes(str, m.Charset)
+	m.SimplifiedBytes = components.StringToBytes(str, m.Charset)
 }
 
 func (m *MacroString) SetCharset(newCharset string) {

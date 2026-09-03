@@ -1,12 +1,15 @@
 package objectsfile_test
 
 import (
+	"encoding/json"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/fileFormats/objectsfile"
+	"ffxresources/backend/models"
 	testcommon "ffxresources/testData"
 	"os"
+	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -112,6 +115,80 @@ var _ = Describe("Data Objects Readers", Ordered, func() {
 
 			// Assert
 			Expect(datastore.Commands.Len()).To(Equal(0))
+		})
+	})
+
+	Context("ReadCommandsWithAllLocalizations - JSON Roundtrip", func() {
+		It("should produce identical JSON after export, import, save binary, reload and re-export", func() {
+			// 1. Load from binary
+			binFile := objectsfile.ReadCommandsWithAllLocalizations()
+			Expect(datastore.Commands.Len()).To(BeNumerically(">", 0))
+
+			// Get maxIndex from header
+			binFileObj, ok := binFile.(*objectsfile.BinaryFile)
+			Expect(ok).To(BeTrue())
+			maxIndex := binFileObj.Header.GetMaxIndex()
+
+			// 2. Export to JSON
+			jsonFileName := "commands_roundtrip_test.json"
+			Expect(binFile.ExportToJson(jsonFileName)).To(Succeed())
+
+			// Cleanup created files after test
+			jsonFilePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", common.WithVersionSuffix(jsonFileName))
+			defer os.Remove(jsonFilePath)
+
+			// 3. Read the JSON and verify strings length
+			firstJsonBytes, err := os.ReadFile(jsonFilePath)
+			Expect(err).ToNot(HaveOccurred())
+
+			var firstExport models.ObjectsFileExport
+			Expect(json.Unmarshal(firstJsonBytes, &firstExport)).To(Succeed())
+
+			var firstStrings []objectsfile.NameDescriptionData
+			Expect(json.Unmarshal(firstExport.Strings, &firstStrings)).To(Succeed())
+
+			// Verify strings length == maxIndex + 1
+			Expect(len(firstStrings)).To(Equal(maxIndex + 1))
+
+			// 4. Import from JSON
+			Expect(binFile.ImportFromJson(jsonFileName)).To(Succeed())
+
+			// 5. Save to temp binary
+			tmpDir, err := os.MkdirTemp("", "commands_roundtrip")
+			Expect(err).ToNot(HaveOccurred())
+			defer os.RemoveAll(tmpDir)
+
+			binRelPath := filepath.Join("ffx_ps2", "ffx", "master", "new_uspc", "battle", "kernel", "command.bin")
+			tmpBinPath := filepath.Join(tmpDir, binRelPath)
+			Expect(common.EnsurePathExists(tmpBinPath)).To(Succeed())
+			Expect(binFile.SaveToBinary(tmpBinPath)).To(Succeed())
+
+			// 6. Temporarily change GameFilesRoot to load from temp
+			origGameFilesRoot := common.GameFilesRoot
+			common.GameFilesRoot = tmpDir
+			defer func() { common.GameFilesRoot = origGameFilesRoot }()
+
+			// 7. Load from temp binary
+			newBinFile := objectsfile.ReadCommandsWithAllLocalizations()
+			Expect(newBinFile.GetObjects().Len()).To(BeNumerically(">", 0))
+
+			// 8. Export to JSON from reloaded binary
+			jsonFileName2 := "commands_roundtrip_test_2.json"
+			Expect(newBinFile.ExportToJson(jsonFileName2)).To(Succeed())
+
+			// Cleanup
+			jsonFilePath2 := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", common.WithVersionSuffix(jsonFileName2))
+			defer os.Remove(jsonFilePath2)
+
+			// 9. Read the second JSON
+			secondJsonBytes, err := os.ReadFile(jsonFilePath2)
+			Expect(err).ToNot(HaveOccurred())
+
+			var secondExport models.ObjectsFileExport
+			Expect(json.Unmarshal(secondJsonBytes, &secondExport)).To(Succeed())
+
+			// 10. Compare strings - both JSONs should be identical
+			Expect(firstExport.Strings).To(Equal(secondExport.Strings))
 		})
 	})
 

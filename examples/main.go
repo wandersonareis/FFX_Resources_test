@@ -2,7 +2,6 @@ package main
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/core/exporters"
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/core/writer"
 	"ffxresources/backend/datastore"
@@ -56,7 +55,7 @@ func runFFXv1Examples() {
 	// ok
 	objectsfile.ReadKeyItemsWithAllLocalizations()
 	fmt.Printf("✓ Itens-chave carregados: %d\n", datastore.KeyItems.Len())
-	exporters.ExportKeyItemsToJSON()
+	objectsfile.ExportKeyItemsToJSON()
 	fmt.Println("✓ Itens-chave exportados para JSON")
 	objectsfile.ProcessKeyItemsJsonFile()
 	fmt.Println("✓ Itens-chave editados e salvos com sucesso")
@@ -67,7 +66,7 @@ func runFFXv1Examples() {
 	fmt.Println("Carregando comandos...")
 	objectsfile.ReadCommandsWithAllLocalizations()
 	fmt.Printf("✓ Habilidades carregadas: %d\n", datastore.Commands.Len())
-	exporters.ExportCommandsToJSON()
+	objectsfile.ExportCommandsToJSON()
 	fmt.Println("✓ Habilidades exportadas para JSON")
 	objectsfile.ProcessCommandsJsonFile()
 	fmt.Println("✓ Comandos editados e salvos com sucesso")
@@ -79,7 +78,7 @@ func runFFXv1Examples() {
 	fmt.Println("Carregando itens...")
 	objectsfile.ReadItemsWithAllLocalizations()
 	fmt.Printf("✓ Itens carregados: %d\n", datastore.Items.Len())
-	exporters.ExportItemsToJSON()
+	objectsfile.ExportItemsToJSON()
 	fmt.Println("✓ Itens exportados para JSON")
 	objectsfile.ProcessItemsJsonFile()
 	fmt.Println("✓ Itens editados e salvos com sucesso")
@@ -91,7 +90,7 @@ func runFFXv1Examples() {
 	fmt.Println("Carregando textos de armas...")
 	objectsfile.ReadArmsTextWithAllLocalizations()
 	fmt.Printf("✓ Textos de armas carregados: %d\n", datastore.ArmsTxt.Len())
-	exporters.ExportArmsToJSON()
+	objectsfile.ExportArmsToJSON()
 	fmt.Println("✓ Textos de armas exportados para JSON")
 	objectsfile.ProcessArmsJsonFile()
 	fmt.Println("✓ Textos de armas editados e salvos com sucesso")
@@ -102,7 +101,7 @@ func runFFXv1Examples() {
 	// ok
 	objectsfile.ReadBattleTextWithAllLocalizations()
 	fmt.Printf("✓ Textos de batalha carregados: %d\n", datastore.BattleTxt.Len())
-	exporters.ExportBattleToJSON()
+	objectsfile.ExportBattleToJSON()
 	fmt.Println("✓ Textos de batalha exportados para JSON")
 	objectsfile.ProcessBattleTextJsonFile()
 	fmt.Println("✓ Textos de batalha editados e salvos com sucesso")
@@ -113,7 +112,7 @@ func runFFXv1Examples() {
 	// ok
 	objectsfile.ReadBattleEndTextWithAllLocalizations()
 	fmt.Printf("✓ Textos de fim de batalha carregados: %d\n", datastore.BattleEndTxt.Len())
-	exporters.ExportBattleEndToJSON()
+	objectsfile.ExportBattleEndToJSON()
 	fmt.Println("✓ Textos de fim de batalha exportados para JSON")
 	objectsfile.ProcessBattleEndTextJsonFile()
 	fmt.Println("✓ Textos de fim de batalha editados e salvos com sucesso")
@@ -125,7 +124,7 @@ func runFFXv1Examples() {
 	fmt.Println("Carregando itens mágicos...")
 	objectsfile.ReadMonsterMagic1WithAllLocalizations()
 	fmt.Printf("✓ Itens carregados: %d\n", objectsfile.MONMAGIC1.Len())
-	exporters.ExportMonsterMagic1ToJSON()
+	objectsfile.ExportMonsterMagic1ToJSON()
 	fmt.Println("✓ Itens exportados para JSON")
 	objectsfile.ProcessMonsterMagic1JsonFile()
 	fmt.Println("✓ Comandos editados e salvos com sucesso")
@@ -136,7 +135,7 @@ func runFFXv1Examples() {
 	// ok
 	objectsfile.ReadMonsterMagic2WithAllLocalizations()
 	fmt.Printf("✓ Itens carregados: %d\n", objectsfile.MONMAGIC2.Len())
-	exporters.ExportMonsterMagic2ToJSON()
+	objectsfile.ExportMonsterMagic2ToJSON()
 	fmt.Println("✓ Itens exportados para JSON")
 	objectsfile.ProcessMonsterMagic2JsonFile()
 	fmt.Println("✓ Comandos editados e salvos com sucesso")
@@ -147,7 +146,7 @@ func runFFXv1Examples() {
 	fmt.Println("Carregando textos de build...")
 	objectsfile.ReadBuildTextWithAllLocalizations()
 	fmt.Printf("✓ Textos de build carregados: %d\n", objectsfile.BUILD_TEXT.Len())
-	exporters.ExportBuildToJSON()
+	objectsfile.ExportBuildToJSON()
 	fmt.Println("✓ Textos de build exportados para JSON")
 	objectsfile.ProcessBuildTextJsonFile()
 	fmt.Println("✓ Textos de build editados e salvos com sucesso")
@@ -158,7 +157,7 @@ func runFFXv1Examples() {
 	fmt.Println("Carregando textos de configuração...")
 	objectsfile.ReadConfigTextWithAllLocalizations()
 	fmt.Printf("✓ Textos de configuração carregados: %d\n", objectsfile.CONFIG_TEXT.Len())
-	exporters.ExportConfigToJSON()
+	objectsfile.ExportConfigToJSON()
 	fmt.Println("✓ Textos de configuração exportados para JSON")
 	objectsfile.ProcessConfigTextJsonFile()
 	fmt.Println("✓ Textos de configuração editados e salvos com sucesso")
@@ -169,7 +168,7 @@ func runFFXv1Examples() {
 	fmt.Println("Carregando textos de itens...")
 	objectsfile.ReadItemCommandsWithAllLocalizations()
 	fmt.Printf("✓ Textos de itens carregados: %d\n", objectsfile.ITEM_TEXT.Len())
-	exporters.ExportItemCommandsToJSON()
+	objectsfile.ExportItemCommandsToJSON()
 	fmt.Println("✓ Textos de itens exportados para JSON")
 	objectsfile.ProcessItemCommandsJsonFile()
 	fmt.Println("✓ Textos de itens editados e salvos com sucesso")
@@ -180,7 +179,7 @@ func runFFXv1Examples() {
 	fmt.Println("Carregando textos do menu principal...")
 	objectsfile.ReadMainMenuTextWithAllLocalizations()
 	fmt.Printf("✓ Textos do menu principal carregados: %d\n", objectsfile.MMAIN_TEXT.Len())
-	exporters.ExportMainMenuToJSON()
+	objectsfile.ExportMainMenuToJSON()
 	fmt.Println("✓ Textos do menu principal exportados para JSON")
 	objectsfile.ProcessMainMenuTextJsonFile()
 	fmt.Println("✓ Textos do menu principal editados e salvos com sucesso")
@@ -191,7 +190,7 @@ func runFFXv1Examples() {
 	fmt.Println("Carregando textos de jogador de blitsball...")
 	objectsfile.ReadPlayerRomTextWithAllLocalizations()
 	fmt.Printf("✓ Textos de jogador de blitsball carregados: %d\n", objectsfile.PLAYER_ROOM.Len())
-	exporters.ExportPlayerRoomToJSON()
+	objectsfile.ExportPlayerRoomToJSON()
 	fmt.Println("✓ Textos de jogador de blitsball exportados para JSON")
 	objectsfile.ProcessPlayerRoomTextJsonFile()
 	fmt.Println("✓ Textos de jogador de blitsball editados e salvos com sucesso")
@@ -202,7 +201,7 @@ func runFFXv1Examples() {
 	fmt.Println("Carregando textos de nomes...")
 	objectsfile.ReadNameTextWithAllLocalizations()
 	fmt.Printf("✓ Textos de nomes carregados: %d\n", objectsfile.NAME_TEXT.Len())
-	exporters.ExportNameToJSON()
+	objectsfile.ExportNameToJSON()
 	fmt.Println("✓ Textos de nomes exportados para JSON")
 	objectsfile.ProcessNameTextJsonFile()
 	fmt.Println("✓ Textos de nomes editados e salvos com sucesso")
@@ -229,113 +228,125 @@ func runFFX2Examples() {
 	fmt.Println("Extraindo arquivos de name+description do FFX-2 (v2) para JSON...")
 
 	// Arquivos em comum com a v1 (mesmos nomes existem no FFX-2).
-	objectsfile.ReadKeyItemsWithAllLocalizations()
-	fmt.Printf("[FFX-2] key items: %d\n", datastore.KeyItems.Len())
-	if datastore.KeyItems.Len() > 0 {
-		exporters.ExportKeyItemsToJSON()
-	}
+	keyItemsBinaryFile := objectsfile.ReadKeyItemsWithAllLocalizations()
+	fmt.Printf("[FFX-2] ✓ Itens-chave carregados: %d\n", keyItemsBinaryFile.GetObjects().Len())
+	keyItemsBinaryFile.ExportToJson("key_items_all_localizations.json")
+	fmt.Println("[FFX-2] ✓ Itens-chave exportados para JSON")
+	keyItemsBinaryFile.ImportFromJson("key_items_all_localizations.json")
+	fmt.Println("[FFX-2] ✓ Itens-chave editados e salvos com sucesso")
+	keyItemsBinaryFile.SaveToBinary("battle/kernel/important.bin")
+	fmt.Println("[FFX-2] ✓ Itens-chave salvos com sucesso")
 
-	objectsfile.ReadCommandsWithAllLocalizations()
-	fmt.Printf("[FFX-2] commands: %d\n", datastore.Commands.Len())
-	if datastore.Commands.Len() > 0 {
-		exporters.ExportCommandsToJSON()
+	commandsBinaryFile := objectsfile.ReadCommandsWithAllLocalizations()
+	fmt.Printf("[FFX-2] commands carregados: %d\n", commandsBinaryFile.GetObjects().Len())
+	if err := commandsBinaryFile.ExportToJson("commands_all_localizations.json"); err != nil {
+		fmt.Printf("[FFX-2] Error exporting commands to JSON: %v\n", err)
 	}
-
+	fmt.Println("[FFX-2] ✓ Comandos exportados para JSON")
+	if err := commandsBinaryFile.ImportFromJson("commands_all_localizations.json"); err != nil {
+		fmt.Printf("[FFX-2] Error importing commands from JSON: %v\n", err)
+	}
+	fmt.Println("[FFX-2] ✓ Comandos editados e salvos com sucesso")
+	if err := commandsBinaryFile.SaveToBinary("battle/kernel/command.bin"); err != nil {
+		fmt.Printf("[FFX-2] Error saving commands to binary: %v\n", err)
+	}
+	fmt.Println("[FFX-2] ✓ Comandos salvos com sucesso")
+	
 	objectsfile.ReadItemsWithAllLocalizations()
 	fmt.Printf("[FFX-2] items: %d\n", datastore.Items.Len())
 	if datastore.Items.Len() > 0 {
-		exporters.ExportItemsToJSON()
+		objectsfile.ExportItemsToJSON()
 	}
 
 	objectsfile.ReadMenuTextWithAllLocalizations()
 	fmt.Printf("[FFX-2] menu text: %d\n", objectsfile.MENU_TEXT.Len())
 	if datastore.MenuTxt.Len() > 0 {
-		exporters.ExportItemsToJSON()
+		objectsfile.ExportItemsToJSON()
 	}
 
 	objectsfile.ReadOversoulWithAllLocalizations()
 	fmt.Printf("[FFX-2] oversoul: %d\n", objectsfile.OVERSOUL.Len())
 	if objectsfile.OVERSOUL.Len() > 0 {
-		exporters.ExportOversoulToJSON()
+		objectsfile.ExportOversoulToJSON()
 	}
 
 	objectsfile.ReadBattleTextWithAllLocalizations()
 	fmt.Printf("[FFX-2] battle text: %d\n", datastore.BattleTxt.Len())
 	if datastore.BattleTxt.Len() > 0 {
-		exporters.ExportBattleToJSON()
+		objectsfile.ExportBattleToJSON()
 	}
 
 	objectsfile.ReadBattleEndTextWithAllLocalizations()
 	fmt.Printf("[FFX-2] battle end text: %d\n", datastore.BattleEndTxt.Len())
 	if datastore.BattleEndTxt.Len() > 0 {
-		exporters.ExportBattleEndToJSON()
+		objectsfile.ExportBattleEndToJSON()
 	}
 
 	objectsfile.ReadPlayerRomTextWithAllLocalizations()
 	fmt.Printf("[FFX-2] player room: %d\n", objectsfile.PLAYER_ROOM.Len())
 	if objectsfile.PLAYER_ROOM.Len() > 0 {
-		exporters.ExportPlayerRoomToJSON()
+		objectsfile.ExportPlayerRoomToJSON()
 	}
 
 	// Exclusivos do FFX-2 (retornam cedo se a versão não for FFX-2).
 	objectsfile.ReadAAbilityWithAllLocalizations()
 	fmt.Printf("[FFX-2] a-ability: %d\n", objectsfile.A_ABILITY.Len())
 	if objectsfile.A_ABILITY.Len() > 0 {
-		exporters.ExportAAbilityToJSON()
+		objectsfile.ExportAAbilityToJSON()
 	}
 
 	objectsfile.ReadAccessoriesWithAllLocalizations()
 	fmt.Printf("[FFX-2] accessory: %d\n", objectsfile.ACCESSORY.Len())
 	if objectsfile.ACCESSORY.Len() > 0 {
-		exporters.ExportAccessoriesToJSON()
+		objectsfile.ExportAccessoriesToJSON()
 	}
 
 	objectsfile.ReadJobsWithAllLocalizations()
 	fmt.Printf("[FFX-2] job: %d\n", objectsfile.JOB.Len())
 	if objectsfile.JOB.Len() > 0 {
-		exporters.ExportJobsToJSON()
+		objectsfile.ExportJobsToJSON()
 	}
 
 	objectsfile.ReadMenuTextWithAllLocalizations()
 	fmt.Printf("[FFX-2] menu text: %d\n", objectsfile.MENU_TEXT.Len())
 	if objectsfile.MENU_TEXT.Len() > 0 {
-		exporters.ExportMenuTextToJSON()
+		objectsfile.ExportMenuTextToJSON()
 	}
 
 	objectsfile.ReadMonsterMagicWithAllLocalizations()
 	fmt.Printf("[FFX-2] monster magic: %d\n", objectsfile.MONMAGIC.Len())
 	if objectsfile.MONMAGIC.Len() > 0 {
-		exporters.ExportMonsterMagicToJSON()
+		objectsfile.ExportMonsterMagicToJSON()
 	}
 
 	objectsfile.ReadMonstersWithAllLocalizations()
 	fmt.Printf("[FFX-2] monster: %d\n", objectsfile.MONSTER.Len())
 	if objectsfile.MONSTER.Len() > 0 {
-		exporters.ExportMonstersToJSON()
+		objectsfile.ExportMonstersToJSON()
 	}
 
 	objectsfile.ReadMonsters2WithAllLocalizations()
 	fmt.Printf("[FFX-2] monster2: %d\n", objectsfile.MONSTER2.Len())
 	if objectsfile.MONSTER2.Len() > 0 {
-		exporters.ExportMonsters2ToJSON()
+		objectsfile.ExportMonsters2ToJSON()
 	}
 
 	objectsfile.ReadPlateWithAllLocalizations()
 	fmt.Printf("[FFX-2] plate: %d\n", objectsfile.PLATE.Len())
 	if objectsfile.PLATE.Len() > 0 {
-		exporters.ExportPlateToJSON()
+		objectsfile.ExportPlateToJSON()
 	}
 
 	objectsfile.ReadPlayerSaveWithAllLocalizations()
 	fmt.Printf("[FFX-2] player save: %d\n", objectsfile.PLAYER_SAVE.Len())
 	if objectsfile.PLAYER_SAVE.Len() > 0 {
-		exporters.ExportPlayerSaveToJSON()
+		objectsfile.ExportPlayerSaveToJSON()
 	}
 
 	objectsfile.ReadSaveTextWithAllLocalizations()
 	fmt.Printf("[FFX-2] save text: %d\n", objectsfile.SAVE_TEXT.Len())
 	if objectsfile.SAVE_TEXT.Len() > 0 {
-		exporters.ExportSaveTextToJSON()
+		objectsfile.ExportSaveTextToJSON()
 	}
 
 	// Carregar eventos

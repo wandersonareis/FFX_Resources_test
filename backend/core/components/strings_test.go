@@ -150,7 +150,7 @@ var _ = Describe("String Conversion Functions", func() {
 					map[uint]rune{0x50: 'A', 0x51: 'B', 0x52: 'C'},
 					map[rune]uint{'A': 0x50, 'B': 0x51, 'C': 0x52})
 
-				bytes := converter.StringToBytes(original, "us")
+				bytes := components.StringToBytes(original, "us")
 				result := converter.BytesToString(bytes, "us")
 
 				Expect(result).To(Equal(original))
@@ -159,7 +159,7 @@ var _ = Describe("String Conversion Functions", func() {
 			It("should maintain data integrity for command strings", func() {
 				original := "{PAUSE}"
 
-				bytes := converter.StringToBytes(original, "us")
+				bytes := components.StringToBytes(original, "us")
 				result := converter.BytesToString(bytes, "us")
 
 				Expect(result).To(Equal(original))
@@ -170,42 +170,42 @@ var _ = Describe("String Conversion Functions", func() {
 	Describe("Different localizations", func() {
 		Context("when using different charset localizations", func() {
 			It("should handle US localization", func() {
-				result := converter.StringToBytes("test", "us")
+				result := components.StringToBytes("test", "us")
 				Expect(result).NotTo(BeNil())
 			})
 
 			It("should not handle Japanese localization", func() {
-				result := converter.StringToBytes("test", "jp")
+				result := components.StringToBytes("test", "jp")
 				Expect(result).To(BeNil())
 			})
 
 			It("should not handle Korean localization", func() {
-				result := converter.StringToBytes("test", "kr")
+				result := components.StringToBytes("test", "kr")
 				Expect(result).To(BeNil())
 			})
 
 			It("should not handle Chinese localization", func() {
-				result := converter.StringToBytes("test", "ch")
+				result := components.StringToBytes("test", "ch")
 				Expect(result).To(BeNil())
 			})
 
 			It("should not handle US localiztion", func() {
-				result := converter.StringToBytes("你好吗", "us")
+				result := components.StringToBytes("你好吗", "us")
 				Expect(result).To(BeNil())
 			})
 
 			It("should handle Japanese localization", func() {
-				result := converter.StringToBytes("こんにちは", "jp")
+				result := components.StringToBytes("こんにちは", "jp")
 				Expect(result).NotTo(BeNil())
 			})
 
 			It("should handle Korean localization", func() {
-				result := converter.StringToBytes("안녕하세요", "kr")
+				result := components.StringToBytes("안녕하세요", "kr")
 				Expect(result).NotTo(BeNil())
 			})
 
 			It("should handle Chinese localization", func() {
-				result := converter.StringToBytes("你好", "ch")
+				result := components.StringToBytes("你好", "ch")
 				Expect(result).NotTo(BeNil())
 			})
 		})

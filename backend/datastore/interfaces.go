@@ -95,7 +95,7 @@ type IGlobalMacroString interface {
 
 // IBinaryFile orquestra todo o ciclo de vida de um arquivo binário de localização
 type IBinaryFile interface {
-	LoadFromBinary(data []byte) error
+	LoadFromBinary() error
 	ExportToJson(filePath string) error
 	ImportFromJson(filePath string) error
 	SaveToBinary(filePath string) error

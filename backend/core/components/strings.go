@@ -19,7 +19,7 @@ var (
 	reMCR    = regexp.MustCompile(`^MCR:s([0-9A-Fa-f]{1,2}):l([0-9A-Fa-f]{1,2}):`)
 	reHEX    = regexp.MustCompile(`^HEX:([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2})*)$`)
 	rePC     = regexp.MustCompile(`^PC:([0-9A-Fa-f]{1,2}):`)
-	reCTRL   = regexp.MustCompile(`^CTRL:([0-9A-Fa-f]{1,2}):`)
+	reICON   = regexp.MustCompile(`^ICON:([0-9A-Fa-f]{1,2}):`)
 )
 
 func CharToBytes(chr rune, charset string) []uint {
@@ -199,185 +199,6 @@ func GetStringBytesAtLookupOffset(table []byte, offset int) []byte {
 	return newArray
 }
 
-/* func getStringAtLookupOffsetBinary(table []byte, offset int, localization string) string {
-	if offset < 0 || offset >= len(table) {
-		return ""
-	}
-
-	var (
-		out               strings.Builder
-		charset           = GetCharsetForLanguage(localization)
-		extraFiveSections bool
-		buf               = bytes.NewReader(table[offset:])
-	)
-
-	for {
-		var idx uint8
-		err := readOneByte(buf, &idx)
-		if err != nil || idx == 0x00 {
-			break
-		}
-
-		var extraOffset uint = 0
-		if extraFiveSections {
-			extraOffset = 0x410
-			extraFiveSections = false
-		}
-
-		switch {
-		case idx >= 0x30:
-			if chr, ok := ByteToChar(uint(idx)+extraOffset, charset); ok {
-				out.WriteRune(chr)
-			}
-		case idx == 0x01:
-			out.WriteString("{PAUSE}")
-		case idx == 0x03:
-			if WriteLinebreaksAsCommands {
-				out.WriteString("{\\n}")
-			} else {
-				out.WriteByte('\n')
-			}
-		case buf.Len() == 0:
-			out.WriteString(fmt.Sprintf("{HEX:%02X}", idx))
-		case idx == 0x04:
-			extraFiveSections = true
-		case idx == 0x07:
-			var pixels uint8
-			if err := readOneByte(buf, &pixels); err != nil {
-				out.WriteString("{SPACE:??}")
-				break
-			}
-			out.WriteString(fmt.Sprintf("{SPACE:%02X}", pixels-0x30))
-		case idx == 0x09:
-			var varIdx uint8
-			if err := readOneByte(buf, &varIdx); err != nil {
-				out.WriteString("{TIME:??}")
-				break
-			}
-			out.WriteString(fmt.Sprintf("{TIME:%02X}", varIdx-0x30))
-		case idx == 0x0A:
-			var clr uint8
-			if err := readOneByte(buf, &clr); err != nil {
-				out.WriteString("{CLR:??}")
-				break
-			}
-			out.WriteString(GetColorString(clr))
-		case idx == 0x0B:
-			var ctrlIdx uint8
-			if err := readOneByte(buf, &ctrlIdx); err != nil {
-				out.WriteString("{CTRL:??}")
-				break
-			}
-			out.WriteString(fmt.Sprintf("{CTRL:%02X:%s}", ctrlIdx, GetControllerInput(ctrlIdx)))
-		case idx == 0x10:
-			var rawValue uint8
-			if err := readOneByte(buf, &rawValue); err != nil {
-				if err == io.EOF {
-					out.WriteString(fmt.Sprintf("{HEX:%02X}", idx))
-				} else {
-					out.WriteString("{CHOICE:??}")
-				}
-				break
-			}
-			if rawValue == 0xFF {
-				out.WriteString("{CHOICE-END}")
-				break
-			}
-			choiceIdx := rawValue - 0x30
-			out.WriteString(fmt.Sprintf("{CHOICE:%02X}", choiceIdx))
-		case idx == 0x12:
-			var varIdx uint8
-			if err := readOneByte(buf, &varIdx); err != nil {
-				out.WriteString("{VAR:??}")
-				break
-			}
-			out.WriteString(fmt.Sprintf("{VAR:%02X}", varIdx-0x30))
-		case idx == 0x13 && buf.Len() > 0:
-			var rawValue uint8
-			if err := readOneByte(buf, &rawValue); err != nil || rawValue > 0x43 {
-				out.WriteString(fmt.Sprintf("{PC:%02X:??}", rawValue))
-				break
-			}
-			pcIdx := rawValue - 0x30
-			out.WriteString(fmt.Sprintf("{PC:%02X:%s}", pcIdx, GetPlayerChar(pcIdx)))
-		case idx >= 0x13 && idx <= 0x22:
-			var section uint = uint(idx) - 0x13
-			var line byte
-			if err := readOneByte(buf, &line); err != nil {
-				fmt.Println("Error reading line number for MCR command:", err)
-				out.WriteString(fmt.Sprintf("{HEX:%02X}", idx))
-				break
-			}
-			lineAdjusted := line - 0x30
-			out.WriteString(fmt.Sprintf("{MCR:s%02X:l%02X", section, lineAdjusted))
-			if len(MacroLookup) > 0 {
-				out.WriteString(":")
-				index := int(section*0x100 + uint(lineAdjusted))
-				if macro, ok := MacroLookup[index]; ok {
-					out.WriteString(`"`)
-					out.WriteString(macro.GetLocalizedContent(localization).String())
-					out.WriteString(`"`)
-				} else {
-					out.WriteString("<Missing>")
-				}
-			}
-			out.WriteString("}")
-		case idx == 0x23:
-			var varIdx uint8
-			if err := readOneByte(buf, &varIdx); err != nil {
-				out.WriteString("{KEY:??}")
-				break
-			}
-			varIdx -= 0x30
-			out.WriteString(fmt.Sprintf("{KEY:%02X", varIdx))
-			if keyItem := GetKeyItem(int(varIdx) + 0xA000); keyItem != nil {
-				out.WriteString(fmt.Sprintf(`:"%s"`, keyItem.GetName(localization)))
-			}
-			out.WriteString("}")
-		case idx == 0x28:
-			var val uint8
-			if err := readOneByte(buf, &val); err != nil {
-				out.WriteString("{CMD:28:??}")
-				break
-			}
-			out.WriteString(fmt.Sprintf("{CMD:28:%02X}", val-0x30))
-		case idx == 0x2A:
-			var val byte
-			if err := readOneByte(buf, &val); err != nil {
-				out.WriteString("{CMD:2A:??}")
-				break
-			}
-			out.WriteString(fmt.Sprintf("{CMD:2A:%02X}", val-0x30))
-
-		case idx >= 0x2B: // Double-byte character handling
-			section := uint(idx) - 0x2B
-			var low byte
-			if err := readOneByte(buf, &low); err != nil {
-				out.WriteString(fmt.Sprintf("{UNKDBLCHR:%02X:??}", idx))
-				break
-			}
-
-			actualIdx := section*0xD0 + uint(low)
-			newVar := actualIdx + extraOffset
-
-			if chr, ok := ByteToChar(newVar, charset); ok {
-				out.WriteRune(chr)
-			} else {
-				out.WriteString(fmt.Sprintf("{UNKDBLCHR:%02X:%02X}", idx, low))
-			}
-		default:
-			var nextByte byte
-			if err := readOneByte(buf, &nextByte); err != nil {
-				out.WriteString(fmt.Sprintf("{CMD:%02X:??}", idx))
-				break
-			}
-			out.WriteString(fmt.Sprintf("{CMD:%02X:%02X}", idx, nextByte-0x30))
-		}
-	}
-
-	return out.String()
-} */
-
 func ParseCommand(runes []rune, startIndex int) []uint {
 	if startIndex >= len(runes) {
 		return nil
@@ -397,10 +218,18 @@ func ParseCommand(runes []rune, startIndex int) []uint {
 	switch {
 	case cmd == "PAUSE":
 		return []uint{0x01}
+	case cmd == "BREAK":
+		return []uint{0x02}
 	case cmd == "\\n":
 		return []uint{0x03}
-	case cmd == "CMD04":
-		return []uint{0x04}
+	case cmd == "BLANK05":
+		return []uint{0x05}
+	case cmd == "BLANK0C":
+		return []uint{0x0C}
+	case cmd == "BLANK0F":
+		return []uint{0x0F}
+	case cmd == "BLANK11":
+		return []uint{0x11}
 	case strings.HasPrefix(cmd, "SPACE:"):
 		val, err := strconv.ParseUint(cmd[6:], 16, 8)
 		if err != nil {
@@ -421,17 +250,22 @@ func ParseCommand(runes []rune, startIndex int) []uint {
 	case strings.HasPrefix(cmd, "COLOR:"):
 		clr := ColorToByte(cmd[6:])
 		return []uint{0x0A, uint(clr)}
-	case strings.HasPrefix(cmd, "CTRL:"):
-		matches := reCTRL.FindStringSubmatch(cmd)
-		if len(matches) != 2 {
-			fmt.Printf("Invalid CTRL format: %s\n", cmd)
+	case strings.HasPrefix(cmd, "ICON:"):
+		// Divide em até 3 partes: ["ICON", "hex", "identificador"]
+		parts := strings.SplitN(cmd, ":", 3)
+		if len(parts) != 3 {
+			fmt.Printf("Invalid ICON format: %s\n", cmd)
 			return nil
 		}
-		ctrlIdx, err := strconv.ParseUint(matches[1], 16, 8)
+		// parts[0] = "ICON", parts[1] = hex, parts[2] = identificador (ex: "SQUARE")
+		iconIdx, err := strconv.ParseUint(parts[1], 16, 8)
 		if err != nil {
+			fmt.Printf("Invalid hex value: %s\n", parts[1])
 			return nil
 		}
-		return []uint{0x0B, uint(ctrlIdx)}
+		// Se quiser usar o identificador (opcional):
+		// ident := parts[2]
+		return []uint{0x0B, uint(iconIdx)}
 	case cmd == "CHOICE-END":
 		return []uint{0x10, 0xFF}
 	case strings.HasPrefix(cmd, "CHOICE:"):
@@ -449,13 +283,15 @@ func ParseCommand(runes []rune, startIndex int) []uint {
 		varIdx := val + 0x30
 		return []uint{0x12, uint(varIdx)}
 	case strings.HasPrefix(cmd, "PC:"):
-		matches := rePC.FindStringSubmatch(cmd)
-		if len(matches) != 2 {
+		parts := strings.SplitN(cmd, ":", 3)
+		if len(parts) != 3 {
 			fmt.Printf("Invalid PC format: %s\n", cmd)
 			return nil
 		}
-		val, err := strconv.ParseUint(matches[1], 16, 8)
+		// parts[0] = "PC", parts[1] = hex, parts[2] = identificador (ex: "IFRIT")
+		val, err := strconv.ParseUint(parts[1], 16, 8)
 		if err != nil {
+			fmt.Printf("Invalid hex value: %s\n", parts[1])
 			return nil
 		}
 		pc := val + 0x30
@@ -468,6 +304,18 @@ func ParseCommand(runes []rune, startIndex int) []uint {
 		}
 		secVal, err1 := strconv.ParseUint(matches[1], 16, 8)
 		lineVal, err2 := strconv.ParseUint(matches[2], 16, 8)
+		if err1 != nil || err2 != nil {
+			return nil
+		}
+		section := secVal + 0x13
+		line := lineVal + 0x30
+		return []uint{uint(section), uint(line)}
+	case strings.HasPrefix(cmd, "MACRO:"):
+		if len(cmd) < 12 {
+			return nil
+		}
+		secVal, err1 := strconv.ParseUint(cmd[7:9], 16, 8)
+		lineVal, err2 := strconv.ParseUint(cmd[10:12], 16, 8)
 		if err1 != nil || err2 != nil {
 			return nil
 		}

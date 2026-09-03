@@ -1,10 +1,10 @@
 package objectsfile
 
 import (
-	"path/filepath"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/datastore"
+	"path/filepath"
 )
 
 // ReadCommandsWithAllLocalizations reads battle command data from the command.bin file
@@ -16,11 +16,34 @@ import (
 //
 // File format: name and description data
 // Pattern path: "battle/kernel/command.bin"
-func ReadCommandsWithAllLocalizations() {
+func ReadCommandsWithAllLocalizations() datastore.IBinaryFile {
 	patternPath := "battle/kernel/command.bin"
-	datastore.Commands = ReadNameDescriptionObjectsWithIlist(patternPath)
 
-	common.LogVerbose("Loaded %d commands with all localizations", datastore.Commands.Len())
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
+		if common.GetGameVersionString() == "ffx2" {
+			return NewNameDescriptionTextObjectV2(cBytes, sBytes, hLen, lang)
+		}
+		return NewNameDescriptionTextObject(cBytes, sBytes, hLen, lang)
+	}
+
+	commandsFile := NewBinaryFile(
+		patternPath,
+		creatorFunc,
+		ExportNameDescriptionToJSON,
+		ImportLocalizedDataFromJsonFile,
+		common.DefaultLocalization,
+	)
+
+	if err := commandsFile.LoadFromBinary(); err != nil {
+		common.LogVerbose("Error loading commands binary data: %v", err)
+		return commandsFile
+	}
+
+	if commandsFile.Objects != nil && !commandsFile.Objects.IsEmpty() {
+		common.LogVerbose("Loaded %d commands with all localizations", commandsFile.Objects.Len())
+		datastore.Commands = commandsFile.GetObjects()
+	}
+	return commandsFile
 }
 
 // ReadKeyItemsWithAllLocalizations reads key item data from the important.bin file
@@ -57,23 +80,16 @@ func ReadKeyItemsWithAllLocalizations() datastore.IBinaryFile {
 	patternPath := "battle/kernel/important.bin"
 
 	keyItemsFile := NewBinaryFile(
+		patternPath,
 		func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
 			return NewNameDescriptionTextObjectV2(cBytes, sBytes, hLen, lang)
 		},
-		nil,
-		func(fileName string, objectsList components.IList[datastore.IGlobalLocalizedTextObject]) error {
-			return ImportLocalizedDataFromJsonFile(fileName, objectsList)
-		},
+		ExportKeyItemsToJSONWithExporter,
+		ImportLocalizedDataFromJsonFile,
+		common.DefaultLocalization,
 	)
 
-	filePath := filepath.Join(common.GetLocalizationRoot(common.DefaultLocalization), patternPath)
-	binaryData, err := common.ReadFile(filePath)
-	if err != nil {
-		common.LogVerbose("Error reading key items binary file: %v", err)
-		return keyItemsFile
-	}
-
-	if err := keyItemsFile.LoadFromBinary(binaryData); err != nil {
+	if err := keyItemsFile.LoadFromBinary(); err != nil {
 		common.LogVerbose("Error loading key items binary data: %v", err)
 		return keyItemsFile
 	}
