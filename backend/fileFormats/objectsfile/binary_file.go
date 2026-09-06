@@ -6,6 +6,7 @@ import (
 	"errors"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/datastore"
 	"fmt"
 	"io"
@@ -249,7 +250,7 @@ func (b *BinaryFile) SaveToBinary(filePath string) error {
 			}
 		} */
 
-		charset := components.GetCharsetForLanguage(localizationKey)
+		charset := ffxencoding.GetCharsetForLanguage(localizationKey)
 		b.StringBytes = RebuildKeyedStrings(allKeyedStrings, charset)
 
 		// 1. Escreve o Header

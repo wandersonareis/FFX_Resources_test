@@ -1,7 +1,7 @@
 package event_test
 
 import (
-	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/fileFormats/event"
 	"testing"
 
@@ -237,6 +237,6 @@ func setupLocalizedCharMaps() {
 	usReverseMap['D'] = 0x53
 	usReverseMap['E'] = 0x54
 
-	components.SetCharMap("us", usMap, usReverseMap)
-	components.SetCharMap("jp", usMap, usReverseMap)
+	ffxencoding.SetCharMap("us", usMap, usReverseMap)
+	ffxencoding.SetCharMap("jp", usMap, usReverseMap)
 }

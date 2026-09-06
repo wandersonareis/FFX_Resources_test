@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"ffxresources/backend/common"
-	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/converter"
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/fileFormats/macrodic"
@@ -222,7 +222,7 @@ func stringsToStringFileBytes(localizedStrings []*event.LocalizedFieldStringObje
 		return []byte{}
 	}
 
-	charset := components.GetCharsetForLanguage(languageCode)
+	charset := ffxencoding.GetCharsetForLanguage(languageCode)
 	fieldStrings := make([]*event.FieldString, 0, len(localizedStrings))
 
 	for _, localizedObj := range localizedStrings {
@@ -642,7 +642,7 @@ func editAndSaveMacroDictFromJSON(jsonPath string) error {
 				chunks[chunkIndex] = make([]*macrodic.MacroString, maxStringIndex+1)
 			}
 
-			charset := components.GetCharsetForLanguage(locData.Localization)
+			charset := ffxencoding.GetCharsetForLanguage(locData.Localization)
 			for _, stringData := range chunkData.Strings {
 				stringIndex := stringData.Index
 
@@ -650,7 +650,7 @@ func editAndSaveMacroDictFromJSON(jsonPath string) error {
 				var regularBytes []byte
 				var simplifiedBytes []byte
 
-				regularBytes = components.StringToBytes(stringData.RegularText, charset)
+				regularBytes = converter.StringToBytes(stringData.RegularText, charset)
 				bytesToString := converter.BytesToString(regularBytes, charset)
 
 				// Verificar se bytesToString é diferente de stringData.RegularText
@@ -679,7 +679,7 @@ func editAndSaveMacroDictFromJSON(jsonPath string) error {
 				}
 
 				if stringData.HasDistinct {
-					simplifiedBytes = components.StringToBytes(simplifiedText, charset)
+					simplifiedBytes = converter.StringToBytes(simplifiedText, charset)
 				}
 
 				// Create MacroString object
@@ -848,9 +848,9 @@ func EditAndSaveSpecificMacroDictFromJSON(localization string) error {
 			}
 
 			// Convert strings back to bytes using the localization's charset
-			charset := components.GetCharsetForLanguage(localization)
-			regularBytes := components.StringToBytes(regularText, charset)
-			simplifiedBytes := components.StringToBytes(simplifiedText, charset)
+			charset := ffxencoding.GetCharsetForLanguage(localization)
+			regularBytes := converter.StringToBytes(regularText, charset)
+			simplifiedBytes := converter.StringToBytes(simplifiedText, charset)
 
 			// Create MacroString object
 			macroString := &macrodic.MacroString{

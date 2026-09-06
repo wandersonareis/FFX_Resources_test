@@ -1,8 +1,8 @@
 package components_test
 
 import (
-	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/converter"
+	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/reader"
 	"testing"
 
@@ -24,44 +24,44 @@ var _ = Describe("String Conversion Functions", func() {
 	Describe("StringToBytes", func() {
 		Context("when converting simple strings", func() {
 			It("should convert basic ASCII characters", func() {
-				result := components.StringToBytes("ABC", "us")
+				result := converter.StringToBytes("ABC", "us")
 				Expect(result).To(Equal([]byte{0x50, 0x51, 0x52}))
 			})
 
 			It("should handle newline characters", func() {
-				result := components.StringToBytes("A\nB", "us")
+				result := converter.StringToBytes("A\nB", "us")
 				Expect(result).To(ContainElement(byte(0x03))) // newline should become 0x03
 			})
 
 			It("should handle empty strings", func() {
-				result := components.StringToBytes("", "us")
+				result := converter.StringToBytes("", "us")
 				Expect(result).To(BeEmpty())
 			})
 		})
 
 		Context("when converting command strings", func() {
 			It("should convert PAUSE command", func() {
-				result := components.StringToBytes("{PAUSE}", "us")
+				result := converter.StringToBytes("{PAUSE}", "us")
 				Expect(result).To(Equal([]byte{0x01}))
 			})
 
 			It("should convert line break command", func() {
-				result := components.StringToBytes("{\\n}", "us")
+				result := converter.StringToBytes("{\\n}", "us")
 				Expect(result).To(Equal([]byte{0x03}))
 			})
 
 			It("should convert color commands", func() {
-				result := components.StringToBytes("{CLR:WHITE}", "us")
+				result := converter.StringToBytes("{CLR:WHITE}", "us")
 				Expect(result).To(Equal([]byte{0x0A, 0x41}))
 			})
 
 			It("should convert choice commands", func() {
-				result := components.StringToBytes("{CHOICE:00}", "us")
+				result := converter.StringToBytes("{CHOICE:00}", "us")
 				Expect(result).To(Equal([]byte{0x10, 0x30}))
 			})
 
 			It("should convert choice end command", func() {
-				result := components.StringToBytes("{CHOICE-END}", "us")
+				result := converter.StringToBytes("{CHOICE-END}", "us")
 				Expect(result).To(Equal([]byte{0x10, 0xFF}))
 			})
 		})
@@ -69,7 +69,7 @@ var _ = Describe("String Conversion Functions", func() {
 		Context("when handling unknown characters", func() {
 			It("should handle characters not in charset gracefully", func() {
 				// Don't expect it to panic, but result may contain no bytes for unknown chars
-				result := components.StringToBytes("。", "us") // Character not in basic map
+				result := converter.StringToBytes("。", "us") // Character not in basic map
 				Expect(result).To(BeNil())
 			})
 		})
@@ -79,7 +79,7 @@ var _ = Describe("String Conversion Functions", func() {
 		Context("when converting basic byte sequences", func() {
 			It("should convert basic character bytes", func() {
 				// Setup character map
-				components.SetCharMap("us",
+				ffxencoding.SetCharMap("us",
 					map[uint]rune{0x50: 'A', 0x51: 'B', 0x52: 'C'},
 					map[rune]uint{'A': 0x50, 'B': 0x51, 'C': 0x52})
 
@@ -108,7 +108,7 @@ var _ = Describe("String Conversion Functions", func() {
 
 			It("should convert line break command bytes", func() {
 				// Assuming WriteLinebreaksAsCommands is true
-				components.WriteLinebreaksAsCommands = true
+				converter.WriteLinebreaksAsCommands = true
 				result := converter.BytesToString([]byte{0x03}, "us")
 				Expect(result).To(Equal("{\\n}"))
 			})
@@ -146,11 +146,11 @@ var _ = Describe("String Conversion Functions", func() {
 				original := "ABC"
 
 				// Setup character map
-				components.SetCharMap("us",
+				ffxencoding.SetCharMap("us",
 					map[uint]rune{0x50: 'A', 0x51: 'B', 0x52: 'C'},
 					map[rune]uint{'A': 0x50, 'B': 0x51, 'C': 0x52})
 
-				bytes := components.StringToBytes(original, "us")
+				bytes := converter.StringToBytes(original, "us")
 				result := converter.BytesToString(bytes, "us")
 
 				Expect(result).To(Equal(original))
@@ -159,7 +159,7 @@ var _ = Describe("String Conversion Functions", func() {
 			It("should maintain data integrity for command strings", func() {
 				original := "{PAUSE}"
 
-				bytes := components.StringToBytes(original, "us")
+				bytes := converter.StringToBytes(original, "us")
 				result := converter.BytesToString(bytes, "us")
 
 				Expect(result).To(Equal(original))
@@ -170,42 +170,42 @@ var _ = Describe("String Conversion Functions", func() {
 	Describe("Different localizations", func() {
 		Context("when using different charset localizations", func() {
 			It("should handle US localization", func() {
-				result := components.StringToBytes("test", "us")
+				result := converter.StringToBytes("test", "us")
 				Expect(result).NotTo(BeNil())
 			})
 
 			It("should not handle Japanese localization", func() {
-				result := components.StringToBytes("test", "jp")
+				result := converter.StringToBytes("test", "jp")
 				Expect(result).To(BeNil())
 			})
 
 			It("should not handle Korean localization", func() {
-				result := components.StringToBytes("test", "kr")
+				result := converter.StringToBytes("test", "kr")
 				Expect(result).To(BeNil())
 			})
 
 			It("should not handle Chinese localization", func() {
-				result := components.StringToBytes("test", "ch")
+				result := converter.StringToBytes("test", "ch")
 				Expect(result).To(BeNil())
 			})
 
 			It("should not handle US localiztion", func() {
-				result := components.StringToBytes("你好吗", "us")
+				result := converter.StringToBytes("你好吗", "us")
 				Expect(result).To(BeNil())
 			})
 
 			It("should handle Japanese localization", func() {
-				result := components.StringToBytes("こんにちは", "jp")
+				result := converter.StringToBytes("こんにちは", "jp")
 				Expect(result).NotTo(BeNil())
 			})
 
 			It("should handle Korean localization", func() {
-				result := components.StringToBytes("안녕하세요", "kr")
+				result := converter.StringToBytes("안녕하세요", "kr")
 				Expect(result).NotTo(BeNil())
 			})
 
 			It("should handle Chinese localization", func() {
-				result := components.StringToBytes("你好", "ch")
+				result := converter.StringToBytes("你好", "ch")
 				Expect(result).NotTo(BeNil())
 			})
 		})
@@ -226,10 +226,10 @@ func setupBasicCharMaps() {
 		usReverseMap[char] = byteVal
 	} */
 
-	/* components.SetCharMap("us", usMap, usReverseMap)
-	components.SetCharMap("jp", usMap, usReverseMap)
-	components.SetCharMap("kr", usMap, usReverseMap)
-	components.SetCharMap("ch", usMap, usReverseMap) */
+	/* ffxencoding.SetCharMap("us", usMap, usReverseMap)
+	ffxencoding.SetCharMap("jp", usMap, usReverseMap)
+	ffxencoding.SetCharMap("kr", usMap, usReverseMap)
+	ffxencoding.SetCharMap("ch", usMap, usReverseMap) */
 
 	reader.InitializeInternals() // Initialize character maps and macros
 }

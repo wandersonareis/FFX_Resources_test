@@ -3,10 +3,10 @@ package objectsfile_test
 import (
 	"encoding/json"
 	"ffxresources/backend/common"
+	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/fileFormats/objectsfile"
-	"ffxresources/backend/core/components"
 	testcommon "ffxresources/testData"
 	"os"
 	"path/filepath"
@@ -76,9 +76,9 @@ var _ = Describe("Data Objects JSON Readers", Ordered, func() {
 		objectsfile.MMAIN_TEXT = nil
 		objectsfile.PLAYER_ROOM = nil
 		objectsfile.NAME_TEXT = nil
-		components.ByteToCharMaps = make(map[string]map[uint]rune)
-		components.CharToByteMaps = make(map[string]map[rune]uint)
-		//components.MacroLookup = make(map[int]*macrodic.LocalizedMacroStringObject)
+		ffxencoding.ByteToCharMaps = make(map[string]map[uint]rune)
+		ffxencoding.CharToByteMaps = make(map[string]map[rune]uint)
+		//ffxencoding.MacroLookup = make(map[int]*macrodic.LocalizedMacroStringObject)
 	})
 
 	Context("ProcessKeyItemsJsonFile", func() {
@@ -167,7 +167,7 @@ var _ = Describe("Data Objects JSON Readers", Ordered, func() {
 	Context("ProcessCommandsJsonFile", func() {
 		BeforeEach(func() {
 			Expect(reader.InitializeInternals()).To(Succeed())
-			objectsfile.ReadCommandsWithAllLocalizations()
+			objectsfile.ReadNameDescriptionLocalizations()
 		})
 
 		It("should process commands JSON file without error", func() {

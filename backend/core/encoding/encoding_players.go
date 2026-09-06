@@ -1,4 +1,4 @@
-package sharedutils
+package ffxencoding
 
 var (
 	playerCharMap = map[byte]string{

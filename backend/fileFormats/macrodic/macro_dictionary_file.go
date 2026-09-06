@@ -2,6 +2,7 @@ package macrodic
 
 import (
 	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/models"
 )
@@ -31,7 +32,7 @@ func (mdf *MacroDictionaryFile) mapStringsForChunk(chunk models.Chunk) []*MacroS
 	if chunk.Offset == 0 {
 		return []*MacroString{}
 	}
-	return FromStringData(chunk.Bytes, components.GetCharsetForLanguage(mdf.Localization))
+	return FromStringData(chunk.Bytes, ffxencoding.GetCharsetForLanguage(mdf.Localization))
 }
 
 func (mdf *MacroDictionaryFile) PublishStrings() {

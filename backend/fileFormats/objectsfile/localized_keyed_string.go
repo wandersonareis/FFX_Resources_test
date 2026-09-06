@@ -3,6 +3,7 @@ package objectsfile
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/models"
 )
@@ -46,7 +47,7 @@ func (l *LocalizedKeyedStringObject) ReadAndSetLocalizedContent(languageCode str
 	if bytes == nil {
 		return
 	}
-	charset := components.GetCharsetForLanguage(languageCode)
+	charset := ffxencoding.GetCharsetForLanguage(languageCode)
 	ks := NewKeyedString(charset, models.Segment{Offset: offset, Key: key}, bytes)
 	if ks == nil {
 		return

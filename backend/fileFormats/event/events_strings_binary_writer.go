@@ -3,7 +3,7 @@ package event
 import (
 	"bytes"
 	"ffxresources/backend/common"
-	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/encoding"
 	"fmt"
 	"path/filepath"
 )
@@ -149,7 +149,7 @@ func convertEventStringsToBytes(localizedStrings []*LocalizedFieldStringObject, 
 		return []byte{}, nil
 	}
 
-	charset := components.GetCharsetForLanguage(languageCode)
+	charset := ffxencoding.GetCharsetForLanguage(languageCode)
 	fieldStrings := extractFieldStringsForLanguage(localizedStrings, languageCode, charset)
 
 	return buildEventStringsBinaryData(fieldStrings)

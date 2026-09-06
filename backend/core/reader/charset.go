@@ -10,7 +10,7 @@ import (
     "unicode/utf8"
 
     "ffxresources/backend/common"
-    "ffxresources/backend/core/components"
+    "ffxresources/backend/core/encoding"
 )
 
 const puaBase = 0xE000
@@ -110,7 +110,7 @@ func PrepareCharset(charset string) error {
     strict := len(runes) <= maxSingleByteSlots
 
     byteToChar, charToByte := buildMappings(runes, strict, charset)
-    components.SetCharMap(charset, byteToChar, charToByte)
+    ffxencoding.SetCharMap(charset, byteToChar, charToByte)
     return nil
 }
 

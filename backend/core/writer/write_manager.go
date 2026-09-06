@@ -3,7 +3,8 @@ package writer
 import (
 	"encoding/json"
 	"ffxresources/backend/common"
-	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/converter"
+	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/fileFormats/macrodic"
 	"ffxresources/backend/models"
@@ -446,9 +447,9 @@ func EditAndSaveMacrodicFromJson(jsonFilePath string) error {
 				}
 
 				// Convert strings back to bytes using the localization's charset
-				charset := components.GetCharsetForLanguage(locData.Localization)
-				regularBytes := components.StringToBytes(regularText, charset)
-				simplifiedBytes := components.StringToBytes(simplifiedText, charset)
+				charset := ffxencoding.GetCharsetForLanguage(locData.Localization)
+				regularBytes := converter.StringToBytes(regularText, charset)
+				simplifiedBytes := converter.StringToBytes(simplifiedText, charset)
 
 				// Create MacroString object
 				macroString := &macrodic.MacroString{
@@ -614,7 +615,7 @@ func WriteMacroDictionaryToBinaryFiles() {
 			}
 
 			// Convert MacroString slice to bytes using the new rebuild function
-			charset := components.GetCharsetForLanguage(localization)
+			charset := ffxencoding.GetCharsetForLanguage(localization)
 			binaryData := macrodic.MacroStringsToBytes(chunk, charset, true) // true = optimize (deduplicate strings)
 
 			// Write to file
@@ -659,7 +660,7 @@ func TestMacroStringReconstruction() {
 	if chunks, exists := macrodic.MACRODICTFILE[testLocalization]; exists && len(chunks) > 0 {
 		chunk := chunks[6] // Test first chunk
 		if len(chunk) > 0 {
-			charset := components.GetCharsetForLanguage(testLocalization)
+			charset := ffxencoding.GetCharsetForLanguage(testLocalization)
 
 			// Convert to binary
 			binaryData := macrodic.MacroStringsToBytes(chunk, charset, true)

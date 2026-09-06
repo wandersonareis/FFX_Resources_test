@@ -3,8 +3,8 @@ package converter
 import (
 	"bytes"
 	"encoding/binary"
+	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/datastore"
-	"ffxresources/backend/core/components"
 	"fmt"
 	"io"
 	"strings"
@@ -21,7 +21,7 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 
     var (
         out               strings.Builder
-        charset           = components.GetCharsetForLanguage(localization)
+        charset           = ffxencoding.GetCharsetForLanguage(localization)
         extraFiveSections bool
         buf               = bytes.NewReader(table[offset:])
     )
@@ -41,7 +41,7 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 
         switch {
         case idx >= 0x30:
-            if chr, ok := components.ByteToChar(uint(idx)+extraOffset, charset); ok {
+            if chr, ok := ffxencoding.ByteToChar(uint(idx)+extraOffset, charset); ok {
                 out.WriteRune(chr)
             } else if extraOffset != 0 {
                 out.WriteString(fmt.Sprintf("{UNKDBLCHR:04:%02X}", idx))
@@ -80,7 +80,7 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
             section := uint(idx) - 0x2B
             actualIdx := section*0xD0 + uint(lowByte)
             newVar := actualIdx + extraOffset
-            if chr, ok := components.ByteToChar(newVar, charset); ok {
+            if chr, ok := ffxencoding.ByteToChar(newVar, charset); ok {
                 out.WriteRune(chr)
             } else if extraOffset != 0 {
                 out.WriteString(fmt.Sprintf("{UNKTPLCHR:04:%02X:%02X}", idx, lowByte))
@@ -90,7 +90,7 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 
         // === NOVO: quando extraOffset está ativo, bytes baixos viram caractere ===
         case extraOffset != 0:
-            if chr, ok := components.ByteToChar(uint(idx)+extraOffset, charset); ok {
+            if chr, ok := ffxencoding.ByteToChar(uint(idx)+extraOffset, charset); ok {
                 out.WriteRune(chr)
             } else {
                 out.WriteString(fmt.Sprintf("{UNKDBLCHR:04:%02X}", idx))
@@ -101,7 +101,7 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
         case idx == 0x02:
             out.WriteString("{BREAK}")
         case idx == 0x03:
-            if components.WriteLinebreaksAsCommands {
+            if WriteLinebreaksAsCommands {
                 out.WriteString("{\\n}")
             } else {
                 out.WriteByte('\n')
@@ -132,14 +132,14 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
                 out.WriteString("{CLR:??}")
                 break
             }
-            out.WriteString(components.GetColorString(clr))
+            out.WriteString(ffxencoding.GetColorString(clr))
         case idx == 0x0B:
             var icon uint8
             if err := readOneByte(buf, &icon); err != nil {
                 out.WriteString("{ICON:??}")
                 break
             }
-            out.WriteString(fmt.Sprintf("{ICON:%02X:%s}", icon, components.GetIconName(icon)))
+            out.WriteString(fmt.Sprintf("{ICON:%02X:%s}", icon, ffxencoding.GetIconName(icon)))
         case idx == 0x0C:
             out.WriteString("{BLANK0C}")
         case idx == 0x0F:
@@ -176,7 +176,7 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
                 break
             }
             pcIdx := rawValue - 0x30
-            out.WriteString(fmt.Sprintf("{PC:%02X:%s}", pcIdx, components.GetPlayerChar(pcIdx)))
+            out.WriteString(fmt.Sprintf("{PC:%02X:%s}", pcIdx, ffxencoding.GetPlayerChar(pcIdx)))
         case idx >= 0x13 && idx <= 0x22:
             var section uint = uint(idx) - 0x13
             var line byte

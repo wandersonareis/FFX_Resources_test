@@ -1,4 +1,4 @@
-package components
+package ffxencoding
 
 var (
 	ByteToCharMaps = make(map[string]map[uint]rune)

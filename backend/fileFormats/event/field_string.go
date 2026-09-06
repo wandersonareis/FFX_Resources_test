@@ -36,12 +36,12 @@ func NewFieldString(charset string, regularHeader, simplifiedHeader int, stringB
 		SimplifiedChoices: (simplifiedHeader & 0xFF000000) >> 24,
 	}
 
-	fs.RegularBytes = components.GetStringBytesAtLookupOffset(stringBytes, fs.RegularOffset)
+	fs.RegularBytes = converter.GetStringBytesAtLookupOffset(stringBytes, fs.RegularOffset)
 
 	if fs.RegularOffset == fs.SimplifiedOffset {
 		fs.SimplifiedBytes = fs.RegularBytes
 	} else {
-		fs.SimplifiedBytes = components.GetStringBytesAtLookupOffset(stringBytes, fs.SimplifiedOffset)
+		fs.SimplifiedBytes = converter.GetStringBytesAtLookupOffset(stringBytes, fs.SimplifiedOffset)
 	}
 
 	return fs
@@ -75,7 +75,7 @@ func RebuildFieldStrings(strings []*FieldString, charset string) []byte {
 
 	for _, fieldString := range strings {
 		regularString := fieldString.GetRegularString()
-		fieldString.RegularChoices = components.GetChoicesInString(regularString)
+		fieldString.RegularChoices = converter.GetChoicesInString(regularString)
 
 		if regularString == "" {
 			fieldString.RegularOffset = contentOffset
@@ -84,11 +84,11 @@ func RebuildFieldStrings(strings []*FieldString, charset string) []byte {
 		} else {
 			fieldString.RegularOffset = contentOffset + buf.Len()
 			offsetMap[regularString] = buf.Len()
-			components.FillByteList(regularString, &buf, charset)
+			converter.FillByteList(regularString, &buf, charset)
 		}
 
 		simplifiedString := fieldString.GetSimplifiedString()
-		fieldString.SimplifiedChoices = components.GetChoicesInString(simplifiedString)
+		fieldString.SimplifiedChoices = converter.GetChoicesInString(simplifiedString)
 
 		if simplifiedString == "" {
 			fieldString.SimplifiedOffset = contentOffset
@@ -97,7 +97,7 @@ func RebuildFieldStrings(strings []*FieldString, charset string) []byte {
 		} else {
 			fieldString.SimplifiedOffset = contentOffset + buf.Len()
 			offsetMap[simplifiedString] = buf.Len()
-			components.FillByteList(simplifiedString, &buf, charset)
+			converter.FillByteList(simplifiedString, &buf, charset)
 		}
 	}
 
@@ -155,7 +155,7 @@ func (fs *FieldString) SetRegularString(str string, newCharset ...string) {
 	}
 
 	keepSimplifiedSynced := !fs.HasDistinctSimplified()
-	fs.RegularBytes = components.StringToBytes(str, fs.Charset)
+	fs.RegularBytes = converter.StringToBytes(str, fs.Charset)
 
 	if keepSimplifiedSynced {
 		fs.SimplifiedBytes = fs.RegularBytes
@@ -167,7 +167,7 @@ func (fs *FieldString) SetSimplifiedString(str string, newCharset ...string) {
 		fs.SetCharset(newCharset[0])
 	}
 
-	fs.SimplifiedBytes = components.StringToBytes(str, fs.Charset)
+	fs.SimplifiedBytes = converter.StringToBytes(str, fs.Charset)
 }
 
 func (fs *FieldString) SetCharset(newCharset string) {

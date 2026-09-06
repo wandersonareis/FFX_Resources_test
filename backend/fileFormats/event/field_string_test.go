@@ -1,7 +1,7 @@
 package event_test
 
 import (
-	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/fileFormats/event"
 	"testing"
 
@@ -473,5 +473,5 @@ func setupFieldStringCharMaps() {
 	usReverseMap['D'] = 0x53
 	usReverseMap['E'] = 0x54
 
-	components.SetCharMap("us", usMap, usReverseMap)
+	ffxencoding.SetCharMap("us", usMap, usReverseMap)
 }

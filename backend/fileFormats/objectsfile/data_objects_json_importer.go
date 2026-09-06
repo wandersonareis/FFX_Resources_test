@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/converter"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/models"
 	"fmt"
@@ -335,7 +336,7 @@ func createNewKeyedString(text string, charset string) *KeyedString {
 		/* 		Offset:  0,
 		   		Key:     0, */
 		Segment: models.Segment{Offset: 0, Key: 0},
-		Bytes:   components.StringToBytes(text, charset),
+		Bytes:   converter.StringToBytes(text, charset),
 	}
 }
 

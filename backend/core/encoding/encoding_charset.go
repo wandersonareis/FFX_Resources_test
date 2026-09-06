@@ -1,4 +1,4 @@
-package sharedutils
+package ffxencoding
 
 var localizationMap = map[string]string{
 	"ch": "ch",

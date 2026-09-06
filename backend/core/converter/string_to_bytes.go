@@ -1,4 +1,4 @@
-package components
+package converter
 
 import (
 	"bytes"
@@ -8,7 +8,11 @@ import (
 	"strconv"
 	"strings"
 
-	ffxencoding "ffxresources/backend/core/encoding"
+	encoding "ffxresources/backend/core/encoding"
+)
+
+var (
+	WriteLinebreaksAsCommands = true
 )
 
 var (
@@ -23,7 +27,7 @@ func CharToBytes(chr rune, charset string) []uint {
 		return []uint{0x03}
 	}
 
-	indexValue, exists := ffxencoding.CharToByteMaps[charset][chr]
+	indexValue, exists := encoding.CharToByteMaps[charset][chr]
 	if !exists {
 		return nil
 	}
@@ -197,10 +201,10 @@ func ParseCommand(runes []rune, startIndex int) []uint {
 		boxType := val + 0x30
 		return []uint{0x09, uint(boxType)}
 	case strings.HasPrefix(cmd, "CLR:"):
-		clr := ffxencoding.ColorToByte(cmd[4:])
+		clr := encoding.ColorToByte(cmd[4:])
 		return []uint{0x0A, uint(clr)}
 	case strings.HasPrefix(cmd, "COLOR:"):
-		clr := ffxencoding.ColorToByte(cmd[6:])
+		clr := encoding.ColorToByte(cmd[6:])
 		return []uint{0x0A, uint(clr)}
 	case strings.HasPrefix(cmd, "ICON:"):
 		parts := strings.SplitN(cmd, ":", 3)

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"ffxresources/backend/common"
-	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/converter"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/models"
@@ -29,7 +28,7 @@ func NewKeyedString(charset string, segment models.Segment, data []byte) datasto
 		Key:     segment.Key, */
 		Segment: segment,
 	}
-	ks.Bytes = components.GetStringBytesAtLookupOffset(data, int(segment.Offset))
+	ks.Bytes = converter.GetStringBytesAtLookupOffset(data, int(segment.Offset))
 	return ks
 }
 
@@ -104,7 +103,7 @@ func (ks *KeyedString) SetString(str, newCharset string) {
 	if newCharset != "" && newCharset != ks.Charset {
 		ks.Charset = newCharset
 	}
-	ks.Bytes = components.StringToBytes(str, ks.Charset)
+	ks.Bytes = converter.StringToBytes(str, ks.Charset)
 }
 
 func RebuildKeyedStrings(strings []datastore.IGlobalKeyedString, charset string) []byte {
@@ -114,7 +113,7 @@ func RebuildKeyedStrings(strings []datastore.IGlobalKeyedString, charset string)
 		s := ks.GetString()
 
 		ks.SetOffset(models.Offset(buf.Len()))
-		components.FillByteList(s, &buf, charset)
+		converter.FillByteList(s, &buf, charset)
 	}
 
 	return buf.Bytes()

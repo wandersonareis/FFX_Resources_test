@@ -6,7 +6,7 @@ import (
 	"ffxresources/backend/core/writer"
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/fileFormats/macrodic"
-	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/encoding"
 	testcommon "ffxresources/testData"
 	"os"
 	"path/filepath"
@@ -46,8 +46,8 @@ var _ = Describe("ReadManager", Ordered, func() {
 		common.ResourcesRoot = originalResourcesRoot
 
 		// Clear any global state that might have been set
-		components.ByteToCharMaps = make(map[string]map[uint]rune)
-		components.CharToByteMaps = make(map[string]map[rune]uint)
+		ffxencoding.ByteToCharMaps = make(map[string]map[uint]rune)
+		ffxencoding.CharToByteMaps = make(map[string]map[rune]uint)
 		macrodic.MacroLookup = make(map[int]*macrodic.LocalizedMacroStringObject)
 	})
 	Context("when testing FFX (version 1)", func() {
@@ -62,11 +62,11 @@ var _ = Describe("ReadManager", Ordered, func() {
 
 				// Verify that character maps were created for each charset
 				for _, charset := range common.Charsets {
-					byteToChar, exists := components.ByteToCharMaps[charset]
+					byteToChar, exists := ffxencoding.ByteToCharMaps[charset]
 					Expect(exists).To(BeTrue(), "ByteToChar map should exist for charset %s", charset)
 					Expect(byteToChar).ToNot(BeEmpty(), "ByteToChar map should be populated for charset %s", charset)
 
-					charToByte, exists := components.CharToByteMaps[charset]
+					charToByte, exists := ffxencoding.CharToByteMaps[charset]
 					Expect(exists).To(BeTrue(), "CharToByte map should exist for charset %s", charset)
 					Expect(charToByte).ToNot(BeEmpty(), "CharToByte map should be populated for charset %s", charset)
 				}
@@ -104,11 +104,11 @@ var _ = Describe("ReadManager", Ordered, func() {
 
 				// Verify that character maps were created for each charset
 				for _, charset := range common.Charsets {
-					byteToChar, exists := components.ByteToCharMaps[charset]
+					byteToChar, exists := ffxencoding.ByteToCharMaps[charset]
 					Expect(exists).To(BeTrue(), "ByteToChar map should exist for charset %s", charset)
 					Expect(byteToChar).ToNot(BeEmpty(), "ByteToChar map should be populated for charset %s", charset)
 
-					charToByte, exists := components.CharToByteMaps[charset]
+					charToByte, exists := ffxencoding.CharToByteMaps[charset]
 					Expect(exists).To(BeTrue(), "CharToByte map should exist for charset %s", charset)
 					Expect(charToByte).ToNot(BeEmpty(), "CharToByte map should be populated for charset %s", charset)
 				}

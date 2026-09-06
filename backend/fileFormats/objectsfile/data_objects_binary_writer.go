@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
+	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/datastore"
 	"fmt"
 	"path/filepath"
@@ -129,7 +130,7 @@ func ConvertFFXLocalizedDataToBytes(objects []datastore.IGlobalLocalizedTextObje
 		}
 	}
 
-	charset := components.GetCharsetForLanguage(languageCode)
+	charset := ffxencoding.GetCharsetForLanguage(languageCode)
 	stringBytes := RebuildKeyedStrings(allKeyedStrings, charset)
 
 	var buf bytes.Buffer

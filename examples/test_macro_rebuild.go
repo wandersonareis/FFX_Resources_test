@@ -1,10 +1,10 @@
 package main
 
 import (
+	encoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/core/writer"
 	"ffxresources/backend/fileFormats/macrodic"
-	"ffxresources/backend/core/components"
 	"fmt"
 )
 
@@ -27,7 +27,7 @@ func TestMacroStringRebuild() {
 			fmt.Printf("Testando com chunk 0 da localização %s (%d strings)\n", testLocalization, len(chunk))
 
 			// Test the rebuild function
-			charset := components.GetCharsetForLanguage(testLocalization)
+			charset := encoding.GetCharsetForLanguage(testLocalization)
 			rebuiltData := macrodic.GenerateMacroStringData(chunk, charset, true)
 
 			fmt.Printf("Dados reconstruídos: %d bytes\n", len(rebuiltData))
