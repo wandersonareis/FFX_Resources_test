@@ -171,7 +171,7 @@ var _ = Describe("Data Objects Binary Writer", Ordered, func() {
 			Expect(err).To(BeNil())
 
 			// Import modifications
-			err = objectsfile.ImportLocalizedDataFromJsonFile(jsonFileName, originalData)
+			err = objectsfile.ImportFromJson(jsonFileName, originalData)
 			Expect(err).To(BeNil())
 
 			// Export the modified data
@@ -279,7 +279,7 @@ var _ = Describe("Data Objects Binary Writer", Ordered, func() {
 			Expect(err).To(BeNil())
 
 			// Import modifications
-			err = objectsfile.ImportLocalizedDataFromJsonFile(jsonFileName, originalData)
+			err = objectsfile.ImportFromJson(jsonFileName, originalData)
 			Expect(err).To(BeNil())
 
 			// Export the modified data

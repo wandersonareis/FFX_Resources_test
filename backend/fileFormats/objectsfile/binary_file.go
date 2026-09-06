@@ -96,13 +96,9 @@ var _ datastore.IBinaryFile = (*BinaryFile)(nil)
 
 // BinaryFile orquestra todo o ciclo de vida de um arquivo binário de localização
 type BinaryFile struct {
-	Header      IBinaryHeader
-	Objects     components.IList[datastore.IGlobalLocalizedTextObject]
-	StringBytes []byte
-
-	JsonExporter JsonExporterFunc
-	JsonImporter JsonImporterFunc
-
+	Header       IBinaryHeader
+	Objects      components.IList[datastore.IGlobalLocalizedTextObject]
+	StringBytes  []byte
 	creator      CreatorFunc
 	languageCode string
 	patternPath  string
@@ -110,15 +106,13 @@ type BinaryFile struct {
 }
 
 // NewBinaryFile cria o orquestrador. Você passa a função que cria o objeto correto.
-func NewBinaryFile(patternPath string, creator CreatorFunc, jsonExporter JsonExporterFunc, jsonImporter JsonImporterFunc, languageCode string) *BinaryFile {
+func NewBinaryFile(patternPath string, creator CreatorFunc, languageCode string) *BinaryFile {
 	return &BinaryFile{
 		Header:       NewBinaryHeader(),
 		patternPath:  patternPath,
 		relativePath: filepath.Join(common.GetLocalizationRoot(common.DefaultLocalization), patternPath),
 		languageCode: languageCode,
 		creator:      creator,
-		JsonExporter: jsonExporter,
-		JsonImporter: jsonImporter,
 	}
 }
 
@@ -142,7 +136,6 @@ func (b *BinaryFile) fileAcessor() ([]byte, error) {
 	return data, nil
 }
 
-// LoadFromBinary faz o parse do binário no formato V2 (header 32 bytes, campos uint32)
 func (b *BinaryFile) LoadFromBinary() error {
 	data, err := b.fileAcessor()
 	if err != nil {
@@ -151,29 +144,21 @@ func (b *BinaryFile) LoadFromBinary() error {
 
 	reader := bytes.NewReader(data)
 
-	// 1. Lê o Header (o cursor avança sozinho)
 	if err := b.Header.Read(reader); err != nil {
 		return fmt.Errorf("error reading header: %w", err)
 	}
-
-	// 2. Lê os Chunks (DataBytes)
-	totalLength := b.Header.GetTotalLength()
-	fmt.Printf("Header: %+v\n", totalLength)
 
 	dataBytes := make([]byte, b.Header.GetTotalLength())
 	if _, err := io.ReadFull(reader, dataBytes); err != nil {
 		return fmt.Errorf("error reading chunks: %w", err)
 	}
 
-	// 3. O restante no reader é o StringBytes
 	b.StringBytes = make([]byte, reader.Len())
 	io.ReadFull(reader, b.StringBytes)
 
-	// 4. Processa os chunks
 	count := b.Header.GetMaxIndex() - b.Header.GetMinIndex()
 	b.Objects = components.NewList[datastore.IGlobalLocalizedTextObject](count + 1)
 
-	// O individualLength é o tamanho do chunk, não do header do arquivo
 	individualLength := b.Header.GetIndividualLength()
 	for i := 0; i <= count; i++ {
 		from := i * individualLength
@@ -182,9 +167,9 @@ func (b *BinaryFile) LoadFromBinary() error {
 			break
 		}
 
-		objData := dataBytes[from:to]
+		chunk := bytes.Clone(dataBytes[from:to])
 		// Passa individualLength como headerLength para o objeto (chunk)
-		obj := b.creator(objData, b.StringBytes, individualLength, b.languageCode)
+		obj := b.creator(chunk, b.StringBytes, individualLength, b.languageCode)
 		if obj == nil {
 			common.LogVerbose("Skipping invalid V2 object at index %d", i+b.Header.GetMinIndex())
 			continue
@@ -198,20 +183,18 @@ func (b *BinaryFile) LoadFromBinary() error {
 	return nil
 }
 
-// ExportToJson exporta para JSON usando a função injetada
 func (b *BinaryFile) ExportToJson(filePath string) error {
-	if b.JsonExporter == nil {
-		return fmt.Errorf("json exporter not configured")
+	if filePath == "" {
+		return fmt.Errorf("json file not configured")
 	}
-	return b.JsonExporter(b.Objects, filePath)
+	return ExportToJSON(b.Objects, filePath)
 }
 
-// ImportFromJson importa do JSON (atualiza os ponteiros na memória)
 func (b *BinaryFile) ImportFromJson(filePath string) error {
-	if b.JsonImporter == nil {
-		return fmt.Errorf("json importer not configured")
+	if filePath == "" {
+		return fmt.Errorf("json file not configured")
 	}
-	return b.JsonImporter(filePath, b.Objects)
+	return ImportFromJson(filePath, b.Objects)
 }
 
 // SaveToBinary salva de volta para o binário no formato V2

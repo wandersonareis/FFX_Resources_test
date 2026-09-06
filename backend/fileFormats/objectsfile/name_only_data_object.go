@@ -30,6 +30,7 @@ type NameOnlyDataObjectV2 struct {
 	Bytes        []byte
 	Name         datastore.IGlobalLocalizedKeyedStringObject
 	HeaderLength int
+	unknown      []byte
 }
 
 var (
@@ -211,6 +212,10 @@ func (n *NameOnlyDataObjectV2) mapBytes(stringBytes []byte, languageCode string)
 		return
 	}
 	n.Name.ReadAndSetLocalizedContent(languageCode, stringBytes, seg.Offset, seg.Key)
+	if r.Len() > 0 {
+		n.unknown = make([]byte, r.Len())
+		r.Read(n.unknown)
+	}
 }
 
 func (n *NameOnlyDataObjectV2) GetName(languageCode string) string {
@@ -247,11 +252,12 @@ func (n *NameOnlyDataObjectV2) GetHeaderLength() int {
 }
 
 func (n *NameOnlyDataObjectV2) ToBytes(languageCode string) []byte {
-	result := make([]byte, n.HeaderLength)
 	var buf bytes.Buffer
 	models.WriteSegment(&buf, getSegment(n.Name.GetLocalizedContent(languageCode)))
-	copy(result, buf.Bytes())
-	return result
+	if len(n.unknown) > 0 {
+		buf.Write(n.unknown)
+	}
+	return buf.Bytes()
 }
 
 func (n *NameOnlyDataObjectV2) ToString(languageCode string) string {

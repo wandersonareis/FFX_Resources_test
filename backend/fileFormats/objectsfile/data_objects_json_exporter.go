@@ -67,8 +67,34 @@ func binaryMetadataForFile(fileName string) *models.FileMetadata {
 	return models.NewFileMetadata(models.NewFileInfoFromPath(models.ObjectFileBinaryPath(pattern)))
 }
 
+func createJSON(dataObjectEntries []*JSONEntry, fileName string) error {
+	editsPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits")
+	if err := common.EnsurePathExists(editsPath); err != nil {
+		return fmt.Errorf("error creating edits directory: %w", err)
+	}
+
+	jsonPath := filepath.Join(editsPath, common.WithVersionSuffix(fileName))
+
+	stringsBytes, err := json.Marshal(dataObjectEntries)
+	if err != nil {
+		return fmt.Errorf("error marshaling data for %s: %w", jsonPath, err)
+	}
+
+	export := models.ObjectsFileExport{
+		Metadata: binaryMetadataForFile(fileName),
+		Strings:  stringsBytes,
+	}
+
+	if err := models.SaveDataFile(export, jsonPath); err != nil {
+		return fmt.Errorf("error writing JSON file %s: %w", jsonPath, err)
+	}
+
+	common.LogVerbose("Exported name-description data to JSON: %s", jsonPath)
+	return nil
+}
+
 // createNameDescriptionJSON creates a JSON file with name and description data.
-func createNameDescriptionJSON(nameDescriptionList []*NameDescriptionData, fileName string) error {
+func createNameDescriptionJSON(nameDescriptionList []*JSONEntry, fileName string) error {
 	editsPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits")
 	if err := common.EnsurePathExists(editsPath); err != nil {
 		return fmt.Errorf("error creating edits directory: %w", err)
@@ -94,31 +120,147 @@ func createNameDescriptionJSON(nameDescriptionList []*NameDescriptionData, fileN
 	return nil
 }
 
-// createNameOnlyJSON creates a JSON file with name-only data.
-func createNameOnlyJSON(data []*NameOnlyData, fileName string) error {
-	editsPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits")
-	if err := common.EnsurePathExists(editsPath); err != nil {
-		return fmt.Errorf("error creating edits directory: %w", err)
+func ExportToJSON(objects components.IList[datastore.IGlobalLocalizedTextObject], jsonFileName string) error {
+	if objects == nil || objects.IsEmpty() {
+		return fmt.Errorf("no objects loaded or empty")
 	}
 
-	jsonPath := filepath.Join(editsPath, common.WithVersionSuffix(fileName))
+	var jsonEntries []*JSONEntry
 
-	stringsBytes, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Errorf("error marshaling data for %s: %w", jsonPath, err)
-	}
+	objects.RangeIndex(func(i int, obj datastore.IGlobalLocalizedTextObject) {
+		if obj == nil {
+			common.LogVerbose("Object %d is nil, skipping", i)
+			return
+		}
 
-	export := models.ObjectsFileExport{
-		Metadata: binaryMetadataForFile(fileName),
-		Strings:  stringsBytes,
-	}
+		data := &JSONEntry{
+			ID:   i,
+			Name: make(map[string]string),
+		}
 
-	if err := models.SaveDataFile(export, jsonPath); err != nil {
-		return fmt.Errorf("error writing JSON file %s: %w", jsonPath, err)
-	}
+		nameKeyed := obj.GetKeyedString("name")
+		descKeyed := obj.GetKeyedString("description")
+		effKeyed := obj.GetKeyedString("effect")
 
-	common.LogVerbose("Exported name-only data to JSON: %s", jsonPath)
-	return nil
+		var abKeyed []datastore.IGlobalLocalizedKeyedStringObject
+		for idx := 1; ; idx++ {
+			ability := obj.GetKeyedString(fmt.Sprintf("ability%d", idx))
+			if ability == nil {
+				break
+			}
+			abKeyed = append(abKeyed, ability)
+		}
+
+		sensorKeyed := obj.GetKeyedString("sensorText")
+		simplifiedSensorKeyed := obj.GetKeyedString("simplifiedSensorText")
+		scanKeyed := obj.GetKeyedString("scanText")
+		simplifiedScanKeyed := obj.GetKeyedString("simplifiedScanText")
+
+		if len(abKeyed) > 0 {
+			data.Abilities = make([]map[string]string, len(abKeyed))
+			for idx := range data.Abilities {
+				data.Abilities[idx] = make(map[string]string)
+			}
+		}
+
+		for locKey := range common.SupportedLanguages {
+			// Name
+			if nameKeyed != nil {
+				if nameText := nameKeyed.GetLocalizedString(locKey); nameText != "" {
+					data.Name[locKey] = nameText
+				}
+			}
+
+			// Description
+			if descKeyed != nil {
+				if descText := descKeyed.GetLocalizedString(locKey); descText != "" {
+					if data.Description == nil {
+						data.Description = make(map[string]string)
+					}
+					data.Description[locKey] = descText
+				}
+			}
+
+			// Effect
+			if effKeyed != nil {
+				if effText := effKeyed.GetLocalizedString(locKey); effText != "" {
+					if data.Effect == nil {
+						data.Effect = make(map[string]string)
+					}
+					data.Effect[locKey] = effText
+				}
+			}
+
+			// Abilities
+			for idx, abKey := range abKeyed {
+				if abKey != nil {
+					if abText := abKey.GetLocalizedString(locKey); abText != "" {
+						data.Abilities[idx][locKey] = abText
+					}
+				}
+			}
+
+			// SensorText
+			if sensorKeyed != nil {
+				if sensorText := sensorKeyed.GetLocalizedString(locKey); sensorText != "" {
+					if data.SensorText == nil {
+						data.SensorText = make(map[string]string)
+					}
+					data.SensorText[locKey] = sensorText
+				}
+			}
+
+			// SimplifiedSensorText
+			if simplifiedSensorKeyed != nil {
+				if simplifiedSensorText := simplifiedSensorKeyed.GetLocalizedString(locKey); simplifiedSensorText != "" {
+					if data.SimplifiedSensorText == nil {
+						data.SimplifiedSensorText = make(map[string]string)
+					}
+					data.SimplifiedSensorText[locKey] = simplifiedSensorText
+				}
+			}
+
+			// ScanText
+			if scanKeyed != nil {
+				if scanText := scanKeyed.GetLocalizedString(locKey); scanText != "" {
+					if data.ScanText == nil {
+						data.ScanText = make(map[string]string)
+					}
+					data.ScanText[locKey] = scanText
+				}
+			}
+
+			// SimplifiedScanText
+			if simplifiedScanKeyed != nil {
+				if simplifiedScanText := simplifiedScanKeyed.GetLocalizedString(locKey); simplifiedScanText != "" {
+					if data.SimplifiedScanText == nil {
+						data.SimplifiedScanText = make(map[string]string)
+					}
+					data.SimplifiedScanText[locKey] = simplifiedScanText
+				}
+			}
+		}
+
+		hasData := len(data.Name) > 0 || len(data.Description) > 0 || len(data.Effect) > 0
+		if !hasData {
+			for _, ab := range data.Abilities {
+				if len(ab) > 0 {
+					hasData = true
+					break
+				}
+			}
+		}
+		if !hasData {
+			hasData = len(data.SensorText) > 0 || len(data.SimplifiedSensorText) > 0 ||
+				len(data.ScanText) > 0 || len(data.SimplifiedScanText) > 0
+		}
+
+		if hasData {
+			jsonEntries = append(jsonEntries, data)
+		}
+	})
+
+	return createJSON(jsonEntries, jsonFileName)
 }
 
 // ExportNameDescriptionToJSON converts IList data to JSON format for name-description objects.
@@ -127,7 +269,7 @@ func ExportNameDescriptionToJSON(objects components.IList[datastore.IGlobalLocal
 		return fmt.Errorf("no objects loaded or empty")
 	}
 
-	var nameDescData []*NameDescriptionData
+	var nameDescData []*JSONEntry
 
 	objects.RangeIndex(func(i int, nameDescObj datastore.IGlobalLocalizedTextObject) {
 		if nameDescObj == nil {
@@ -135,11 +277,9 @@ func ExportNameDescriptionToJSON(objects components.IList[datastore.IGlobalLocal
 			return
 		}
 
-		data := &NameDescriptionData{
-			NameOnlyData: NameOnlyData{
-				ID:   i,
-				Name: make(map[string]string),
-			},
+		data := &JSONEntry{
+			ID:          i,
+			Name:        make(map[string]string),
 			Description: make(map[string]string),
 		}
 
@@ -170,155 +310,63 @@ func ExportNameDescriptionToJSON(objects components.IList[datastore.IGlobalLocal
 	return createNameDescriptionJSON(nameDescData, jsonFileName)
 }
 
-// serializeJobTextToJSON converts IList data to JSON format for job text objects.
-func serializeJobTextToJSON(objects components.IList[datastore.IGlobalLocalizedTextObject], jsonFileName string) error {
+// serializeNameDescriptionAbilitiesEffectToJSON converts IList data to JSON format for plate text objects.
+func serializeNameDescriptionAbilitiesEffectToJSON(objects components.IList[datastore.IGlobalLocalizedTextObject], jsonFileName string) error {
 	if objects == nil || objects.IsEmpty() {
 		return fmt.Errorf("no objects loaded or empty")
 	}
 
-	var jobTextData []*JobTextData
+	var jsonEntries []*JSONEntry
 
-	objects.RangeIndex(func(i int, jobObj datastore.IGlobalLocalizedTextObject) {
-		if jobObj == nil {
+	objects.RangeIndex(func(i int, obj datastore.IGlobalLocalizedTextObject) {
+		if obj == nil {
 			common.LogVerbose("Object %d is nil, skipping", i)
 			return
 		}
 
-		data := &JobTextData{
-			NameOnlyData: NameOnlyData{
-				ID:   i,
-				Name: make(map[string]string),
-			},
-			Description: make(map[string]string),
-			Effect:      make(map[string]string),
+		nameKeyed := obj.GetKeyedString("name")
+		descKeyed := obj.GetKeyedString("description")
+		effKeyed := obj.GetKeyedString("effect")
+
+		var abKeyed []datastore.IGlobalLocalizedKeyedStringObject
+		for idx := 1; ; idx++ {
+			ability := obj.GetKeyedString(fmt.Sprintf("ability%d", idx))
+			if ability == nil {
+				break
+			}
+			abKeyed = append(abKeyed, ability)
 		}
 
-		nameKeyed := jobObj.GetKeyedString("name")
-		descKeyed := jobObj.GetKeyedString("description")
-		effKeyed := jobObj.GetKeyedString("effect")
+		data := &JSONEntry{
+			ID:          i,
+			Name:        make(map[string]string),
+			Description: make(map[string]string),
+			Effect:      make(map[string]string),
+			Abilities:   make([]map[string]string, len(abKeyed)),
+		}
+		for idx := range data.Abilities {
+			data.Abilities[idx] = make(map[string]string)
+		}
 
 		for locKey := range common.SupportedLanguages {
 			if nameKeyed != nil {
-				nameText := nameKeyed.GetLocalizedString(locKey)
-				if nameText != "" {
+				if nameText := nameKeyed.GetLocalizedString(locKey); nameText != "" {
 					data.Name[locKey] = nameText
 				}
 			}
-
 			if descKeyed != nil {
-				descText := descKeyed.GetLocalizedString(locKey)
-				if descText != "" {
+				if descText := descKeyed.GetLocalizedString(locKey); descText != "" {
 					data.Description[locKey] = descText
 				}
 			}
-
 			if effKeyed != nil {
-				effText := effKeyed.GetLocalizedString(locKey)
-				if effText != "" {
+				if effText := effKeyed.GetLocalizedString(locKey); effText != "" {
 					data.Effect[locKey] = effText
 				}
 			}
-		}
-
-		if len(data.Name) > 0 || len(data.Description) > 0 || len(data.Effect) > 0 {
-			jobTextData = append(jobTextData, data)
-		}
-	})
-
-	return createJobTextJSON(jobTextData, jsonFileName)
-}
-
-// createJobTextJSON creates a JSON file with job text data.
-func createJobTextJSON(jobTextData []*JobTextData, fileName string) error {
-	editsPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits")
-	if err := common.EnsurePathExists(editsPath); err != nil {
-		return fmt.Errorf("error creating edits directory: %w", err)
-	}
-
-	jsonPath := filepath.Join(editsPath, common.WithVersionSuffix(fileName))
-
-	stringsBytes, err := json.Marshal(jobTextData)
-	if err != nil {
-		return fmt.Errorf("error marshaling data for %s: %w", jsonPath, err)
-	}
-
-	export := models.ObjectsFileExport{
-		Metadata: binaryMetadataForFile(fileName),
-		Strings:  stringsBytes,
-	}
-
-	if err := models.SaveDataFile(export, jsonPath); err != nil {
-		return fmt.Errorf("error writing JSON file %s: %w", jsonPath, err)
-	}
-
-	common.LogVerbose("Exported job text data to JSON: %s", jsonPath)
-	return nil
-}
-
-// exportPlateTextToJSON converts IList data to JSON format for plate text objects.
-func exportPlateTextToJSON(objects components.IList[datastore.IGlobalLocalizedTextObject], jsonFileName string) error {
-	if objects == nil || objects.IsEmpty() {
-		return fmt.Errorf("no objects loaded or empty")
-	}
-
-	var plateTextData []*PlateTextData
-
-	objects.RangeIndex(func(i int, plateObj datastore.IGlobalLocalizedTextObject) {
-		if plateObj == nil {
-			common.LogVerbose("Object %d is nil, skipping", i)
-			return
-		}
-
-		data := &PlateTextData{
-			NameOnlyData: NameOnlyData{
-				ID:   i,
-				Name: make(map[string]string),
-			},
-			Description: make(map[string]string),
-			Abilities:   make([]map[string]string, 4),
-			Effect:      make(map[string]string),
-		}
-
-		for k := range data.Abilities {
-			data.Abilities[k] = make(map[string]string)
-		}
-
-		nameKeyed := plateObj.GetKeyedString("name")
-		descKeyed := plateObj.GetKeyedString("description")
-		effKeyed := plateObj.GetKeyedString("effect")
-
-		abKeyed := make([]datastore.IGlobalLocalizedKeyedStringObject, 4)
-		abKeyed[0] = plateObj.GetKeyedString("ability1")
-		abKeyed[1] = plateObj.GetKeyedString("ability2")
-		abKeyed[2] = plateObj.GetKeyedString("ability3")
-		abKeyed[3] = plateObj.GetKeyedString("ability4")
-
-		for locKey := range common.SupportedLanguages {
-			if nameKeyed != nil {
-				nameText := nameKeyed.GetLocalizedString(locKey)
-				if nameText != "" {
-					data.Name[locKey] = nameText
-				}
-			}
-
-			if descKeyed != nil {
-				descText := descKeyed.GetLocalizedString(locKey)
-				if descText != "" {
-					data.Description[locKey] = descText
-				}
-			}
-
-			if effKeyed != nil {
-				effText := effKeyed.GetLocalizedString(locKey)
-				if effText != "" {
-					data.Effect[locKey] = effText
-				}
-			}
-
 			for idx, abKey := range abKeyed {
 				if abKey != nil {
-					abText := abKey.GetLocalizedString(locKey)
-					if abText != "" {
+					if abText := abKey.GetLocalizedString(locKey); abText != "" {
 						data.Abilities[idx][locKey] = abText
 					}
 				}
@@ -336,38 +384,11 @@ func exportPlateTextToJSON(objects components.IList[datastore.IGlobalLocalizedTe
 		}
 
 		if hasData {
-			plateTextData = append(plateTextData, data)
+			jsonEntries = append(jsonEntries, data)
 		}
 	})
 
-	return createPlateTextJSON(plateTextData, jsonFileName)
-}
-
-// createPlateTextJSON creates a JSON file with plate text data.
-func createPlateTextJSON(plateTextData []*PlateTextData, fileName string) error {
-	editsPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits")
-	if err := common.EnsurePathExists(editsPath); err != nil {
-		return fmt.Errorf("error creating edits directory: %w", err)
-	}
-
-	jsonPath := filepath.Join(editsPath, common.WithVersionSuffix(fileName))
-
-	stringsBytes, err := json.Marshal(plateTextData)
-	if err != nil {
-		return fmt.Errorf("error marshaling data for %s: %w", jsonPath, err)
-	}
-
-	export := models.ObjectsFileExport{
-		Metadata: binaryMetadataForFile(fileName),
-		Strings:  stringsBytes,
-	}
-
-	if err := models.SaveDataFile(export, jsonPath); err != nil {
-		return fmt.Errorf("error writing JSON file %s: %w", jsonPath, err)
-	}
-
-	common.LogVerbose("Exported plate text data to JSON: %s", jsonPath)
-	return nil
+	return createJSON(jsonEntries, jsonFileName)
 }
 
 // serializeNameOnlyToJSON converts IList data to JSON format for name-only objects.
@@ -376,7 +397,7 @@ func serializeNameOnlyToJSON(objects components.IList[datastore.IGlobalLocalized
 		return fmt.Errorf("no objects loaded or empty")
 	}
 
-	var nameOnlyData []*NameOnlyData
+	var nameOnlyData []*JSONEntry
 
 	objects.RangeIndex(func(i int, nameObj datastore.IGlobalLocalizedTextObject) {
 		if nameObj == nil {
@@ -384,7 +405,7 @@ func serializeNameOnlyToJSON(objects components.IList[datastore.IGlobalLocalized
 			return
 		}
 
-		data := &NameOnlyData{
+		data := &JSONEntry{
 			ID:   i,
 			Name: make(map[string]string),
 		}
@@ -405,7 +426,7 @@ func serializeNameOnlyToJSON(objects components.IList[datastore.IGlobalLocalized
 		}
 	})
 
-	return createNameOnlyJSON(nameOnlyData, jsonFileName)
+	return createJSON(nameOnlyData, jsonFileName)
 }
 
 // ExportKeyItemsToJSON exports key items data from objectsfile.KEY_ITEMS to a JSON file.
@@ -469,7 +490,7 @@ func ExportMainMenuToJSON() error {
 		return fmt.Errorf("MMAIN_TEXT data not loaded or empty")
 	}
 
-	return ExportNameDescriptionToJSON(MMAIN_TEXT, "main_menu_all_localizations.json")
+	return ExportToJSON(MMAIN_TEXT, "main_menu_all_localizations.json")
 }
 
 // ExportPlayerRoomToJSON exports player room data from objectsfile.PLAYER_ROOM to a JSON file.
@@ -478,7 +499,7 @@ func ExportPlayerRoomToJSON() error {
 		return fmt.Errorf("PLAYER_ROOM data not loaded or empty")
 	}
 
-	return serializeNameOnlyToJSON(PLAYER_ROOM, "player_room_all_localizations.json")
+	return ExportToJSON(PLAYER_ROOM, "player_room_all_localizations.json")
 }
 
 // ExportBuildToJSON exports build data from objectsfile.BUILD_TEXT to a JSON file.
@@ -487,7 +508,7 @@ func ExportBuildToJSON() error {
 		return fmt.Errorf("BUILD_TEXT data not loaded or empty")
 	}
 
-	return serializeNameOnlyToJSON(BUILD_TEXT, "build_all_localizations.json")
+	return ExportToJSON(BUILD_TEXT, "build_all_localizations.json")
 }
 
 // ExportBattleToJSON exports battle data from objectsfile.BTL_TEXT to a JSON file.
@@ -496,7 +517,7 @@ func ExportBattleToJSON() error {
 		return fmt.Errorf("BTL_TEXT data not loaded or empty")
 	}
 
-	return serializeNameOnlyToJSON(datastore.BattleTxt, "battle_text_all_localizations.json")
+	return ExportToJSON(datastore.BattleTxt, "battle_text_all_localizations.json")
 }
 
 // ExportBattleEndToJSON exports battle end data from objectsfile.BTLEND_TEXT to a JSON file.
@@ -515,132 +536,6 @@ func ExportMonsterMagic1ToJSON() error {
 	}
 
 	return serializeNameOnlyToJSON(MONMAGIC1, "monster_magic1_all_localizations.json")
-}
-
-// ExportMonsterMagic2ToJSON exports monster magic 2 data from objectsfile.MONMAGIC2 to a JSON file.
-func ExportMonsterMagic2ToJSON() error {
-	if MONMAGIC2 == nil || MONMAGIC2.IsEmpty() {
-		return fmt.Errorf("MONMAGIC2 data not loaded or empty")
-	}
-
-	return serializeNameOnlyToJSON(MONMAGIC2, "monster_magic2_all_localizations.json")
-}
-
-// ExportNameToJSON exports name data from objectsfile.NAME_TEXT to a JSON file.
-func ExportNameToJSON() error {
-	if NAME_TEXT == nil || NAME_TEXT.IsEmpty() {
-		return fmt.Errorf("NAME_TEXT data not loaded or empty")
-	}
-
-	return serializeNameOnlyToJSON(NAME_TEXT, "names_all_localizations.json")
-}
-
-// ExportAAbilityToJSON exports FFX-2 ability data (a_ability.bin) to a JSON file.
-func ExportAAbilityToJSON() error {
-	if A_ABILITY == nil || A_ABILITY.IsEmpty() {
-		return fmt.Errorf("A_ABILITY data not loaded or empty")
-	}
-
-	return ExportNameDescriptionToJSON(A_ABILITY, "a_ability_all_localizations.json")
-}
-
-// ExportAccessoriesToJSON exports FFX-2 accessory data (accessory.bin) to a JSON file.
-func ExportAccessoriesToJSON() error {
-	if ACCESSORY == nil || ACCESSORY.IsEmpty() {
-		return fmt.Errorf("ACCESSORY data not loaded or empty")
-	}
-
-	return ExportNameDescriptionToJSON(ACCESSORY, "accessory_all_localizations.json")
-}
-
-// ExportJobsToJSON exports FFX-2 job data (job.bin) to a JSON file.
-func ExportJobsToJSON() error {
-	if JOB == nil || JOB.IsEmpty() {
-		return fmt.Errorf("JOB data not loaded or empty")
-	}
-
-	return serializeJobTextToJSON(JOB, "job_all_localizations.json")
-}
-
-// ExportMenuTextToJSON exports FFX-2 menu text data (menu_txt.bin) to a JSON file.
-func ExportMenuTextToJSON() error {
-	if MENU_TEXT == nil || MENU_TEXT.IsEmpty() {
-		return fmt.Errorf("MENU_TEXT data not loaded or empty")
-	}
-
-	return ExportNameDescriptionToJSON(MENU_TEXT, "menu_text_all_localizations.json")
-}
-
-// ExportMonsterMagicToJSON exports FFX-2 monster magic data (monmagic.bin) to a JSON file.
-func ExportMonsterMagicToJSON() error {
-	if MONMAGIC == nil || MONMAGIC.IsEmpty() {
-		return fmt.Errorf("MONMAGIC data not loaded or empty")
-	}
-
-	return ExportNameDescriptionToJSON(MONMAGIC, "monster_magic_all_localizations.json")
-}
-
-// ExportMonstersToJSON exports FFX-2 monster data (monster.bin) to a JSON file.
-func ExportMonstersToJSON() error {
-	if MONSTER == nil || MONSTER.IsEmpty() {
-		return fmt.Errorf("MONSTER data not loaded or empty")
-	}
-
-	return ExportNameDescriptionToJSON(MONSTER, "monster_all_localizations.json")
-}
-
-// ExportMonsters2ToJSON exports FFX-2 monster data (monster2.bin) to a JSON file.
-func ExportMonsters2ToJSON() error {
-	if MONSTER2 == nil || MONSTER2.IsEmpty() {
-		return fmt.Errorf("MONSTER2 data not loaded or empty")
-	}
-
-	return ExportNameDescriptionToJSON(MONSTER2, "monster2_all_localizations.json")
-}
-
-// ExportBattleTextToJSON exports FFX-2 battle text data (battle_txt.bin) to a JSON file.
-func ExportBattleTextToJSON() error {
-	if BATTLE_TEXT == nil || BATTLE_TEXT.IsEmpty() {
-		return fmt.Errorf("BATTLE_TEXT data not loaded or empty")
-	}
-
-	return ExportNameDescriptionToJSON(BATTLE_TEXT, "battle_text_all_localizations.json")
-}
-
-// ExportOversoulToJSON exports FFX-2 oversoul data (oversoul.bin) to a JSON file.
-func ExportOversoulToJSON() error {
-	if OVERSOUL == nil || OVERSOUL.IsEmpty() {
-		return fmt.Errorf("OVERSOUL data not loaded or empty")
-	}
-
-	return serializeNameOnlyToJSON(OVERSOUL, "oversoul_all_localizations.json")
-}
-
-// ExportPlateToJSON exports FFX-2 plate data (plate.bin) to a JSON file.
-func ExportPlateToJSON() error {
-	if PLATE == nil || PLATE.IsEmpty() {
-		return fmt.Errorf("PLATE data not loaded or empty")
-	}
-
-	return exportPlateTextToJSON(PLATE, "plate_all_localizations.json")
-}
-
-// ExportPlayerSaveToJSON exports FFX-2 player save data (ply_save.bin) to a JSON file.
-func ExportPlayerSaveToJSON() error {
-	if PLAYER_SAVE == nil || PLAYER_SAVE.IsEmpty() {
-		return fmt.Errorf("PLAYER_SAVE data not loaded or empty")
-	}
-
-	return ExportNameDescriptionToJSON(PLAYER_SAVE, "player_save_all_localizations.json")
-}
-
-// ExportSaveTextToJSON exports FFX-2 save text data (save_txt.bin) to a JSON file.
-func ExportSaveTextToJSON() error {
-	if SAVE_TEXT == nil || SAVE_TEXT.IsEmpty() {
-		return fmt.Errorf("SAVE_TEXT data not loaded or empty")
-	}
-
-	return ExportNameDescriptionToJSON(SAVE_TEXT, "save_text_all_localizations.json")
 }
 
 // getLocalizationKeys returns all available localization keys
@@ -825,10 +720,4 @@ func ExportSingleEventToJSON(eventId string) error {
 	fileName := "event_" + eventId + "_all_localizations.json"
 
 	return writeEventJSONFile(allEvents, fileName)
-}
-
-// ExportKeyItemsToJSONWithExporter exports key items using the ExportNameDescriptionToJSON function
-// This is the function to be used as JsonExporterFunc in NewBinaryFile
-func ExportKeyItemsToJSONWithExporter(objects components.IList[datastore.IGlobalLocalizedTextObject], fileName string) error {
-	return ExportNameDescriptionToJSON(objects, fileName)
 }

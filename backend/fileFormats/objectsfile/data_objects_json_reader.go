@@ -13,7 +13,7 @@ import "ffxresources/backend/datastore"
 //
 // Returns: error if import fails or file cannot be read
 func ProcessKeyItemsJsonFile() error {
-	return ImportLocalizedDataFromJsonFile(
+	return ImportFromJson(
 		"key_items_all_localizations.json",
 		datastore.KeyItems,
 	)
@@ -30,7 +30,7 @@ func ProcessKeyItemsJsonFile() error {
 //
 // Returns: error if import fails or file cannot be read
 func ProcessCommandsJsonFile() error {
-	return ImportLocalizedDataFromJsonFile(
+	return ImportFromJson(
 		"commands_all_localizations.json",
 		datastore.Commands,
 	)
@@ -47,7 +47,7 @@ func ProcessCommandsJsonFile() error {
 //
 // Returns: error if import fails or file cannot be read
 func ProcessItemsJsonFile() error {
-	return ImportLocalizedDataFromJsonFile(
+	return ImportFromJson(
 		"items_all_localizations.json",
 		datastore.Items,
 	)
@@ -64,7 +64,7 @@ func ProcessItemsJsonFile() error {
 //
 // Returns: error if import fails or file cannot be read
 func ProcessArmsJsonFile() error {
-	return ImportLocalizedDataFromJsonFile(
+	return ImportFromJson(
 		"arms_all_localizations.json",
 		datastore.ArmsTxt,
 	)
@@ -81,7 +81,7 @@ func ProcessArmsJsonFile() error {
 //
 // Returns: error if import fails or file cannot be read
 func ProcessBattleTextJsonFile() error {
-	return ImportLocalizedDataFromJsonFile(
+	return ImportFromJson(
 		"battle_text_all_localizations.json",
 		datastore.BattleTxt,
 	)
@@ -98,7 +98,7 @@ func ProcessBattleTextJsonFile() error {
 //
 // Returns: error if import fails or file cannot be read
 func ProcessBattleEndTextJsonFile() error {
-	return ImportLocalizedDataFromJsonFile(
+	return ImportFromJson(
 		"battle_end_text_all_localizations.json",
 		datastore.BattleEndTxt,
 	)
@@ -115,7 +115,7 @@ func ProcessBattleEndTextJsonFile() error {
 //
 // Returns: error if import fails or file cannot be read
 func ProcessMonsterMagic1JsonFile() error {
-	return ImportLocalizedDataFromJsonFile(
+	return ImportFromJson(
 		"monster_magic1_all_localizations.json",
 		MONMAGIC1,
 	)
@@ -132,7 +132,7 @@ func ProcessMonsterMagic1JsonFile() error {
 //
 // Returns: error if import fails or file cannot be read
 func ProcessMonsterMagic2JsonFile() error {
-	return ImportLocalizedDataFromJsonFile(
+	return ImportFromJson(
 		"monster_magic2_all_localizations.json",
 		MONMAGIC2,
 	)
@@ -149,7 +149,7 @@ func ProcessMonsterMagic2JsonFile() error {
 //
 // Returns: error if import fails or file cannot be read
 func ProcessBuildTextJsonFile() error {
-	return ImportLocalizedDataFromJsonFile(
+	return ImportFromJson(
 		"build_all_localizations.json",
 		BUILD_TEXT,
 	)
@@ -166,7 +166,7 @@ func ProcessBuildTextJsonFile() error {
 //
 // Returns: error if import fails or file cannot be read
 func ProcessConfigTextJsonFile() error {
-	return ImportLocalizedDataFromJsonFile(
+	return ImportFromJson(
 		"config_text_all_localizations.json",
 		CONFIG_TEXT,
 	)
@@ -183,7 +183,7 @@ func ProcessConfigTextJsonFile() error {
 //
 // Returns: error if import fails or file cannot be read
 func ProcessItemCommandsJsonFile() error {
-	return ImportLocalizedDataFromJsonFile(
+	return ImportFromJson(
 		"item_commands_all_localizations.json",
 		ITEM_TEXT,
 	)
@@ -200,7 +200,7 @@ func ProcessItemCommandsJsonFile() error {
 //
 // Returns: error if import fails or file cannot be read
 func ProcessMainMenuTextJsonFile() error {
-	return ImportLocalizedDataFromJsonFile(
+	return ImportFromJson(
 		"main_menu_all_localizations.json",
 		MMAIN_TEXT,
 	)
@@ -217,7 +217,7 @@ func ProcessMainMenuTextJsonFile() error {
 //
 // Returns: error if import fails or file cannot be read
 func ProcessPlayerRoomTextJsonFile() error {
-	return ImportLocalizedDataFromJsonFile(
+	return ImportFromJson(
 		"player_room_all_localizations.json",
 		PLAYER_ROOM,
 	)
@@ -234,7 +234,7 @@ func ProcessPlayerRoomTextJsonFile() error {
 //
 // Returns: error if import fails or file cannot be read
 func ProcessNameTextJsonFile() error {
-	return ImportLocalizedDataFromJsonFile(
+	return ImportFromJson(
 		"names_all_localizations.json",
 		NAME_TEXT,
 	)

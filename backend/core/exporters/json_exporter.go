@@ -651,15 +651,6 @@ func ExportAccessoriesToJSON() error {
 	return serializeNameDescriptionToJSON(objectsfile.ACCESSORY, "accessory_all_localizations.json")
 }
 
-// ExportJobsToJSON exports FFX-2 job data (job.bin) to a JSON file.
-func ExportJobsToJSON() error {
-	if objectsfile.JOB == nil || objectsfile.JOB.IsEmpty() {
-		return fmt.Errorf("JOB data not loaded or empty")
-	}
-
-	return serializeJobTextToJSON(objectsfile.JOB, "job_all_localizations.json")
-}
-
 // ExportMenuTextToJSON exports FFX-2 menu text data (menu_txt.bin) to a JSON file.
 func ExportMenuTextToJSON() error {
 	if objectsfile.MENU_TEXT == nil || objectsfile.MENU_TEXT.IsEmpty() {

@@ -112,7 +112,7 @@ type (
 const NameDescriptionTextObjectLength = 0x10
 
 func NewNameDescriptionTextObject(bytes []byte, stringBytes []byte, headerLength int, languageCode string) *NameDescriptionTextObject {
-	if len(bytes) < 8 {
+	if len(bytes) < headerLength {
 		common.LogVerbose("Insufficient data to create NameDescriptionTextObject!")
 		return nil
 	}

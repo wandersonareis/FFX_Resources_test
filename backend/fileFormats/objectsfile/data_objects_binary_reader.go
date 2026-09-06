@@ -103,42 +103,6 @@ func ReadNameDescriptionObjectsWithIlist(patternPath string) components.IList[da
 	return nameDescObjects
 }
 
-// ReadJobObjectsWithIlist reads job data from the job.bin file (FFX-2 only).
-// and creates JobTextObject entries with all available localizations.
-func ReadJobObjectsWithIlist(patternPath string) components.IList[datastore.IGlobalLocalizedTextObject] {
-	filePath := filepath.Join(common.GetLocalizationRoot(common.DefaultLocalization), patternPath)
-
-	creator := func(data []byte, stringBytes []byte, headerLength int, localization string) datastore.IGlobalLocalizedTextObject {
-		if common.GetGameVersionString() == "ffx2" {
-			if obj := NewJobTextObject(data, stringBytes, headerLength, localization); obj != nil {
-				return obj
-			}
-			return nil
-		}
-		if obj := NewNameDescriptionTextObject(data, stringBytes, headerLength, localization); obj != nil {
-			return obj
-		}
-		return nil
-	}
-
-	var jobObjects components.IList[datastore.IGlobalLocalizedTextObject]
-	if common.GetGameVersionString() == "ffx2" {
-		jobObjects = ReadDataListWithIlistV2(filePath, common.DefaultLocalization, creator)
-	} else {
-		jobObjects = ReadDataListWithIlist(filePath, common.DefaultLocalization, creator)
-	}
-	if jobObjects == nil || jobObjects.IsEmpty() {
-		common.LogVerbose("No job objects found for %s\n", patternPath)
-		return components.NewList[datastore.IGlobalLocalizedTextObject](0)
-	}
-
-	PopulateDataObjectLocalizationsWithIlist(patternPath, jobObjects, creator)
-
-	common.LogVerbose("Loading %d job objects...\n", jobObjects.Len())
-
-	return jobObjects
-}
-
 // PopulateDataObjectLocalizationsWithIlist populates localization data for all supported languages
 // by reading corresponding binary files for each language and merging the localized content
 // into the existing LocalizedTextObject instances within the provided IList.
@@ -162,6 +126,55 @@ func PopulateDataObjectLocalizationsWithIlist(path string, objects components.IL
 		var localizationData components.IList[datastore.IGlobalLocalizedTextObject]
 		if common.GetGameVersionString() == "ffx2" {
 			localizationData = ReadDataListWithIlistV2(fullPath, locKey, creator)
+		} else {
+			localizationData = ReadDataListWithIlist(fullPath, locKey, creator)
+		}
+		if localizationData != nil {
+			maxLen := min(localizationData.Len(), objects.Len())
+			items := objects.Items()
+			locItems := localizationData.Items()
+			for i := range maxLen {
+				if items[i] == nil || locItems[i] == nil {
+					continue
+				}
+				items[i].SetLocalizations(locItems[i])
+			}
+		}
+	}
+}
+
+// PopulateDataObjectLocalizations populates localization data for all supported languages
+// by reading corresponding binary files for each language and merging the localized content
+// into the existing LocalizedTextObject instances within the provided IList.
+//
+// This function iterates through all supported languages, reads the binary files for each
+// language, and applies the localized text content to the corresponding objects in the IList,
+// leveraging IList's content() method for efficient access to the underlying collection.
+//
+// Parameters:
+//   - path: Relative path to the binary file pattern (e.g., "battle/kernel/command.bin")
+//   - objects: IList[ILocalizedTextObject] containing instances to be populated with localizations
+//   - creator: Function that creates LocalizedTextObject instances from binary data
+func PopulateDataObjectLocalizations(path string, objects components.IList[datastore.IGlobalLocalizedTextObject], creator func([]byte, []byte, int, string) datastore.IGlobalLocalizedTextObject) {
+	if objects == nil || objects.IsEmpty() {
+		return
+	}
+
+	for locKey := range common.SupportedLanguages {
+		fullPath := filepath.Join(common.GetLocalizationRoot(locKey), path)
+
+		var localizationData components.IList[datastore.IGlobalLocalizedTextObject]
+		if common.GetGameVersionString() == "ffx2" {
+			binary := NewBinaryFile(path, creator, locKey)
+			if binary == nil {
+				common.LogVerbose("Error creating binary file for localization %s", locKey)
+				continue
+			}
+			if err := binary.LoadFromBinary(); err != nil {
+				common.LogVerbose("Error loading binary file: %v", err)
+				continue
+			}
+			localizationData = binary.GetObjects()
 		} else {
 			localizationData = ReadDataListWithIlist(fullPath, locKey, creator)
 		}
@@ -344,72 +357,77 @@ func ReadDataListWithIlistV2(filename string, languageCode string, creator func(
 //   - 8 bytes: reserved (0x18..0x1F)
 //   - Variable: object data section (totalLength bytes)
 //   - Variable: string data section (remainder)
+//
 // ParseDataListWithIlistV2 faz o parse do formato V2 com fallbacks estáticos
 func ParseDataListWithIlistV2(data []byte, languageCode string, creator func([]byte, []byte, int, string) datastore.IGlobalLocalizedTextObject) components.IList[datastore.IGlobalLocalizedTextObject] {
-    if len(data) < 32 {
-        common.LogVerbose("Data too small for valid binary format v2")
-        return components.NewList[datastore.IGlobalLocalizedTextObject](0)
-    }
+	if len(data) < 32 {
+		common.LogVerbose("Data too small for valid binary format v2")
+		return components.NewList[datastore.IGlobalLocalizedTextObject](0)
+	}
 
-    offset := 16
+	offset := 16
 
-    // 2. Lê o número de chunks (age como maxIndex na V2, já que minIndex é sempre 0)
-    maxIndex := int(binary.LittleEndian.Uint32(data[offset : offset+4]))
-    offset += 4
+	// 2. Lê o número de chunks (age como maxIndex na V2, já que minIndex é sempre 0)
+	maxIndex := int(binary.LittleEndian.Uint32(data[offset : offset+4]))
+	offset += 4
 
-    minIndex := 0 // Na V2, o índice inicial é sempre 0
+	minIndex := 0 // Na V2, o índice inicial é sempre 0
 
-    individualLength := int(binary.LittleEndian.Uint32(data[offset : offset+4]))
-    offset += 4
+	individualLength := int(binary.LittleEndian.Uint32(data[offset : offset+4]))
+	offset += 4
 
-    totalLength := int(binary.LittleEndian.Uint32(data[offset : offset+4]))
-    offset += 4
+	totalLength := int(binary.LittleEndian.Uint32(data[offset : offset+4]))
+	offset += 4
 
-    expectedTotalLength := (maxIndex - minIndex + 1) * individualLength
-    if totalLength != expectedTotalLength {
-        common.LogVerbose("TotalLength divergente, aplicando fallback calculado")
-        totalLength = expectedTotalLength
-    }
+	expectedTotalLength := (maxIndex - minIndex + 1) * individualLength
+	if totalLength != expectedTotalLength {
+		common.LogVerbose("TotalLength divergente, aplicando fallback calculado")
+		totalLength = expectedTotalLength
+	}
 
-    offset = 32
+	offset = 32
 
-    if offset+totalLength > len(data) {
-        common.LogVerbose("Insufficient data for specified total length")
-        return components.NewList[datastore.IGlobalLocalizedTextObject](0)
-    }
+	if offset+totalLength > len(data) {
+		common.LogVerbose("Insufficient data for specified total length")
+		return components.NewList[datastore.IGlobalLocalizedTextObject](0)
+	}
 
-    dataBytes := data[offset : offset+totalLength]
-    offset += totalLength
+	dataBytes := data[offset : offset+totalLength]
+	offset += totalLength
 
-    stringBytes := data[offset:]
+	stringBytes := data[offset:]
 
-    count := maxIndex - minIndex
-    objectCount := count + 1
-    objects := components.NewList[datastore.IGlobalLocalizedTextObject](objectCount)
+	count := maxIndex - minIndex
+	objectCount := count + 1
+	objects := components.NewList[datastore.IGlobalLocalizedTextObject](objectCount)
 
-    for i := 0; i <= count; i++ {
-        from := i * individualLength
-        to := (i + 1) * individualLength
+	chunkData := make([]byte, individualLength)
+	defer func() {
+		chunkData = nil
+	}()
 
-        if to > len(dataBytes) {
-            break
-        }
+	for i := 0; i <= count; i++ {
+		from := i * individualLength
+		to := (i + 1) * individualLength
 
-        objData := dataBytes[from:to]
-        obj := creator(objData, stringBytes, individualLength, languageCode)
-        if obj == nil {
-            common.LogVerbose("Skipping invalid V2 object at index %d", i+minIndex)
-            continue
-        }
-        objects.Add(obj)
+		if to > len(dataBytes) {
+			break
+		}
+		copy(chunkData, dataBytes[from:to])
+		obj := creator(chunkData, stringBytes, individualLength, languageCode)
+		if obj == nil {
+			common.LogVerbose("Skipping invalid V2 object at index %d", i+minIndex)
+			continue
+		}
+		objects.Add(obj)
 
-        if common.IsVerboseMode() {
-            offsetStr := fmt.Sprintf("%04X", 0x20+(i*individualLength))
-            indexStr := fmt.Sprintf("%d", i+minIndex)
-            objectString := obj.ToString(languageCode)
-            fmt.Printf("%s (Offset %s) - %s\n", indexStr, offsetStr, objectString)
-        }
-    }
+		if common.IsVerboseMode() {
+			offsetStr := fmt.Sprintf("%04X", 0x20+(i*individualLength))
+			indexStr := fmt.Sprintf("%d", i+minIndex)
+			objectString := obj.ToString(languageCode)
+			fmt.Printf("%s (Offset %s) - %s\n", indexStr, offsetStr, objectString)
+		}
+	}
 
-    return objects
+	return objects
 }

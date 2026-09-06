@@ -2,12 +2,10 @@ package objectsfile
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/core/components"
 	"ffxresources/backend/datastore"
-	"path/filepath"
 )
 
-// ReadCommandsWithAllLocalizations reads battle command data from the command.bin file
+// ReadNameDescriptionLocalizations reads battle command data from the command.bin file
 // and loads all available localizations for each command entry directly into COMMANDS.
 //
 // This function reads CommandDataObject entries containing name and description information
@@ -15,10 +13,43 @@ import (
 // languages in the game. The data is loaded directly into the COMMANDS variable.
 //
 // File format: name and description data
-// Pattern path: "battle/kernel/command.bin"
-func ReadCommandsWithAllLocalizations() datastore.IBinaryFile {
-	patternPath := "battle/kernel/command.bin"
+// Pattern path: ex: "battle/kernel/command.bin"
+func ReadNameOnlyLocalizations(patternPath string) datastore.IBinaryFile {
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
+		if common.GetGameVersionString() == "ffx2" {
+			return NewNameOnlyDataObjectV2(cBytes, sBytes, hLen, lang)
+		}
+		return NewNameOnlyDataObject(cBytes, sBytes, hLen, lang)
+	}
 
+	binaryDataFile := NewBinaryFile(
+		patternPath,
+		creatorFunc,
+		common.DefaultLocalization,
+	)
+
+	if err := binaryDataFile.LoadFromBinary(); err != nil {
+		common.LogVerbose("Error loading commands binary data: %v", err)
+		return nil
+	}
+
+	if binaryDataFile.Objects != nil && !binaryDataFile.Objects.IsEmpty() {
+		common.LogVerbose("Loaded %d commands with all localizations", binaryDataFile.Objects.Len())
+		datastore.Commands = binaryDataFile.GetObjects()
+	}
+	return binaryDataFile
+}
+
+// ReadNameDescriptionLocalizations reads battle command data from the command.bin file
+// and loads all available localizations for each command entry directly into COMMANDS.
+//
+// This function reads CommandDataObject entries containing name and description information
+// for combat abilities and skills. Each command includes localized text for all supported
+// languages in the game. The data is loaded directly into the COMMANDS variable.
+//
+// File format: name and description data
+// Pattern path: ex: "battle/kernel/command.bin"
+func ReadNameDescriptionLocalizations(patternPath string) datastore.IBinaryFile {
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
 		if common.GetGameVersionString() == "ffx2" {
 			return NewNameDescriptionTextObjectV2(cBytes, sBytes, hLen, lang)
@@ -26,46 +57,112 @@ func ReadCommandsWithAllLocalizations() datastore.IBinaryFile {
 		return NewNameDescriptionTextObject(cBytes, sBytes, hLen, lang)
 	}
 
-	commandsFile := NewBinaryFile(
+	binaryDataFile := NewBinaryFile(
 		patternPath,
 		creatorFunc,
-		ExportNameDescriptionToJSON,
-		ImportLocalizedDataFromJsonFile,
 		common.DefaultLocalization,
 	)
 
-	if err := commandsFile.LoadFromBinary(); err != nil {
+	if err := binaryDataFile.LoadFromBinary(); err != nil {
 		common.LogVerbose("Error loading commands binary data: %v", err)
-		return commandsFile
+		return nil
 	}
 
-	if commandsFile.Objects != nil && !commandsFile.Objects.IsEmpty() {
-		common.LogVerbose("Loaded %d commands with all localizations", commandsFile.Objects.Len())
-		datastore.Commands = commandsFile.GetObjects()
+	if binaryDataFile.Objects != nil && !binaryDataFile.Objects.IsEmpty() {
+		common.LogVerbose("Loaded %d commands with all localizations", binaryDataFile.Objects.Len())
+		datastore.Commands = binaryDataFile.GetObjects()
 	}
-	return commandsFile
+	return binaryDataFile
 }
 
-// ReadKeyItemsWithAllLocalizations reads key item data from the important.bin file
-// and loads all available localizations for each key item entry directly into the datastore.
-//
-// This function reads LocalizedTextObject entries containing name and description information
-// for important story items and quest items. Each key item includes localized text for all supported
-// languages in the game. The data is loaded directly into the global datastore via the KEY_ITEMS adapter.
-//
-// File format: name and description data
-// Pattern path: "battle/kernel/important.bin"
-//
-// Deprecated: Use the new version that returns datastore.IBinaryFile for better lifecycle management.
-/* func ReadKeyItemsWithAllLocalizations() {
-	patternPath := "battle/kernel/important.bin"
-	keyItems := ReadNameDescriptionObjectsWithIlist(patternPath)
-
-	if keyItems != nil {
-		common.LogVerbose("Loaded %d key items with all localizations", keyItems.Len())
-		datastore.KeyItems = keyItems
+func ReadNameDescriptionEffectLocalizations(patternPath string, effectSegmentPosition int64) datastore.IBinaryFile {
+	if common.GetGameVersionString() != "ffx2" {
+		common.LogVerbose("ReadNameDescriptionEffectLocalizations is only applicable for FFX-2 (v2) game version.")
+		return nil
 	}
-} */
+
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
+		if common.GetGameVersionString() == "ffx2" {
+			return NewNameDescriptionEffect(cBytes, sBytes, hLen, effectSegmentPosition, lang)
+		}
+		return NewNameDescriptionTextObject(cBytes, sBytes, hLen, lang)
+	}
+
+	binaryDataFile := NewBinaryFile(
+		patternPath,
+		creatorFunc,
+		common.DefaultLocalization,
+	)
+
+	if err := binaryDataFile.LoadFromBinary(); err != nil {
+		common.LogVerbose("Error loading commands binary data: %v", err)
+		return nil
+	}
+
+	if binaryDataFile.Objects != nil && !binaryDataFile.Objects.IsEmpty() {
+		common.LogVerbose("Loaded %d commands with all localizations", binaryDataFile.Objects.Len())
+		datastore.Commands = binaryDataFile.GetObjects()
+	}
+	return binaryDataFile
+}
+
+func ReadNameDescriptionEffectAbilitiesLocalizations(patternPath string, abilitiesCount int,
+	effectSegmentPosition int64) datastore.IBinaryFile {
+	if common.GetGameVersionString() != "ffx2" {
+		common.LogVerbose("ReadNameDescriptionEffectLocalizations is only applicable for FFX-2 (v2) game version.")
+		return nil
+	}
+
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
+		if common.GetGameVersionString() == "ffx2" {
+			return NewNameDescriptionEffectAbility(cBytes, sBytes, hLen, abilitiesCount, effectSegmentPosition, lang)
+		}
+		return nil
+	}
+
+	binaryDataFile := NewBinaryFile(
+		patternPath,
+		creatorFunc,
+		common.DefaultLocalization,
+	)
+
+	if err := binaryDataFile.LoadFromBinary(); err != nil {
+		common.LogVerbose("Error loading commands binary data: %v", err)
+		return nil
+	}
+
+	if binaryDataFile.Objects != nil && !binaryDataFile.Objects.IsEmpty() {
+		common.LogVerbose("Loaded %d commands with all localizations", binaryDataFile.Objects.Len())
+		datastore.Commands = binaryDataFile.GetObjects()
+	}
+	return binaryDataFile
+}
+
+func ReadNameSensorScanLocalizations(patternPath string) datastore.IBinaryFile {
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
+		if common.GetGameVersionString() == "ffx" {
+			return NewNameSensorScan(cBytes, sBytes, hLen, lang)
+		}
+		return nil
+	}
+
+	binaryDataFile := NewBinaryFile(
+		patternPath,
+		creatorFunc,
+		common.DefaultLocalization,
+	)
+
+	if err := binaryDataFile.LoadFromBinary(); err != nil {
+		common.LogVerbose("Error loading commands binary data: %v", err)
+		return nil
+	}
+
+	if binaryDataFile.Objects != nil && !binaryDataFile.Objects.IsEmpty() {
+		common.LogVerbose("Loaded %d commands with all localizations", binaryDataFile.Objects.Len())
+		datastore.Commands = binaryDataFile.GetObjects()
+	}
+	return binaryDataFile
+}
 
 // ReadKeyItemsWithAllLocalizations reads key item data from the important.bin file
 // using the BinaryFile orchestrator for lifecycle management.
@@ -84,8 +181,6 @@ func ReadKeyItemsWithAllLocalizations() datastore.IBinaryFile {
 		func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
 			return NewNameDescriptionTextObjectV2(cBytes, sBytes, hLen, lang)
 		},
-		ExportKeyItemsToJSONWithExporter,
-		ImportLocalizedDataFromJsonFile,
 		common.DefaultLocalization,
 	)
 
@@ -111,11 +206,32 @@ func ReadKeyItemsWithAllLocalizations() datastore.IBinaryFile {
 //
 // File format: name and description data
 // Pattern path: "battle/kernel/item.bin"
-func ReadItemsWithAllLocalizations() {
+func ReadItemsWithAllLocalizations() datastore.IBinaryFile {
 	patternPath := "battle/kernel/item.bin"
-	datastore.Items = ReadNameDescriptionObjectsWithIlist(patternPath)
 
-	common.LogVerbose("Loaded %d items with all localizations", datastore.Items.Len())
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
+		if common.GetGameVersionString() == "ffx2" {
+			return NewNameDescriptionTextObjectV2(cBytes, sBytes, hLen, lang)
+		}
+		return NewNameDescriptionTextObject(cBytes, sBytes, hLen, lang)
+	}
+
+	itemsFile := NewBinaryFile(
+		patternPath,
+		creatorFunc,
+		common.DefaultLocalization,
+	)
+
+	if err := itemsFile.LoadFromBinary(); err != nil {
+		common.LogVerbose("Error loading items binary data: %v", err)
+		return nil
+	}
+
+	if itemsFile.Objects != nil && !itemsFile.Objects.IsEmpty() {
+		common.LogVerbose("Loaded %d items with all localizations", itemsFile.Objects.Len())
+		datastore.Items = itemsFile.GetObjects()
+	}
+	return itemsFile
 }
 
 // ReadArmsTextWithAllLocalizations reads arms text data from the arms_txt.bin file
@@ -209,26 +325,31 @@ func ReadMainMenuTextWithAllLocalizations() {
 //
 // File format: name and description data
 // Pattern path: "battle/kernel/ply_rom.bin"
-func ReadPlayerRomTextWithAllLocalizations() {
+func ReadPlayerRomTextWithAllLocalizations() datastore.IBinaryFile {
 	patternPath := "battle/kernel/ply_rom.bin"
-	PLAYER_ROOM = ReadNameOnlyDataObjectsWithIlist(patternPath)
 
-	if PLAYER_ROOM != nil {
-		common.LogVerbose("Loaded %d player ROM text entries with all localizations", PLAYER_ROOM.Len())
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
+		if common.GetGameVersionString() == "ffx2" {
+			return NewNameOnlyDataObjectV2(cBytes, sBytes, hLen, lang)
+		}
+		return NewNameOnlyDataObject(cBytes, sBytes, hLen, lang)
 	}
-}
 
-// ReadPlayerSaveWithAllLocalizations reads player save data from the ply_save.bin file (FFX-2 only).
-func ReadPlayerSaveWithAllLocalizations() {
-	if common.GetGameVersionString() != "ffx2" {
-		return
-	}
-	patternPath := "battle/kernel/ply_save.bin"
-	PLAYER_SAVE = ReadNameDescriptionObjectsWithIlist(patternPath)
+	playerRoomTextFile := NewBinaryFile(
+		patternPath,
+		creatorFunc,
+		common.DefaultLocalization,
+	)
 
-	if PLAYER_SAVE != nil {
-		common.LogVerbose("Loaded %d player save entries with all localizations", PLAYER_SAVE.Len())
+	if err := playerRoomTextFile.LoadFromBinary(); err != nil {
+		common.LogVerbose("Error loading player room text binary data: %v", err)
+		return nil
 	}
+
+	if playerRoomTextFile.Objects != nil && !playerRoomTextFile.Objects.IsEmpty() {
+		common.LogVerbose("Loaded %d player room text entries with all localizations", playerRoomTextFile.Objects.Len())
+	}
+	return playerRoomTextFile
 }
 
 // ReadBattleTextWithAllLocalizations reads battle text data from the btl_txt.bin file
@@ -240,15 +361,32 @@ func ReadPlayerSaveWithAllLocalizations() {
 //
 // File format: name only data
 // Pattern path: "battle/kernel/btl_txt.bin"
-func ReadBattleTextWithAllLocalizations() {
+func ReadBattleTextWithAllLocalizations() datastore.IBinaryFile {
 	patternPath := "battle/kernel/btl_txt.bin"
-	if common.GetGameVersionString() == "ffx2" {
-		datastore.BattleTxt = ReadNameOnlyDataObjectsWithIlist(patternPath)
-	} else {
-		datastore.BattleTxt = ReadNameOnlyDataObjectsWithIlist(patternPath)
+
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
+		if common.GetGameVersionString() == "ffx2" {
+			return NewNameOnlyDataObjectV2(cBytes, sBytes, hLen, lang)
+		}
+		return NewNameOnlyDataObject(cBytes, sBytes, hLen, lang)
 	}
 
-	common.LogVerbose("Loaded %d battle text entries with all localizations", datastore.BattleTxt.Len())
+	battleTextFile := NewBinaryFile(
+		patternPath,
+		creatorFunc,
+		common.DefaultLocalization,
+	)
+
+	if err := battleTextFile.LoadFromBinary(); err != nil {
+		common.LogVerbose("Error loading oversoul binary data: %v", err)
+		return nil
+	}
+
+	if battleTextFile.Objects != nil && !battleTextFile.Objects.IsEmpty() {
+		datastore.BattleTxt = battleTextFile.GetObjects()
+		common.LogVerbose("Loaded %d battle text entries with all localizations", battleTextFile.Objects.Len())
+	}
+	return battleTextFile
 }
 
 // ReadBattleEndTextWithAllLocalizations reads battle end text data from the btlend_txt.bin file
@@ -260,11 +398,32 @@ func ReadBattleTextWithAllLocalizations() {
 //
 // File format: name only data
 // Pattern path: "battle/kernel/btlend_txt.bin"
-func ReadBattleEndTextWithAllLocalizations() {
+func ReadBattleEndTextWithAllLocalizations() datastore.IBinaryFile {
 	patternPath := "battle/kernel/btlend_txt.bin"
-	datastore.BattleEndTxt = ReadNameOnlyDataObjectsWithIlist(patternPath)
 
-	common.LogVerbose("Loaded %d battle end text entries with all localizations", datastore.BattleEndTxt.Len())
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
+		if common.GetGameVersionString() == "ffx2" {
+			return NewNameOnlyDataObjectV2(cBytes, sBytes, hLen, lang)
+		}
+		return NewNameOnlyDataObject(cBytes, sBytes, hLen, lang)
+	}
+
+	battleEndTextFile := NewBinaryFile(
+		patternPath,
+		creatorFunc,
+		common.DefaultLocalization,
+	)
+
+	if err := battleEndTextFile.LoadFromBinary(); err != nil {
+		common.LogVerbose("Error loading battle end text binary data: %v", err)
+		return nil
+	}
+
+	if battleEndTextFile.Objects != nil && !battleEndTextFile.Objects.IsEmpty() {
+		datastore.BattleEndTxt = battleEndTextFile.GetObjects()
+		common.LogVerbose("Loaded %d battle end text entries with all localizations", battleEndTextFile.Objects.Len())
+	}
+	return battleEndTextFile
 }
 
 // ReadMonsterMagic1WithAllLocalizations reads monster magic 1 data from the monmagic1.bin file
@@ -348,168 +507,5 @@ func ReadNameTextWithAllLocalizations() {
 
 	if NAME_TEXT != nil {
 		common.LogVerbose("Loaded %d name text entries with all localizations", NAME_TEXT.Len())
-	}
-}
-
-// As funções abaixo são exclusivas do FFX-2 (v2). Retornam cedo se a versão do
-// jogo não for FFX-2. Todas usam ReadNameDescriptionObjectsWithIlist, que é a
-// única leitora atualizada para o formato V2 dos arquivos de objetos.
-
-// ReadAAbilityWithAllLocalizations reads ability data from the a_ability.bin file (FFX-2 only).
-func ReadAAbilityWithAllLocalizations() {
-	if common.GetGameVersionString() != "ffx2" {
-		return
-	}
-	patternPath := "battle/kernel/a_ability.bin"
-	A_ABILITY = ReadNameDescriptionObjectsWithIlist(patternPath)
-
-	if A_ABILITY != nil {
-		common.LogVerbose("Loaded %d a-ability entries with all localizations", A_ABILITY.Len())
-	}
-}
-
-// ReadAccessoriesWithAllLocalizations reads accessory data from the accessory.bin file (FFX-2 only).
-func ReadAccessoriesWithAllLocalizations() {
-	if common.GetGameVersionString() != "ffx2" {
-		return
-	}
-	patternPath := "battle/kernel/accessory.bin"
-	ACCESSORY = ReadNameDescriptionObjectsWithIlist(patternPath)
-
-	if ACCESSORY != nil {
-		common.LogVerbose("Loaded %d accessory entries with all localizations", ACCESSORY.Len())
-	}
-}
-
-// ReadJobsWithAllLocalizations reads job data from the job.bin file (FFX-2 only).
-func ReadJobsWithAllLocalizations() {
-	if common.GetGameVersionString() != "ffx2" {
-		return
-	}
-	patternPath := "battle/kernel/job.bin"
-	JOB = ReadJobObjectsWithIlist(patternPath)
-
-	if JOB != nil {
-		common.LogVerbose("Loaded %d job entries with all localizations", JOB.Len())
-	}
-}
-
-// ReadMenuTextWithAllLocalizations reads menu text data from the menu_txt.bin file (FFX-2 only).
-func ReadMenuTextWithAllLocalizations() {
-	if common.GetGameVersionString() != "ffx2" {
-		return
-	}
-	patternPath := "battle/kernel/menu_txt.bin"
-	MENU_TEXT = ReadNameDescriptionObjectsWithIlist(patternPath)
-
-	if MENU_TEXT != nil {
-		common.LogVerbose("Loaded %d menu text entries with all localizations", MENU_TEXT.Len())
-	}
-}
-
-// ReadMonsterMagicWithAllLocalizations reads monster magic data from the monmagic.bin file (FFX-2 only).
-func ReadMonsterMagicWithAllLocalizations() {
-	if common.GetGameVersionString() != "ffx2" {
-		return
-	}
-	patternPath := "battle/kernel/monmagic.bin"
-	MONMAGIC = ReadNameDescriptionObjectsWithIlist(patternPath)
-
-	if MONMAGIC != nil {
-		common.LogVerbose("Loaded %d monster magic entries with all localizations", MONMAGIC.Len())
-	}
-}
-
-// ReadMonstersWithAllLocalizations reads monster data from the monster.bin file
-// and loads all available localizations for each monster entry directly into MONSTER.
-func ReadMonstersWithAllLocalizations() {
-	patternPath := "battle/kernel/monster.bin"
-	MONSTER = ReadNameDescriptionObjectsWithIlist(patternPath)
-
-	if MONSTER != nil {
-		common.LogVerbose("Loaded %d monster entries with all localizations", MONSTER.Len())
-	}
-}
-
-// ReadMonsters2WithAllLocalizations reads monster data from the monster2.bin file (FFX-2 only).
-func ReadMonsters2WithAllLocalizations() {
-	if common.GetGameVersionString() != "ffx2" {
-		return
-	}
-	patternPath := "battle/kernel/monster2.bin"
-	MONSTER2 = ReadNameDescriptionObjectsWithIlist(patternPath)
-
-	if MONSTER2 != nil {
-		common.LogVerbose("Loaded %d monster2 entries with all localizations", MONSTER2.Len())
-	}
-}
-
-// ReadOversoulWithAllLocalizations reads oversoul data from the oversoul.bin file (FFX-2 only).
-func ReadOversoulWithAllLocalizations() {
-	if common.GetGameVersionString() != "ffx2" {
-		return
-	}
-	patternPath := "battle/kernel/oversoul.bin"
-	OVERSOUL = ReadNameOnlyDataObjectsWithIlist(patternPath)
-
-	if OVERSOUL != nil {
-		common.LogVerbose("Loaded %d oversoul entries with all localizations", OVERSOUL.Len())
-	}
-}
-
-// ReadPlateWithAllLocalizations reads plate data from the plate.bin file (FFX-2 only).
-func ReadPlateWithAllLocalizations() {
-	if common.GetGameVersionString() != "ffx2" {
-		return
-	}
-	patternPath := "battle/kernel/plate.bin"
-	PLATE = ReadPlateObjectsWithIlist(patternPath)
-
-	if PLATE != nil {
-		common.LogVerbose("Loaded %d plate entries with all localizations", PLATE.Len())
-	}
-}
-
-// ReadPlateObjectsWithIlist reads plate binary data and creates PlateTextObject entries
-// with all available localizations. The plate format includes name, description, 4 abilities,
-// and effect field per entry.
-func ReadPlateObjectsWithIlist(patternPath string) components.IList[datastore.IGlobalLocalizedTextObject] {
-	filePath := filepath.Join(common.GetLocalizationRoot(common.DefaultLocalization), patternPath)
-
-	creator := func(data []byte, stringBytes []byte, headerLength int, localization string) datastore.IGlobalLocalizedTextObject {
-		if obj := NewPlateTextObject(data, stringBytes, headerLength, localization); obj != nil {
-			return obj
-		}
-		return nil
-	}
-
-	var plateObjects components.IList[datastore.IGlobalLocalizedTextObject]
-	if common.GetGameVersionString() == "ffx2" {
-		plateObjects = ReadDataListWithIlistV2(filePath, common.DefaultLocalization, creator)
-	} else {
-		plateObjects = ReadDataListWithIlist(filePath, common.DefaultLocalization, creator)
-	}
-	if plateObjects == nil || plateObjects.IsEmpty() {
-		common.LogVerbose("No plate objects found for %s\n", patternPath)
-		return components.NewList[datastore.IGlobalLocalizedTextObject](0)
-	}
-
-	PopulateDataObjectLocalizationsWithIlist(patternPath, plateObjects, creator)
-
-	common.LogVerbose("Loading %d plate entries...\n", plateObjects.Len())
-
-	return plateObjects
-}
-
-// ReadSaveTextWithAllLocalizations reads save text data from the save_txt.bin file (FFX-2 only).
-func ReadSaveTextWithAllLocalizations() {
-	if common.GetGameVersionString() != "ffx2" {
-		return
-	}
-	patternPath := "battle/kernel/save_txt.bin"
-	SAVE_TEXT = ReadNameDescriptionObjectsWithIlist(patternPath)
-
-	if SAVE_TEXT != nil {
-		common.LogVerbose("Loaded %d save text entries with all localizations", SAVE_TEXT.Len())
 	}
 }
