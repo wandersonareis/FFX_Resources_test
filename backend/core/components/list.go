@@ -46,7 +46,7 @@ func (l *List[T]) Remove(item T, equals func(a, b T) bool) {
 	}
 }
 
-func (l *List[T]) Filter(f func(item T) bool) *List[T] {
+func (l *List[T]) Filter(f func(item T) bool) IList[T] {
 	result := NewEmptyList[T]()
 
 	for _, v := range l.content {
