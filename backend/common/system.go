@@ -1,7 +1,7 @@
 package common
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -79,10 +79,25 @@ func IsVerboseMode() bool {
 	return verbose == "1"
 }
 
+const (
+	colorReset   = "\033[0m"
+	colorVerbose = "\033[33m"
+	colorInfo    = "\033[32m"
+	colorError   = "\033[31m"
+)
+
 func LogVerbose(format string, args ...any) {
 	if IsVerboseMode() {
-		fmt.Printf(format+"\n", args...)
+		log.Printf(colorVerbose+format+colorReset, args...)
 	}
+}
+
+func LogInfo(format string, args ...any) {
+	log.Printf(colorInfo+format+colorReset, args...)
+}
+
+func LogError(format string, args ...any) {
+	log.Printf(colorError+format+colorReset, args...)
 }
 
 func SetModsEnabled(enabled bool) {
