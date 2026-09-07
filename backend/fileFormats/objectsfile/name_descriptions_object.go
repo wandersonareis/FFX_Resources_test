@@ -9,20 +9,21 @@ import (
 	"fmt"
 	"slices"
 )
+
+var (
 	MONMAGIC1 components.IList[datastore.IGlobalLocalizedTextObject]
 	MONMAGIC2 components.IList[datastore.IGlobalLocalizedTextObject]
 
-	// FFX-2 (v2) kernel objects (name+description format).
-	A_ABILITY   components.IList[datastore.IGlobalLocalizedTextObject]
-	ACCESSORY   components.IList[datastore.IGlobalLocalizedTextObject]
-	BATTLE_TEXT   components.IList[datastore.IGlobalLocalizedTextObject]
-	JOB         components.IList[datastore.IGlobalLocalizedTextObject]
-	MONMAGIC    components.IList[datastore.IGlobalLocalizedTextObject]
-	MONSTER     components.IList[datastore.IGlobalLocalizedTextObject]
-	MONSTER2    components.IList[datastore.IGlobalLocalizedTextObject]
-	OVERSOUL    components.IList[datastore.IGlobalLocalizedTextObject]
-	PLATE       components.IList[datastore.IGlobalLocalizedTextObject]
-	PLAYER_SAVE components.IList[datastore.IGlobalLocalizedTextObject]
+	A_ABILITY    components.IList[datastore.IGlobalLocalizedTextObject]
+	ACCESSORY    components.IList[datastore.IGlobalLocalizedTextObject]
+	BATTLE_TEXT  components.IList[datastore.IGlobalLocalizedTextObject]
+	JOB          components.IList[datastore.IGlobalLocalizedTextObject]
+	MONMAGIC     components.IList[datastore.IGlobalLocalizedTextObject]
+	MONSTER      components.IList[datastore.IGlobalLocalizedTextObject]
+	MONSTER2     components.IList[datastore.IGlobalLocalizedTextObject]
+	OVERSOUL     components.IList[datastore.IGlobalLocalizedTextObject]
+	PLATE        components.IList[datastore.IGlobalLocalizedTextObject]
+	PLAYER_SAVE  components.IList[datastore.IGlobalLocalizedTextObject]
 )
 
 func GetCommand(idx int) datastore.IGlobalLocalizedTextObject {
@@ -106,7 +107,7 @@ func NewNameDescriptionTextObject(bytes []byte, stringBytes []byte, headerLength
 
 	if err := n.mapBytes(stringBytes, languageCode); err != nil {
 		return nil, err
-    }
+	}
 	return n, nil
 }
 
