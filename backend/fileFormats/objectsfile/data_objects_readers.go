@@ -114,15 +114,15 @@ func ReadNameDescriptionLocalizations(patternPath string) datastore.IBinaryFile 
 	return binaryDataFile
 }
 
-func ReadNameDescriptionEffectLocalizations(patternPath string, effectSegmentPosition int64) datastore.IBinaryFile {
+func ReadNameDescriptionEffectTextObjectLocalizations(patternPath string, effectSegmentPosition int64) datastore.IBinaryFile {
 	if common.GetGameVersionString() != "ffx2" {
-		common.LogVerbose("ReadNameDescriptionEffectLocalizations is only applicable for FFX-2 (v2) game version.")
+		common.LogVerbose("ReadNameDescriptionEffectTextObjectLocalizations is only applicable for FFX-2 (v2) game version.")
 		return nil
 	}
 
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
 		if common.GetGameVersionString() == "ffx2" {
-			return NewNameDescriptionEffect(cBytes, sBytes, hLen, effectSegmentPosition, lang)
+			return NewNameDescriptionEffectTextObject(cBytes, sBytes, hLen, effectSegmentPosition, lang)
 		}
 		return NewNameDescriptionTextObject(cBytes, sBytes, hLen, lang)
 	}
@@ -148,7 +148,7 @@ func ReadNameDescriptionEffectLocalizations(patternPath string, effectSegmentPos
 func ReadNameDescriptionEffectAbilitiesLocalizations(patternPath string, abilitiesCount int,
 	effectSegmentPosition int64) datastore.IBinaryFile {
 	if common.GetGameVersionString() != "ffx2" {
-		common.LogVerbose("ReadNameDescriptionEffectLocalizations is only applicable for FFX-2 (v2) game version.")
+		common.LogVerbose("ReadNameDescriptionEffectTextObjectLocalizations is only applicable for FFX-2 (v2) game version.")
 		return nil
 	}
 

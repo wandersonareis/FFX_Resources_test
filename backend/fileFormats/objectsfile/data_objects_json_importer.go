@@ -155,7 +155,7 @@ func updateObjectByType(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextO
 	case *DescriptionOnlyTextObject:
 		updateDescriptionEntry(jsonEntry, localizedTextObj.Description)
 		updateSimplifiedDescriptionEntry(jsonEntry, localizedTextObj.SimplifiedDescription)
-	case *NameDescriptionEffect:
+	case *NameDescriptionEffectTextObject:
 		updateNameEntry(jsonEntry, localizedTextObj.Name)
 		updateDescriptionEntry(jsonEntry, localizedTextObj.Description)
 		updateEffectEntry(jsonEntry, localizedTextObj.Effect)
@@ -439,7 +439,7 @@ func updateScanTextEntry(sourceData JSONEntry, targetObject *NameSensorScanTextO
 	}
 }
 
-// updateEffectEntry applies effect updates to a NameDescriptionEffect.
+// updateEffectEntry applies effect updates to a NameDescriptionEffectTextObject.
 func updateEffectEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject) {
 	if len(sourceData.Effect) == 0 || segment == nil {
 		common.LogVerbose("No effect found for item %d, skipping...", sourceData.ID)

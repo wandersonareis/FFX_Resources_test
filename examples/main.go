@@ -533,7 +533,7 @@ func runFFX2Examples() {
 
 	// Exclusivos do FFX-2 (retornam cedo se a versão não for FFX-2).
 	// accessory.bin
-	accessoriesBinaryFile := objectsfile.ReadNameDescriptionEffectLocalizations("battle/kernel/accessory.bin", objectsfile.FFx2AccessoryEffectSegmentDefaultPosition)
+	accessoriesBinaryFile := objectsfile.ReadNameDescriptionEffectTextObjectLocalizations("battle/kernel/accessory.bin", objectsfile.FFx2AccessoryEffectSegmentDefaultPosition)
 	common.LogInfo("[FFX-2] accessory carregados: %d\n", accessoriesBinaryFile.GetObjects().Len())
 	if err := accessoriesBinaryFile.ExportToJson("accessory_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting accessories text to JSON: %v\n", err)
@@ -549,7 +549,7 @@ func runFFX2Examples() {
 	common.LogInfo("[FFX-2] ✓ accessories text salvos com sucesso")
 
 	// job.bin
-	jobsBinaryFile := objectsfile.ReadNameDescriptionEffectLocalizations("battle/kernel/job.bin", objectsfile.FFx2JobEffectSegmentDefaultPosition)
+	jobsBinaryFile := objectsfile.ReadNameDescriptionEffectTextObjectLocalizations("battle/kernel/job.bin", objectsfile.FFx2JobEffectSegmentDefaultPosition)
 	common.LogInfo("[FFX-2] job carregados: %d\n", jobsBinaryFile.GetObjects().Len())
 	if err := jobsBinaryFile.ExportToJson("job_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting jobs text to JSON: %v\n", err)

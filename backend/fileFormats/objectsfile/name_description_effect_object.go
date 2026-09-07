@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"slices"
 
 	"ffxresources/backend/common"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/models"
 )
 
-type NameDescriptionEffect struct {
+type NameDescriptionEffectTextObject struct {
 	Bytes                 []byte
 	Name                  datastore.IGlobalLocalizedKeyedStringObject
 	Description           datastore.IGlobalLocalizedKeyedStringObject
@@ -19,18 +20,22 @@ type NameDescriptionEffect struct {
 	HeaderLength          int
 }
 
-func NewNameDescriptionEffect(
+func NewNameDescriptionEffectTextObject(
 	bytes []byte,
 	stringBytes []byte,
 	headerLength int,
 	effectSegmentPosition int64,
 	languageCode string,
-) (*NameDescriptionEffect, error) {
-	if len(bytes) < headerLength {
-		return nil, fmt.Errorf("insufficient data to create NameDescriptionEffect: have %d bytes, need at least %d", len(bytes), headerLength)
+) (*NameDescriptionEffectTextObject, error) {
+	if common.GetGameVersionString() != "ffx2" {
+		return nil, fmt.Errorf("NameDescriptionEffectTextObject is only compatible with FFX-2")
 	}
 
-	p := &NameDescriptionEffect{
+	if len(bytes) < headerLength {
+		return nil, fmt.Errorf("insufficient data to create NameDescriptionEffectTextObject: have %d bytes, need at least %d", len(bytes), headerLength)
+	}
+
+	p := &NameDescriptionEffectTextObject{
 		Bytes:                 bytes,
 		Name:                  NewLocalizedKeyedStringObject(),
 		Description:           NewLocalizedKeyedStringObject(),
@@ -46,34 +51,25 @@ func NewNameDescriptionEffect(
 	return p, nil
 }
 
-func (p *NameDescriptionEffect) mapBytes(
+func (p *NameDescriptionEffectTextObject) mapBytes(
 	stringBytes []byte,
 	languageCode string,
 ) error {
 	r := bytes.NewReader(p.Bytes)
 
-	nameSeg, err := models.ReadSegment(r)
-	if err != nil {
-		common.LogError("Error reading NameDescriptionEffect name: %v", err)
+	if err := readStringSegments(r, stringBytes, languageCode, p.Name, p.Description); err != nil {
+		common.LogError("Error reading NameDescriptionEffectTextObject sequential segments: %v", err)
 		return err
 	}
-	p.Name.ReadAndSetLocalizedContent(languageCode, stringBytes, nameSeg.Offset, nameSeg.Key)
-
-	descSeg, err := models.ReadSegment(r)
-	if err != nil {
-		common.LogError("Error reading NameDescriptionEffect description: %v", err)
-		return err
-	}
-	p.Description.ReadAndSetLocalizedContent(languageCode, stringBytes, descSeg.Offset, descSeg.Key)
 
 	if _, err := r.Seek(p.EffectSegmentPosition, io.SeekStart); err != nil {
-		common.LogError("Error seeking to NameDescriptionEffect effect: %v", err)
+		common.LogError("Error seeking to NameDescriptionEffectTextObject effect: %v", err)
 		return err
 	}
 
 	effectSeg, err := models.ReadSegment(r)
 	if err != nil {
-		common.LogError("Error reading NameDescriptionEffect effect: %v", err)
+		common.LogError("Error reading NameDescriptionEffectTextObject effect: %v", err)
 		return err
 	}
 	p.Effect.ReadAndSetLocalizedContent(languageCode, stringBytes, effectSeg.Offset, effectSeg.Key)
@@ -81,20 +77,11 @@ func (p *NameDescriptionEffect) mapBytes(
 	return nil
 }
 
-func (p *NameDescriptionEffect) ToBytes(languageCode string) ([]byte, error) {
-	data := make([]byte, len(p.Bytes))
-	copy(data, p.Bytes)
+func (p *NameDescriptionEffectTextObject) ToBytes(languageCode string) ([]byte, error) {
+	data := slices.Clone(p.Bytes)
 
-	if nameContent := p.Name.GetLocalizedContent(languageCode); nameContent != nil {
-		if err := models.WriteSegmentAt(data, nameSegmentDefaultPosition, getSegment(nameContent)); err != nil {
-			return nil, err
-		}
-	}
-
-	if descContent := p.Description.GetLocalizedContent(languageCode); descContent != nil {
-		if err := models.WriteSegmentAt(data, descriptionSegmentDefaultPosition, getSegment(descContent)); err != nil {
-			return nil, err
-		}
+	if err := writeStringSegments(data, 0, languageCode, p.Name, p.Description); err != nil {
+		return nil, err
 	}
 
 	if effectContent := p.Effect.GetLocalizedContent(languageCode); effectContent != nil {
@@ -106,11 +93,11 @@ func (p *NameDescriptionEffect) ToBytes(languageCode string) ([]byte, error) {
 	return data, nil
 }
 
-func (p *NameDescriptionEffect) GetName(languageCode string) string {
+func (p *NameDescriptionEffectTextObject) GetName(languageCode string) string {
 	return p.Name.GetLocalizedString(languageCode)
 }
 
-func (p *NameDescriptionEffect) GetKeyedString(title string) datastore.IGlobalLocalizedKeyedStringObject {
+func (p *NameDescriptionEffectTextObject) GetKeyedString(title string) datastore.IGlobalLocalizedKeyedStringObject {
 	switch title {
 	case "name":
 		return p.Name
@@ -123,23 +110,23 @@ func (p *NameDescriptionEffect) GetKeyedString(title string) datastore.IGlobalLo
 	}
 }
 
-func (p *NameDescriptionEffect) GetHeaderLength() int {
+func (p *NameDescriptionEffectTextObject) GetHeaderLength() int {
 	return p.HeaderLength
 }
 
-func (p *NameDescriptionEffect) GetTextObject() datastore.IGlobalLocalizedTextObject {
+func (p *NameDescriptionEffectTextObject) GetTextObject() datastore.IGlobalLocalizedTextObject {
 	return p
 }
 
-func (p *NameDescriptionEffect) SetLocalizations(other datastore.IGlobalLocalizationSetter) {
-	if o, ok := other.(*NameDescriptionEffect); ok {
+func (p *NameDescriptionEffectTextObject) SetLocalizations(other datastore.IGlobalLocalizationSetter) {
+	if o, ok := other.(*NameDescriptionEffectTextObject); ok {
 		o.Name.CopyInto(p.Name)
 		o.Description.CopyInto(p.Description)
 		o.Effect.CopyInto(p.Effect)
 	}
 }
 
-func (p *NameDescriptionEffect) GetLocalizedKeyedStrings(localization string) []datastore.IGlobalKeyedString {
+func (p *NameDescriptionEffectTextObject) GetLocalizedKeyedStrings(localization string) []datastore.IGlobalKeyedString {
 	return []datastore.IGlobalKeyedString{
 		p.Name.GetLocalizedContent(localization),
 		p.Description.GetLocalizedContent(localization),
@@ -147,7 +134,7 @@ func (p *NameDescriptionEffect) GetLocalizedKeyedStrings(localization string) []
 	}
 }
 
-func (p *NameDescriptionEffect) ToString(languageCode string) string {
+func (p *NameDescriptionEffectTextObject) ToString(languageCode string) string {
 	nameStr := p.GetName(languageCode)
 	descStr := ""
 	if descContent := p.Description.GetLocalizedContent(languageCode); descContent != nil {
@@ -160,6 +147,6 @@ func (p *NameDescriptionEffect) ToString(languageCode string) string {
 	return fmt.Sprintf("%s - %s - %s", nameStr, descStr, effStr)
 }
 
-func (p *NameDescriptionEffect) String() string {
+func (p *NameDescriptionEffectTextObject) String() string {
 	return p.ToString(common.DefaultLocalization)
 }
