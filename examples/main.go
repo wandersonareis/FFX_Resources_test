@@ -403,6 +403,22 @@ func runFFXExamples() {
 	}
 	common.LogInfo("[FFX] ✓ Summon text salvos com sucesso")
 
+	// w_name.bin
+	weaponNamesBinaryFile := objectsfile.ReadWeaponNamesLocalizations("battle/kernel/w_name.bin")
+	common.LogInfo("[FFX] ✓ Weapon names carregados: %d\n", weaponNamesBinaryFile.GetObjects().Len())
+	if err := weaponNamesBinaryFile.ExportToJson("weapon_names_all_localizations.json"); err != nil {
+		common.LogError("[FFX] Error exporting weapon names to JSON: %v\n", err)
+	}
+	common.LogInfo("[FFX] ✓ Weapon names exportados para JSON")
+	if err := weaponNamesBinaryFile.ImportFromJson("weapon_names_all_localizations.json"); err != nil {
+		common.LogError("[FFX] Error importing weapon names from JSON: %v\n", err)
+	}
+	common.LogInfo("[FFX] ✓ Weapon names editados e salvos com sucesso")
+	if err := weaponNamesBinaryFile.SaveToBinary("battle/kernel/w_name.bin"); err != nil {
+		common.LogError("[FFX] Error saving weapon names to binary: %v\n", err)
+	}
+	common.LogInfo("[FFX] ✓ Weapon names salvos com sucesso")
+
 	// name_txt.bin
 	nameTextBinaryFile := objectsfile.ReadNameOnlyLocalizations("battle/kernel/name_txt.bin")
 	common.LogInfo("[FFX] ✓ Name text carregados: %d\n", nameTextBinaryFile.GetObjects().Len())
