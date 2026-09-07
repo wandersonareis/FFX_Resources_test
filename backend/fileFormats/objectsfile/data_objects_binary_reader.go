@@ -59,8 +59,8 @@ func ReadNameOnlyTextObjectsWithIlist(patternPath string) components.IList[datas
 	return nameObjects
 }
 
-// ReadNameDescriptionObjectsWithIlist reads binary data from a specified pattern path
-// and creates NameDescriptionTextObject entries with all available localizations.
+// ReadCommandObjectsWithIlist reads binary data from a specified pattern path
+// and creates CommandTextObject entries with all available localizations.
 //
 // This function reads LocalizedTextObject entries containing both name and description information
 // for various game elements that require detailed text. Each entry includes localized text for all
@@ -73,41 +73,41 @@ func ReadNameOnlyTextObjectsWithIlist(patternPath string) components.IList[datas
 // Parameters:
 //   - patternPath: Relative path to the binary file within the localization directory
 //
-// Returns: IList[ILocalizedTextObject] containing NameDescriptionTextObject entries with full localization data
-func ReadNameDescriptionObjectsWithIlist(patternPath string) components.IList[datastore.IGlobalLocalizedTextObject] {
+// Returns: IList[ILocalizedTextObject] containing CommandTextObject entries with full localization data
+func ReadCommandObjectsWithIlist(patternPath string) components.IList[datastore.IGlobalLocalizedTextObject] {
 	filePath := filepath.Join(common.GetLocalizationRoot(common.DefaultLocalization), patternPath)
 
 	creator := func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
 		if common.GetGameVersionString() == "ffx2" {
-			obj, err := NewNameDescriptionTextObjectV2(data, stringBytes, headerLength, localization)
+			obj, err := NewCommandTextObjectV2(data, stringBytes, headerLength, localization)
 			if err != nil {
 				return nil, err
 			}
 			return obj, nil
 		}
-		obj, err := NewNameDescriptionTextObject(data, stringBytes, headerLength, localization)
+		obj, err := NewCommandTextObject(data, stringBytes, headerLength, localization)
 		if err != nil {
 			return nil, err
 		}
 		return obj, nil
 	}
 
-	var nameDescObjects components.IList[datastore.IGlobalLocalizedTextObject]
+	var commandObjects components.IList[datastore.IGlobalLocalizedTextObject]
 	if common.GetGameVersionString() == "ffx2" {
-		nameDescObjects = ReadDataListWithIlistV2(filePath, common.DefaultLocalization, creator)
+		commandObjects = ReadDataListWithIlistV2(filePath, common.DefaultLocalization, creator)
 	} else {
-		nameDescObjects = ReadDataListWithIlist(filePath, common.DefaultLocalization, creator)
+		commandObjects = ReadDataListWithIlist(filePath, common.DefaultLocalization, creator)
 	}
-	if nameDescObjects == nil || nameDescObjects.IsEmpty() {
-		common.LogVerbose("No name and description objects found for %s\n", patternPath)
+	if commandObjects == nil || commandObjects.IsEmpty() {
+		common.LogVerbose("No command objects found for %s\n", patternPath)
 		return components.NewList[datastore.IGlobalLocalizedTextObject](0)
 	}
 
-	PopulateDataObjectLocalizationsWithIlist(patternPath, nameDescObjects, creator)
+	PopulateDataObjectLocalizationsWithIlist(patternPath, commandObjects, creator)
 
-	common.LogVerbose("Loading %d name and description objects...\n", nameDescObjects.Len())
+	common.LogVerbose("Loading %d command objects...\n", commandObjects.Len())
 
-	return nameDescObjects
+	return commandObjects
 }
 
 // PopulateDataObjectLocalizationsWithIlist populates localization data for all supported languages
@@ -460,7 +460,7 @@ func ParseDataListWithIlistV2(data []byte, languageCode string, creator func([]b
 // This function is intended exclusively for headers where ALL string segments are
 // stored contiguously at the beginning of the chunk, with no gaps or non-string
 // bytes between them. Examples:
-//   - NameDescriptionTextObject: Name → SimplifiedName → Description → SimplifiedDescription
+//   - CommandTextObject: Name → SimplifiedName → Description → SimplifiedDescription
 //   - NameSensorScanTextObject: Name → SensorText → SimplifiedSensorText → ScanText → SimplifiedScanText
 //   - NameOnlyTextObject: Name → SimplifiedName
 //

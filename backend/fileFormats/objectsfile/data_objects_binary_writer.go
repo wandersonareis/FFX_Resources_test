@@ -183,9 +183,9 @@ func ConvertFFXLocalizedDataToBytes(objects []datastore.IGlobalLocalizedTextObje
 // This function is the write-side counterpart of readStringSegments. It is intended
 // exclusively for headers where ALL string segments are stored contiguously, with no
 // gaps or non-string bytes between them. Examples:
-//   - NameDescriptionTextObject: Name → SimplifiedName → Description → SimplifiedDescription
+//   - CommandTextObject: Name → SimplifiedName → Description → SimplifiedDescription
 //   - NameOnlyTextObject: Name → SimplifiedName
-//   - NameDescriptionTextObjectV2: Name → Description
+//   - CommandTextObjectV2: Name → Description
 //
 // It must NOT be used for segments that are written at arbitrary or non-sequential
 // positions within the binary chunk (e.g., NameDescriptionEffectTextObject where the Effect

@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-// ReadNameDescriptionLocalizations reads battle command data from the command.bin file
+// ReadCommandLocalizations reads battle command data from the command.bin file
 // and loads all available localizations for each command entry directly into COMMANDS.
 //
 // This function reads CommandDataObject entries containing name and description information
@@ -80,7 +80,7 @@ func ReadDescriptionOnlyLocalizations(patternPath string) datastore.IBinaryFile 
 	return binaryDataFile
 }
 
-// ReadNameDescriptionLocalizations reads battle command data from the command.bin file
+// ReadCommandLocalizations reads battle command data from the command.bin file
 // and loads all available localizations for each command entry directly into COMMANDS.
 //
 // This function reads CommandDataObject entries containing name and description information
@@ -89,12 +89,12 @@ func ReadDescriptionOnlyLocalizations(patternPath string) datastore.IBinaryFile 
 //
 // File format: name and description data
 // Pattern path: ex: "battle/kernel/command.bin"
-func ReadNameDescriptionLocalizations(patternPath string) datastore.IBinaryFile {
+func ReadCommandLocalizations(patternPath string) datastore.IBinaryFile {
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
 		if common.GetGameVersionString() == "ffx2" {
-			return NewNameDescriptionTextObjectV2(cBytes, sBytes, hLen, lang)
+			return NewCommandTextObjectV2(cBytes, sBytes, hLen, lang)
 		}
-		return NewNameDescriptionTextObject(cBytes, sBytes, hLen, lang)
+		return NewCommandTextObject(cBytes, sBytes, hLen, lang)
 	}
 
 	binaryDataFile := NewBinaryFile(
@@ -125,7 +125,7 @@ func ReadNameDescriptionEffectTextObjectLocalizations(patternPath string, effect
 		if common.GetGameVersionString() == "ffx2" {
 			return NewNameDescriptionEffectTextObject(cBytes, sBytes, hLen, effectSegmentPosition, lang)
 		}
-		return NewNameDescriptionTextObject(cBytes, sBytes, hLen, lang)
+		return NewCommandTextObject(cBytes, sBytes, hLen, lang)
 	}
 
 	binaryDataFile := NewBinaryFile(
@@ -234,7 +234,7 @@ func ReadWeaponNamesLocalizations(patternPath string) datastore.IBinaryFile {
 // using the BinaryFile orchestrator for lifecycle management.
 //
 // This function creates a BinaryFile with the appropriate creator function for
-// NameDescriptionTextObjectV2 chunks, reads the binary data, and populates the
+// CommandTextObjectV2 chunks, reads the binary data, and populates the
 // global datastore.KeyItems with the parsed objects.
 //
 // File format: name and description data (V2 format)
@@ -245,7 +245,7 @@ func ReadKeyItemsWithAllLocalizations() datastore.IBinaryFile {
 	keyItemsFile := NewBinaryFile(
 		patternPath,
 		func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
-			return NewNameDescriptionTextObjectV2(cBytes, sBytes, hLen, lang)
+			return NewCommandTextObjectV2(cBytes, sBytes, hLen, lang)
 		},
 		common.DefaultLocalization,
 	)
@@ -277,9 +277,9 @@ func ReadItemsWithAllLocalizations() datastore.IBinaryFile {
 
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
 		if common.GetGameVersionString() == "ffx2" {
-			return NewNameDescriptionTextObjectV2(cBytes, sBytes, hLen, lang)
+			return NewCommandTextObjectV2(cBytes, sBytes, hLen, lang)
 		}
-		return NewNameDescriptionTextObject(cBytes, sBytes, hLen, lang)
+		return NewCommandTextObject(cBytes, sBytes, hLen, lang)
 	}
 
 	itemsFile := NewBinaryFile(
@@ -314,7 +314,7 @@ func ReadArmsTextWithAllLocalizations() {
 		return
 	}
 	patternPath := "battle/kernel/arms_txt.bin"
-	datastore.ArmsTxt = ReadNameDescriptionObjectsWithIlist(patternPath)
+	datastore.ArmsTxt = ReadCommandObjectsWithIlist(patternPath)
 
 	common.LogVerbose("Loaded %d arms text entries with all localizations", datastore.ArmsTxt.Len())
 }
@@ -333,7 +333,7 @@ func ReadConfigTextWithAllLocalizations() {
 		return
 	}
 	patternPath := "battle/kernel/config_txt.bin"
-	CONFIG_TEXT = ReadNameDescriptionObjectsWithIlist(patternPath)
+	CONFIG_TEXT = ReadCommandObjectsWithIlist(patternPath)
 
 	if CONFIG_TEXT != nil {
 		common.LogVerbose("Loaded %d config text entries with all localizations", CONFIG_TEXT.Len())
@@ -354,7 +354,7 @@ func ReadItemCommandsWithAllLocalizations() {
 		return
 	}
 	patternPath := "battle/kernel/item_txt.bin"
-	ITEM_TEXT = ReadNameDescriptionObjectsWithIlist(patternPath)
+	ITEM_TEXT = ReadCommandObjectsWithIlist(patternPath)
 
 	if ITEM_TEXT != nil {
 		common.LogVerbose("Loaded %d item commands entries with all localizations", ITEM_TEXT.Len())
@@ -375,7 +375,7 @@ func ReadMainMenuTextWithAllLocalizations() {
 		return
 	}
 	patternPath := "battle/kernel/mmain_txt.bin"
-	MMAIN_TEXT = ReadNameDescriptionObjectsWithIlist(patternPath)
+	MMAIN_TEXT = ReadCommandObjectsWithIlist(patternPath)
 
 	if MMAIN_TEXT != nil {
 		common.LogVerbose("Loaded %d main menu text entries with all localizations", MMAIN_TEXT.Len())

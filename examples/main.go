@@ -52,7 +52,7 @@ func main() {
 func runFFXExamples() {
 
 	// important.bin
-	keyItemsBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/important.bin")
+	keyItemsBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/important.bin")
 	common.LogInfo("[FFX] ✓ Itens-chave carregados: %d\n", keyItemsBinaryFile.GetObjects().Len())
 	if err := keyItemsBinaryFile.ExportToJson("key_items_all_localizations.json"); err != nil {
 		common.LogError("[FFX] Error exporting key items to JSON: %v\n", err)
@@ -68,7 +68,7 @@ func runFFXExamples() {
 	common.LogInfo("[FFX] ✓ Itens-chave salvos com sucesso")
 
 	// command.bin
-	commandsBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/command.bin")
+	commandsBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/command.bin")
 	common.LogInfo("[FFX] commands carregados: %d\n", commandsBinaryFile.GetObjects().Len())
 	if err := commandsBinaryFile.ExportToJson("commands_all_localizations.json"); err != nil {
 		common.LogError("[FFX] Error exporting commands to JSON: %v\n", err)
@@ -84,7 +84,7 @@ func runFFXExamples() {
 	common.LogInfo("[FFX] ✓ Comandos salvos com sucesso")
 
 	// a_ability.bin
-	aAbilityBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/a_ability.bin")
+	aAbilityBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/a_ability.bin")
 	common.LogInfo("[FFX] a_ability carregados: %d\n", aAbilityBinaryFile.GetObjects().Len())
 	if err := aAbilityBinaryFile.ExportToJson("a_ability_all_localizations.json"); err != nil {
 		common.LogError("[FFX] Error exporting a_ability text to JSON: %v\n", err)
@@ -100,7 +100,7 @@ func runFFXExamples() {
 	common.LogInfo("[FFX] ✓ a_ability text salvos com sucesso")
 
 	// item.bin
-	itemsBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/item.bin")
+	itemsBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/item.bin")
 	common.LogInfo("[FFX] items carregados: %d\n", itemsBinaryFile.GetObjects().Len())
 	if err := itemsBinaryFile.ExportToJson("items_all_localizations.json"); err != nil {
 		common.LogError("[FFX] Error exporting items to JSON: %v\n", err)
@@ -116,7 +116,7 @@ func runFFXExamples() {
 	common.LogInfo("[FFX] ✓ Itens salvos com sucesso")
 
 	// arms_txt.bin
-	armsTextBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/arms_txt.bin")
+	armsTextBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/arms_txt.bin")
 	common.LogInfo("[FFX] arms text carregados: %d\n", armsTextBinaryFile.GetObjects().Len())
 	if err := armsTextBinaryFile.ExportToJson("arms_text_all_localizations.json"); err != nil {
 		common.LogError("[FFX] Error exporting arms text to JSON: %v\n", err)
@@ -260,7 +260,7 @@ func runFFXExamples() {
 	common.LogInfo("[FFX] ✓ Build text salvos com sucesso")
 
 	// config_txt.bin
-	configTextBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/config_txt.bin")
+	configTextBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/config_txt.bin")
 	common.LogInfo("[FFX] config text carregados: %d\n", configTextBinaryFile.GetObjects().Len())
 	if err := configTextBinaryFile.ExportToJson("config_txt_all_localizations.json"); err != nil {
 		common.LogError("[FFX] Error exporting config text to JSON: %v\n", err)
@@ -276,7 +276,7 @@ func runFFXExamples() {
 	common.LogInfo("[FFX] ✓ Config text salvos com sucesso")
 
 	// item_txt.bin
-	itemTextBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/item_txt.bin")
+	itemTextBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/item_txt.bin")
 	common.LogInfo("[FFX] item text carregados: %d\n", itemTextBinaryFile.GetObjects().Len())
 	if err := itemTextBinaryFile.ExportToJson("item_txt_all_localizations.json"); err != nil {
 		common.LogError("[FFX] Error exporting item text to JSON: %v\n", err)
@@ -292,7 +292,7 @@ func runFFXExamples() {
 	common.LogInfo("[FFX] ✓ Item text salvos com sucesso")
 
 	// mmain_txt.bin
-	mainMenuTextBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/mmain_txt.bin")
+	mainMenuTextBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/mmain_txt.bin")
 	common.LogInfo("[FFX] ✓ Main menu text carregados: %d\n", mainMenuTextBinaryFile.GetObjects().Len())
 	if err := mainMenuTextBinaryFile.ExportToJson("mmain_txt_all_localizations.json"); err != nil {
 		common.LogError("[FFX] Error exporting main menu text to JSON: %v\n", err)
@@ -308,7 +308,7 @@ func runFFXExamples() {
 	common.LogInfo("[FFX] ✓ Main menu text salvos com sucesso")
 
 	// panel.bin
-	panelTextBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/panel.bin")
+	panelTextBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/panel.bin")
 	common.LogInfo("[FFX] ✓ Panel text carregados: %d\n", panelTextBinaryFile.GetObjects().Len())
 	if err := panelTextBinaryFile.ExportToJson("panel_all_localizations.json"); err != nil {
 		common.LogError("[FFX] Error exporting panel text to JSON: %v\n", err)
@@ -356,7 +356,7 @@ func runFFXExamples() {
 	common.LogInfo("[FFX] ✓ Player save text salvos com sucesso")
 
 	// sphere.bin
-	sphereBinaryFile := objectsfile.ReadDescriptionOnlyLocalizations("battle/kernel/sphere.bin")
+	sphereBinaryFile := objectsfile.ReadNameOnlyLocalizations("battle/kernel/sphere.bin")
 	common.LogInfo("[FFX] ✓ Sphere text carregados: %d\n", sphereBinaryFile.GetObjects().Len())
 	if err := sphereBinaryFile.ExportToJson("sphere_all_localizations.json"); err != nil {
 		common.LogError("[FFX] Error exporting sphere text to JSON: %v\n", err)
@@ -371,8 +371,24 @@ func runFFXExamples() {
 	}
 	common.LogInfo("[FFX] ✓ Sphere text salvos com sucesso")
 
+	// save_txt.bin
+	saveTextBinaryFile := objectsfile.ReadNameOnlyLocalizations("battle/kernel/save_txt.bin")
+	common.LogInfo("[FFX] ✓ Save text carregados: %d\n", saveTextBinaryFile.GetObjects().Len())
+	if err := saveTextBinaryFile.ExportToJson("save_txt_all_localizations.json"); err != nil {
+		common.LogError("[FFX] Error exporting save text to JSON: %v\n", err)
+	}
+	common.LogInfo("[FFX] ✓ Save text exportados para JSON")
+	if err := saveTextBinaryFile.ImportFromJson("save_txt_all_localizations.json"); err != nil {
+		common.LogError("[FFX] Error importing save text from JSON: %v\n", err)
+	}
+	common.LogInfo("[FFX] ✓ Save text editados e salvos com sucesso")
+	if err := saveTextBinaryFile.SaveToBinary("battle/kernel/save_txt.bin"); err != nil {
+		common.LogError("[FFX] Error saving save text to binary: %v\n", err)
+	}
+	common.LogInfo("[FFX] ✓ Save text salvos com sucesso")
+
 	// status_txt.bin
-	statusTextBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/status_txt.bin")
+	statusTextBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/status_txt.bin")
 	common.LogInfo("[FFX] ✓ Status text carregados: %d\n", statusTextBinaryFile.GetObjects().Len())
 	if err := statusTextBinaryFile.ExportToJson("status_txt_all_localizations.json"); err != nil {
 		common.LogError("[FFX] Error exporting status text to JSON: %v\n", err)
@@ -388,7 +404,7 @@ func runFFXExamples() {
 	common.LogInfo("[FFX] ✓ Status text salvos com sucesso")
 
 	// summon_txt.bin
-	summonTextBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/summon_txt.bin")
+	summonTextBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/summon_txt.bin")
 	common.LogInfo("[FFX] ✓ Summon text carregados: %d\n", summonTextBinaryFile.GetObjects().Len())
 	if err := summonTextBinaryFile.ExportToJson("summon_txt_all_localizations.json"); err != nil {
 		common.LogError("[FFX] Error exporting summon text to JSON: %v\n", err)
@@ -456,7 +472,7 @@ func runFFX2Examples() {
 
 	// Arquivos em comum com a v1 (mesmos nomes existem no FFX-2).
 	// important.bin
-	keyItemsBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/important.bin")
+	keyItemsBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/important.bin")
 	fmt.Printf("[FFX-2] ✓ Itens-chave carregados: %d\n", keyItemsBinaryFile.GetObjects().Len())
 	keyItemsBinaryFile.ExportToJson("key_items_all_localizations.json")
 	fmt.Println("[FFX-2] ✓ Itens-chave exportados para JSON")
@@ -466,7 +482,7 @@ func runFFX2Examples() {
 	fmt.Println("[FFX-2] ✓ Itens-chave salvos com sucesso")
 
 	// commands.bin
-	commandsBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/command.bin")
+	commandsBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/command.bin")
 	common.LogInfo("[FFX-2] commands carregados: %d\n", commandsBinaryFile.GetObjects().Len())
 	if err := commandsBinaryFile.ExportToJson("commands_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting commands to JSON: %v\n", err)
@@ -482,7 +498,7 @@ func runFFX2Examples() {
 	common.LogInfo("[FFX-2] ✓ Comandos salvos com sucesso")
 
 	// item.bin
-	itemsBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/item.bin")
+	itemsBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/item.bin")
 	common.LogInfo("[FFX-2] items carregados: %d\n", datastore.Items.Len())
 	if err := itemsBinaryFile.ExportToJson("items_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting items to JSON: %v\n", err)
@@ -498,7 +514,7 @@ func runFFX2Examples() {
 	common.LogInfo("[FFX-2] ✓ Itens salvos com sucesso")
 
 	// menu_txt.bin
-	menuTextBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/menu_txt.bin")
+	menuTextBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/menu_txt.bin")
 	common.LogInfo("[FFX-2] menu text carregados: %d\n", menuTextBinaryFile.GetObjects().Len())
 	if err := menuTextBinaryFile.ExportToJson("menu_text_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting menu text to JSON: %v\n", err)
@@ -562,7 +578,7 @@ func runFFX2Examples() {
 	common.LogInfo("[FFX-2] ✓ Battle end text salvos com sucesso")
 
 	// a_ability.bin
-	aAbilityBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/a_ability.bin")
+	aAbilityBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/a_ability.bin")
 	common.LogInfo("[FFX-2] a_ability carregados: %d\n", aAbilityBinaryFile.GetObjects().Len())
 	if err := aAbilityBinaryFile.ExportToJson("a_ability_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting a_ability text to JSON: %v\n", err)
@@ -611,7 +627,7 @@ func runFFX2Examples() {
 	common.LogInfo("[FFX-2] ✓ jobs text salvos com sucesso")
 
 	// monmagic.bin
-	monMagicBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/monmagic.bin")
+	monMagicBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/monmagic.bin")
 	common.LogInfo("[FFX-2] monster magic carregados: %d\n", monMagicBinaryFile.GetObjects().Len())
 	if err := monMagicBinaryFile.ExportToJson("monster_magic_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting monster magic text to JSON: %v\n", err)
@@ -627,7 +643,7 @@ func runFFX2Examples() {
 	common.LogInfo("[FFX-2] ✓ monster magic text salvos com sucesso")
 
 	// monter.bin
-	monsterBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/monster.bin")
+	monsterBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/monster.bin")
 	common.LogInfo("[FFX-2] monster carregados: %d\n", monsterBinaryFile.GetObjects().Len())
 	if err := monsterBinaryFile.ExportToJson("monster_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting monsters text to JSON: %v\n", err)
@@ -643,7 +659,7 @@ func runFFX2Examples() {
 	common.LogInfo("[FFX-2] ✓ monsters text salvos com sucesso")
 
 	// monter2.bin
-	monster2BinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/monster2.bin")
+	monster2BinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/monster2.bin")
 	common.LogInfo("[FFX-2] monster2 carregados: %d\n", monster2BinaryFile.GetObjects().Len())
 	if err := monster2BinaryFile.ExportToJson("monster2_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting monsters 2 text to JSON: %v\n", err)
@@ -675,7 +691,7 @@ func runFFX2Examples() {
 	common.LogInfo("[FFX-2] ✓ plate text salvos com sucesso")
 
 	// ply_save.bin
-	playerSaveBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/ply_save.bin")
+	playerSaveBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/ply_save.bin")
 	common.LogInfo("[FFX-2] player save: %d\n", playerSaveBinaryFile.GetObjects().Len())
 	if err := playerSaveBinaryFile.ExportToJson("player_save_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting player save text to JSON: %v\n", err)
@@ -707,7 +723,7 @@ func runFFX2Examples() {
 	common.LogInfo("[FFX-2] ✓ Player room text salvos com sucesso")
 
 	// save_txt.bin
-	saveTextBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/save_txt.bin")
+	saveTextBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/save_txt.bin")
 	fmt.Printf("[FFX-2] save text carregados: %d\n", saveTextBinaryFile.GetObjects().Len())
 	if err := saveTextBinaryFile.ExportToJson("save_text_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting save text to JSON: %v\n", err)

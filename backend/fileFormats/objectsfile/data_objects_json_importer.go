@@ -50,7 +50,7 @@ type (
 // translations for all supported languages in the game, which are then applied to
 // update the existing LocalizedTextObject instances.
 //
-// The function supports both NameDescriptionTextObject and NameOnlyTextObject types,
+// The function supports both CommandTextObject and NameOnlyTextObject types,
 // automatically detecting the object type and applying the appropriate updates.
 //
 // File format: JSON array with id, name, and description mappings
@@ -133,12 +133,12 @@ func isValidID(id int, length int) bool {
 // Returns: error if object type is not supported
 func updateObjectByType(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextObject) error {
 	switch localizedTextObj := obj.(type) {
-	case *NameDescriptionTextObject:
+	case *CommandTextObject:
 		updateNameEntry(jsonEntry, localizedTextObj.Name)
 		updateSimplifiedNameEntry(jsonEntry, localizedTextObj.SimplifiedName)
 		updateDescriptionEntry(jsonEntry, localizedTextObj.Description)
 		updateSimplifiedDescriptionEntry(jsonEntry, localizedTextObj.SimplifiedDescription)
-	case *NameDescriptionTextObjectV2:
+	case *CommandTextObjectV2:
 		updateNameEntry(jsonEntry, localizedTextObj.Name)
 		updateDescriptionEntry(jsonEntry, localizedTextObj.Description)
 	case *NameOnlyTextObject:
@@ -172,7 +172,7 @@ func updateObjectByType(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextO
 // updateLocalizedObjectEntries processes JSON data entries and applies the localized
 // text content to the corresponding ILocalizedTextObject instances.
 //
-// This function handles type detection automatically, supporting both NameDescriptionTextObject
+// This function handles type detection automatically, supporting both CommandTextObject
 // and NameOnlyTextObject types. It validates object IDs, checks language support, and
 // updates the appropriate text fields based on the object type.
 //
@@ -206,7 +206,7 @@ func updateLocalizedObjectEntries(itemsData []JSONEntry, objects []datastore.IGl
 	return nil
 }
 
-// updateNameEntry applies name updates to a NameDescriptionTextObject.
+// updateNameEntry applies name updates to a CommandTextObject.
 //
 // Parameters:
 //   - sourceData: JSON data containing name translations
@@ -234,7 +234,7 @@ func updateNameEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKey
 	}
 }
 
-// updateDescriptionEntry applies description updates to a NameDescriptionTextObject.
+// updateDescriptionEntry applies description updates to a CommandTextObject.
 //
 // Parameters:
 //   - sourceData: JSON data containing description translations

@@ -23,9 +23,9 @@ backend/core/converter/
 ### Core Binary Reading (`binary_reader.go`)
 
 - **`ReadNameOnlyDataObjectsWithIlist(patternPath string)`** - Reads binary files containing name-only data
-- **`ReadNameDescriptionObjectsWithIlist(patternPath string)`** - Reads binary files containing name and description data
+- **`ReadCommandObjectsWithIlist(patternPath string)`** - Reads binary files containing name and description data
 - **`ReadNameOnlyObjects(patternPath string)`** - Legacy function for name-only data (returns slice)
-- **`ReadNameDescriptionObjects(patternPath string)`** - Legacy function for name and description data (returns slice)
+- **`ReadCommandObjects(patternPath string)`** - Legacy function for name and description data (returns slice)
 
 ### High-level Data Reading (`data_readers.go`)
 
@@ -206,7 +206,7 @@ if err != nil {
 import "ffxresources/backend/core/converter"
 
 // Read name and description objects
-commands := converter.ReadNameDescriptionObjectsWithIlist("battle/kernel/command.bin")
+commands := converter.ReadCommandObjectsWithIlist("battle/kernel/command.bin")
 
 // Read name-only objects
 battleText := converter.ReadNameOnlyDataObjectsWithIlist("battle/kernel/btl_txt.bin")
@@ -303,7 +303,7 @@ The functions previously in `backend/core/reader/` have been moved here with the
 
 **Core Reading Functions:**
 
-- `reader.ReadNameDescriptionObjectsWithIlist()` → `converter.ReadNameDescriptionObjectsWithIlist()`
+- `reader.ReadCommandObjectsWithIlist()` → `converter.ReadCommandObjectsWithIlist()`
 - `reader.ReadNameOnlyDataObjectsWithIlist()` → `converter.ReadNameOnlyDataObjectsWithIlist()`
 
 **High-level Reading Functions:**

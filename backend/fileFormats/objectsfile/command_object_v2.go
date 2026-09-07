@@ -9,19 +9,19 @@ import (
 	"ffxresources/backend/datastore"
 )
 
-type NameDescriptionTextObjectV2 struct {
+type CommandTextObjectV2 struct {
 	Bytes        []byte
 	Name         datastore.IGlobalLocalizedKeyedStringObject
 	Description  datastore.IGlobalLocalizedKeyedStringObject
 	HeaderLength int
 }
 
-func NewNameDescriptionTextObjectV2(bytes []byte, stringBytes []byte, headerLength int, languageCode string) (*NameDescriptionTextObjectV2, error) {
+func NewCommandTextObjectV2(bytes []byte, stringBytes []byte, headerLength int, languageCode string) (*CommandTextObjectV2, error) {
 	if len(bytes) < headerLength {
 		return nil, fmt.Errorf("insufficient data: have %d bytes, need at least %d", len(bytes), headerLength)
 	}
 
-	n := &NameDescriptionTextObjectV2{
+	n := &CommandTextObjectV2{
 		Bytes:        bytes,
 		Name:         NewLocalizedKeyedStringObject(),
 		Description:  NewLocalizedKeyedStringObject(),
@@ -34,17 +34,17 @@ func NewNameDescriptionTextObjectV2(bytes []byte, stringBytes []byte, headerLeng
 	return n, nil
 }
 
-func (n *NameDescriptionTextObjectV2) mapBytes(stringBytes []byte, languageCode string) error {
+func (n *CommandTextObjectV2) mapBytes(stringBytes []byte, languageCode string) error {
 	r := bytes.NewReader(n.Bytes)
 
 	if err := readStringSegments(r, stringBytes, languageCode, n.Name, n.Description); err != nil {
-		common.LogError("Error reading NameDescriptionTextObjectV2 segments: %v", err)
+		common.LogError("Error reading CommandTextObjectV2 segments: %v", err)
 		return err
 	}
 	return nil
 }
 
-func (n *NameDescriptionTextObjectV2) ToBytes(languageCode string) ([]byte, error) {
+func (n *CommandTextObjectV2) ToBytes(languageCode string) ([]byte, error) {
 	result := slices.Clone(n.Bytes)
 
 	if err := writeStringSegments(result, 0, languageCode,
@@ -56,11 +56,11 @@ func (n *NameDescriptionTextObjectV2) ToBytes(languageCode string) ([]byte, erro
 	return result, nil
 }
 
-func (n *NameDescriptionTextObjectV2) GetName(languageCode string) string {
+func (n *CommandTextObjectV2) GetName(languageCode string) string {
 	return n.Name.GetLocalizedString(languageCode)
 }
 
-func (n *NameDescriptionTextObjectV2) GetKeyedString(title string) datastore.IGlobalLocalizedKeyedStringObject {
+func (n *CommandTextObjectV2) GetKeyedString(title string) datastore.IGlobalLocalizedKeyedStringObject {
 	switch title {
 	case "name":
 		return n.Name
@@ -71,29 +71,29 @@ func (n *NameDescriptionTextObjectV2) GetKeyedString(title string) datastore.IGl
 	}
 }
 
-func (n *NameDescriptionTextObjectV2) GetHeaderLength() int {
+func (n *CommandTextObjectV2) GetHeaderLength() int {
 	return n.HeaderLength
 }
 
-func (n *NameDescriptionTextObjectV2) GetTextObject() datastore.IGlobalLocalizedTextObject {
+func (n *CommandTextObjectV2) GetTextObject() datastore.IGlobalLocalizedTextObject {
 	return n
 }
 
-func (n *NameDescriptionTextObjectV2) SetLocalizations(other datastore.IGlobalLocalizationSetter) {
-	if otherNameDesc, ok := other.(*NameDescriptionTextObjectV2); ok {
-		otherNameDesc.Name.CopyInto(n.Name)
-		otherNameDesc.Description.CopyInto(n.Description)
+func (n *CommandTextObjectV2) SetLocalizations(other datastore.IGlobalLocalizationSetter) {
+	if otherCmd, ok := other.(*CommandTextObjectV2); ok {
+		otherCmd.Name.CopyInto(n.Name)
+		otherCmd.Description.CopyInto(n.Description)
 	}
 }
 
-func (n *NameDescriptionTextObjectV2) GetLocalizedKeyedStrings(localization string) []datastore.IGlobalKeyedString {
+func (n *CommandTextObjectV2) GetLocalizedKeyedStrings(localization string) []datastore.IGlobalKeyedString {
 	return []datastore.IGlobalKeyedString{
 		n.Name.GetLocalizedContent(localization),
 		n.Description.GetLocalizedContent(localization),
 	}
 }
 
-func (n *NameDescriptionTextObjectV2) ToString(languageCode string) string {
+func (n *CommandTextObjectV2) ToString(languageCode string) string {
 	nameStr := n.GetName(languageCode)
 	descStr := ""
 	if descContent := n.Description.GetLocalizedContent(languageCode); descContent != nil {
@@ -102,6 +102,6 @@ func (n *NameDescriptionTextObjectV2) ToString(languageCode string) string {
 	return fmt.Sprintf("%s - %s", nameStr, descStr)
 }
 
-func (n *NameDescriptionTextObjectV2) String() string {
+func (n *CommandTextObjectV2) String() string {
 	return n.ToString(common.DefaultLocalization)
 }

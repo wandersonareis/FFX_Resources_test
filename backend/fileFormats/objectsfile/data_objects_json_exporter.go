@@ -13,6 +13,215 @@ import (
 	"ffxresources/backend/models"
 )
 
+func fillLocalized(m map[string]string, seg datastore.IGlobalLocalizedKeyedStringObject, locKey string) map[string]string {
+	if seg == nil {
+		return m
+	}
+	if text := seg.GetLocalizedString(locKey); text != "" {
+		if m == nil {
+			m = make(map[string]string)
+		}
+		m[locKey] = text
+	}
+	return m
+}
+
+type textGroup interface {
+	exportTo(data *JSONEntry, locKey string)
+}
+
+type commandTexts struct {
+	name                  datastore.IGlobalLocalizedKeyedStringObject
+	simplifiedName        datastore.IGlobalLocalizedKeyedStringObject
+	description           datastore.IGlobalLocalizedKeyedStringObject
+	simplifiedDescription datastore.IGlobalLocalizedKeyedStringObject
+}
+
+func resolveCommandTexts(obj datastore.IGlobalLocalizedTextObject) (commandTexts, bool) {
+	c := commandTexts{
+		name:                  obj.GetKeyedString("name"),
+		simplifiedName:        obj.GetKeyedString("simplifiedName"),
+		description:           obj.GetKeyedString("description"),
+		simplifiedDescription: obj.GetKeyedString("simplifiedDescription"),
+	}
+	return c, c.name != nil || c.simplifiedName != nil ||
+		c.description != nil || c.simplifiedDescription != nil
+}
+
+func (c commandTexts) exportTo(data *JSONEntry, locKey string) {
+	data.Name = fillLocalized(data.Name, c.name, locKey)
+	data.SimplifiedName = fillLocalized(data.SimplifiedName, c.simplifiedName, locKey)
+	data.Description = fillLocalized(data.Description, c.description, locKey)
+	data.SimplifiedDescription = fillLocalized(data.SimplifiedDescription, c.simplifiedDescription, locKey)
+}
+
+type effectTexts struct {
+	effect datastore.IGlobalLocalizedKeyedStringObject
+}
+
+func resolveEffectTexts(obj datastore.IGlobalLocalizedTextObject) (effectTexts, bool) {
+	e := effectTexts{effect: obj.GetKeyedString("effect")}
+	return e, e.effect != nil
+}
+
+func (e effectTexts) exportTo(data *JSONEntry, locKey string) {
+	data.Effect = fillLocalized(data.Effect, e.effect, locKey)
+}
+
+type abilityTexts struct {
+	abilities []datastore.IGlobalLocalizedKeyedStringObject
+}
+
+func resolveAbilityTexts(obj datastore.IGlobalLocalizedTextObject) (abilityTexts, bool) {
+	var a abilityTexts
+	for idx := 1; ; idx++ {
+		seg := obj.GetKeyedString(fmt.Sprintf("ability%d", idx))
+		if seg == nil {
+			break
+		}
+		a.abilities = append(a.abilities, seg)
+	}
+	return a, len(a.abilities) > 0
+}
+
+func (a abilityTexts) exportTo(data *JSONEntry, locKey string) {
+	if data.Abilities == nil {
+		data.Abilities = make([]map[string]string, len(a.abilities))
+		for i := range data.Abilities {
+			data.Abilities[i] = make(map[string]string)
+		}
+	}
+	for idx, seg := range a.abilities {
+		data.Abilities[idx] = fillLocalized(data.Abilities[idx], seg, locKey)
+	}
+}
+
+type monsterTexts struct {
+	sensor           datastore.IGlobalLocalizedKeyedStringObject
+	simplifiedSensor datastore.IGlobalLocalizedKeyedStringObject
+	scan             datastore.IGlobalLocalizedKeyedStringObject
+	simplifiedScan   datastore.IGlobalLocalizedKeyedStringObject
+}
+
+func resolveMonsterTexts(obj datastore.IGlobalLocalizedTextObject) (monsterTexts, bool) {
+	m := monsterTexts{
+		sensor:           obj.GetKeyedString("sensorText"),
+		simplifiedSensor: obj.GetKeyedString("simplifiedSensorText"),
+		scan:             obj.GetKeyedString("scanText"),
+		simplifiedScan:   obj.GetKeyedString("simplifiedScanText"),
+	}
+	return m, m.sensor != nil || m.simplifiedSensor != nil ||
+		m.scan != nil || m.simplifiedScan != nil
+}
+
+func (m monsterTexts) exportTo(data *JSONEntry, locKey string) {
+	data.SensorText = fillLocalized(data.SensorText, m.sensor, locKey)
+	data.SimplifiedSensorText = fillLocalized(data.SimplifiedSensorText, m.simplifiedSensor, locKey)
+	data.ScanText = fillLocalized(data.ScanText, m.scan, locKey)
+	data.SimplifiedScanText = fillLocalized(data.SimplifiedScanText, m.simplifiedScan, locKey)
+}
+
+type weaponsTexts struct {
+	weapon *WeaponsNameTextObject
+}
+
+func resolveWeaponsTexts(obj datastore.IGlobalLocalizedTextObject) (weaponsTexts, bool) {
+	w, ok := obj.(*WeaponsNameTextObject)
+	return weaponsTexts{weapon: w}, ok
+}
+
+func (w weaponsTexts) exportTo(data *JSONEntry, locKey string) {
+	if data.Weapons == nil {
+		data.Weapons = make(map[string]WeaponTexts, len(weaponRefs))
+	}
+	for i, ref := range weaponRefs {
+		entry := data.Weapons[ref.name]
+		if entry.Name == nil {
+			entry.Name = make(map[string]string)
+			entry.SimplifiedName = make(map[string]string)
+		}
+		entry.Name = fillLocalized(entry.Name, w.weapon.Names[i], locKey)
+		entry.SimplifiedName = fillLocalized(entry.SimplifiedName, w.weapon.SimplifiedNames[i], locKey)
+		data.Weapons[ref.name] = entry
+	}
+}
+
+func resolveTextGroups(obj datastore.IGlobalLocalizedTextObject) []textGroup {
+	var groups []textGroup
+	if g, ok := resolveCommandTexts(obj); ok {
+		groups = append(groups, g)
+	}
+	if g, ok := resolveEffectTexts(obj); ok {
+		groups = append(groups, g)
+	}
+	if g, ok := resolveAbilityTexts(obj); ok {
+		groups = append(groups, g)
+	}
+	if g, ok := resolveMonsterTexts(obj); ok {
+		groups = append(groups, g)
+	}
+	if g, ok := resolveWeaponsTexts(obj); ok {
+		groups = append(groups, g)
+	}
+	return groups
+}
+
+func (e *JSONEntry) hasContent() bool {
+	if len(e.Name) > 0 || len(e.SimplifiedName) > 0 ||
+		len(e.Description) > 0 || len(e.SimplifiedDescription) > 0 ||
+		len(e.Effect) > 0 ||
+		len(e.SensorText) > 0 || len(e.SimplifiedSensorText) > 0 ||
+		len(e.ScanText) > 0 || len(e.SimplifiedScanText) > 0 {
+		return true
+	}
+	for _, ab := range e.Abilities {
+		if len(ab) > 0 {
+			return true
+		}
+	}
+	for _, wt := range e.Weapons {
+		if len(wt.Name) > 0 || len(wt.SimplifiedName) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func ExportToJSON(objects components.IList[datastore.IGlobalLocalizedTextObject], jsonFileName string) error {
+	if objects == nil || objects.IsEmpty() {
+		return fmt.Errorf("no objects loaded or empty")
+	}
+
+	var jsonEntries []*JSONEntry
+
+	objects.RangeIndex(func(i int, obj datastore.IGlobalLocalizedTextObject) {
+		if obj == nil {
+			common.LogVerbose("Object %d is nil, skipping", i)
+			return
+		}
+
+		groups := resolveTextGroups(obj)
+		if len(groups) == 0 {
+			return
+		}
+
+		data := &JSONEntry{ID: i}
+
+		for locKey := range common.SupportedLanguages {
+			for _, g := range groups {
+				g.exportTo(data, locKey)
+			}
+		}
+
+		if data.hasContent() {
+			jsonEntries = append(jsonEntries, data)
+		}
+	})
+
+	return createJSON(jsonEntries, jsonFileName)
+}
+
+
 // EventFileDataJSON represents an event file with all its strings for JSON export
 type EventFileDataJSON struct {
 	ID      string                `json:"id"`
@@ -91,205 +300,6 @@ func createJSON(dataObjectEntries []*JSONEntry, fileName string) error {
 
 	common.LogVerbose("Exported name-description data to JSON: %s", jsonPath)
 	return nil
-}
-
-func ExportToJSON(objects components.IList[datastore.IGlobalLocalizedTextObject], jsonFileName string) error {
-	if objects == nil || objects.IsEmpty() {
-		return fmt.Errorf("no objects loaded or empty")
-	}
-
-	var jsonEntries []*JSONEntry
-
-	objects.RangeIndex(func(i int, obj datastore.IGlobalLocalizedTextObject) {
-		if obj == nil {
-			common.LogVerbose("Object %d is nil, skipping", i)
-			return
-		}
-
-		data := &JSONEntry{
-			ID: i,
-		}
-
-		nameKeyed := obj.GetKeyedString("name")
-		simplifiedNameKeyed := obj.GetKeyedString("simplifiedName")
-		descKeyed := obj.GetKeyedString("description")
-		simplifiedDescKeyed := obj.GetKeyedString("simplifiedDescription")
-		effKeyed := obj.GetKeyedString("effect")
-
-		if nameKeyed != nil {
-			data.Name = make(map[string]string)
-		}
-
-		var abKeyed []datastore.IGlobalLocalizedKeyedStringObject
-		for idx := 1; ; idx++ {
-			ability := obj.GetKeyedString(fmt.Sprintf("ability%d", idx))
-			if ability == nil {
-				break
-			}
-			abKeyed = append(abKeyed, ability)
-		}
-
-		sensorKeyed := obj.GetKeyedString("sensorText")
-		simplifiedSensorKeyed := obj.GetKeyedString("simplifiedSensorText")
-		scanKeyed := obj.GetKeyedString("scanText")
-		simplifiedScanKeyed := obj.GetKeyedString("simplifiedScanText")
-
-		if len(abKeyed) > 0 {
-			data.Abilities = make([]map[string]string, len(abKeyed))
-			for idx := range data.Abilities {
-				data.Abilities[idx] = make(map[string]string)
-			}
-		}
-
-		for locKey := range common.SupportedLanguages {
-			// Name
-			if nameKeyed != nil {
-				if nameText := nameKeyed.GetLocalizedString(locKey); nameText != "" {
-					data.Name[locKey] = nameText
-				}
-			}
-
-			// Description
-			if descKeyed != nil {
-				if descText := descKeyed.GetLocalizedString(locKey); descText != "" {
-					if data.Description == nil {
-						data.Description = make(map[string]string)
-					}
-					data.Description[locKey] = descText
-				}
-			}
-
-			// SimplifiedName
-			if simplifiedNameKeyed != nil {
-				if simplifiedNameText := simplifiedNameKeyed.GetLocalizedString(locKey); simplifiedNameText != "" {
-					if data.SimplifiedName == nil {
-						data.SimplifiedName = make(map[string]string)
-					}
-					data.SimplifiedName[locKey] = simplifiedNameText
-				}
-			}
-
-			// SimplifiedDescription
-			if simplifiedDescKeyed != nil {
-				if simplifiedDescText := simplifiedDescKeyed.GetLocalizedString(locKey); simplifiedDescText != "" {
-					if data.SimplifiedDescription == nil {
-						data.SimplifiedDescription = make(map[string]string)
-					}
-					data.SimplifiedDescription[locKey] = simplifiedDescText
-				}
-			}
-
-			// Effect
-			if effKeyed != nil {
-				if effText := effKeyed.GetLocalizedString(locKey); effText != "" {
-					if data.Effect == nil {
-						data.Effect = make(map[string]string)
-					}
-					data.Effect[locKey] = effText
-				}
-			}
-
-			// Abilities
-			for idx, abKey := range abKeyed {
-				if abKey != nil {
-					if abText := abKey.GetLocalizedString(locKey); abText != "" {
-						data.Abilities[idx][locKey] = abText
-					}
-				}
-			}
-
-			// SensorText
-			if sensorKeyed != nil {
-				if sensorText := sensorKeyed.GetLocalizedString(locKey); sensorText != "" {
-					if data.SensorText == nil {
-						data.SensorText = make(map[string]string)
-					}
-					data.SensorText[locKey] = sensorText
-				}
-			}
-
-			// SimplifiedSensorText
-			if simplifiedSensorKeyed != nil {
-				if simplifiedSensorText := simplifiedSensorKeyed.GetLocalizedString(locKey); simplifiedSensorText != "" {
-					if data.SimplifiedSensorText == nil {
-						data.SimplifiedSensorText = make(map[string]string)
-					}
-					data.SimplifiedSensorText[locKey] = simplifiedSensorText
-				}
-			}
-
-			// ScanText
-			if scanKeyed != nil {
-				if scanText := scanKeyed.GetLocalizedString(locKey); scanText != "" {
-					if data.ScanText == nil {
-						data.ScanText = make(map[string]string)
-					}
-					data.ScanText[locKey] = scanText
-				}
-			}
-
-			// SimplifiedScanText
-			if simplifiedScanKeyed != nil {
-				if simplifiedScanText := simplifiedScanKeyed.GetLocalizedString(locKey); simplifiedScanText != "" {
-					if data.SimplifiedScanText == nil {
-						data.SimplifiedScanText = make(map[string]string)
-					}
-					data.SimplifiedScanText[locKey] = simplifiedScanText
-				}
-			}
-
-			// Weapons
-			if _, isWeapons := obj.(*WeaponsNameTextObject); isWeapons {
-				if data.Weapons == nil {
-					data.Weapons = make(map[string]WeaponTexts, len(weaponRefs))
-				}
-				for _, ref := range weaponRefs {
-					if _, exists := data.Weapons[ref.name]; !exists {
-						data.Weapons[ref.name] = WeaponTexts{
-							Name:           make(map[string]string),
-							SimplifiedName: make(map[string]string),
-						}
-					}
-					entry := data.Weapons[ref.name]
-					if seg := obj.GetKeyedString(ref.key); seg != nil {
-						if text := seg.GetLocalizedString(locKey); text != "" {
-							entry.Name[locKey] = text
-						}
-					}
-					if seg := obj.GetKeyedString("s" + ref.key); seg != nil {
-						if text := seg.GetLocalizedString(locKey); text != "" {
-							entry.SimplifiedName[locKey] = text
-						}
-					}
-					data.Weapons[ref.name] = entry
-				}
-			}
-		}
-
-		hasData := len(data.Name) > 0 || len(data.SimplifiedName) > 0 ||
-			len(data.Description) > 0 || len(data.SimplifiedDescription) > 0 || len(data.Effect) > 0
-		if !hasData {
-			for _, ab := range data.Abilities {
-				if len(ab) > 0 {
-					hasData = true
-					break
-				}
-			}
-		}
-		if !hasData {
-			hasData = len(data.SensorText) > 0 || len(data.SimplifiedSensorText) > 0 ||
-				len(data.ScanText) > 0 || len(data.SimplifiedScanText) > 0
-		}
-		if !hasData {
-			hasData = len(data.Weapons) > 0
-		}
-
-		if hasData {
-			jsonEntries = append(jsonEntries, data)
-		}
-	})
-
-	return createJSON(jsonEntries, jsonFileName)
 }
 
 // getLocalizationKeys returns all available localization keys
