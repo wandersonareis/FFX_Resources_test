@@ -180,7 +180,7 @@ func ReadNameDescriptionEffectAbilitiesLocalizations(patternPath string, abiliti
 func ReadNameSensorScanLocalizations(patternPath string) datastore.IBinaryFile {
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
 		if common.GetGameVersionString() == "ffx" {
-			return NewNameSensorScan(cBytes, sBytes, hLen, lang)
+			return NewNameSensorScanTextObject(cBytes, sBytes, hLen, lang)
 		}
 		return nil, nil
 	}

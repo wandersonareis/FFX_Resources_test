@@ -9,7 +9,7 @@ import (
 	"ffxresources/backend/models"
 )
 
-type NameSensorScan struct {
+type NameSensorScanTextObject struct {
 	Bytes                 []byte
 	Name                  datastore.IGlobalLocalizedKeyedStringObject
 	SensorText            datastore.IGlobalLocalizedKeyedStringObject
@@ -19,17 +19,17 @@ type NameSensorScan struct {
 	HeaderLength          int
 }
 
-func NewNameSensorScan(
+func NewNameSensorScanTextObject(
 	bytes []byte,
 	stringBytes []byte,
 	headerLength int,
 	languageCode string,
-) (*NameSensorScan, error) {
+) (*NameSensorScanTextObject, error) {
 	if len(bytes) < headerLength {
-		return nil, fmt.Errorf("insufficient data to create NameSensorScan: have %d bytes, need at least %d", len(bytes), headerLength)
+		return nil, fmt.Errorf("insufficient data to create NameSensorScanTextObject: have %d bytes, need at least %d", len(bytes), headerLength)
 	}
 
-	p := &NameSensorScan{
+	p := &NameSensorScanTextObject{
 		Bytes:                bytes,
 		Name:                 NewLocalizedKeyedStringObject(),
 		SensorText:           NewLocalizedKeyedStringObject(),
@@ -46,7 +46,7 @@ func NewNameSensorScan(
 	return p, nil
 }
 
-func (p *NameSensorScan) mapBytes(
+func (p *NameSensorScanTextObject) mapBytes(
 	stringBytes []byte,
 	languageCode string,
 ) error {
@@ -60,7 +60,7 @@ func (p *NameSensorScan) mapBytes(
 	)
 }
 
-func (p *NameSensorScan) ToBytes(languageCode string) ([]byte, error) {
+func (p *NameSensorScanTextObject) ToBytes(languageCode string) ([]byte, error) {
 	data := make([]byte, len(p.Bytes))
 	copy(data, p.Bytes)
 
@@ -97,11 +97,11 @@ func (p *NameSensorScan) ToBytes(languageCode string) ([]byte, error) {
 	return data, nil
 }
 
-func (p *NameSensorScan) GetName(languageCode string) string {
+func (p *NameSensorScanTextObject) GetName(languageCode string) string {
 	return p.Name.GetLocalizedString(languageCode)
 }
 
-func (p *NameSensorScan) GetKeyedString(title string) datastore.IGlobalLocalizedKeyedStringObject {
+func (p *NameSensorScanTextObject) GetKeyedString(title string) datastore.IGlobalLocalizedKeyedStringObject {
 	switch title {
 	case "name":
 		return p.Name
@@ -118,16 +118,16 @@ func (p *NameSensorScan) GetKeyedString(title string) datastore.IGlobalLocalized
 	}
 }
 
-func (p *NameSensorScan) GetHeaderLength() int {
+func (p *NameSensorScanTextObject) GetHeaderLength() int {
 	return p.HeaderLength
 }
 
-func (p *NameSensorScan) GetTextObject() datastore.IGlobalLocalizedTextObject {
+func (p *NameSensorScanTextObject) GetTextObject() datastore.IGlobalLocalizedTextObject {
 	return p
 }
 
-func (p *NameSensorScan) SetLocalizations(other datastore.IGlobalLocalizationSetter) {
-	if o, ok := other.(*NameSensorScan); ok {
+func (p *NameSensorScanTextObject) SetLocalizations(other datastore.IGlobalLocalizationSetter) {
+	if o, ok := other.(*NameSensorScanTextObject); ok {
 		o.Name.CopyInto(p.Name)
 		o.SensorText.CopyInto(p.SensorText)
 		o.SimplifiedSensorText.CopyInto(p.SimplifiedSensorText)
@@ -136,7 +136,7 @@ func (p *NameSensorScan) SetLocalizations(other datastore.IGlobalLocalizationSet
 	}
 }
 
-func (p *NameSensorScan) GetLocalizedKeyedStrings(localization string) []datastore.IGlobalKeyedString {
+func (p *NameSensorScanTextObject) GetLocalizedKeyedStrings(localization string) []datastore.IGlobalKeyedString {
 	return []datastore.IGlobalKeyedString{
 		p.Name.GetLocalizedContent(localization),
 		p.SensorText.GetLocalizedContent(localization),
@@ -146,7 +146,7 @@ func (p *NameSensorScan) GetLocalizedKeyedStrings(localization string) []datasto
 	}
 }
 
-func (p *NameSensorScan) ToString(languageCode string) string {
+func (p *NameSensorScanTextObject) ToString(languageCode string) string {
 	nameStr := p.GetName(languageCode)
 	sensorStr := ""
 	if sensorContent := p.SensorText.GetLocalizedContent(languageCode); sensorContent != nil {
@@ -167,6 +167,6 @@ func (p *NameSensorScan) ToString(languageCode string) string {
 	return fmt.Sprintf("%s - %s - %s - %s - %s", nameStr, sensorStr, simplifiedSensorStr, scanStr, simplifiedScanStr)
 }
 
-func (p *NameSensorScan) String() string {
+func (p *NameSensorScanTextObject) String() string {
 	return p.ToString(common.DefaultLocalization)
 }

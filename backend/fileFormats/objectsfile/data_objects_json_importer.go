@@ -163,7 +163,7 @@ func updateObjectByType(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextO
 		updateNameEntry(jsonEntry, localizedTextObj.Name)
 		updateDescriptionEntry(jsonEntry, localizedTextObj.Description)
 		updateAbilitiesEntry(jsonEntry, localizedTextObj.Abilities)
-	case *NameSensorScan:
+	case *NameSensorScanTextObject:
 		updateNameEntry(jsonEntry, localizedTextObj.Name)
 		updateSensorTextEntry(jsonEntry, localizedTextObj)
 		updateScanTextEntry(jsonEntry, localizedTextObj)
@@ -365,12 +365,12 @@ func updateAbilitiesEntry(sourceData JSONEntry, segments []datastore.IGlobalLoca
 	}
 }
 
-// updateSensorTextEntry applies sensor text updates to a NameSensorScan.
+// updateSensorTextEntry applies sensor text updates to a NameSensorScanTextObject.
 //
 // Parameters:
 //   - sourceData: JSON data containing sensor translations
-//   - targetObject: The NameSensorScan object to update
-func updateSensorTextEntry(sourceData JSONEntry, targetObject *NameSensorScan) {
+//   - targetObject: The NameSensorScanTextObject object to update
+func updateSensorTextEntry(sourceData JSONEntry, targetObject *NameSensorScanTextObject) {
 	if len(sourceData.SensorText) > 0 && targetObject.SensorText != nil {
 		for languageCode, newText := range sourceData.SensorText {
 			if newText == "" {
@@ -402,12 +402,12 @@ func updateSensorTextEntry(sourceData JSONEntry, targetObject *NameSensorScan) {
 	}
 }
 
-// updateScanTextEntry applies scan text updates to a NameSensorScan.
+// updateScanTextEntry applies scan text updates to a NameSensorScanTextObject.
 //
 // Parameters:
 //   - sourceData: JSON data containing scan translations
-//   - targetObject: The NameSensorScan object to update
-func updateScanTextEntry(sourceData JSONEntry, targetObject *NameSensorScan) {
+//   - targetObject: The NameSensorScanTextObject object to update
+func updateScanTextEntry(sourceData JSONEntry, targetObject *NameSensorScanTextObject) {
 	if len(sourceData.ScanText) > 0 && targetObject.ScanText != nil {
 		for languageCode, newText := range sourceData.ScanText {
 			if newText == "" {
