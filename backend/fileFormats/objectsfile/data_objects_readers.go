@@ -154,7 +154,7 @@ func ReadNameDescriptionEffectAbilitiesLocalizations(patternPath string, abiliti
 
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
 		if common.GetGameVersionString() == "ffx2" {
-			return NewNameDescriptionEffectAbility(cBytes, sBytes, hLen, abilitiesCount, effectSegmentPosition, lang)
+			return NewNameDescriptionEffectAbilityTextObject(cBytes, sBytes, hLen, abilitiesCount, effectSegmentPosition, lang)
 		}
 		return nil, nil
 	}

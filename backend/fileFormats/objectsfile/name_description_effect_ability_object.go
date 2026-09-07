@@ -11,7 +11,7 @@ import (
 	"ffxresources/backend/models"
 )
 
-type NameDescriptionEffectAbilityObjectV2 struct {
+type NameDescriptionEffectAbilityTextObject struct {
 	Bytes          []byte
 	Name           datastore.IGlobalLocalizedKeyedStringObject
 	Description    datastore.IGlobalLocalizedKeyedStringObject
@@ -21,19 +21,23 @@ type NameDescriptionEffectAbilityObjectV2 struct {
 	HeaderLength   int
 }
 
-func NewNameDescriptionEffectAbility(
+func NewNameDescriptionEffectAbilityTextObject(
 	bytes []byte,
 	stringBytes []byte,
 	headerLength int,
 	abilitiesCount int,
 	effectSegmentPosition int64,
 	languageCode string,
-) (*NameDescriptionEffectAbilityObjectV2, error) {
-	if len(bytes) < headerLength {
-		return nil, fmt.Errorf("insufficient data to create NameDescriptionEffectAbility: have %d bytes, need at least %d", len(bytes), headerLength)
+) (*NameDescriptionEffectAbilityTextObject, error) {
+	if common.GetGameVersionString() != "ffx2" {
+		return nil, fmt.Errorf("NameDescriptionEffectAbilityTextObject is only compatible with FFX-2")
 	}
 
-	p := &NameDescriptionEffectAbilityObjectV2{
+	if len(bytes) < headerLength {
+		return nil, fmt.Errorf("insufficient data to create NameDescriptionEffectAbilityTextObject: have %d bytes, need at least %d", len(bytes), headerLength)
+	}
+
+	p := &NameDescriptionEffectAbilityTextObject{
 		Bytes:          bytes,
 		Name:           NewLocalizedKeyedStringObject(),
 		Description:    NewLocalizedKeyedStringObject(),
@@ -54,7 +58,7 @@ func NewNameDescriptionEffectAbility(
 	return p, nil
 }
 
-func (p *NameDescriptionEffectAbilityObjectV2) mapBytes(stringBytes []byte, languageCode string) error {
+func (p *NameDescriptionEffectAbilityTextObject) mapBytes(stringBytes []byte, languageCode string) error {
 	r := bytes.NewReader(p.Bytes)
 
 	sequentialSegments := make([]datastore.IGlobalLocalizedKeyedStringObject, 0, 2+len(p.Abilities))
@@ -81,7 +85,7 @@ func (p *NameDescriptionEffectAbilityObjectV2) mapBytes(stringBytes []byte, lang
 	return nil
 }
 
-func (p *NameDescriptionEffectAbilityObjectV2) ToBytes(languageCode string) ([]byte, error) {
+func (p *NameDescriptionEffectAbilityTextObject) ToBytes(languageCode string) ([]byte, error) {
 	data := slices.Clone(p.Bytes)
 
 	sequential := make([]datastore.IGlobalLocalizedKeyedStringObject, 0, 2+len(p.Abilities))
@@ -104,11 +108,11 @@ func (p *NameDescriptionEffectAbilityObjectV2) ToBytes(languageCode string) ([]b
 	return data, nil
 }
 
-func (p *NameDescriptionEffectAbilityObjectV2) GetName(languageCode string) string {
+func (p *NameDescriptionEffectAbilityTextObject) GetName(languageCode string) string {
 	return p.Name.GetLocalizedString(languageCode)
 }
 
-func (p *NameDescriptionEffectAbilityObjectV2) GetKeyedString(title string) datastore.IGlobalLocalizedKeyedStringObject {
+func (p *NameDescriptionEffectAbilityTextObject) GetKeyedString(title string) datastore.IGlobalLocalizedKeyedStringObject {
 	switch title {
 	case "name":
 		return p.Name
@@ -126,16 +130,16 @@ func (p *NameDescriptionEffectAbilityObjectV2) GetKeyedString(title string) data
 	}
 }
 
-func (p *NameDescriptionEffectAbilityObjectV2) GetHeaderLength() int {
+func (p *NameDescriptionEffectAbilityTextObject) GetHeaderLength() int {
 	return p.HeaderLength
 }
 
-func (p *NameDescriptionEffectAbilityObjectV2) GetTextObject() datastore.IGlobalLocalizedTextObject {
+func (p *NameDescriptionEffectAbilityTextObject) GetTextObject() datastore.IGlobalLocalizedTextObject {
 	return p
 }
 
-func (p *NameDescriptionEffectAbilityObjectV2) SetLocalizations(other datastore.IGlobalLocalizationSetter) {
-	if o, ok := other.(*NameDescriptionEffectAbilityObjectV2); ok {
+func (p *NameDescriptionEffectAbilityTextObject) SetLocalizations(other datastore.IGlobalLocalizationSetter) {
+	if o, ok := other.(*NameDescriptionEffectAbilityTextObject); ok {
 		o.Name.CopyInto(p.Name)
 		o.Description.CopyInto(p.Description)
 
@@ -149,7 +153,7 @@ func (p *NameDescriptionEffectAbilityObjectV2) SetLocalizations(other datastore.
 	}
 }
 
-func (p *NameDescriptionEffectAbilityObjectV2) GetLocalizedKeyedStrings(localization string) []datastore.IGlobalKeyedString {
+func (p *NameDescriptionEffectAbilityTextObject) GetLocalizedKeyedStrings(localization string) []datastore.IGlobalKeyedString {
 	result := make([]datastore.IGlobalKeyedString, 0, 3+len(p.Abilities))
 	result = append(result,
 		p.Name.GetLocalizedContent(localization),
@@ -162,7 +166,7 @@ func (p *NameDescriptionEffectAbilityObjectV2) GetLocalizedKeyedStrings(localiza
 	return result
 }
 
-func (p *NameDescriptionEffectAbilityObjectV2) ToString(languageCode string) string {
+func (p *NameDescriptionEffectAbilityTextObject) ToString(languageCode string) string {
 	nameStr := p.GetName(languageCode)
 	descStr := ""
 	if descContent := p.Description.GetLocalizedContent(languageCode); descContent != nil {
@@ -171,6 +175,6 @@ func (p *NameDescriptionEffectAbilityObjectV2) ToString(languageCode string) str
 	return fmt.Sprintf("%s - %s", nameStr, descStr)
 }
 
-func (p *NameDescriptionEffectAbilityObjectV2) String() string {
+func (p *NameDescriptionEffectAbilityTextObject) String() string {
 	return p.ToString(common.DefaultLocalization)
 }

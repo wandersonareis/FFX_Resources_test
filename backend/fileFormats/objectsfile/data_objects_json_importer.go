@@ -159,7 +159,7 @@ func updateObjectByType(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextO
 		updateNameEntry(jsonEntry, localizedTextObj.Name)
 		updateDescriptionEntry(jsonEntry, localizedTextObj.Description)
 		updateEffectEntry(jsonEntry, localizedTextObj.Effect)
-	case *NameDescriptionEffectAbilityObjectV2:
+	case *NameDescriptionEffectAbilityTextObject:
 		updateNameEntry(jsonEntry, localizedTextObj.Name)
 		updateDescriptionEntry(jsonEntry, localizedTextObj.Description)
 		updateAbilitiesEntry(jsonEntry, localizedTextObj.Abilities)
@@ -503,7 +503,7 @@ func updateOrCreateSegment(segment datastore.IGlobalLocalizedKeyedStringObject, 
 }
 
 // updatePlateEntry applies plate updates to a PlateTextObject.
-func updatePlateEntry(sourceData PlateTextData, targetObject *NameDescriptionEffectAbilityObjectV2) {
+func updatePlateEntry(sourceData PlateTextData, targetObject *NameDescriptionEffectAbilityTextObject) {
 	if len(sourceData.Name) > 0 && targetObject.Name != nil {
 		for languageCode, nameText := range sourceData.Name {
 			if nameText == "" {
@@ -544,9 +544,9 @@ func updatePlateEntry(sourceData PlateTextData, targetObject *NameDescriptionEff
 	}
 }
 
-// serializePlateTextToJSON serializes a NameDescriptionEffectAbilityObjectV2 to JSON-friendly data.
+// serializePlateTextToJSON serializes a NameDescriptionEffectAbilityTextObject to JSON-friendly data.
 // Returns a PlateTextData struct with name, description, abilities, and effect for all supported languages.
-func serializePlateTextToJSON(obj *NameDescriptionEffectAbilityObjectV2, languageCode string) PlateTextData {
+func serializePlateTextToJSON(obj *NameDescriptionEffectAbilityTextObject, languageCode string) PlateTextData {
 	name := obj.GetName(languageCode)
 	description := ""
 	if descContent := obj.Description.GetLocalizedContent(languageCode); descContent != nil {
@@ -620,7 +620,7 @@ func ImportPlateDataFromJsonFile(jsonFileName string, objectsList components.ILi
 			continue
 		}
 
-		plateObj, ok := objects[id].(*NameDescriptionEffectAbilityObjectV2)
+		plateObj, ok := objects[id].(*NameDescriptionEffectAbilityTextObject)
 		if !ok {
 			continue
 		}
