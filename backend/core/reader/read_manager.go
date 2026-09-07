@@ -31,17 +31,22 @@ func InitializeInternals() error {
 			return err
 		}
 	}
-	/* for _, strings := range macrodic.MacroLookup {
-		//fmt.Printf("MacroLookup[%d] s%dl%d\n", idx, idx/0x100, idx%0x100)
+	
+	common.LogVerbose("Macro Lookup Table:\n")
+	logMacroLookup()
+
+	return nil
+}
+
+func logMacroLookup() {
+	for _, strings := range macrodic.MacroLookup {
 		for loc := range common.SupportedLanguages {
-			content := strings.GetLocalizedContent(loc)
+			content, _ := strings.GetLocalizedContent(loc)
 			if content == nil || content.IsEmpty() {
 				continue
 			}
-			//macro := content.GetString()
-			//fmt.Printf("  %s: %s\n", loc, macro)
+			macro := content.GetString()
+			common.LogVerbose("  %s: %s\n", loc, macro)
 		}
-	} */
-
-	return nil
+	}
 }
