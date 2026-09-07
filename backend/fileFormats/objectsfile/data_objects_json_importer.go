@@ -13,17 +13,23 @@ import (
 
 type (
 	JSONEntry struct {
-		ID                     int                 `json:"id"`
-		Name                   map[string]string   `json:"name,omitempty"`
-		SimplifiedName         map[string]string   `json:"simplifiedName,omitempty"`
-		Description            map[string]string   `json:"description,omitempty"`
-		SimplifiedDescription  map[string]string   `json:"simplifiedDescription,omitempty"`
-		Effect                 map[string]string   `json:"effect,omitempty"`
-		Abilities              []map[string]string `json:"abilities,omitempty"`
-		SensorText             map[string]string   `json:"sensorText,omitempty"`
-		SimplifiedSensorText   map[string]string   `json:"simplifiedSensorText,omitempty"`
-		ScanText               map[string]string   `json:"scanText,omitempty"`
-		SimplifiedScanText     map[string]string   `json:"simplifiedScanText,omitempty"`
+		ID                    int                    `json:"id"`
+		Name                  map[string]string      `json:"name,omitempty"`
+		SimplifiedName        map[string]string      `json:"simplifiedName,omitempty"`
+		Description           map[string]string      `json:"description,omitempty"`
+		SimplifiedDescription map[string]string      `json:"simplifiedDescription,omitempty"`
+		Effect                map[string]string      `json:"effect,omitempty"`
+		Abilities             []map[string]string    `json:"abilities,omitempty"`
+		SensorText            map[string]string      `json:"sensorText,omitempty"`
+		SimplifiedSensorText  map[string]string      `json:"simplifiedSensorText,omitempty"`
+		ScanText              map[string]string      `json:"scanText,omitempty"`
+		SimplifiedScanText    map[string]string      `json:"simplifiedScanText,omitempty"`
+		Weapons               map[string]WeaponTexts `json:"weapons,omitempty"`
+	}
+
+	WeaponTexts struct {
+		Name           map[string]string `json:"name"`
+		SimplifiedName map[string]string `json:"simplifiedName"`
 	}
 	NameOnlyData struct {
 		ID   int               `json:"id"`
@@ -167,6 +173,8 @@ func updateObjectByType(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextO
 		updateNameEntry(jsonEntry, localizedTextObj.Name)
 		updateSensorTextEntry(jsonEntry, localizedTextObj)
 		updateScanTextEntry(jsonEntry, localizedTextObj)
+	case *WeaponsNameTextObject:
+		updateWeaponsEntry(jsonEntry, localizedTextObj)
 	default:
 		common.LogVerbose("Object type not recognized for ID %d", jsonEntry.ID)
 		return fmt.Errorf("unknown type for ID object %d", jsonEntry.ID)
@@ -500,4 +508,46 @@ func updateOrCreateSegment(segment datastore.IGlobalLocalizedKeyedStringObject, 
 	}
 
 	common.LogVerbose("Segment updated (%s): %s", languageCode, newText)
+}
+
+func updateWeaponsEntry(sourceData JSONEntry, obj *WeaponsNameTextObject) {
+	if len(sourceData.Weapons) == 0 {
+		common.LogVerbose("No weapons found, skipping...")
+		return
+	}
+
+	for _, ref := range weaponRefs {
+		texts, ok := sourceData.Weapons[ref.name]
+		if !ok {
+			continue
+		}
+		updateWeaponField(obj, ref.key, texts.Name, ref.name)
+		updateWeaponField(obj, "s"+ref.key, texts.SimplifiedName, ref.name+" simplified")
+	}
+}
+
+func updateWeaponField(obj *WeaponsNameTextObject, key string, fieldTexts map[string]string, label string) {
+	if len(fieldTexts) == 0 {
+		return
+	}
+	segment := obj.GetKeyedString(key)
+	if segment == nil {
+		common.LogVerbose("Weapon segment %q is nil, skipping...", key)
+		return
+	}
+
+	for languageCode, newText := range fieldTexts {
+		if newText == "" {
+			continue
+		}
+		if !common.IsSupportedLanguage(languageCode) {
+			continue
+		}
+		if newText == segment.GetLocalizedString(languageCode) {
+			continue
+		}
+
+		updateOrCreateSegment(segment, newText, languageCode)
+		common.LogVerbose("Updated weapon %s for language %s: %s", label, languageCode, newText)
+	}
 }

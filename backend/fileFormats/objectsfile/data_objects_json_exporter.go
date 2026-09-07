@@ -264,6 +264,33 @@ func ExportToJSON(objects components.IList[datastore.IGlobalLocalizedTextObject]
 					data.SimplifiedScanText[locKey] = simplifiedScanText
 				}
 			}
+
+			// Weapons
+			if _, isWeapons := obj.(*WeaponsNameTextObject); isWeapons {
+				if data.Weapons == nil {
+					data.Weapons = make(map[string]WeaponTexts, len(weaponRefs))
+				}
+				for _, ref := range weaponRefs {
+					if _, exists := data.Weapons[ref.name]; !exists {
+						data.Weapons[ref.name] = WeaponTexts{
+							Name:           make(map[string]string),
+							SimplifiedName: make(map[string]string),
+						}
+					}
+					entry := data.Weapons[ref.name]
+					if seg := obj.GetKeyedString(ref.key); seg != nil {
+						if text := seg.GetLocalizedString(locKey); text != "" {
+							entry.Name[locKey] = text
+						}
+					}
+					if seg := obj.GetKeyedString("s" + ref.key); seg != nil {
+						if text := seg.GetLocalizedString(locKey); text != "" {
+							entry.SimplifiedName[locKey] = text
+						}
+					}
+					data.Weapons[ref.name] = entry
+				}
+			}
 		}
 
 		hasData := len(data.Name) > 0 || len(data.SimplifiedName) > 0 ||
@@ -280,156 +307,8 @@ func ExportToJSON(objects components.IList[datastore.IGlobalLocalizedTextObject]
 			hasData = len(data.SensorText) > 0 || len(data.SimplifiedSensorText) > 0 ||
 				len(data.ScanText) > 0 || len(data.SimplifiedScanText) > 0
 		}
-
-		if hasData {
-			jsonEntries = append(jsonEntries, data)
-		}
-	})
-
-	return createJSON(jsonEntries, jsonFileName)
-}
-
-// ExportNameDescriptionToJSON converts IList data to JSON format for name-description objects.
-func ExportNameDescriptionToJSON(objects components.IList[datastore.IGlobalLocalizedTextObject], jsonFileName string) error {
-	if objects == nil || objects.IsEmpty() {
-		return fmt.Errorf("no objects loaded or empty")
-	}
-
-	var nameDescData []*JSONEntry
-
-	objects.RangeIndex(func(i int, nameDescObj datastore.IGlobalLocalizedTextObject) {
-		if nameDescObj == nil {
-			common.LogVerbose("Object %d is nil, skipping", i)
-			return
-		}
-
-		data := &JSONEntry{
-			ID:          i,
-			Name:        make(map[string]string),
-			Description: make(map[string]string),
-		}
-
-		nameKeyed := nameDescObj.GetKeyedString("name")
-		simplifiedNameKeyed := nameDescObj.GetKeyedString("simplifiedName")
-		descKeyed := nameDescObj.GetKeyedString("description")
-		simplifiedDescKeyed := nameDescObj.GetKeyedString("simplifiedDescription")
-
-		for locKey := range common.SupportedLanguages {
-			if nameKeyed != nil {
-				nameText := nameKeyed.GetLocalizedString(locKey)
-				if nameText != "" {
-					data.Name[locKey] = nameText
-				}
-			}
-
-			if simplifiedNameKeyed != nil {
-				simplifiedNameText := simplifiedNameKeyed.GetLocalizedString(locKey)
-				if simplifiedNameText != "" {
-					if data.SimplifiedName == nil {
-						data.SimplifiedName = make(map[string]string)
-					}
-					data.SimplifiedName[locKey] = simplifiedNameText
-				}
-			}
-
-			if descKeyed != nil {
-				descText := descKeyed.GetLocalizedString(locKey)
-				if descText != "" {
-					data.Description[locKey] = descText
-				}
-			}
-
-			if simplifiedDescKeyed != nil {
-				simplifiedDescText := simplifiedDescKeyed.GetLocalizedString(locKey)
-				if simplifiedDescText != "" {
-					if data.SimplifiedDescription == nil {
-						data.SimplifiedDescription = make(map[string]string)
-					}
-					data.SimplifiedDescription[locKey] = simplifiedDescText
-				}
-			}
-		}
-
-		if len(data.Name) > 0 || len(data.SimplifiedName) > 0 ||
-			len(data.Description) > 0 || len(data.SimplifiedDescription) > 0 {
-			nameDescData = append(nameDescData, data)
-		}
-	})
-
-	return createNameDescriptionJSON(nameDescData, jsonFileName)
-}
-
-// serializeNameDescriptionAbilitiesEffectToJSON converts IList data to JSON format for plate text objects.
-func serializeNameDescriptionAbilitiesEffectToJSON(objects components.IList[datastore.IGlobalLocalizedTextObject], jsonFileName string) error {
-	if objects == nil || objects.IsEmpty() {
-		return fmt.Errorf("no objects loaded or empty")
-	}
-
-	var jsonEntries []*JSONEntry
-
-	objects.RangeIndex(func(i int, obj datastore.IGlobalLocalizedTextObject) {
-		if obj == nil {
-			common.LogVerbose("Object %d is nil, skipping", i)
-			return
-		}
-
-		nameKeyed := obj.GetKeyedString("name")
-		descKeyed := obj.GetKeyedString("description")
-		effKeyed := obj.GetKeyedString("effect")
-
-		var abKeyed []datastore.IGlobalLocalizedKeyedStringObject
-		for idx := 1; ; idx++ {
-			ability := obj.GetKeyedString(fmt.Sprintf("ability%d", idx))
-			if ability == nil {
-				break
-			}
-			abKeyed = append(abKeyed, ability)
-		}
-
-		data := &JSONEntry{
-			ID:          i,
-			Name:        make(map[string]string),
-			Description: make(map[string]string),
-			Effect:      make(map[string]string),
-			Abilities:   make([]map[string]string, len(abKeyed)),
-		}
-		for idx := range data.Abilities {
-			data.Abilities[idx] = make(map[string]string)
-		}
-
-		for locKey := range common.SupportedLanguages {
-			if nameKeyed != nil {
-				if nameText := nameKeyed.GetLocalizedString(locKey); nameText != "" {
-					data.Name[locKey] = nameText
-				}
-			}
-			if descKeyed != nil {
-				if descText := descKeyed.GetLocalizedString(locKey); descText != "" {
-					data.Description[locKey] = descText
-				}
-			}
-			if effKeyed != nil {
-				if effText := effKeyed.GetLocalizedString(locKey); effText != "" {
-					data.Effect[locKey] = effText
-				}
-			}
-			for idx, abKey := range abKeyed {
-				if abKey != nil {
-					if abText := abKey.GetLocalizedString(locKey); abText != "" {
-						data.Abilities[idx][locKey] = abText
-					}
-				}
-			}
-		}
-
-		hasData := len(data.Name) > 0 || len(data.Description) > 0 || len(data.Effect) > 0
 		if !hasData {
-			for _, ab := range data.Abilities {
-				if len(ab) > 0 {
-					hasData = true
-					break
-				}
-			}
+			hasData = len(data.Weapons) > 0
 		}
 
 		if hasData {

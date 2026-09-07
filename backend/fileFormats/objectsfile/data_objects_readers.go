@@ -3,6 +3,7 @@ package objectsfile
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/datastore"
+	"fmt"
 )
 
 // ReadNameDescriptionLocalizations reads battle command data from the command.bin file
@@ -183,6 +184,32 @@ func ReadNameSensorScanLocalizations(patternPath string) datastore.IBinaryFile {
 			return NewNameSensorScanTextObject(cBytes, sBytes, hLen, lang)
 		}
 		return nil, nil
+	}
+
+	binaryDataFile := NewBinaryFile(
+		patternPath,
+		creatorFunc,
+		common.DefaultLocalization,
+	)
+
+	if err := binaryDataFile.LoadFromBinary(); err != nil {
+		common.LogVerbose("Error loading commands binary data: %v", err)
+		return nil
+	}
+
+	if binaryDataFile.Objects != nil && !binaryDataFile.Objects.IsEmpty() {
+		common.LogVerbose("Loaded %d commands with all localizations", binaryDataFile.Objects.Len())
+		datastore.Commands = binaryDataFile.GetObjects()
+	}
+	return binaryDataFile
+}
+
+func ReadWeaponNamesLocalizations(patternPath string) datastore.IBinaryFile {
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
+		if common.GetGameVersionString() == "ffx" {
+			return NewWeaponsNameTextObject(cBytes, sBytes, hLen, lang)
+		}
+		return nil, fmt.Errorf("Weapon names are only compatible with FFX")
 	}
 
 	binaryDataFile := NewBinaryFile(
