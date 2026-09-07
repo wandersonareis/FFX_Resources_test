@@ -3,7 +3,7 @@ package objectsfile
 import (
 	"bytes"
 	"fmt"
-	"io"
+	"slices"
 
 	"ffxresources/backend/common"
 	"ffxresources/backend/datastore"
@@ -13,15 +13,12 @@ type NameDescriptionTextObjectV2 struct {
 	Bytes        []byte
 	Name         datastore.IGlobalLocalizedKeyedStringObject
 	Description  datastore.IGlobalLocalizedKeyedStringObject
-	unknownBytes []byte
 	HeaderLength int
 }
 
-const NameDescriptionTextObjectV2Length = 0x08
-
 func NewNameDescriptionTextObjectV2(bytes []byte, stringBytes []byte, headerLength int, languageCode string) (*NameDescriptionTextObjectV2, error) {
-	if len(bytes) < NameDescriptionTextObjectV2Length {
-		return nil, fmt.Errorf("insufficient data: have %d bytes, need at least %d", len(bytes), NameDescriptionTextObjectV2Length)
+	if len(bytes) < headerLength {
+		return nil, fmt.Errorf("insufficient data: have %d bytes, need at least %d", len(bytes), headerLength)
 	}
 
 	n := &NameDescriptionTextObjectV2{
@@ -44,33 +41,17 @@ func (n *NameDescriptionTextObjectV2) mapBytes(stringBytes []byte, languageCode 
 		common.LogError("Error reading NameDescriptionTextObjectV2 segments: %v", err)
 		return err
 	}
-
-	if r.Len() > 0 {
-		n.unknownBytes = make([]byte, r.Len())
-		if _, err := io.ReadFull(r, n.unknownBytes); err != nil {
-			common.LogError("Error reading NameDescriptionTextObjectV2 unknown bytes: %v", err)
-			return err
-		}
-	}
 	return nil
 }
 
 func (n *NameDescriptionTextObjectV2) ToBytes(languageCode string) ([]byte, error) {
-	segLen := NameDescriptionTextObjectV2Length
-	if len(n.unknownBytes) > 0 {
-		segLen += len(n.unknownBytes)
-	}
-	result := make([]byte, segLen)
+	result := slices.Clone(n.Bytes)
 
 	if err := writeStringSegments(result, 0, languageCode,
 		n.Name,
 		n.Description,
 	); err != nil {
 		return nil, err
-	}
-
-	if len(n.unknownBytes) > 0 {
-		copy(result[NameDescriptionTextObjectV2Length:], n.unknownBytes)
 	}
 	return result, nil
 }
@@ -99,12 +80,9 @@ func (n *NameDescriptionTextObjectV2) GetTextObject() datastore.IGlobalLocalized
 }
 
 func (n *NameDescriptionTextObjectV2) SetLocalizations(other datastore.IGlobalLocalizationSetter) {
-	if o, ok := other.(*NameDescriptionTextObjectV2); ok {
-		o.Name.CopyInto(n.Name)
-		o.Description.CopyInto(n.Description)
-		if len(o.unknownBytes) > 0 {
-			n.unknownBytes = append([]byte{}, o.unknownBytes...)
-		}
+	if otherNameDesc, ok := other.(*NameDescriptionTextObjectV2); ok {
+		otherNameDesc.Name.CopyInto(n.Name)
+		otherNameDesc.Description.CopyInto(n.Description)
 	}
 }
 
