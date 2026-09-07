@@ -27,10 +27,9 @@ func NewNameDescriptionEffectAbility(
 	abilitiesCount int,
 	effectSegmentPosition int64,
 	languageCode string,
-) *NameDescriptionEffectAbilityObjectV2 {
+) (*NameDescriptionEffectAbilityObjectV2, error) {
 	if len(bytes) < headerLength {
-		common.LogVerbose("Insufficient data to create NameDescriptionEffectAbility!")
-		return nil
+		return nil, fmt.Errorf("insufficient data to create NameDescriptionEffectAbility: have %d bytes, need at least %d", len(bytes), headerLength)
 	}
 
 	p := &NameDescriptionEffectAbilityObjectV2{
@@ -47,60 +46,54 @@ func NewNameDescriptionEffectAbility(
 		p.Abilities[i] = NewLocalizedKeyedStringObject()
 	}
 
-	p.mapBytes(stringBytes, languageCode)
+	if err := p.mapBytes(stringBytes, languageCode); err != nil {
+		return nil, err
+	}
 
-	return p
+	return p, nil
 }
 
-func (p *NameDescriptionEffectAbilityObjectV2) mapBytes(stringBytes []byte, languageCode string) {
+func (p *NameDescriptionEffectAbilityObjectV2) mapBytes(stringBytes []byte, languageCode string) error {
 	r := bytes.NewReader(p.Bytes)
 
-	nameSeg, err := models.ReadSegment(r)
-	if err != nil {
-		common.LogVerbose("Error reading NameDescriptionEffectAbility name: %v", err)
-		return
-	}
-	p.Name.ReadAndSetLocalizedContent(languageCode, stringBytes, nameSeg.Offset, nameSeg.Key)
+	sequentialSegments := make([]datastore.IGlobalLocalizedKeyedStringObject, 0, 2+len(p.Abilities))
+	sequentialSegments = append(sequentialSegments, p.Name, p.Description)
+	sequentialSegments = append(sequentialSegments, p.Abilities...)
 
-	descSeg, err := models.ReadSegment(r)
-	if err != nil {
-		common.LogVerbose("Error reading NameDescriptionEffectAbility description: %v", err)
-		return
-	}
-	p.Description.ReadAndSetLocalizedContent(languageCode, stringBytes, descSeg.Offset, descSeg.Key)
-
-	for i := range p.Abilities {
-		abSeg, err := models.ReadSegment(r)
-		if err != nil {
-			common.LogVerbose("Error reading NameDescriptionEffectAbility ability %d: %v", i+1, err)
-			continue
-		}
-		p.Abilities[i].ReadAndSetLocalizedContent(languageCode, stringBytes, abSeg.Offset, abSeg.Key)
+	if err := readStringSegments(r, stringBytes, languageCode, sequentialSegments...); err != nil {
+		common.LogError("Error reading NameDescriptionEffectAbility sequential segments: %v", err)
+		return err
 	}
 
 	if _, err := r.Seek(p.EffectPosition, io.SeekStart); err != nil {
-		common.LogVerbose("Error seeking to NameDescriptionEffectAbility effect: %v", err)
-		return
+		common.LogError("Error seeking to NameDescriptionEffectAbility effect: %v", err)
+		return err
 	}
 
 	effectSeg, err := models.ReadSegment(r)
 	if err != nil {
-		common.LogVerbose("Error reading NameDescriptionEffectAbility effect: %v", err)
-		return
+		common.LogError("Error reading NameDescriptionEffectAbility effect: %v", err)
+		return err
 	}
 	p.Effect.ReadAndSetLocalizedContent(languageCode, stringBytes, effectSeg.Offset, effectSeg.Key)
+
+	return nil
 }
 
-func (p *NameDescriptionEffectAbilityObjectV2) ToBytes(languageCode string) []byte {
+func (p *NameDescriptionEffectAbilityObjectV2) ToBytes(languageCode string) ([]byte, error) {
 	data := make([]byte, len(p.Bytes))
 	copy(data, p.Bytes)
 
 	if nameContent := p.Name.GetLocalizedContent(languageCode); nameContent != nil {
-		models.WriteSegmentAt(data, nameSegmentDefaultPosition, getSegment(nameContent))
+		if err := models.WriteSegmentAt(data, nameSegmentDefaultPosition, getSegment(nameContent)); err != nil {
+			return nil, err
+		}
 	}
 
 	if descContent := p.Description.GetLocalizedContent(languageCode); descContent != nil {
-		models.WriteSegmentAt(data, descriptionSegmentDefaultPosition, getSegment(descContent))
+		if err := models.WriteSegmentAt(data, descriptionSegmentDefaultPosition, getSegment(descContent)); err != nil {
+			return nil, err
+		}
 	}
 
 	// Abilities: sequenciais, começando imediatamente após a Description
@@ -108,15 +101,19 @@ func (p *NameDescriptionEffectAbilityObjectV2) ToBytes(languageCode string) []by
 	for i := range p.Abilities {
 		if abilityContent := p.Abilities[i].GetLocalizedContent(languageCode); abilityContent != nil {
 			pos := abilityStartPos + (i * 4) // Cada Ability tem 4 bytes
-			models.WriteSegmentAt(data, pos, getSegment(abilityContent))
+			if err := models.WriteSegmentAt(data, pos, getSegment(abilityContent)); err != nil {
+				return nil, err
+			}
 		}
 	}
 
 	if effectContent := p.Effect.GetLocalizedContent(languageCode); effectContent != nil {
-		models.WriteSegmentAt(data, int(p.EffectPosition), getSegment(effectContent))
+		if err := models.WriteSegmentAt(data, int(p.EffectPosition), getSegment(effectContent)); err != nil {
+			return nil, err
+		}
 	}
 
-	return data
+	return data, nil
 }
 
 func (p *NameDescriptionEffectAbilityObjectV2) GetName(languageCode string) string {

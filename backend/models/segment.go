@@ -16,10 +16,10 @@ type (
 	}
 
 	NameDescriptionHeaderData struct {
-		NameSegment            Segment
-		FirstSeparatorSegment  Segment
-		DescriptionSegment     Segment
-		SecondSeparatorSegment Segment
+		NameSegment               Segment
+		SimplifiedNameSegment     Segment
+		DescriptionSegment        Segment
+		SimplifiedDescriptionSegment Segment
 	}
 
 	NameOnlyHeaderData struct {

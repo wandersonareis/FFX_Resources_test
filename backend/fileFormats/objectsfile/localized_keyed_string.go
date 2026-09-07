@@ -16,7 +16,7 @@ type (
 		SetLocalizations(other components.LocalizationSetter)
 		GetTextObject() ILocalizedTextObject
 		GetHeaderLength() int
-		ToBytes(languageCode string) []byte
+		ToBytes(languageCode string) ([]byte, error)
 		ToString(languageCode string) string
 		String() string
 	}

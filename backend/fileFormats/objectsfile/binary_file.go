@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 )
 
 // IBinaryHeader define o contrato para leitura e escrita do cabeçalho
@@ -84,7 +85,7 @@ func NewBinaryHeader() IBinaryHeader {
 }
 
 // CreatorFunc é a função que sabe instanciar o chunk correto (NameDesc, Plate, etc)
-type CreatorFunc func(chunkBytes []byte, stringBytes []byte, headerLength int, languageCode string) datastore.IGlobalLocalizedTextObject
+type CreatorFunc func(chunkBytes []byte, stringBytes []byte, headerLength int, languageCode string) (datastore.IGlobalLocalizedTextObject, error)
 
 // JsonExporterFunc exporta objetos para JSON
 type JsonExporterFunc func(objects components.IList[datastore.IGlobalLocalizedTextObject], fileName string) error
@@ -167,9 +168,12 @@ func (b *BinaryFile) LoadFromBinary() error {
 			break
 		}
 
-		chunk := bytes.Clone(dataBytes[from:to])
-		// Passa individualLength como headerLength para o objeto (chunk)
-		obj := b.creator(chunk, b.StringBytes, individualLength, b.languageCode)
+		chunk := slices.Clone(dataBytes[from:to])
+		obj, err := b.creator(chunk, b.StringBytes, individualLength, b.languageCode)
+		if err != nil {
+			common.LogVerbose("Error creating object at index %d: %v", i+b.Header.GetMinIndex(), err)
+			continue
+		}
 		if obj == nil {
 			common.LogVerbose("Skipping invalid V2 object at index %d", i+b.Header.GetMinIndex())
 			continue
@@ -197,9 +201,8 @@ func (b *BinaryFile) ImportFromJson(filePath string) error {
 	return ImportFromJson(filePath, b.Objects)
 }
 
-// SaveToBinary salva de volta para o binário no formato V2
 func (b *BinaryFile) SaveToBinary(filePath string) error {
-	var buf bytes.Buffer
+	buf := bytes.NewBuffer(make([]byte, 0, b.Header.GetDataLength()+len(b.StringBytes)+0x20))
 
 	for localizationKey := range common.SupportedLanguages {
 		if localizationKey != "us" {
@@ -221,38 +224,29 @@ func (b *BinaryFile) SaveToBinary(filePath string) error {
 				}
 			}
 		})
-		/* for _, obj := range b.Objects.Items() {
-			keyedStrings := obj.GetLocalizedKeyedStrings(localizationKey)
-			for _, ks := range keyedStrings {
-				if ks != nil {
-					allKeyedStrings = append(allKeyedStrings, ks)
-				} else {
-					// TODO: delete this
-					common.LogVerbose("Keyed string is nil for object at index %d", obj.GetName(common.DefaultLocalization))
-				}
-			}
-		} */
 
 		charset := ffxencoding.GetCharsetForLanguage(localizationKey)
 		b.StringBytes = RebuildKeyedStrings(allKeyedStrings, charset)
 
-		// 1. Escreve o Header
-		if err := b.Header.Write(&buf); err != nil {
+		if err := b.Header.Write(buf); err != nil {
 			return fmt.Errorf("error writing header: %w", err)
 		}
 
-		// 2. Escreve os Chunks (ToBytes de cada objeto)
+		var writeErr error
 		b.Objects.RangeIndex(func(i int, obj datastore.IGlobalLocalizedTextObject) {
-			if obj != nil {
-				// Se você recalculou os offsets internos do chunk, eles serão salvos aqui
-				chunkBytes := obj.ToBytes(b.languageCode)
+			if obj != nil && writeErr == nil {
+				chunkBytes, err := obj.ToBytes(b.languageCode)
+				if err != nil {
+					writeErr = fmt.Errorf("error converting object %d to bytes: %w", i, err)
+					return
+				}
 				buf.Write(chunkBytes)
 			}
 		})
+		if writeErr != nil {
+			return writeErr
+		}
 
-		// 3. Escreve o Bloco de Strings
-		// Se você modificou textos, este StringBytes deve ser o NOVO bloco de strings
-		// recalculado. Aqui assumimos que b.StringBytes foi atualizado antes de chamar esta função.
 		buf.Write(b.StringBytes)
 
 		dir := filepath.Dir(localePath)
@@ -267,11 +261,9 @@ func (b *BinaryFile) SaveToBinary(filePath string) error {
 		common.LogVerbose("Wrote localized data to %s (%d bytes)", localePath, len(buf.Bytes()))
 	}
 
-	// 4. Salva no disco
 	return common.WriteBytesToFile(filePath, buf.Bytes())
 }
 
-// GetObjects permite acessar a lista de objetos
 func (b *BinaryFile) GetObjects() components.IList[datastore.IGlobalLocalizedTextObject] {
 	return b.Objects
 }

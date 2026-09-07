@@ -7,26 +7,19 @@ import (
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/models"
 	"fmt"
-	"io"
+	"slices"
 )
 
 type (
-	NameOnlyDataObject struct {
-		Bytes            []byte
-		Name             datastore.IGlobalLocalizedKeyedStringObject
-		FirstSeparator   datastore.IGlobalLocalizedKeyedStringObject
-		headerParameters []byte
-		HeaderLength     int
+	NameOnlyTextObject struct {
+		Bytes          []byte
+		Name           datastore.IGlobalLocalizedKeyedStringObject
+		SimplifiedName datastore.IGlobalLocalizedKeyedStringObject
+		HeaderLength   int
 	}
-	/* nameOnlyHeaderData struct {
-		NameOffset           uint16
-		NameKey              uint16
-		FirstSeparatorOffset uint16
-		FirstSeparatorKey    uint16
-	} */
 )
 
-type NameOnlyDataObjectV2 struct {
+type NameOnlyTextObjectV2 struct {
 	Bytes        []byte
 	Name         datastore.IGlobalLocalizedKeyedStringObject
 	HeaderLength int
@@ -49,7 +42,7 @@ var (
 	SUMMON_TEXT components.IList[datastore.IGlobalLocalizedTextObject]
 )
 
-const NameOnlyDataObjectLength int = 0x10
+const NameOnlyTextObjectLength int = 0x10
 
 func getValidHeader(data []byte, max int) []byte {
 	const minRequired = 0x8
@@ -63,166 +56,140 @@ func getValidHeader(data []byte, max int) []byte {
 	return data[:end:end]
 }
 
-func NewNameOnlyDataObject(data []byte, stringBytes []byte, headerLength int, languageCode string) *NameOnlyDataObject {
-	if len(data) < 8 {
-		common.LogVerbose("Insufficient data to create NameOnlyDataObject!")
-		return nil
+func NewNameOnlyTextObject(data []byte, stringBytes []byte, headerLength int, languageCode string) (*NameOnlyTextObject, error) {
+	if len(data) < headerLength {
+		return nil, fmt.Errorf("insufficient data to create NameOnlyTextObject: have %d bytes, need at least %d", len(data), headerLength)
 	}
 
-	n := &NameOnlyDataObject{
+	n := &NameOnlyTextObject{
 		Bytes:          data,
 		Name:           NewLocalizedKeyedStringObject(),
-		FirstSeparator: NewLocalizedKeyedStringObject(),
+		SimplifiedName: NewLocalizedKeyedStringObject(),
 		HeaderLength:   headerLength,
 	}
-	if headerLength > NameOnlyDataObjectLength {
-		n.headerParameters = data[NameOnlyDataObjectLength:headerLength]
+	if err := n.mapBytes(stringBytes, languageCode); err != nil {
+		return nil, err
 	}
-	n.mapBytes(stringBytes, languageCode)
-	return n
+	return n, nil
 }
 
-func (n *NameOnlyDataObject) readHeaderData(reader *bytes.Reader) (models.NameOnlyHeaderData, error) {
-	nameSegment, err := models.ReadSegment(reader)
-	if err != nil {
-		if err == io.EOF {
-			panic(fmt.Errorf("unexpected EOF while reading NameOnlyDataObject header"))
-		}
-		return models.NameOnlyHeaderData{}, err
-	}
-
-	firstSeparator, err := models.ReadSegment(reader)
-	if err != nil {
-		if err == io.EOF {
-			panic(fmt.Errorf("unexpected EOF while reading NameOnlyDataObject header"))
-		}
-		return models.NameOnlyHeaderData{}, err
-	}
-
-	return models.NameOnlyHeaderData{
-		NameSegment:           nameSegment,
-		FirstSeparatorSegment: firstSeparator,
-	}, nil
+func (n *NameOnlyTextObject) mapBytes(stringBytes []byte, languageCode string) error {
+	r := bytes.NewReader(getValidHeader(n.Bytes, NameOnlyTextObjectLength))
+	return readStringSegments(r, stringBytes, languageCode,
+		n.Name,
+		n.SimplifiedName,
+	)
 }
 
-func (n *NameOnlyDataObject) mapBytes(stringBytes []byte, languageCode string) {
-	r := bytes.NewReader(getValidHeader(n.Bytes, NameOnlyDataObjectLength))
+func (n *NameOnlyTextObject) ToBytes(languageCode string) ([]byte, error) {
+	result := slices.Clone(n.Bytes)
 
-	hd, err := n.readHeaderData(r)
-	if err != nil {
-		fmt.Printf("Error reading NameOnlyDataObject: %v\n", err)
-		return
-	}
-	n.Name.ReadAndSetLocalizedContent(languageCode, stringBytes, hd.NameSegment.Offset, hd.NameSegment.Key)
-	n.FirstSeparator.ReadAndSetLocalizedContent(languageCode, stringBytes, hd.FirstSeparatorSegment.Offset, hd.FirstSeparatorSegment.Key)
-}
-
-func (n *NameOnlyDataObject) ToBytes(languageCode string) []byte {
-	result := make([]byte, n.HeaderLength)
-
-	var buf bytes.Buffer
-/* 	binary.Write(&buf, binary.LittleEndian, getLocalizedBytes(n.Name.GetLocalizedContent(languageCode)))
-	binary.Write(&buf, binary.LittleEndian, getLocalizedBytes(n.FirstSeparator.GetLocalizedContent(languageCode))) */
-	models.WriteSegment(&buf, getSegment(n.Name.GetLocalizedContent(languageCode)))
-	models.WriteSegment(&buf, getSegment(n.FirstSeparator.GetLocalizedContent(languageCode)))
-
-	copy(result, buf.Bytes())
-
-	if len(n.headerParameters) > 0 && NameOnlyDataObjectLength+len(n.headerParameters) <= n.HeaderLength {
-		copy(result[NameOnlyDataObjectLength:], n.headerParameters)
+	if err := writeStringSegments(result, []datastore.IGlobalLocalizedKeyedStringObject{
+		n.Name,
+		n.SimplifiedName,
+	}, languageCode); err != nil {
+		return nil, err
 	}
 
-	return result
+	return result, nil
 }
 
-func (n *NameOnlyDataObject) ToList(filename string, languageCode string) components.IList[datastore.IGlobalLocalizedTextObject] {
-	creator := func(data []byte, stringBytes []byte, headerLength int, loc string) datastore.IGlobalLocalizedTextObject {
-		return NewNameOnlyDataObject(data, stringBytes, headerLength, loc)
+func (n *NameOnlyTextObject) ToList(filename string, languageCode string) components.IList[datastore.IGlobalLocalizedTextObject] {
+	creator := func(data []byte, stringBytes []byte, headerLength int, loc string) (datastore.IGlobalLocalizedTextObject, error) {
+		return NewNameOnlyTextObject(data, stringBytes, headerLength, loc)
 	}
 	return ReadDataListWithIlist(filename, languageCode, creator)
 }
 
-func (n *NameOnlyDataObject) GetTextObject() datastore.IGlobalLocalizedTextObject {
+func (n *NameOnlyTextObject) GetTextObject() datastore.IGlobalLocalizedTextObject {
 	return n
 }
 
-func (n *NameOnlyDataObject) GetName(languageCode string) string {
+func (n *NameOnlyTextObject) GetName(languageCode string) string {
 	return n.Name.GetLocalizedString(languageCode)
 }
 
-func (n *NameOnlyDataObject) GetKeyedString(title string) datastore.IGlobalLocalizedKeyedStringObject {
+func (n *NameOnlyTextObject) GetKeyedString(title string) datastore.IGlobalLocalizedKeyedStringObject {
 	switch title {
 	case "name":
 		return n.Name
+	case "simplifiedName":
+		return n.SimplifiedName
 	default:
 		return nil
 	}
 }
 
-func (n *NameOnlyDataObject) GetHeaderLength() int {
+func (n *NameOnlyTextObject) GetHeaderLength() int {
 	return n.HeaderLength
 }
 
-func (n *NameOnlyDataObject) SetLocalizations(other datastore.IGlobalLocalizationSetter) {
-	if otherName, ok := other.(*NameOnlyDataObject); ok {
+func (n *NameOnlyTextObject) SetLocalizations(other datastore.IGlobalLocalizationSetter) {
+	if otherName, ok := other.(*NameOnlyTextObject); ok {
 		otherName.Name.CopyInto(n.Name)
-		otherName.FirstSeparator.CopyInto(n.FirstSeparator)
+		otherName.SimplifiedName.CopyInto(n.SimplifiedName)
 	}
 }
 
-func (n *NameOnlyDataObject) GetLocalizedKeyedStrings(languageCode string) []datastore.IGlobalKeyedString {
+func (n *NameOnlyTextObject) GetLocalizedKeyedStrings(languageCode string) []datastore.IGlobalKeyedString {
 	return []datastore.IGlobalKeyedString{
 		n.Name.GetLocalizedContent(languageCode),
-		n.FirstSeparator.GetLocalizedContent(languageCode),
+		n.SimplifiedName.GetLocalizedContent(languageCode),
 	}
 }
-func (d *NameOnlyDataObject) ToString(languageCode string) string {
+
+func (d *NameOnlyTextObject) ToString(languageCode string) string {
 	nameStr := d.GetName(languageCode)
-	firstSepStr := ""
-	if firstSepContent := d.FirstSeparator.GetLocalizedContent(languageCode); firstSepContent != nil {
-		firstSepStr = firstSepContent.GetString()
+	simplifiedNameStr := ""
+	if simplifiedNameContent := d.SimplifiedName.GetLocalizedContent(languageCode); simplifiedNameContent != nil {
+		simplifiedNameStr = simplifiedNameContent.GetString()
 	}
 
-	return fmt.Sprintf("%s %s", nameStr, firstSepStr)
+	return fmt.Sprintf("%s %s", nameStr, simplifiedNameStr)
 }
 
-func (n *NameOnlyDataObject) String() string {
+func (n *NameOnlyTextObject) String() string {
 	return n.ToString(common.DefaultLocalization)
 }
 
-func NewNameOnlyDataObjectV2(data []byte, stringBytes []byte, headerLength int, languageCode string) *NameOnlyDataObjectV2 {
+func NewNameOnlyTextObjectV2(data []byte, stringBytes []byte, headerLength int, languageCode string) (*NameOnlyTextObjectV2, error) {
 	if len(data) < 4 {
-		common.LogVerbose("Insufficient data to create NameOnlyDataObjectV2!")
-		return nil
+		return nil, fmt.Errorf("insufficient data to create NameOnlyTextObjectV2: have %d bytes, need at least 4", len(data))
 	}
-	n := &NameOnlyDataObjectV2{
+	n := &NameOnlyTextObjectV2{
 		Bytes:        data,
 		Name:         NewLocalizedKeyedStringObject(),
 		HeaderLength: headerLength,
 	}
-	n.mapBytes(stringBytes, languageCode)
-	return n
+	if err := n.mapBytes(stringBytes, languageCode); err != nil {
+		return nil, err
+	}
+	return n, nil
 }
 
-func (n *NameOnlyDataObjectV2) mapBytes(stringBytes []byte, languageCode string) {
+func (n *NameOnlyTextObjectV2) mapBytes(stringBytes []byte, languageCode string) error {
 	r := bytes.NewReader(n.Bytes)
-	seg, err := models.ReadSegment(r)
-	if err != nil {
-		fmt.Printf("Error reading NameOnlyDataObjectV2 name: %v\n", err)
-		return
+
+	if err := readStringSegments(r, stringBytes, languageCode, n.Name); err != nil {
+		common.LogError("Error reading NameOnlyTextObjectV2 name segment: %v", err)
+		return err
 	}
-	n.Name.ReadAndSetLocalizedContent(languageCode, stringBytes, seg.Offset, seg.Key)
+
 	if r.Len() > 0 {
 		n.unknown = make([]byte, r.Len())
-		r.Read(n.unknown)
+		if _, err := r.Read(n.unknown); err != nil {
+			common.LogError("Error reading NameOnlyTextObjectV2 unknown bytes: %v", err)
+			return err
+		}
 	}
+	return nil
 }
 
-func (n *NameOnlyDataObjectV2) GetName(languageCode string) string {
+func (n *NameOnlyTextObjectV2) GetName(languageCode string) string {
 	return n.Name.GetLocalizedString(languageCode)
 }
 
-func (n *NameOnlyDataObjectV2) GetKeyedString(title string) datastore.IGlobalLocalizedKeyedStringObject {
+func (n *NameOnlyTextObjectV2) GetKeyedString(title string) datastore.IGlobalLocalizedKeyedStringObject {
 	switch title {
 	case "name":
 		return n.Name
@@ -231,39 +198,43 @@ func (n *NameOnlyDataObjectV2) GetKeyedString(title string) datastore.IGlobalLoc
 	}
 }
 
-func (n *NameOnlyDataObjectV2) GetLocalizedKeyedStrings(languageCode string) []datastore.IGlobalKeyedString {
+func (n *NameOnlyTextObjectV2) GetLocalizedKeyedStrings(languageCode string) []datastore.IGlobalKeyedString {
 	return []datastore.IGlobalKeyedString{
 		n.Name.GetLocalizedContent(languageCode),
 	}
 }
 
-func (n *NameOnlyDataObjectV2) SetLocalizations(other datastore.IGlobalLocalizationSetter) {
-	if otherName, ok := other.(*NameOnlyDataObjectV2); ok {
+func (n *NameOnlyTextObjectV2) SetLocalizations(other datastore.IGlobalLocalizationSetter) {
+	if otherName, ok := other.(*NameOnlyTextObjectV2); ok {
 		otherName.Name.CopyInto(n.Name)
 	}
 }
 
-func (n *NameOnlyDataObjectV2) GetTextObject() datastore.IGlobalLocalizedTextObject {
+func (n *NameOnlyTextObjectV2) GetTextObject() datastore.IGlobalLocalizedTextObject {
 	return n
 }
 
-func (n *NameOnlyDataObjectV2) GetHeaderLength() int {
+func (n *NameOnlyTextObjectV2) GetHeaderLength() int {
 	return n.HeaderLength
 }
 
-func (n *NameOnlyDataObjectV2) ToBytes(languageCode string) []byte {
+func (n *NameOnlyTextObjectV2) ToBytes(languageCode string) ([]byte, error) {
 	var buf bytes.Buffer
-	models.WriteSegment(&buf, getSegment(n.Name.GetLocalizedContent(languageCode)))
+
+	if err := models.WriteSegment(&buf, getSegment(n.Name.GetLocalizedContent(languageCode))); err != nil {
+		return nil, fmt.Errorf("writing NameOnlyTextObjectV2 name segment: %w", err)
+	}
+
 	if len(n.unknown) > 0 {
 		buf.Write(n.unknown)
 	}
-	return buf.Bytes()
+	return buf.Bytes(), nil
 }
 
-func (n *NameOnlyDataObjectV2) ToString(languageCode string) string {
+func (n *NameOnlyTextObjectV2) ToString(languageCode string) string {
 	return n.GetName(languageCode)
 }
 
-func (n *NameOnlyDataObjectV2) String() string {
+func (n *NameOnlyTextObjectV2) String() string {
 	return n.ToString(common.DefaultLocalization)
 }

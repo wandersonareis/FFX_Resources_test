@@ -24,10 +24,9 @@ func NewNameSensorScan(
 	stringBytes []byte,
 	headerLength int,
 	languageCode string,
-) *NameSensorScan {
+) (*NameSensorScan, error) {
 	if len(bytes) < headerLength {
-		common.LogVerbose("Insufficient data to create NameSensorScan!")
-		return nil
+		return nil, fmt.Errorf("insufficient data to create NameSensorScan: have %d bytes, need at least %d", len(bytes), headerLength)
 	}
 
 	p := &NameSensorScan{
@@ -40,108 +39,62 @@ func NewNameSensorScan(
 		HeaderLength:         headerLength,
 	}
 
-	p.mapBytes(stringBytes, languageCode)
+	if err := p.mapBytes(stringBytes, languageCode); err != nil {
+		return nil, err
+	}
 
-	return p
+	return p, nil
 }
 
 func (p *NameSensorScan) mapBytes(
 	stringBytes []byte,
 	languageCode string,
-) {
+) error {
 	r := bytes.NewReader(p.Bytes)
-
-	nameSeg, err := models.ReadSegment(r)
-	if err != nil {
-		common.LogVerbose("Error reading NameSensorScan name: %v", err)
-		return
-	}
-
-	p.Name.ReadAndSetLocalizedContent(
-		languageCode,
-		stringBytes,
-		nameSeg.Offset,
-		nameSeg.Key,
-	)
-
-	sensorSeg, err := models.ReadSegment(r)
-	if err != nil {
-		common.LogVerbose("Error reading NameSensorScan sensorText: %v", err)
-		return
-	}
-
-	p.SensorText.ReadAndSetLocalizedContent(
-		languageCode,
-		stringBytes,
-		sensorSeg.Offset,
-		sensorSeg.Key,
-	)
-
-	simplifiedSensorSeg, err := models.ReadSegment(r)
-	if err != nil {
-		common.LogVerbose("Error reading NameSensorScan simplifiedSensorText: %v", err)
-		return
-	}
-
-	p.SimplifiedSensorText.ReadAndSetLocalizedContent(
-		languageCode,
-		stringBytes,
-		simplifiedSensorSeg.Offset,
-		simplifiedSensorSeg.Key,
-	)
-
-	scanSeg, err := models.ReadSegment(r)
-	if err != nil {
-		common.LogVerbose("Error reading NameSensorScan scanText: %v", err)
-		return
-	}
-
-	p.ScanText.ReadAndSetLocalizedContent(
-		languageCode,
-		stringBytes,
-		scanSeg.Offset,
-		scanSeg.Key,
-	)
-
-	simplifiedScanSeg, err := models.ReadSegment(r)
-	if err != nil {
-		common.LogVerbose("Error reading NameSensorScan simplifiedScanText: %v", err)
-		return
-	}
-
-	p.SimplifiedScanText.ReadAndSetLocalizedContent(
-		languageCode,
-		stringBytes,
-		simplifiedScanSeg.Offset,
-		simplifiedScanSeg.Key,
+	return readStringSegments(r, stringBytes, languageCode,
+		p.Name,
+		p.SensorText,
+		p.SimplifiedSensorText,
+		p.ScanText,
+		p.SimplifiedScanText,
 	)
 }
 
-func (p *NameSensorScan) ToBytes(languageCode string) []byte {
+func (p *NameSensorScan) ToBytes(languageCode string) ([]byte, error) {
 	data := make([]byte, len(p.Bytes))
 	copy(data, p.Bytes)
 
 	if nameContent := p.Name.GetLocalizedContent(languageCode); nameContent != nil {
-		models.WriteSegmentAt(data, nameSegmentDefaultPosition, getSegment(nameContent))
+		if err := models.WriteSegmentAt(data, nameSegmentDefaultPosition, getSegment(nameContent)); err != nil {
+			return nil, err
+		}
 	}
 
 	if sensorContent := p.SensorText.GetLocalizedContent(languageCode); sensorContent != nil {
-		models.WriteSegmentAt(data, sensorTextSegmentDefaultPosition, getSegment(sensorContent))
+		if err := models.WriteSegmentAt(data, sensorTextSegmentDefaultPosition, getSegment(sensorContent)); err != nil {
+			return nil, err
+		}
 	}
 
 	if simplifiedSensorContent := p.SimplifiedSensorText.GetLocalizedContent(languageCode); simplifiedSensorContent != nil {
-		models.WriteSegmentAt(data, simplifiedSensorTextSegmentPosition, getSegment(simplifiedSensorContent))
+		if err := models.WriteSegmentAt(data, simplifiedSensorTextSegmentPosition, getSegment(simplifiedSensorContent)); err != nil {
+			return nil, err
+		}
 	}
 
 	if scanContent := p.ScanText.GetLocalizedContent(languageCode); scanContent != nil {
-		models.WriteSegmentAt(data, scanTextSegmentDefaultPosition, getSegment(scanContent))
+		if err := models.WriteSegmentAt(data, scanTextSegmentDefaultPosition, getSegment(scanContent)); err != nil {
+			return nil, err
+		}
 	}
 
 	if simplifiedScanContent := p.SimplifiedScanText.GetLocalizedContent(languageCode); simplifiedScanContent != nil {
-		models.WriteSegmentAt(data, simplifiedScanTextSegmentPosition, getSegment(simplifiedScanContent))
+		if err := models.WriteSegmentAt(data, simplifiedScanTextSegmentPosition, getSegment(simplifiedScanContent)); err != nil {
+			return nil, err
+		}
 	}
 
-	return data
+	return data, nil
 }
 
 func (p *NameSensorScan) GetName(languageCode string) string {

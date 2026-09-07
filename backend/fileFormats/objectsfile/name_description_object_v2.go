@@ -3,11 +3,10 @@ package objectsfile
 import (
 	"bytes"
 	"fmt"
+	"io"
 
 	"ffxresources/backend/common"
 	"ffxresources/backend/datastore"
-	"ffxresources/backend/models"
-	"io"
 )
 
 type NameDescriptionTextObjectV2 struct {
@@ -20,10 +19,9 @@ type NameDescriptionTextObjectV2 struct {
 
 const NameDescriptionTextObjectV2Length = 0x08
 
-func NewNameDescriptionTextObjectV2(bytes []byte, stringBytes []byte, headerLength int, languageCode string) *NameDescriptionTextObjectV2 {
+func NewNameDescriptionTextObjectV2(bytes []byte, stringBytes []byte, headerLength int, languageCode string) (*NameDescriptionTextObjectV2, error) {
 	if len(bytes) < NameDescriptionTextObjectV2Length {
-		common.LogVerbose("Insufficient data to create NameDescriptionTextObjectV2!")
-		return nil
+		return nil, fmt.Errorf("insufficient data: have %d bytes, need at least %d", len(bytes), NameDescriptionTextObjectV2Length)
 	}
 
 	n := &NameDescriptionTextObjectV2{
@@ -32,45 +30,49 @@ func NewNameDescriptionTextObjectV2(bytes []byte, stringBytes []byte, headerLeng
 		Description:  NewLocalizedKeyedStringObject(),
 		HeaderLength: headerLength,
 	}
-	n.mapBytesV2(stringBytes, languageCode)
-	return n
+
+	if err := n.mapBytes(stringBytes, languageCode); err != nil {
+		return nil, err
+	}
+	return n, nil
 }
 
-func (n *NameDescriptionTextObjectV2) mapBytesV2(stringBytes []byte, languageCode string) {
+func (n *NameDescriptionTextObjectV2) mapBytes(stringBytes []byte, languageCode string) error {
 	r := bytes.NewReader(n.Bytes)
 
-	nameSeg, err := models.ReadSegment(r)
-	if err != nil {
-		common.LogVerbose("Error reading NameDescriptionTextObjectV2 name: %v", err)
-		return
+	if err := readStringSegments(r, stringBytes, languageCode, n.Name, n.Description); err != nil {
+		common.LogError("Error reading NameDescriptionTextObjectV2 segments: %v", err)
+		return err
 	}
-	descSeg, err := models.ReadSegment(r)
-	if err != nil {
-		common.LogVerbose("Error reading NameDescriptionTextObjectV2 description: %v", err)
-		return
-	}
-
-	n.Name.ReadAndSetLocalizedContent(languageCode, stringBytes, nameSeg.Offset, nameSeg.Key)
-	n.Description.ReadAndSetLocalizedContent(languageCode, stringBytes, descSeg.Offset, descSeg.Key)
 
 	if r.Len() > 0 {
 		n.unknownBytes = make([]byte, r.Len())
 		if _, err := io.ReadFull(r, n.unknownBytes); err != nil {
-			common.LogVerbose("Error reading V2 unknown bytes: %v", err)
-			n.unknownBytes = nil
+			common.LogError("Error reading NameDescriptionTextObjectV2 unknown bytes: %v", err)
+			return err
 		}
 	}
+	return nil
 }
 
-func (n *NameDescriptionTextObjectV2) ToBytes(languageCode string) []byte {
-	var buf bytes.Buffer
-	models.WriteSegment(&buf, getSegment(n.Name.GetLocalizedContent(languageCode)))
-	models.WriteSegment(&buf, getSegment(n.Description.GetLocalizedContent(languageCode)))
+func (n *NameDescriptionTextObjectV2) ToBytes(languageCode string) ([]byte, error) {
+	segLen := NameDescriptionTextObjectV2Length
+	if len(n.unknownBytes) > 0 {
+		segLen += len(n.unknownBytes)
+	}
+	result := make([]byte, segLen)
+
+	if err := writeStringSegments(result, []datastore.IGlobalLocalizedKeyedStringObject{
+		n.Name,
+		n.Description,
+	}, languageCode); err != nil {
+		return nil, err
+	}
 
 	if len(n.unknownBytes) > 0 {
-		buf.Write(n.unknownBytes)
+		copy(result[NameDescriptionTextObjectV2Length:], n.unknownBytes)
 	}
-	return buf.Bytes()
+	return result, nil
 }
 
 func (n *NameDescriptionTextObjectV2) GetName(languageCode string) string {

@@ -15,11 +15,11 @@ import (
 // File format: name and description data
 // Pattern path: ex: "battle/kernel/command.bin"
 func ReadNameOnlyLocalizations(patternPath string) datastore.IBinaryFile {
-	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
 		if common.GetGameVersionString() == "ffx2" {
-			return NewNameOnlyDataObjectV2(cBytes, sBytes, hLen, lang)
+			return NewNameOnlyTextObjectV2(cBytes, sBytes, hLen, lang)
 		}
-		return NewNameOnlyDataObject(cBytes, sBytes, hLen, lang)
+		return NewNameOnlyTextObject(cBytes, sBytes, hLen, lang)
 	}
 
 	binaryDataFile := NewBinaryFile(
@@ -40,6 +40,45 @@ func ReadNameOnlyLocalizations(patternPath string) datastore.IBinaryFile {
 	return binaryDataFile
 }
 
+// ReadDescriptionOnlyLocalizations reads description-only data from a binary file
+// and loads all available localizations for each entry.
+//
+// This function reads DescriptionOnlyTextObject entries containing description and
+// simplified description information. Each entry includes localized text for all
+// supported languages in the game.
+//
+// Only applicable for FFX (v1) game version. Returns nil for other versions.
+//
+// File format: description only data (binary format)
+// Pattern path: Variable, passed as parameter
+func ReadDescriptionOnlyLocalizations(patternPath string) datastore.IBinaryFile {
+	if common.GetGameVersionString() != "ffx" {
+		common.LogVerbose("ReadDescriptionOnlyLocalizations is only applicable for FFX (v1) game version.")
+		return nil
+	}
+
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
+		return NewDescriptionOnlyTextObject(cBytes, sBytes, hLen, lang)
+	}
+
+	binaryDataFile := NewBinaryFile(
+		patternPath,
+		creatorFunc,
+		common.DefaultLocalization,
+	)
+
+	if err := binaryDataFile.LoadFromBinary(); err != nil {
+		common.LogVerbose("Error loading description-only binary data: %v", err)
+		return nil
+	}
+
+	if binaryDataFile.Objects != nil && !binaryDataFile.Objects.IsEmpty() {
+		common.LogVerbose("Loaded %d description-only objects with all localizations", binaryDataFile.Objects.Len())
+	}
+
+	return binaryDataFile
+}
+
 // ReadNameDescriptionLocalizations reads battle command data from the command.bin file
 // and loads all available localizations for each command entry directly into COMMANDS.
 //
@@ -50,7 +89,7 @@ func ReadNameOnlyLocalizations(patternPath string) datastore.IBinaryFile {
 // File format: name and description data
 // Pattern path: ex: "battle/kernel/command.bin"
 func ReadNameDescriptionLocalizations(patternPath string) datastore.IBinaryFile {
-	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
 		if common.GetGameVersionString() == "ffx2" {
 			return NewNameDescriptionTextObjectV2(cBytes, sBytes, hLen, lang)
 		}
@@ -81,7 +120,7 @@ func ReadNameDescriptionEffectLocalizations(patternPath string, effectSegmentPos
 		return nil
 	}
 
-	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
 		if common.GetGameVersionString() == "ffx2" {
 			return NewNameDescriptionEffect(cBytes, sBytes, hLen, effectSegmentPosition, lang)
 		}
@@ -113,11 +152,11 @@ func ReadNameDescriptionEffectAbilitiesLocalizations(patternPath string, abiliti
 		return nil
 	}
 
-	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
 		if common.GetGameVersionString() == "ffx2" {
 			return NewNameDescriptionEffectAbility(cBytes, sBytes, hLen, abilitiesCount, effectSegmentPosition, lang)
 		}
-		return nil
+		return nil, nil
 	}
 
 	binaryDataFile := NewBinaryFile(
@@ -139,11 +178,11 @@ func ReadNameDescriptionEffectAbilitiesLocalizations(patternPath string, abiliti
 }
 
 func ReadNameSensorScanLocalizations(patternPath string) datastore.IBinaryFile {
-	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
 		if common.GetGameVersionString() == "ffx" {
 			return NewNameSensorScan(cBytes, sBytes, hLen, lang)
 		}
-		return nil
+		return nil, nil
 	}
 
 	binaryDataFile := NewBinaryFile(
@@ -178,7 +217,7 @@ func ReadKeyItemsWithAllLocalizations() datastore.IBinaryFile {
 
 	keyItemsFile := NewBinaryFile(
 		patternPath,
-		func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
+		func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
 			return NewNameDescriptionTextObjectV2(cBytes, sBytes, hLen, lang)
 		},
 		common.DefaultLocalization,
@@ -209,7 +248,7 @@ func ReadKeyItemsWithAllLocalizations() datastore.IBinaryFile {
 func ReadItemsWithAllLocalizations() datastore.IBinaryFile {
 	patternPath := "battle/kernel/item.bin"
 
-	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
 		if common.GetGameVersionString() == "ffx2" {
 			return NewNameDescriptionTextObjectV2(cBytes, sBytes, hLen, lang)
 		}
@@ -328,11 +367,11 @@ func ReadMainMenuTextWithAllLocalizations() {
 func ReadPlayerRomTextWithAllLocalizations() datastore.IBinaryFile {
 	patternPath := "battle/kernel/ply_rom.bin"
 
-	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
 		if common.GetGameVersionString() == "ffx2" {
-			return NewNameOnlyDataObjectV2(cBytes, sBytes, hLen, lang)
+			return NewNameOnlyTextObjectV2(cBytes, sBytes, hLen, lang)
 		}
-		return NewNameOnlyDataObject(cBytes, sBytes, hLen, lang)
+		return NewNameOnlyTextObject(cBytes, sBytes, hLen, lang)
 	}
 
 	playerRoomTextFile := NewBinaryFile(
@@ -364,11 +403,11 @@ func ReadPlayerRomTextWithAllLocalizations() datastore.IBinaryFile {
 func ReadBattleTextWithAllLocalizations() datastore.IBinaryFile {
 	patternPath := "battle/kernel/btl_txt.bin"
 
-	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
 		if common.GetGameVersionString() == "ffx2" {
-			return NewNameOnlyDataObjectV2(cBytes, sBytes, hLen, lang)
+			return NewNameOnlyTextObjectV2(cBytes, sBytes, hLen, lang)
 		}
-		return NewNameOnlyDataObject(cBytes, sBytes, hLen, lang)
+		return NewNameOnlyTextObject(cBytes, sBytes, hLen, lang)
 	}
 
 	battleTextFile := NewBinaryFile(
@@ -401,11 +440,11 @@ func ReadBattleTextWithAllLocalizations() datastore.IBinaryFile {
 func ReadBattleEndTextWithAllLocalizations() datastore.IBinaryFile {
 	patternPath := "battle/kernel/btlend_txt.bin"
 
-	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) datastore.IGlobalLocalizedTextObject {
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
 		if common.GetGameVersionString() == "ffx2" {
-			return NewNameOnlyDataObjectV2(cBytes, sBytes, hLen, lang)
+			return NewNameOnlyTextObjectV2(cBytes, sBytes, hLen, lang)
 		}
-		return NewNameOnlyDataObject(cBytes, sBytes, hLen, lang)
+		return NewNameOnlyTextObject(cBytes, sBytes, hLen, lang)
 	}
 
 	battleEndTextFile := NewBinaryFile(
@@ -440,7 +479,7 @@ func ReadMonsterMagic1WithAllLocalizations() {
 		return
 	}
 	patternPath := "battle/kernel/monmagic1.bin"
-	MONMAGIC1 = ReadNameOnlyDataObjectsWithIlist(patternPath)
+	MONMAGIC1 = ReadNameOnlyTextObjectsWithIlist(patternPath)
 
 	if MONMAGIC1 != nil {
 		common.LogVerbose("Loaded %d monster magic 1 entries with all localizations", MONMAGIC1.Len())
@@ -461,7 +500,7 @@ func ReadMonsterMagic2WithAllLocalizations() {
 		return
 	}
 	patternPath := "battle/kernel/monmagic2.bin"
-	MONMAGIC2 = ReadNameOnlyDataObjectsWithIlist(patternPath)
+	MONMAGIC2 = ReadNameOnlyTextObjectsWithIlist(patternPath)
 
 	if MONMAGIC2 != nil {
 		common.LogVerbose("Loaded %d monster magic 2 entries with all localizations", MONMAGIC2.Len())
@@ -482,7 +521,7 @@ func ReadBuildTextWithAllLocalizations() {
 		return
 	}
 	patternPath := "battle/kernel/build_txt.bin"
-	BUILD_TEXT = ReadNameOnlyDataObjectsWithIlist(patternPath)
+	BUILD_TEXT = ReadNameOnlyTextObjectsWithIlist(patternPath)
 
 	if BUILD_TEXT != nil {
 		common.LogVerbose("Loaded %d build text entries with all localizations", BUILD_TEXT.Len())
@@ -503,7 +542,7 @@ func ReadNameTextWithAllLocalizations() {
 		return
 	}
 	patternPath := "battle/kernel/name_txt.bin"
-	NAME_TEXT = ReadNameOnlyDataObjectsWithIlist(patternPath)
+	NAME_TEXT = ReadNameOnlyTextObjectsWithIlist(patternPath)
 
 	if NAME_TEXT != nil {
 		common.LogVerbose("Loaded %d name text entries with all localizations", NAME_TEXT.Len())

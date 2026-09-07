@@ -134,13 +134,18 @@ func ExportToJSON(objects components.IList[datastore.IGlobalLocalizedTextObject]
 		}
 
 		data := &JSONEntry{
-			ID:   i,
-			Name: make(map[string]string),
+			ID: i,
 		}
 
 		nameKeyed := obj.GetKeyedString("name")
+		simplifiedNameKeyed := obj.GetKeyedString("simplifiedName")
 		descKeyed := obj.GetKeyedString("description")
+		simplifiedDescKeyed := obj.GetKeyedString("simplifiedDescription")
 		effKeyed := obj.GetKeyedString("effect")
+
+		if nameKeyed != nil {
+			data.Name = make(map[string]string)
+		}
 
 		var abKeyed []datastore.IGlobalLocalizedKeyedStringObject
 		for idx := 1; ; idx++ {
@@ -178,6 +183,26 @@ func ExportToJSON(objects components.IList[datastore.IGlobalLocalizedTextObject]
 						data.Description = make(map[string]string)
 					}
 					data.Description[locKey] = descText
+				}
+			}
+
+			// SimplifiedName
+			if simplifiedNameKeyed != nil {
+				if simplifiedNameText := simplifiedNameKeyed.GetLocalizedString(locKey); simplifiedNameText != "" {
+					if data.SimplifiedName == nil {
+						data.SimplifiedName = make(map[string]string)
+					}
+					data.SimplifiedName[locKey] = simplifiedNameText
+				}
+			}
+
+			// SimplifiedDescription
+			if simplifiedDescKeyed != nil {
+				if simplifiedDescText := simplifiedDescKeyed.GetLocalizedString(locKey); simplifiedDescText != "" {
+					if data.SimplifiedDescription == nil {
+						data.SimplifiedDescription = make(map[string]string)
+					}
+					data.SimplifiedDescription[locKey] = simplifiedDescText
 				}
 			}
 
@@ -241,7 +266,8 @@ func ExportToJSON(objects components.IList[datastore.IGlobalLocalizedTextObject]
 			}
 		}
 
-		hasData := len(data.Name) > 0 || len(data.Description) > 0 || len(data.Effect) > 0
+		hasData := len(data.Name) > 0 || len(data.SimplifiedName) > 0 ||
+			len(data.Description) > 0 || len(data.SimplifiedDescription) > 0 || len(data.Effect) > 0
 		if !hasData {
 			for _, ab := range data.Abilities {
 				if len(ab) > 0 {
@@ -284,7 +310,9 @@ func ExportNameDescriptionToJSON(objects components.IList[datastore.IGlobalLocal
 		}
 
 		nameKeyed := nameDescObj.GetKeyedString("name")
+		simplifiedNameKeyed := nameDescObj.GetKeyedString("simplifiedName")
 		descKeyed := nameDescObj.GetKeyedString("description")
+		simplifiedDescKeyed := nameDescObj.GetKeyedString("simplifiedDescription")
 
 		for locKey := range common.SupportedLanguages {
 			if nameKeyed != nil {
@@ -294,15 +322,36 @@ func ExportNameDescriptionToJSON(objects components.IList[datastore.IGlobalLocal
 				}
 			}
 
+			if simplifiedNameKeyed != nil {
+				simplifiedNameText := simplifiedNameKeyed.GetLocalizedString(locKey)
+				if simplifiedNameText != "" {
+					if data.SimplifiedName == nil {
+						data.SimplifiedName = make(map[string]string)
+					}
+					data.SimplifiedName[locKey] = simplifiedNameText
+				}
+			}
+
 			if descKeyed != nil {
 				descText := descKeyed.GetLocalizedString(locKey)
 				if descText != "" {
 					data.Description[locKey] = descText
 				}
 			}
+
+			if simplifiedDescKeyed != nil {
+				simplifiedDescText := simplifiedDescKeyed.GetLocalizedString(locKey)
+				if simplifiedDescText != "" {
+					if data.SimplifiedDescription == nil {
+						data.SimplifiedDescription = make(map[string]string)
+					}
+					data.SimplifiedDescription[locKey] = simplifiedDescText
+				}
+			}
 		}
 
-		if len(data.Name) > 0 || len(data.Description) > 0 {
+		if len(data.Name) > 0 || len(data.SimplifiedName) > 0 ||
+			len(data.Description) > 0 || len(data.SimplifiedDescription) > 0 {
 			nameDescData = append(nameDescData, data)
 		}
 	})

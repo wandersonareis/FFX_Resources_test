@@ -25,10 +25,9 @@ func NewNameDescriptionEffect(
 	headerLength int,
 	effectSegmentPosition int64,
 	languageCode string,
-) *NameDescriptionEffect {
+) (*NameDescriptionEffect, error) {
 	if len(bytes) < headerLength {
-		common.LogVerbose("Insufficient data to create NameDescriptionEffect!")
-		return nil
+		return nil, fmt.Errorf("insufficient data to create NameDescriptionEffect: have %d bytes, need at least %d", len(bytes), headerLength)
 	}
 
 	p := &NameDescriptionEffect{
@@ -40,79 +39,71 @@ func NewNameDescriptionEffect(
 		HeaderLength:          headerLength,
 	}
 
-	p.mapBytes(stringBytes, languageCode)
+	if err := p.mapBytes(stringBytes, languageCode); err != nil {
+		return nil, err
+	}
 
-	return p
+	return p, nil
 }
 
 func (p *NameDescriptionEffect) mapBytes(
 	stringBytes []byte,
 	languageCode string,
-) {
+) error {
 	r := bytes.NewReader(p.Bytes)
 
 	nameSeg, err := models.ReadSegment(r)
 	if err != nil {
-		common.LogVerbose("Error reading NameDescriptionEffect name: %v", err)
-		return
+		common.LogError("Error reading NameDescriptionEffect name: %v", err)
+		return err
 	}
-
-	p.Name.ReadAndSetLocalizedContent(
-		languageCode,
-		stringBytes,
-		nameSeg.Offset,
-		nameSeg.Key,
-	)
+	p.Name.ReadAndSetLocalizedContent(languageCode, stringBytes, nameSeg.Offset, nameSeg.Key)
 
 	descSeg, err := models.ReadSegment(r)
 	if err != nil {
-		common.LogVerbose("Error reading NameDescriptionEffect description: %v", err)
-		return
+		common.LogError("Error reading NameDescriptionEffect description: %v", err)
+		return err
 	}
-
-	p.Description.ReadAndSetLocalizedContent(
-		languageCode,
-		stringBytes,
-		descSeg.Offset,
-		descSeg.Key,
-	)
+	p.Description.ReadAndSetLocalizedContent(languageCode, stringBytes, descSeg.Offset, descSeg.Key)
 
 	if _, err := r.Seek(p.EffectSegmentPosition, io.SeekStart); err != nil {
-		common.LogVerbose("Error seeking to NameDescriptionEffect effect: %v", err)
-		return
+		common.LogError("Error seeking to NameDescriptionEffect effect: %v", err)
+		return err
 	}
 
 	effectSeg, err := models.ReadSegment(r)
 	if err != nil {
-		common.LogVerbose("Error reading NameDescriptionEffect effect: %v", err)
-		return
+		common.LogError("Error reading NameDescriptionEffect effect: %v", err)
+		return err
 	}
+	p.Effect.ReadAndSetLocalizedContent(languageCode, stringBytes, effectSeg.Offset, effectSeg.Key)
 
-	p.Effect.ReadAndSetLocalizedContent(
-		languageCode,
-		stringBytes,
-		effectSeg.Offset,
-		effectSeg.Key,
-	)
+	return nil
 }
 
-func (p *NameDescriptionEffect) ToBytes(languageCode string) []byte {
+func (p *NameDescriptionEffect) ToBytes(languageCode string) ([]byte, error) {
 	data := make([]byte, len(p.Bytes))
 	copy(data, p.Bytes)
 
 	if nameContent := p.Name.GetLocalizedContent(languageCode); nameContent != nil {
-		models.WriteSegmentAt(data, nameSegmentDefaultPosition, getSegment(nameContent))
+		if err := models.WriteSegmentAt(data, nameSegmentDefaultPosition, getSegment(nameContent)); err != nil {
+			return nil, err
+		}
 	}
 
 	if descContent := p.Description.GetLocalizedContent(languageCode); descContent != nil {
-		models.WriteSegmentAt(data, descriptionSegmentDefaultPosition, getSegment(descContent))
+		if err := models.WriteSegmentAt(data, descriptionSegmentDefaultPosition, getSegment(descContent)); err != nil {
+			return nil, err
+		}
 	}
 
 	if effectContent := p.Effect.GetLocalizedContent(languageCode); effectContent != nil {
-		models.WriteSegmentAt(data, int(p.EffectSegmentPosition), getSegment(effectContent))
+		if err := models.WriteSegmentAt(data, int(p.EffectSegmentPosition), getSegment(effectContent)); err != nil {
+			return nil, err
+		}
 	}
 
-	return data
+	return data, nil
 }
 
 func (p *NameDescriptionEffect) GetName(languageCode string) string {

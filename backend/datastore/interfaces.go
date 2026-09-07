@@ -71,7 +71,7 @@ type IGlobalLocalizedTextObject interface {
 	SetLocalizations(other IGlobalLocalizationSetter)
 	GetTextObject() IGlobalLocalizedTextObject
 	GetHeaderLength() int
-	ToBytes(languageCode string) []byte
+	ToBytes(languageCode string) ([]byte, error)
 	ToString(languageCode string) string
 	String() string
 }

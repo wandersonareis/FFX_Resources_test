@@ -7,26 +7,8 @@ import (
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/models"
 	"fmt"
+	"slices"
 )
-
-/* type (
-	ILocalizedTextObject interface {
-		GetName(languageCode string) string
-		GetKeyedString(title string) *localization.LocalizedKeyedStringObject
-		GetLocalizedKeyedStrings(languageCode string) []*models.KeyedString
-		SetLocalizations(other components.LocalizationSetter)
-		GetTextObject() ILocalizedTextObject
-		GetHeaderLength() int
-		ToBytes(languageCode string) []byte
-		ToString(languageCode string) string
-		String() string
-	}
-) */
-
-var (
-	//KEY_ITEMS components.IList[datastore.IGlobalLocalizedTextObject]
-	//COMMANDS  components.IList[datastore.IGlobalLocalizedTextObject]
-	//ITEMS     components.IList[datastore.IGlobalLocalizedTextObject]
 	MONMAGIC1 components.IList[datastore.IGlobalLocalizedTextObject]
 	MONMAGIC2 components.IList[datastore.IGlobalLocalizedTextObject]
 
@@ -99,95 +81,58 @@ func getSegment(keyedObj datastore.IGlobalKeyedString) models.Segment {
 
 type (
 	NameDescriptionTextObject struct {
-		Bytes            []byte
-		Name             datastore.IGlobalLocalizedKeyedStringObject
-		FirstSeparator   datastore.IGlobalLocalizedKeyedStringObject
-		Description      datastore.IGlobalLocalizedKeyedStringObject
-		SecondSeparator  datastore.IGlobalLocalizedKeyedStringObject
-		headerParameters []byte
-		HeaderLength     int
+		Bytes                  []byte
+		Name                   datastore.IGlobalLocalizedKeyedStringObject
+		SimplifiedName         datastore.IGlobalLocalizedKeyedStringObject
+		Description            datastore.IGlobalLocalizedKeyedStringObject
+		SimplifiedDescription  datastore.IGlobalLocalizedKeyedStringObject
+		HeaderLength           int
 	}
 )
 
-const NameDescriptionTextObjectLength = 0x10
-
-func NewNameDescriptionTextObject(bytes []byte, stringBytes []byte, headerLength int, languageCode string) *NameDescriptionTextObject {
+func NewNameDescriptionTextObject(bytes []byte, stringBytes []byte, headerLength int, languageCode string) (*NameDescriptionTextObject, error) {
 	if len(bytes) < headerLength {
-		common.LogVerbose("Insufficient data to create NameDescriptionTextObject!")
-		return nil
+		return nil, fmt.Errorf("insufficient data: have %d bytes, need at least %d", len(bytes), headerLength)
 	}
 
 	n := &NameDescriptionTextObject{
-		Bytes:           bytes,
-		Name:            NewLocalizedKeyedStringObject(),
-		FirstSeparator:  NewLocalizedKeyedStringObject(),
-		Description:     NewLocalizedKeyedStringObject(),
-		SecondSeparator: NewLocalizedKeyedStringObject(),
-		HeaderLength:    headerLength,
+		Bytes:                 bytes,
+		Name:                  NewLocalizedKeyedStringObject(),
+		SimplifiedName:        NewLocalizedKeyedStringObject(),
+		Description:           NewLocalizedKeyedStringObject(),
+		SimplifiedDescription: NewLocalizedKeyedStringObject(),
+		HeaderLength:          headerLength,
 	}
-	n.mapBytes(stringBytes, languageCode)
-	return n
+
+	if err := n.mapBytes(stringBytes, languageCode); err != nil {
+		return nil, err
+    }
+	return n, nil
 }
 
-func (n *NameDescriptionTextObject) readHeaderData(reader *bytes.Reader) (models.NameDescriptionHeaderData, error) {
-    nameSegment, err := models.ReadSegment(reader)
-    if err != nil {
-        return models.NameDescriptionHeaderData{}, err
-    }
-
-    firstSeparator, err := models.ReadSegment(reader)
-    if err != nil {
-        return models.NameDescriptionHeaderData{}, err
-    }
-
-    descriptionSegment, err := models.ReadSegment(reader)
-    if err != nil {
-        return models.NameDescriptionHeaderData{}, err
-    }
-
-    secondSeparator, err := models.ReadSegment(reader)
-    if err != nil {
-        return models.NameDescriptionHeaderData{}, err
-    }
-
-    return models.NameDescriptionHeaderData{
-        NameSegment:            nameSegment,
-        FirstSeparatorSegment:  firstSeparator,
-        DescriptionSegment:     descriptionSegment,
-        SecondSeparatorSegment: secondSeparator,
-    }, nil
+func (n *NameDescriptionTextObject) mapBytes(stringBytes []byte, languageCode string) error {
+	r := bytes.NewReader(n.Bytes)
+	return readStringSegments(r, stringBytes, languageCode,
+		n.Name,
+		n.SimplifiedName,
+		n.Description,
+		n.SimplifiedDescription,
+	)
 }
 
-func (n *NameDescriptionTextObject) mapBytes(stringBytes []byte, languageCode string) {
-	r := bytes.NewReader(getValidHeader(n.Bytes, NameDescriptionTextObjectLength))
+func (n *NameDescriptionTextObject) ToBytes(languageCode string) ([]byte, error) {
+	result := slices.Clone(n.Bytes)
 
-	hd, err := n.readHeaderData(r)
-	if err != nil {
-		fmt.Printf("Error reading NameDescriptionTextObject: %v\n", err)
-		return
+	if err := writeStringSegments(result, []datastore.IGlobalLocalizedKeyedStringObject{
+		n.Name,
+		n.SimplifiedName,
+		n.Description,
+		n.SimplifiedDescription,
+	}, languageCode); err != nil {
+		return nil, err
 	}
 
-	n.Name.ReadAndSetLocalizedContent(languageCode, stringBytes, hd.NameSegment.Offset, hd.NameSegment.Key)
-	n.FirstSeparator.ReadAndSetLocalizedContent(languageCode, stringBytes, hd.FirstSeparatorSegment.Offset, hd.FirstSeparatorSegment.Key)
-	n.Description.ReadAndSetLocalizedContent(languageCode, stringBytes, hd.DescriptionSegment.Offset, hd.DescriptionSegment.Key)
-	n.SecondSeparator.ReadAndSetLocalizedContent(languageCode, stringBytes, hd.SecondSeparatorSegment.Offset, hd.SecondSeparatorSegment.Key)
-
-	if n.HeaderLength > NameDescriptionTextObjectLength {
-		n.headerParameters = n.Bytes[NameDescriptionTextObjectLength:n.HeaderLength]
-	}
-}
-
-func (n *NameDescriptionTextObject) ToBytes(languageCode string) []byte {
-	var buf bytes.Buffer
- 	models.WriteSegment(&buf, getSegment(n.Name.GetLocalizedContent(languageCode)))
-	models.WriteSegment(&buf, getSegment(n.FirstSeparator.GetLocalizedContent(languageCode)))
-	models.WriteSegment(&buf, getSegment(n.Description.GetLocalizedContent(languageCode)))
-	models.WriteSegment(&buf, getSegment(n.SecondSeparator.GetLocalizedContent(languageCode)))
-
-	if len(n.headerParameters) > 0 && NameDescriptionTextObjectLength+len(n.headerParameters) <= n.HeaderLength {
-		buf.Write(n.headerParameters)
-	}
-	return buf.Bytes()
+	return result, nil
 }
 
 func (n *NameDescriptionTextObject) GetName(languageCode string) string {
@@ -198,8 +143,12 @@ func (d *NameDescriptionTextObject) GetKeyedString(title string) datastore.IGlob
 	switch title {
 	case "name":
 		return d.Name
+	case "simplifiedName":
+		return d.SimplifiedName
 	case "description":
 		return d.Description
+	case "simplifiedDescription":
+		return d.SimplifiedDescription
 	default:
 		return nil
 	}
@@ -216,38 +165,36 @@ func (n *NameDescriptionTextObject) GetTextObject() datastore.IGlobalLocalizedTe
 func (n *NameDescriptionTextObject) SetLocalizations(other datastore.IGlobalLocalizationSetter) {
 	if otherNameDesc, ok := other.(*NameDescriptionTextObject); ok {
 		otherNameDesc.Name.CopyInto(n.Name)
-		otherNameDesc.FirstSeparator.CopyInto(n.FirstSeparator)
+		otherNameDesc.SimplifiedName.CopyInto(n.SimplifiedName)
 		otherNameDesc.Description.CopyInto(n.Description)
-		otherNameDesc.SecondSeparator.CopyInto(n.SecondSeparator)
+		otherNameDesc.SimplifiedDescription.CopyInto(n.SimplifiedDescription)
 	}
 }
 
 func (n *NameDescriptionTextObject) GetLocalizedKeyedStrings(localization string) []datastore.IGlobalKeyedString {
 	return []datastore.IGlobalKeyedString{
 		n.Name.GetLocalizedContent(localization),
-		n.FirstSeparator.GetLocalizedContent(localization),
+		n.SimplifiedName.GetLocalizedContent(localization),
 		n.Description.GetLocalizedContent(localization),
-		n.SecondSeparator.GetLocalizedContent(localization),
+		n.SimplifiedDescription.GetLocalizedContent(localization),
 	}
 }
 
 func (d *NameDescriptionTextObject) ToString(languageCode string) string {
 	nameStr := d.GetName(languageCode)
-	firstSepStr := ""
-	if firstSepContent := d.FirstSeparator.GetLocalizedContent(languageCode); firstSepContent != nil {
-		firstSepStr = firstSepContent.GetString()
+	simplifiedNameStr := ""
+	if simplifiedNameContent := d.SimplifiedName.GetLocalizedContent(languageCode); simplifiedNameContent != nil {
+		simplifiedNameStr = simplifiedNameContent.GetString()
 	}
-
 	descStr := ""
 	if descContent := d.Description.GetLocalizedContent(languageCode); descContent != nil {
 		descStr = descContent.GetString()
 	}
-	secondSepStr := ""
-	if secondSepContent := d.SecondSeparator.GetLocalizedContent(languageCode); secondSepContent != nil {
-		secondSepStr = secondSepContent.GetString()
+	simplifiedDescStr := ""
+	if simplifiedDescContent := d.SimplifiedDescription.GetLocalizedContent(languageCode); simplifiedDescContent != nil {
+		simplifiedDescStr = simplifiedDescContent.GetString()
 	}
-
-	return fmt.Sprintf("%s %s %s %s", nameStr, firstSepStr, descStr, secondSepStr)
+	return fmt.Sprintf("%s %s - %s %s", nameStr, simplifiedNameStr, descStr, simplifiedDescStr)
 }
 
 func (n *NameDescriptionTextObject) String() string {

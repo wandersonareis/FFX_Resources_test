@@ -5,13 +5,15 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/datastore"
+	"ffxresources/backend/models"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 )
 
-// ReadNameOnlyDataObjectsWithIlist reads binary data from a specified pattern path
-// and creates NameOnlyDataObject entries with all available localizations.
+// ReadNameOnlyTextObjectsWithIlist reads binary data from a specified pattern path
+// and creates NameOnlyTextObject entries with all available localizations.
 //
 // This function reads LocalizedTextObject entries containing only name information
 // for various game elements that don't require descriptions. Each entry includes
@@ -24,21 +26,24 @@ import (
 // Parameters:
 //   - patternPath: Relative path to the binary file within the localization directory
 //
-// Returns: IList[ILocalizedTextObject] containing NameOnlyDataObject entries with full localization data
-func ReadNameOnlyDataObjectsWithIlist(patternPath string) components.IList[datastore.IGlobalLocalizedTextObject] {
+// Returns: IList[ILocalizedTextObject] containing NameOnlyTextObject entries with full localization data
+func ReadNameOnlyTextObjectsWithIlist(patternPath string) components.IList[datastore.IGlobalLocalizedTextObject] {
 	filePath := filepath.Join(common.GetLocalizationRoot(common.DefaultLocalization), patternPath)
 
-	creator := func(data []byte, stringBytes []byte, headerLength int, localization string) datastore.IGlobalLocalizedTextObject {
-		var obj datastore.IGlobalLocalizedTextObject
+	creator := func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
+		var (
+			obj datastore.IGlobalLocalizedTextObject
+			err error
+		)
 		if common.GetGameVersionString() == "ffx2" {
-			obj = NewNameOnlyDataObjectV2(data, stringBytes, headerLength, localization)
+			obj, err = NewNameOnlyTextObjectV2(data, stringBytes, headerLength, localization)
 		} else {
-			obj = NewNameOnlyDataObject(data, stringBytes, headerLength, localization)
+			obj, err = NewNameOnlyTextObject(data, stringBytes, headerLength, localization)
 		}
-		if obj == nil {
-			return nil
+		if err != nil {
+			return nil, err
 		}
-		return obj
+		return obj, nil
 	}
 
 	nameObjects := ReadDataListWithIlist(filePath, common.DefaultLocalization, creator)
@@ -72,17 +77,19 @@ func ReadNameOnlyDataObjectsWithIlist(patternPath string) components.IList[datas
 func ReadNameDescriptionObjectsWithIlist(patternPath string) components.IList[datastore.IGlobalLocalizedTextObject] {
 	filePath := filepath.Join(common.GetLocalizationRoot(common.DefaultLocalization), patternPath)
 
-	creator := func(data []byte, stringBytes []byte, headerLength int, localization string) datastore.IGlobalLocalizedTextObject {
+	creator := func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
 		if common.GetGameVersionString() == "ffx2" {
-			if obj := NewNameDescriptionTextObjectV2(data, stringBytes, headerLength, localization); obj != nil {
-				return obj
+			obj, err := NewNameDescriptionTextObjectV2(data, stringBytes, headerLength, localization)
+			if err != nil {
+				return nil, err
 			}
-			return nil
+			return obj, nil
 		}
-		if obj := NewNameDescriptionTextObject(data, stringBytes, headerLength, localization); obj != nil {
-			return obj
+		obj, err := NewNameDescriptionTextObject(data, stringBytes, headerLength, localization)
+		if err != nil {
+			return nil, err
 		}
-		return nil
+		return obj, nil
 	}
 
 	var nameDescObjects components.IList[datastore.IGlobalLocalizedTextObject]
@@ -115,7 +122,7 @@ func ReadNameDescriptionObjectsWithIlist(patternPath string) components.IList[da
 //   - path: Relative path to the binary file pattern (e.g., "battle/kernel/command.bin")
 //   - objects: IList[ILocalizedTextObject] containing instances to be populated with localizations
 //   - creator: Function that creates LocalizedTextObject instances from binary data
-func PopulateDataObjectLocalizationsWithIlist(path string, objects components.IList[datastore.IGlobalLocalizedTextObject], creator func([]byte, []byte, int, string) datastore.IGlobalLocalizedTextObject) {
+func PopulateDataObjectLocalizationsWithIlist(path string, objects components.IList[datastore.IGlobalLocalizedTextObject], creator func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error)) {
 	if objects == nil || objects.IsEmpty() {
 		return
 	}
@@ -155,7 +162,7 @@ func PopulateDataObjectLocalizationsWithIlist(path string, objects components.IL
 //   - path: Relative path to the binary file pattern (e.g., "battle/kernel/command.bin")
 //   - objects: IList[ILocalizedTextObject] containing instances to be populated with localizations
 //   - creator: Function that creates LocalizedTextObject instances from binary data
-func PopulateDataObjectLocalizations(path string, objects components.IList[datastore.IGlobalLocalizedTextObject], creator func([]byte, []byte, int, string) datastore.IGlobalLocalizedTextObject) {
+func PopulateDataObjectLocalizations(path string, objects components.IList[datastore.IGlobalLocalizedTextObject], creator func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error)) {
 	if objects == nil || objects.IsEmpty() {
 		return
 	}
@@ -205,7 +212,7 @@ func PopulateDataObjectLocalizations(path string, objects components.IList[datas
 //     Parameters: (objData []byte, stringBytes []byte, headerLength int, languageCode string)
 //
 // Returns: IList[ILocalizedTextObject] containing localized text entries, or nil if reading fails
-func ReadDataListWithIlist(filename string, languageCode string, creator func([]byte, []byte, int, string) datastore.IGlobalLocalizedTextObject) components.IList[datastore.IGlobalLocalizedTextObject] {
+func ReadDataListWithIlist(filename string, languageCode string, creator func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error)) components.IList[datastore.IGlobalLocalizedTextObject] {
 	fileAccessor, err := common.NewFileAccessor(filename)
 	if err != nil {
 		common.LogVerbose("Error accessing file: %v", err)
@@ -249,7 +256,7 @@ func ReadDataListWithIlist(filename string, languageCode string, creator func([]
 //     Parameters: (objData []byte, stringBytes []byte, headerLength int, languageCode string)
 //
 // Returns: IList[ILocalizedTextObject] containing localized text entries, or nil if parsing fails
-func ParseDataListWithIlist(data []byte, languageCode string, creator func([]byte, []byte, int, string) datastore.IGlobalLocalizedTextObject) components.IList[datastore.IGlobalLocalizedTextObject] {
+func ParseDataListWithIlist(data []byte, languageCode string, creator func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error)) components.IList[datastore.IGlobalLocalizedTextObject] {
 	// No FFX-2 (v2) o cabeçalho é de 0x20 bytes e usa campos uint32 a partir do
 	// offset 16. Quando a versão do jogo é FFX-2, delegamos ao parser V2 (que lê
 	// offset := 16 e uint32), idêntico a ParseDataListWithIlistV2.
@@ -304,7 +311,11 @@ func ParseDataListWithIlist(data []byte, languageCode string, creator func([]byt
 			break
 		}
 		objData := dataBytes[from:to]
-		obj := creator(objData, stringBytes, individualLength, languageCode)
+		obj, err := creator(objData, stringBytes, individualLength, languageCode)
+		if err != nil {
+			common.LogVerbose("Error creating object at index %d: %v", i+minIndex, err)
+			continue
+		}
 		if obj == nil {
 			continue
 		}
@@ -323,7 +334,7 @@ func ParseDataListWithIlist(data []byte, languageCode string, creator func([]byt
 
 // ReadDataListWithIlistV2 is the FFX-2 (version 2) counterpart of ReadDataListWithIlist.
 // It reads the binary file and delegates to ParseDataListWithIlistV2 for parsing.
-func ReadDataListWithIlistV2(filename string, languageCode string, creator func([]byte, []byte, int, string) datastore.IGlobalLocalizedTextObject) components.IList[datastore.IGlobalLocalizedTextObject] {
+func ReadDataListWithIlistV2(filename string, languageCode string, creator func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error)) components.IList[datastore.IGlobalLocalizedTextObject] {
 	fileAccessor, err := common.NewFileAccessor(filename)
 	if err != nil {
 		common.LogVerbose("Error accessing file: %v", err)
@@ -359,7 +370,7 @@ func ReadDataListWithIlistV2(filename string, languageCode string, creator func(
 //   - Variable: string data section (remainder)
 //
 // ParseDataListWithIlistV2 faz o parse do formato V2 com fallbacks estáticos
-func ParseDataListWithIlistV2(data []byte, languageCode string, creator func([]byte, []byte, int, string) datastore.IGlobalLocalizedTextObject) components.IList[datastore.IGlobalLocalizedTextObject] {
+func ParseDataListWithIlistV2(data []byte, languageCode string, creator func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error)) components.IList[datastore.IGlobalLocalizedTextObject] {
 	if len(data) < 32 {
 		common.LogVerbose("Data too small for valid binary format v2")
 		return components.NewList[datastore.IGlobalLocalizedTextObject](0)
@@ -414,7 +425,11 @@ func ParseDataListWithIlistV2(data []byte, languageCode string, creator func([]b
 			break
 		}
 		copy(chunkData, dataBytes[from:to])
-		obj := creator(chunkData, stringBytes, individualLength, languageCode)
+		obj, err := creator(chunkData, stringBytes, individualLength, languageCode)
+		if err != nil {
+			common.LogVerbose("Error creating V2 object at index %d: %v", i+minIndex, err)
+			continue
+		}
 		if obj == nil {
 			common.LogVerbose("Skipping invalid V2 object at index %d", i+minIndex)
 			continue
@@ -430,4 +445,50 @@ func ParseDataListWithIlistV2(data []byte, languageCode string, creator func([]b
 	}
 
 	return objects
+}
+
+// readStringSegments reads a contiguous sequence of 4-byte string reference segments
+// from a binary reader and populates the corresponding IGlobalLocalizedKeyedStringObject
+// instances with their localized content.
+//
+// Each segment is exactly 4 bytes: 2 bytes for the string table offset (uint16 LE)
+// and 2 bytes for the string key (uint16 LE). The segments are read sequentially
+// from the reader's current position, one after another, in the order they appear
+// in the binary data. No seeking or position calculation is performed — the reader
+// must already be positioned at the first segment.
+//
+// This function is intended exclusively for headers where ALL string segments are
+// stored contiguously at the beginning of the chunk, with no gaps or non-string
+// bytes between them. Examples:
+//   - NameDescriptionTextObject: Name → SimplifiedName → Description → SimplifiedDescription
+//   - NameSensorScan: Name → SensorText → SimplifiedSensorText → ScanText → SimplifiedScanText
+//   - NameOnlyTextObject: Name → SimplifiedName
+//
+// It must NOT be used for segments that are located at arbitrary or non-sequential
+// positions within the binary chunk (e.g., NameDescriptionEffect where the Effect
+// segment is at a separate position offset). For those cases, use direct
+// io.Reader.Seek + models.ReadSegment instead.
+//
+// Parameters:
+//   - r: The io.Reader positioned exactly at the start of the first segment to read.
+//     The caller is responsible for seeking or positioning the reader beforehand.
+//   - stringBytes: The complete raw string table blob from the binary file, used by
+//     each segment to resolve its offset+key into actual localized string content.
+//   - languageCode: The localization language code (e.g., "us", "jp", "de") that
+//     determines the character encoding used when interpreting the raw bytes.
+//   - segments: One or more IGlobalLocalizedKeyedStringObject instances to populate,
+//     listed in the exact order they appear in the binary stream. Each instance will
+//     have its localized content set via ReadAndSetLocalizedContent.
+//
+// Returns: nil on success, or a wrapped fmt.Errorf indicating which segment index
+// failed to read (e.g., "reading segment 2: EOF").
+func readStringSegments(r io.Reader, stringBytes []byte, languageCode string, segments ...datastore.IGlobalLocalizedKeyedStringObject) error {
+	for i, seg := range segments {
+		s, err := models.ReadSegment(r)
+		if err != nil {
+			return fmt.Errorf("reading segment %d: %w", i, err)
+		}
+		seg.ReadAndSetLocalizedContent(languageCode, stringBytes, s.Offset, s.Key)
+	}
+	return nil
 }

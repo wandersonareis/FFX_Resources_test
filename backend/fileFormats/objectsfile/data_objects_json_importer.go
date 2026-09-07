@@ -13,15 +13,17 @@ import (
 
 type (
 	JSONEntry struct {
-		ID                   int                 `json:"id"`
-		Name                 map[string]string   `json:"name"`
-		Description          map[string]string   `json:"description,omitempty"`
-		Effect               map[string]string   `json:"effect,omitempty"`
-		Abilities            []map[string]string `json:"abilities,omitempty"`
-		SensorText           map[string]string   `json:"sensorText,omitempty"`
-		SimplifiedSensorText map[string]string   `json:"simplifiedSensorText,omitempty"`
-		ScanText             map[string]string   `json:"scanText,omitempty"`
-		SimplifiedScanText   map[string]string   `json:"simplifiedScanText,omitempty"`
+		ID                     int                 `json:"id"`
+		Name                   map[string]string   `json:"name,omitempty"`
+		SimplifiedName         map[string]string   `json:"simplifiedName,omitempty"`
+		Description            map[string]string   `json:"description,omitempty"`
+		SimplifiedDescription  map[string]string   `json:"simplifiedDescription,omitempty"`
+		Effect                 map[string]string   `json:"effect,omitempty"`
+		Abilities              []map[string]string `json:"abilities,omitempty"`
+		SensorText             map[string]string   `json:"sensorText,omitempty"`
+		SimplifiedSensorText   map[string]string   `json:"simplifiedSensorText,omitempty"`
+		ScanText               map[string]string   `json:"scanText,omitempty"`
+		SimplifiedScanText     map[string]string   `json:"simplifiedScanText,omitempty"`
 	}
 	NameOnlyData struct {
 		ID   int               `json:"id"`
@@ -140,14 +142,19 @@ func updateObjectByType(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextO
 	switch localizedTextObj := obj.(type) {
 	case *NameDescriptionTextObject:
 		updateNameEntry(jsonEntry, localizedTextObj.Name)
+		updateSimplifiedNameEntry(jsonEntry, localizedTextObj.SimplifiedName)
 		updateDescriptionEntry(jsonEntry, localizedTextObj.Description)
+		updateSimplifiedDescriptionEntry(jsonEntry, localizedTextObj.SimplifiedDescription)
 	case *NameDescriptionTextObjectV2:
 		updateNameEntry(jsonEntry, localizedTextObj.Name)
 		updateDescriptionEntry(jsonEntry, localizedTextObj.Description)
-	case *NameOnlyDataObject:
+	case *NameOnlyTextObject:
 		updateNameEntry(jsonEntry, localizedTextObj.Name)
-	case *NameOnlyDataObjectV2:
+	case *NameOnlyTextObjectV2:
 		updateNameEntry(jsonEntry, localizedTextObj.Name)
+	case *DescriptionOnlyTextObject:
+		updateDescriptionEntry(jsonEntry, localizedTextObj.Description)
+		updateSimplifiedDescriptionEntry(jsonEntry, localizedTextObj.SimplifiedDescription)
 	case *NameDescriptionEffect:
 		updateNameEntry(jsonEntry, localizedTextObj.Name)
 		updateDescriptionEntry(jsonEntry, localizedTextObj.Description)
@@ -257,6 +264,56 @@ func updateDescriptionEntry(sourceData JSONEntry, segment datastore.IGlobalLocal
 		}
 
 		updateOrCreateSegment(segment, newDescriptionText, languageCode)
+	}
+}
+
+// updateSimplifiedNameEntry applies simplifiedName updates only if present in the JSON data.
+//
+// Parameters:
+//   - sourceData: JSON data containing simplifiedName translations
+//   - segment: The object to update
+func updateSimplifiedNameEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject) {
+	if len(sourceData.SimplifiedName) == 0 || segment == nil {
+		return
+	}
+
+	for languageCode, newText := range sourceData.SimplifiedName {
+		if newText == "" {
+			continue
+		}
+		if !common.IsSupportedLanguage(languageCode) {
+			continue
+		}
+		if newText == segment.GetLocalizedString(languageCode) {
+			continue
+		}
+
+		updateOrCreateSegment(segment, newText, languageCode)
+	}
+}
+
+// updateSimplifiedDescriptionEntry applies simplifiedDescription updates only if present in the JSON data.
+//
+// Parameters:
+//   - sourceData: JSON data containing simplifiedDescription translations
+//   - segment: The object to update
+func updateSimplifiedDescriptionEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject) {
+	if len(sourceData.SimplifiedDescription) == 0 || segment == nil {
+		return
+	}
+
+	for languageCode, newText := range sourceData.SimplifiedDescription {
+		if newText == "" {
+			continue
+		}
+		if !common.IsSupportedLanguage(languageCode) {
+			continue
+		}
+		if newText == segment.GetLocalizedString(languageCode) {
+			continue
+		}
+
+		updateOrCreateSegment(segment, newText, languageCode)
 	}
 }
 
