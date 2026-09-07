@@ -46,10 +46,10 @@ func (n *DescriptionOnlyTextObject) mapBytes(stringBytes []byte, languageCode st
 func (n *DescriptionOnlyTextObject) ToBytes(languageCode string) ([]byte, error) {
 	result := slices.Clone(n.Bytes)
 
-	if err := writeStringSegments(result, []datastore.IGlobalLocalizedKeyedStringObject{
+	if err := writeStringSegments(result, 0, languageCode,
 		n.Description,
 		n.SimplifiedDescription,
-	}, languageCode); err != nil {
+	); err != nil {
 		return nil, err
 	}
 

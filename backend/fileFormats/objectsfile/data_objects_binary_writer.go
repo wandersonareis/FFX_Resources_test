@@ -177,13 +177,12 @@ func ConvertFFXLocalizedDataToBytes(objects []datastore.IGlobalLocalizedTextObje
 //
 // Each segment is exactly 4 bytes: 2 bytes for the string table offset (uint16 LE)
 // and 2 bytes for the string key (uint16 LE). Segments are written sequentially
-// starting at position 0, with each subsequent segment at position i*4. The caller
-// must ensure that `result` is large enough to hold all segments (at least
-// len(segments)*4 bytes).
+// starting at the given offset, with each subsequent segment at start+i*4. The caller
+// must ensure that `data` is large enough to hold all segments.
 //
 // This function is the write-side counterpart of readStringSegments. It is intended
-// exclusively for headers where ALL string segments are stored contiguously at the
-// beginning of the chunk, with no gaps or non-string bytes between them. Examples:
+// exclusively for headers where ALL string segments are stored contiguously, with no
+// gaps or non-string bytes between them. Examples:
 //   - NameDescriptionTextObject: Name → SimplifiedName → Description → SimplifiedDescription
 //   - NameOnlyTextObject: Name → SimplifiedName
 //   - NameDescriptionTextObjectV2: Name → Description
@@ -193,23 +192,27 @@ func ConvertFFXLocalizedDataToBytes(objects []datastore.IGlobalLocalizedTextObje
 // segment is at a separate position offset). For those cases, use direct
 // models.WriteSegmentAt instead.
 //
-// The function stops and returns an error on the first write failure without
-// processing remaining segments.
+// Segments with nil localized content are skipped, preserving the original bytes
+// in the data slice. The function stops and returns an error on the first write
+// failure without processing remaining segments.
 //
 // Parameters:
-//   - result: The pre-allocated byte slice to write into. Must be at least
-//     len(segments)*4 bytes long.
-//   - segments: One or more IGlobalLocalizedKeyedStringObject instances to serialize,
-//     listed in the exact order they should appear in the binary output.
+//   - data: The pre-allocated byte slice to write into.
+//   - start: The byte offset where the first segment is written.
 //   - languageCode: The localization language code (e.g., "us", "jp", "de") used to
 //     resolve each segment's localized content via GetLocalizedContent.
+//   - segments: One or more IGlobalLocalizedKeyedStringObject instances to serialize,
+//     listed in the exact order they should appear in the binary output.
 //
 // Returns: nil on success, or a wrapped fmt.Errorf indicating which segment index
 // failed to write (e.g., "writing segment 2: <underlying error>").
-func writeStringSegments(result []byte, segments []datastore.IGlobalLocalizedKeyedStringObject, languageCode string) error {
+func writeStringSegments(data []byte, start int, languageCode string, segments ...datastore.IGlobalLocalizedKeyedStringObject) error {
 	for i, seg := range segments {
-		position := i * 4
-		if err := models.WriteSegmentAt(result, position, getSegment(seg.GetLocalizedContent(languageCode))); err != nil {
+		content := seg.GetLocalizedContent(languageCode)
+		if content == nil {
+			continue
+		}
+		if err := models.WriteSegmentAt(data, start+i*4, getSegment(content)); err != nil {
 			return fmt.Errorf("writing segment %d: %w", i, err)
 		}
 	}

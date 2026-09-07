@@ -62,10 +62,10 @@ func (n *NameDescriptionTextObjectV2) ToBytes(languageCode string) ([]byte, erro
 	}
 	result := make([]byte, segLen)
 
-	if err := writeStringSegments(result, []datastore.IGlobalLocalizedKeyedStringObject{
+	if err := writeStringSegments(result, 0, languageCode,
 		n.Name,
 		n.Description,
-	}, languageCode); err != nil {
+	); err != nil {
 		return nil, err
 	}
 

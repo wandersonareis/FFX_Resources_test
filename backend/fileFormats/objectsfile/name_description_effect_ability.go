@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"slices"
 
 	"ffxresources/backend/common"
 	"ffxresources/backend/datastore"
@@ -81,30 +82,17 @@ func (p *NameDescriptionEffectAbilityObjectV2) mapBytes(stringBytes []byte, lang
 }
 
 func (p *NameDescriptionEffectAbilityObjectV2) ToBytes(languageCode string) ([]byte, error) {
-	data := make([]byte, len(p.Bytes))
-	copy(data, p.Bytes)
+	data := slices.Clone(p.Bytes)
 
-	if nameContent := p.Name.GetLocalizedContent(languageCode); nameContent != nil {
-		if err := models.WriteSegmentAt(data, nameSegmentDefaultPosition, getSegment(nameContent)); err != nil {
-			return nil, err
-		}
-	}
+	sequential := make([]datastore.IGlobalLocalizedKeyedStringObject, 0, 2+len(p.Abilities))
+	sequential = append(sequential,
+		p.Name,
+		p.Description,
+	)
+	sequential = append(sequential, p.Abilities...)
 
-	if descContent := p.Description.GetLocalizedContent(languageCode); descContent != nil {
-		if err := models.WriteSegmentAt(data, descriptionSegmentDefaultPosition, getSegment(descContent)); err != nil {
-			return nil, err
-		}
-	}
-
-	// Abilities: sequenciais, começando imediatamente após a Description
-	abilityStartPos := descriptionSegmentDefaultPosition + 4 // 4 bytes do segmento Description
-	for i := range p.Abilities {
-		if abilityContent := p.Abilities[i].GetLocalizedContent(languageCode); abilityContent != nil {
-			pos := abilityStartPos + (i * 4) // Cada Ability tem 4 bytes
-			if err := models.WriteSegmentAt(data, pos, getSegment(abilityContent)); err != nil {
-				return nil, err
-			}
-		}
+	if err := writeStringSegments(data, nameSegmentDefaultPosition, languageCode, sequential...); err != nil {
+		return nil, err
 	}
 
 	if effectContent := p.Effect.GetLocalizedContent(languageCode); effectContent != nil {
