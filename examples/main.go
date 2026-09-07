@@ -34,7 +34,7 @@ func main() {
 		return
 	}
 	// Executa os exemplos para FFX v1
-	runFFXv1Examples()
+	runFFXExamples()
 
 	// ===== FFX-2 (v2) =====
 	common.SetGameVersion(2)
@@ -49,7 +49,7 @@ func main() {
 	runFFX2Examples()
 }
 
-func runFFXv1Examples() {
+func runFFXExamples() {
 
 	// important.bin
 	keyItemsBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/important.bin")
@@ -371,9 +371,39 @@ func runFFXv1Examples() {
 	}
 	common.LogInfo("[FFX] ✓ Sphere text salvos com sucesso")
 
+	// status_txt.bin
+	statusTextBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/status_txt.bin")
+	common.LogInfo("[FFX] ✓ Status text carregados: %d\n", statusTextBinaryFile.GetObjects().Len())
+	if err := statusTextBinaryFile.ExportToJson("status_txt_all_localizations.json"); err != nil {
+		common.LogError("[FFX] Error exporting status text to JSON: %v\n", err)
+	}
+	common.LogInfo("[FFX] ✓ Status text exportados para JSON")
+	if err := statusTextBinaryFile.ImportFromJson("status_txt_all_localizations.json"); err != nil {
+		common.LogError("[FFX] Error importing status text from JSON: %v\n", err)
+	}
+	common.LogInfo("[FFX] ✓ Status text editados e salvos com sucesso")
+	if err := statusTextBinaryFile.SaveToBinary("battle/kernel/status_txt.bin"); err != nil {
+		common.LogError("[FFX] Error saving status text to binary: %v\n", err)
+	}
+	common.LogInfo("[FFX] ✓ Status text salvos com sucesso")
+
+	// summon_txt.bin
+	summonTextBinaryFile := objectsfile.ReadNameDescriptionLocalizations("battle/kernel/summon_txt.bin")
+	common.LogInfo("[FFX] ✓ Summon text carregados: %d\n", summonTextBinaryFile.GetObjects().Len())
+	if err := summonTextBinaryFile.ExportToJson("summon_txt_all_localizations.json"); err != nil {
+		common.LogError("[FFX] Error exporting summon text to JSON: %v\n", err)
+	}
+	common.LogInfo("[FFX] ✓ Summon text exportados para JSON")
+	if err := summonTextBinaryFile.ImportFromJson("summon_txt_all_localizations.json"); err != nil {
+		common.LogError("[FFX] Error importing summon text from JSON: %v\n", err)
+	}
+	common.LogInfo("[FFX] ✓ Summon text editados e salvos com sucesso")
+	if err := summonTextBinaryFile.SaveToBinary("battle/kernel/summon_txt.bin"); err != nil {
+		common.LogError("[FFX] Error saving summon text to binary: %v\n", err)
+	}
+	common.LogInfo("[FFX] ✓ Summon text salvos com sucesso")
+
 	// name_txt.bin
-	fmt.Println("Carregando textos de nomes...")
-	objectsfile.ReadNameTextWithAllLocalizations()
 	nameTextBinaryFile := objectsfile.ReadNameOnlyLocalizations("battle/kernel/name_txt.bin")
 	common.LogInfo("[FFX] ✓ Name text carregados: %d\n", nameTextBinaryFile.GetObjects().Len())
 	if err := nameTextBinaryFile.ExportToJson("name_txt_all_localizations.json"); err != nil {

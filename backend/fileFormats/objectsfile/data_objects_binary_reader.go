@@ -465,7 +465,7 @@ func ParseDataListWithIlistV2(data []byte, languageCode string, creator func([]b
 //   - NameOnlyTextObject: Name → SimplifiedName
 //
 // It must NOT be used for segments that are located at arbitrary or non-sequential
-// positions within the binary chunk (e.g., NameDescriptionEffect where the Effect
+// positions within the binary chunk (e.g., NameDescriptionEffectTextObject where the Effect
 // segment is at a separate position offset). For those cases, use direct
 // io.Reader.Seek + models.ReadSegment instead.
 //
