@@ -40,19 +40,6 @@ type (
 		NameOnlyData
 		Description map[string]string `json:"description"`
 	}
-
-	JobTextData struct {
-		NameOnlyData
-		Description map[string]string `json:"description"`
-		Effect      map[string]string `json:"effect"`
-	}
-
-	PlateTextData struct {
-		NameOnlyData
-		Description map[string]string   `json:"description"`
-		Abilities   []map[string]string `json:"abilities"`
-		Effect      map[string]string   `json:"effect"`
-	}
 )
 
 // ImportFromJson imports localized text data from a JSON file
