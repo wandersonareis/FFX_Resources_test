@@ -16,7 +16,11 @@ type CommandTextObjectV2 struct {
 	HeaderLength int
 }
 
-func NewCommandTextObjectV2(bytes []byte, stringBytes []byte, headerLength int, languageCode string) (*CommandTextObjectV2, error) {
+func NewCommandTextObjectV2(bytes []byte, stringBytes []byte, headerLength int, languageCode string, gameVersion int) (*CommandTextObjectV2, error) {
+	if gameVersion != 2 {
+		return nil, fmt.Errorf("CommandTextObjectV2 is only compatible with FFX-2 (game version 2), but got game version %d", gameVersion)
+	}
+	
 	if len(bytes) < headerLength {
 		return nil, fmt.Errorf("insufficient data: have %d bytes, need at least %d", len(bytes), headerLength)
 	}

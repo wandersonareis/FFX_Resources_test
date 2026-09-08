@@ -7,36 +7,36 @@ import (
 )
 
 type interactionBase struct {
-	defaultDirName string
+	targetDir string
+	config    ISetAppConfig
+	configKey string
 }
 
-func (e *interactionBase) GetTargetDirectoryBase(field ConfigField) (any, error) {
-	return NewInteractionService().FFXAppConfig().GetField(field)
+func (e *interactionBase) GetTargetDirectory() string {
+	return e.targetDir
 }
 
-func (e *interactionBase) SetTargetDirectoryBase(field ConfigField, path string) error {
+func (e *interactionBase) SetTargetDirectory(path string) error {
 	fullPath, err := filepath.Abs(path)
 	if err != nil {
 		return fmt.Errorf("error when obtaining the absolute path: %v", err)
 	}
 
-	if err := NewInteractionService().FFXAppConfig().UpdateField(field, fullPath); err != nil {
-		return err
+	e.targetDir = fullPath
+
+	if e.config != nil {
+		e.config.SetLocation(e.configKey, fullPath)
 	}
 
 	return nil
 }
 
-func (e *interactionBase) ProviderTargetDirectoryBase(field ConfigField, targetDirectory string) error {
-	if targetDirectory == "" {
-		targetDirectory = filepath.Join(common.GetExecDir(), e.defaultDirName)
-
-		if err := e.SetTargetDirectoryBase(field, targetDirectory); err != nil {
-			return err
-		}
+func (e *interactionBase) ProvideTargetDirectory() error {
+	if e.targetDir == "" {
+		e.targetDir = filepath.Join(common.ResourcesRoot, common.DirData)
 	}
 
-	err := common.EnsurePathExists(targetDirectory)
+	err := common.EnsurePathExists(e.targetDir)
 	if err != nil {
 		return err
 	}

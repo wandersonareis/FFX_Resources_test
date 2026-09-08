@@ -3,6 +3,7 @@ package objectsfile
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/datastore"
+	"ffxresources/backend/interactions"
 	"fmt"
 )
 
@@ -16,11 +17,16 @@ import (
 // File format: name and description data
 // Pattern path: ex: "battle/kernel/command.bin"
 func ReadNameOnlyLocalizations(patternPath string) datastore.IBinaryFile {
+	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
-		if common.GetGameVersionString() == "ffx2" {
+		switch gameVersion {
+		case 2:
 			return NewNameOnlyTextObjectV2(cBytes, sBytes, hLen, lang)
+		case 1:
+			return NewNameOnlyTextObject(cBytes, sBytes, hLen, lang)
+		default:
+			return nil, fmt.Errorf("NameOnlyTextObject is only compatible with FFX (game version 1) or FFX-2 (game version 2), but got game version %d", gameVersion)
 		}
-		return NewNameOnlyTextObject(cBytes, sBytes, hLen, lang)
 	}
 
 	binaryDataFile := NewBinaryFile(
@@ -53,13 +59,17 @@ func ReadNameOnlyLocalizations(patternPath string) datastore.IBinaryFile {
 // File format: description only data (binary format)
 // Pattern path: Variable, passed as parameter
 func ReadDescriptionOnlyLocalizations(patternPath string) datastore.IBinaryFile {
-	if common.GetGameVersionString() != "ffx" {
+	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
+	if gameVersion != 1 {
 		common.LogVerbose("ReadDescriptionOnlyLocalizations is only applicable for FFX (v1) game version.")
 		return nil
 	}
 
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
-		return NewDescriptionOnlyTextObject(cBytes, sBytes, hLen, lang)
+		if gameVersion == 1 {
+			return NewDescriptionOnlyTextObject(cBytes, sBytes, hLen, lang, gameVersion)
+		}
+		return nil, fmt.Errorf("DescriptionOnlyTextObject is only compatible with FFX (game version 1), but got game version %d", gameVersion)
 	}
 
 	binaryDataFile := NewBinaryFile(
@@ -90,11 +100,16 @@ func ReadDescriptionOnlyLocalizations(patternPath string) datastore.IBinaryFile 
 // File format: name and description data
 // Pattern path: ex: "battle/kernel/command.bin"
 func ReadCommandLocalizations(patternPath string) datastore.IBinaryFile {
+	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
-		if common.GetGameVersionString() == "ffx2" {
-			return NewCommandTextObjectV2(cBytes, sBytes, hLen, lang)
+		switch gameVersion {
+		case 2:
+			return NewCommandTextObjectV2(cBytes, sBytes, hLen, lang, gameVersion)
+		case 1:
+			return NewCommandTextObject(cBytes, sBytes, hLen, lang, interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber())
+		default:
+			return nil, fmt.Errorf("CommandTextObject is only compatible with FFX (game version 1) or FFX-2 (game version 2), but got game version %d", gameVersion)
 		}
-		return NewCommandTextObject(cBytes, sBytes, hLen, lang)
 	}
 
 	binaryDataFile := NewBinaryFile(
@@ -115,17 +130,18 @@ func ReadCommandLocalizations(patternPath string) datastore.IBinaryFile {
 	return binaryDataFile
 }
 
-func ReadNameDescriptionEffectTextObjectLocalizations(patternPath string, effectSegmentPosition int64) datastore.IBinaryFile {
-	if common.GetGameVersionString() != "ffx2" {
-		common.LogVerbose("ReadNameDescriptionEffectTextObjectLocalizations is only applicable for FFX-2 (v2) game version.")
+func ReadJobLocalizations(patternPath string, effectSegmentPosition int64) datastore.IBinaryFile {
+	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
+	if gameVersion != 2 {
+		common.LogVerbose("ReadJobLocalizations is only compatible with FFX-2 (game version 2), but got game version %d", gameVersion)
 		return nil
 	}
 
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
-		if common.GetGameVersionString() == "ffx2" {
-			return NewNameDescriptionEffectTextObject(cBytes, sBytes, hLen, effectSegmentPosition, lang)
+		if gameVersion == 2 {
+			return NewJobTextObject(cBytes, sBytes, hLen, effectSegmentPosition, lang)
 		}
-		return NewCommandTextObject(cBytes, sBytes, hLen, lang)
+		return nil, fmt.Errorf("JobTextObject is only compatible with FFX-2 (game version 2), but got game version %d", gameVersion)
 	}
 
 	binaryDataFile := NewBinaryFile(
@@ -148,16 +164,17 @@ func ReadNameDescriptionEffectTextObjectLocalizations(patternPath string, effect
 
 func ReadNameDescriptionEffectAbilitiesLocalizations(patternPath string, abilitiesCount int,
 	effectSegmentPosition int64) datastore.IBinaryFile {
-	if common.GetGameVersionString() != "ffx2" {
-		common.LogVerbose("ReadNameDescriptionEffectTextObjectLocalizations is only applicable for FFX-2 (v2) game version.")
+	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
+	if gameVersion != 2 {
+		common.LogVerbose("ReadNameDescriptionEffectAbilitiesLocalizations is only compatible with FFX-2 (game version 2), but got game version %d", gameVersion)
 		return nil
 	}
 
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
-		if common.GetGameVersionString() == "ffx2" {
+		if gameVersion == 2 {
 			return NewNameDescriptionEffectAbilityTextObject(cBytes, sBytes, hLen, abilitiesCount, effectSegmentPosition, lang)
 		}
-		return nil, nil
+		return nil, fmt.Errorf("Name description effect abilities is only compatible with FFX-2 (game version 2), but got game version %d", gameVersion)
 	}
 
 	binaryDataFile := NewBinaryFile(
@@ -179,11 +196,17 @@ func ReadNameDescriptionEffectAbilitiesLocalizations(patternPath string, abiliti
 }
 
 func ReadNameSensorScanLocalizations(patternPath string) datastore.IBinaryFile {
+	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
+	if gameVersion != 1 {
+		common.LogVerbose("ReadNameSensorScanLocalizations is only compatible with FFX (game version 1), but got game version %d", gameVersion)
+		return nil
+	}
+
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
-		if common.GetGameVersionString() == "ffx" {
+		if gameVersion == 1 {
 			return NewNameSensorScanTextObject(cBytes, sBytes, hLen, lang)
 		}
-		return nil, nil
+		return nil, fmt.Errorf("Name sensor scan is only compatible with FFX (game version 1), but got game version %d", gameVersion)
 	}
 
 	binaryDataFile := NewBinaryFile(
@@ -205,11 +228,17 @@ func ReadNameSensorScanLocalizations(patternPath string) datastore.IBinaryFile {
 }
 
 func ReadWeaponNamesLocalizations(patternPath string) datastore.IBinaryFile {
+	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
+	if gameVersion != 1 {
+		common.LogVerbose("ReadWeaponNamesLocalizations is only compatible with FFX (game version 1), but got game version %d", gameVersion)
+		return nil
+	}
+	
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
-		if common.GetGameVersionString() == "ffx" {
-			return NewWeaponsNameTextObject(cBytes, sBytes, hLen, lang)
+		if gameVersion == 1 {
+			return NewWeaponsNameTextObject(cBytes, sBytes, hLen, lang, gameVersion)
 		}
-		return nil, fmt.Errorf("Weapon names are only compatible with FFX")
+		return nil, fmt.Errorf("Weapon names are only compatible with FFX (game version 1), but got game version %d", gameVersion)
 	}
 
 	binaryDataFile := NewBinaryFile(
@@ -245,7 +274,15 @@ func ReadKeyItemsWithAllLocalizations() datastore.IBinaryFile {
 	keyItemsFile := NewBinaryFile(
 		patternPath,
 		func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
-			return NewCommandTextObjectV2(cBytes, sBytes, hLen, lang)
+			gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
+			switch gameVersion {
+			case 2:
+				return NewCommandTextObjectV2(cBytes, sBytes, hLen, lang, gameVersion)
+			case 1:
+				return NewCommandTextObject(cBytes, sBytes, hLen, lang, gameVersion)
+			default:
+				return nil, fmt.Errorf("KeyItems CommandTextObject is only compatible with FFX (game version 1) or FFX-2 (game version 2), but got game version %d", gameVersion)
+			}
 		},
 		common.DefaultLocalization,
 	)
@@ -276,10 +313,15 @@ func ReadItemsWithAllLocalizations() datastore.IBinaryFile {
 	patternPath := "battle/kernel/item.bin"
 
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
-		if common.GetGameVersionString() == "ffx2" {
-			return NewCommandTextObjectV2(cBytes, sBytes, hLen, lang)
+		gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
+		switch gameVersion {
+		case 2:
+			return NewCommandTextObjectV2(cBytes, sBytes, hLen, lang, gameVersion)
+		case 1:
+			return NewCommandTextObject(cBytes, sBytes, hLen, lang, gameVersion)
+		default:
+			return nil, fmt.Errorf("Items CommandTextObject is only compatible with FFX (game version 1) or FFX-2 (game version 2), but got game version %d", gameVersion)
 		}
-		return NewCommandTextObject(cBytes, sBytes, hLen, lang)
 	}
 
 	itemsFile := NewBinaryFile(
@@ -395,10 +437,15 @@ func ReadPlayerRomTextWithAllLocalizations() datastore.IBinaryFile {
 	patternPath := "battle/kernel/ply_rom.bin"
 
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
-		if common.GetGameVersionString() == "ffx2" {
+		gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
+		switch gameVersion {
+		case 2:
 			return NewNameOnlyTextObjectV2(cBytes, sBytes, hLen, lang)
+		case 1:
+			return NewNameOnlyTextObject(cBytes, sBytes, hLen, lang)
+		default:
+			return nil, fmt.Errorf("PlayerRomTextObject is only compatible with FFX (game version 1) or FFX-2 (game version 2), but got game version %d", gameVersion)
 		}
-		return NewNameOnlyTextObject(cBytes, sBytes, hLen, lang)
 	}
 
 	playerRoomTextFile := NewBinaryFile(
@@ -431,10 +478,15 @@ func ReadBattleTextWithAllLocalizations() datastore.IBinaryFile {
 	patternPath := "battle/kernel/btl_txt.bin"
 
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
-		if common.GetGameVersionString() == "ffx2" {
+		gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
+		switch gameVersion {
+		case 2:
 			return NewNameOnlyTextObjectV2(cBytes, sBytes, hLen, lang)
+		case 1:
+			return NewNameOnlyTextObject(cBytes, sBytes, hLen, lang)
+		default:
+			return nil, fmt.Errorf("BattleTextObject is only compatible with FFX (game version 1) or FFX-2 (game version 2), but got game version %d", gameVersion)
 		}
-		return NewNameOnlyTextObject(cBytes, sBytes, hLen, lang)
 	}
 
 	battleTextFile := NewBinaryFile(
@@ -468,10 +520,15 @@ func ReadBattleEndTextWithAllLocalizations() datastore.IBinaryFile {
 	patternPath := "battle/kernel/btlend_txt.bin"
 
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
-		if common.GetGameVersionString() == "ffx2" {
+		gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
+		switch gameVersion {
+		case 2:
 			return NewNameOnlyTextObjectV2(cBytes, sBytes, hLen, lang)
+		case 1:
+			return NewNameOnlyTextObject(cBytes, sBytes, hLen, lang)
+		default:
+			return nil, fmt.Errorf("BattleEndTextObject is only compatible with FFX (game version 1) or FFX-2 (game version 2), but got game version %d", gameVersion)
 		}
-		return NewNameOnlyTextObject(cBytes, sBytes, hLen, lang)
 	}
 
 	battleEndTextFile := NewBinaryFile(

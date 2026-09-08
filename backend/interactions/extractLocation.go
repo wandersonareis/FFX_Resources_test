@@ -8,35 +8,24 @@ type (
 	}
 	IExtractLocation interface {
 		interfaces.IInteractionBase
+
+		WithTargetDirectory(path string) IExtractLocation
 	}
 )
 
-func newExtractLocation() IExtractLocation {
-	rootDirectoryName := "extracted"
-
-	return &ExtractLocation{
+func newExtractLocation(path string, config ISetAppConfig) IExtractLocation {
+	extractLocation := &ExtractLocation{
 		interactionBase: &interactionBase{
-			defaultDirName: rootDirectoryName,
+			targetDir: path,
+			config:    config,
+			configKey: "ExtractLocation",
 		},
 	}
+	extractLocation.SetTargetDirectory(path)
+	return extractLocation
 }
 
-func (e *ExtractLocation) GetTargetDirectory() string {
-	path, _ := e.interactionBase.GetTargetDirectoryBase(ConfigExtractLocation)
-	return path.(string)
-}
-
-func (e *ExtractLocation) SetTargetDirectory(path string) error {
-	return e.interactionBase.SetTargetDirectoryBase(ConfigExtractLocation, path)
-}
-
-func (e *ExtractLocation) ProvideTargetDirectory() error {
-	path := e.GetTargetDirectory()
-
-	err := e.interactionBase.ProviderTargetDirectoryBase(ConfigExtractLocation, path)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (e *ExtractLocation) WithTargetDirectory(path string) IExtractLocation {
+	_ = e.SetTargetDirectory(path)
+	return e
 }

@@ -23,6 +23,7 @@ func main() {
 
 	// ===== FFX (v1) =====
 	common.SetGameVersion(1)
+	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(1)
 	common.SetGameFilesRoot("/home/mestre/FFX_Resources/build/bin/data/") // Defina o caminho correto para os arquivos do jogo
 	common.SetVerboseMode(false)                                          // Ativa o modo verboso para depuração
 
@@ -38,6 +39,7 @@ func main() {
 
 	// ===== FFX-2 (v2) =====
 	common.SetGameVersion(2)
+	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(2)
 	common.SetGameFilesRoot("/home/mestre/FFX_Resources/build/bin/data/") // Defina o caminho correto para os arquivos do jogo
 
 	fmt.Println("\n=== FFX-2 (v2) ===")
@@ -595,7 +597,7 @@ func runFFX2Examples() {
 
 	// Exclusivos do FFX-2 (retornam cedo se a versão não for FFX-2).
 	// accessory.bin
-	accessoriesBinaryFile := objectsfile.ReadNameDescriptionEffectTextObjectLocalizations("battle/kernel/accessory.bin", objectsfile.FFx2AccessoryEffectSegmentDefaultPosition)
+	accessoriesBinaryFile := objectsfile.ReadJobLocalizations("battle/kernel/accessory.bin", objectsfile.FFx2AccessoryEffectSegmentDefaultPosition)
 	common.LogInfo("[FFX-2] accessory carregados: %d\n", accessoriesBinaryFile.GetObjects().Len())
 	if err := accessoriesBinaryFile.ExportToJson("accessory_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting accessories text to JSON: %v\n", err)
@@ -611,7 +613,7 @@ func runFFX2Examples() {
 	common.LogInfo("[FFX-2] ✓ accessories text salvos com sucesso")
 
 	// job.bin
-	jobsBinaryFile := objectsfile.ReadNameDescriptionEffectTextObjectLocalizations("battle/kernel/job.bin", objectsfile.FFx2JobEffectSegmentDefaultPosition)
+	jobsBinaryFile := objectsfile.ReadJobLocalizations("battle/kernel/job.bin", objectsfile.FFx2JobEffectSegmentDefaultPosition)
 	common.LogInfo("[FFX-2] job carregados: %d\n", jobsBinaryFile.GetObjects().Len())
 	if err := jobsBinaryFile.ExportToJson("job_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting jobs text to JSON: %v\n", err)

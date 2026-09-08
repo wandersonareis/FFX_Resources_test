@@ -5,6 +5,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/datastore"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
 	"fmt"
 	"io"
@@ -78,18 +79,24 @@ func ReadCommandObjectsWithIlist(patternPath string) components.IList[datastore.
 	filePath := filepath.Join(common.GetLocalizationRoot(common.DefaultLocalization), patternPath)
 
 	creator := func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
-		if common.GetGameVersionString() == "ffx2" {
-			obj, err := NewCommandTextObjectV2(data, stringBytes, headerLength, localization)
+		gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
+		switch gameVersion {
+		case 2:
+			obj, err := NewCommandTextObjectV2(data, stringBytes, headerLength, localization, gameVersion)
 			if err != nil {
 				return nil, err
 			}
 			return obj, nil
+		case 1:
+			obj, err := NewCommandTextObject(data, stringBytes, headerLength, localization, gameVersion)
+			if err != nil {
+				return nil, err
+			}
+			return obj, nil
+		default:
+			return nil, fmt.Errorf("unsupported game version: %d", gameVersion)
 		}
-		obj, err := NewCommandTextObject(data, stringBytes, headerLength, localization)
-		if err != nil {
-			return nil, err
-		}
-		return obj, nil
+
 	}
 
 	var commandObjects components.IList[datastore.IGlobalLocalizedTextObject]
@@ -465,7 +472,7 @@ func ParseDataListWithIlistV2(data []byte, languageCode string, creator func([]b
 //   - NameOnlyTextObject: Name → SimplifiedName
 //
 // It must NOT be used for segments that are located at arbitrary or non-sequential
-// positions within the binary chunk (e.g., NameDescriptionEffectTextObject where the Effect
+// positions within the binary chunk (e.g., JobTextObject where the Effect
 // segment is at a separate position offset). For those cases, use direct
 // io.Reader.Seek + models.ReadSegment instead.
 //

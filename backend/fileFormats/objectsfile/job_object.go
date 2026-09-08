@@ -11,7 +11,7 @@ import (
 	"ffxresources/backend/models"
 )
 
-type NameDescriptionEffectTextObject struct {
+type JobTextObject struct {
 	Bytes                 []byte
 	Name                  datastore.IGlobalLocalizedKeyedStringObject
 	Description           datastore.IGlobalLocalizedKeyedStringObject
@@ -20,22 +20,22 @@ type NameDescriptionEffectTextObject struct {
 	HeaderLength          int
 }
 
-func NewNameDescriptionEffectTextObject(
+func NewJobTextObject(
 	bytes []byte,
 	stringBytes []byte,
 	headerLength int,
 	effectSegmentPosition int64,
 	languageCode string,
-) (*NameDescriptionEffectTextObject, error) {
+) (*JobTextObject, error) {
 	if common.GetGameVersionString() != "ffx2" {
-		return nil, fmt.Errorf("NameDescriptionEffectTextObject is only compatible with FFX-2")
+		return nil, fmt.Errorf("JobTextObject is only compatible with FFX-2")
 	}
 
 	if len(bytes) < headerLength {
-		return nil, fmt.Errorf("insufficient data to create NameDescriptionEffectTextObject: have %d bytes, need at least %d", len(bytes), headerLength)
+		return nil, fmt.Errorf("insufficient data to create JobTextObject: have %d bytes, need at least %d", len(bytes), headerLength)
 	}
 
-	p := &NameDescriptionEffectTextObject{
+	p := &JobTextObject{
 		Bytes:                 bytes,
 		Name:                  NewLocalizedKeyedStringObject(),
 		Description:           NewLocalizedKeyedStringObject(),
@@ -51,25 +51,25 @@ func NewNameDescriptionEffectTextObject(
 	return p, nil
 }
 
-func (p *NameDescriptionEffectTextObject) mapBytes(
+func (p *JobTextObject) mapBytes(
 	stringBytes []byte,
 	languageCode string,
 ) error {
 	r := bytes.NewReader(p.Bytes)
 
 	if err := readStringSegments(r, stringBytes, languageCode, p.Name, p.Description); err != nil {
-		common.LogError("Error reading NameDescriptionEffectTextObject sequential segments: %v", err)
+		common.LogError("Error reading JobTextObject sequential segments: %v", err)
 		return err
 	}
 
 	if _, err := r.Seek(p.EffectSegmentPosition, io.SeekStart); err != nil {
-		common.LogError("Error seeking to NameDescriptionEffectTextObject effect: %v", err)
+		common.LogError("Error seeking to JobTextObject effect: %v", err)
 		return err
 	}
 
 	effectSeg, err := models.ReadSegment(r)
 	if err != nil {
-		common.LogError("Error reading NameDescriptionEffectTextObject effect: %v", err)
+		common.LogError("Error reading JobTextObject effect: %v", err)
 		return err
 	}
 	p.Effect.ReadAndSetLocalizedContent(languageCode, stringBytes, effectSeg.Offset, effectSeg.Key)
@@ -77,7 +77,7 @@ func (p *NameDescriptionEffectTextObject) mapBytes(
 	return nil
 }
 
-func (p *NameDescriptionEffectTextObject) ToBytes(languageCode string) ([]byte, error) {
+func (p *JobTextObject) ToBytes(languageCode string) ([]byte, error) {
 	data := slices.Clone(p.Bytes)
 
 	if err := writeStringSegments(data, 0, languageCode, p.Name, p.Description); err != nil {
@@ -93,11 +93,11 @@ func (p *NameDescriptionEffectTextObject) ToBytes(languageCode string) ([]byte, 
 	return data, nil
 }
 
-func (p *NameDescriptionEffectTextObject) GetName(languageCode string) string {
+func (p *JobTextObject) GetName(languageCode string) string {
 	return p.Name.GetLocalizedString(languageCode)
 }
 
-func (p *NameDescriptionEffectTextObject) GetKeyedString(title string) datastore.IGlobalLocalizedKeyedStringObject {
+func (p *JobTextObject) GetKeyedString(title string) datastore.IGlobalLocalizedKeyedStringObject {
 	switch title {
 	case "name":
 		return p.Name
@@ -110,23 +110,23 @@ func (p *NameDescriptionEffectTextObject) GetKeyedString(title string) datastore
 	}
 }
 
-func (p *NameDescriptionEffectTextObject) GetHeaderLength() int {
+func (p *JobTextObject) GetHeaderLength() int {
 	return p.HeaderLength
 }
 
-func (p *NameDescriptionEffectTextObject) GetTextObject() datastore.IGlobalLocalizedTextObject {
+func (p *JobTextObject) GetTextObject() datastore.IGlobalLocalizedTextObject {
 	return p
 }
 
-func (p *NameDescriptionEffectTextObject) SetLocalizations(other datastore.IGlobalLocalizationSetter) {
-	if o, ok := other.(*NameDescriptionEffectTextObject); ok {
+func (p *JobTextObject) SetLocalizations(other datastore.IGlobalLocalizationSetter) {
+	if o, ok := other.(*JobTextObject); ok {
 		o.Name.CopyInto(p.Name)
 		o.Description.CopyInto(p.Description)
 		o.Effect.CopyInto(p.Effect)
 	}
 }
 
-func (p *NameDescriptionEffectTextObject) GetLocalizedKeyedStrings(localization string) []datastore.IGlobalKeyedString {
+func (p *JobTextObject) GetLocalizedKeyedStrings(localization string) []datastore.IGlobalKeyedString {
 	return []datastore.IGlobalKeyedString{
 		p.Name.GetLocalizedContent(localization),
 		p.Description.GetLocalizedContent(localization),
@@ -134,7 +134,7 @@ func (p *NameDescriptionEffectTextObject) GetLocalizedKeyedStrings(localization 
 	}
 }
 
-func (p *NameDescriptionEffectTextObject) ToString(languageCode string) string {
+func (p *JobTextObject) ToString(languageCode string) string {
 	nameStr := p.GetName(languageCode)
 	descStr := ""
 	if descContent := p.Description.GetLocalizedContent(languageCode); descContent != nil {
@@ -147,6 +147,6 @@ func (p *NameDescriptionEffectTextObject) ToString(languageCode string) string {
 	return fmt.Sprintf("%s - %s - %s", nameStr, descStr, effStr)
 }
 
-func (p *NameDescriptionEffectTextObject) String() string {
+func (p *JobTextObject) String() string {
 	return p.ToString(common.DefaultLocalization)
 }

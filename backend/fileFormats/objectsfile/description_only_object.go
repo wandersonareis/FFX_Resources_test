@@ -17,7 +17,11 @@ type DescriptionOnlyTextObject struct {
 
 const DescriptionOnlyTextObjectLength = 0x08
 
-func NewDescriptionOnlyTextObject(bytes []byte, stringBytes []byte, headerLength int, languageCode string) (*DescriptionOnlyTextObject, error) {
+func NewDescriptionOnlyTextObject(bytes []byte, stringBytes []byte, headerLength int, languageCode string, gameVersion int) (*DescriptionOnlyTextObject, error) {
+	if gameVersion != 1 {
+		return nil, fmt.Errorf("DescriptionOnlyTextObject is only compatible with FFX (game version 1), but got game version %d", gameVersion)
+	}
+	
 	if len(bytes) < headerLength {
 		return nil, fmt.Errorf("insufficient data: have %d bytes, need at least %d", len(bytes), headerLength)
 	}

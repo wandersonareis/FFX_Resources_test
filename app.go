@@ -16,14 +16,6 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-type AppConfig struct {
-	GameFilesLocation string `json:"gameFilesLocation"`
-	GamePart          int    `json:"gamePart"`
-	ExtractLocation   string `json:"extractLocation"`
-	TranslateLocation string `json:"translateLocation"`
-	ReimportLocation  string `json:"reimportLocation"`
-}
-
 // App struct
 type App struct {
 	noticationService services.INotificationService

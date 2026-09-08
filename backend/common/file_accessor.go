@@ -7,12 +7,16 @@ import (
 )
 
 const (
-	ModsFolder   = "mods/"
-	csvLineRegex = `,(?=([^\"]*\"[^\"]*\")*[^\"]*$)`
+	ModsFolder    = "mods/"
+	DirData       = "data"
+	DirExtracted  = "extracted"
+	DirTranslated = "translated"
+	DirReimported = "reimported"
+	csvLineRegex  = `,(?=([^\"]*\"[^\"]*\")*[^\"]*$)`
 )
 
 var (
-	ResourcesRoot = `D:\Steam\steamapps\common\FINAL FANTASY FFX&FFX-2 HD Remaster\data\FFX_Data`
+	ResourcesRoot = GetExecDir()
 	GameFilesRoot = ResourcesRoot
 	DisableMods   = true
 )

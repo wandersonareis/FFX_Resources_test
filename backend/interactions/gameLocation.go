@@ -9,6 +9,7 @@ import (
 type IGameLocation interface {
 	interfaces.IInteractionBase
 
+	WithTargetDirectory(path string) IGameLocation
 	IsSpira() error
 }
 
@@ -16,33 +17,21 @@ type GameLocation struct {
 	*interactionBase
 }
 
-func newGameLocation() IGameLocation {
-	defaultDirName := "data"
-	return &GameLocation{
+func newGameLocation(path string, config ISetAppConfig) IGameLocation {
+	gameLocation := &GameLocation{
 		interactionBase: &interactionBase{
-			defaultDirName: defaultDirName,
+			targetDir: path,
+			config:    config,
+			configKey: "GameFilesLocation",
 		},
 	}
+	gameLocation.SetTargetDirectory(path)
+	return gameLocation
 }
 
-func (g *GameLocation) GetTargetDirectory() string {
-	path, _ := g.interactionBase.GetTargetDirectoryBase(ConfigGameFilesLocation)
-	return path.(string)
-}
-
-func (g *GameLocation) SetTargetDirectory(path string) error {
-	return g.interactionBase.SetTargetDirectoryBase(ConfigGameFilesLocation, path)
-}
-
-func (g *GameLocation) ProvideTargetDirectory() error {
-	path := g.GetTargetDirectory()
-
-	err := g.interactionBase.ProviderTargetDirectoryBase(ConfigGameFilesLocation, path)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (g *GameLocation) WithTargetDirectory(path string) IGameLocation {
+	_ = g.SetTargetDirectory(path)
+	return g
 }
 
 func (g *GameLocation) IsSpira() error {

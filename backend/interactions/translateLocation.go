@@ -8,35 +8,24 @@ type (
 	}
 	ITranslateLocation interface {
 		interfaces.IInteractionBase
+
+		WithTargetDirectory(path string) ITranslateLocation
 	}
 )
 
-func newTranslateLocation() ITranslateLocation {
-	rootDirectoryName := "translated"
-
-	return &TranslateLocation{
+func newTranslateLocation(path string, config ISetAppConfig) ITranslateLocation {
+	translateLocation := &TranslateLocation{
 		interactionBase: &interactionBase{
-			defaultDirName: rootDirectoryName,
+			targetDir: path,
+			config:    config,
+			configKey: "TranslateLocation",
 		},
 	}
+	translateLocation.SetTargetDirectory(path)
+	return translateLocation
 }
 
-func (t *TranslateLocation) GetTargetDirectory() string {
-	path, _ := t.interactionBase.GetTargetDirectoryBase(ConfigTranslateLocation)
-	return path.(string)
-}
-
-func (t *TranslateLocation) SetTargetDirectory(path string) error {
-	return t.interactionBase.SetTargetDirectoryBase(ConfigTranslateLocation, path)
-}
-
-func (e *TranslateLocation) ProvideTargetDirectory() error {
-	path := e.GetTargetDirectory()
-
-	err := e.interactionBase.ProviderTargetDirectoryBase(ConfigTranslateLocation, path)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (t *TranslateLocation) WithTargetDirectory(path string) ITranslateLocation {
+	_ = t.SetTargetDirectory(path)
+	return t
 }

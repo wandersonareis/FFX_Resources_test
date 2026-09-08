@@ -91,7 +91,11 @@ type (
 	}
 )
 
-func NewCommandTextObject(bytes []byte, stringBytes []byte, headerLength int, languageCode string) (*CommandTextObject, error) {
+func NewCommandTextObject(bytes []byte, stringBytes []byte, headerLength int, languageCode string, gameVersion int) (*CommandTextObject, error) {
+	if gameVersion != 1 {
+		return nil, fmt.Errorf("CommandTextObject is only compatible with FFX (game version 1), but got game version %d", gameVersion)
+	}
+
 	if len(bytes) < headerLength {
 		return nil, fmt.Errorf("insufficient data: have %d bytes, need at least %d", len(bytes), headerLength)
 	}

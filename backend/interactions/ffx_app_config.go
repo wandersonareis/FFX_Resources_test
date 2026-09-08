@@ -4,70 +4,66 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"ffxresources/backend/common"
 	"os"
+	"path/filepath"
 )
 
-type (
-	ConfigField string
+type IGetAppConfig interface {
+	GetGameVersion() int
+	GetLocations() map[string]string
+	GetLocation(name string) string
+}
 
-	FFXAppConfig struct {
-		filePath          string
-		FFXGameVersion    int    `json:"FFXGameVersion"`
-		GameFilesLocation string `json:"GameFilesLocation"`
-		ExtractLocation   string `json:"ExtractLocation"`
-		TranslateLocation string `json:"TranslateLocation"`
-		ImportLocation    string `json:"ImportLocation"`
+type ISetAppConfig interface {
+	SetGameVersion(version int)
+	SetLocation(name, path string)
+}
+
+type IAppConfig interface {
+	IGetAppConfig
+	ISetAppConfig
+	FromJson() error
+	ToJson() error
+}
+
+type AppConfig struct {
+	filePath    string
+	locations   map[string]string
+	gameVersion int
+}
+
+type appConfigJSON struct {
+	Locations   map[string]string `json:"Locations"`
+	GameVersion int               `json:"GameVersion"`
+}
+
+func NewAppConfig() *AppConfig {
+	filePath := filepath.Join(common.GetExecDir(), "config", "config.json")
+
+	c := &AppConfig{
+		filePath:    filePath,
+		locations:   make(map[string]string),
+		gameVersion: 1,
 	}
 
-	IFFXAppConfig interface {
-		ToJson() error
-		FromJson() error
-		GetField(field ConfigField) (interface{}, error)
-		UpdateField(field ConfigField, value interface{}) error
-	}
-)
-
-const (
-	ConfigGameVersion       ConfigField = "FFXGameVersion"
-	ConfigGameFilesLocation ConfigField = "GameFilesLocation"
-	ConfigExtractLocation   ConfigField = "ExtractLocation"
-	ConfigTranslateLocation ConfigField = "TranslateLocation"
-	ConfigImportLocation    ConfigField = "ImportLocation"
-)
-
-func NewAppConfig(filePath string) *FFXAppConfig {
-	ffxAppConfig := &FFXAppConfig{
-		filePath: filePath,
-	}
-	err := ffxAppConfig.FromJson()
-	if err != nil {
+	if err := c.FromJson(); err != nil {
 		return nil
 	}
 
-	return ffxAppConfig
+	return c
 }
 
-func (c *FFXAppConfig) validateConfig() error {
+func (c *AppConfig) validateConfig() error {
 	changed := false
 
-	if c.FFXGameVersion <= 0 {
-		c.FFXGameVersion = 1
+	if c.gameVersion <= 0 {
+		c.gameVersion = 1
 		changed = true
 	}
-	if c.GameFilesLocation == "" {
-		c.GameFilesLocation = NewInteractionService().GameLocation.GetTargetDirectory()
-		changed = true
-	}
-	if c.ExtractLocation == "" {
-		c.ExtractLocation = NewInteractionService().ExtractLocation.GetTargetDirectory()
-		changed = true
-	}
-	if c.TranslateLocation == "" {
-		c.TranslateLocation = NewInteractionService().TranslateLocation.GetTargetDirectory()
-		changed = true
-	}
-	if c.ImportLocation == "" {
-		c.ImportLocation = NewInteractionService().ImportLocation.GetTargetDirectory()
+
+	if c.locations == nil {
+		c.locations = make(map[string]string)
 		changed = true
 	}
 
@@ -78,9 +74,30 @@ func (c *FFXAppConfig) validateConfig() error {
 	return nil
 }
 
-func (c *FFXAppConfig) ToJson() error {
+func (c *AppConfig) MarshalJSON() ([]byte, error) {
+	return json.Marshal(appConfigJSON{
+		Locations:   c.locations,
+		GameVersion: c.gameVersion,
+	})
+}
+
+func (c *AppConfig) UnmarshalJSON(data []byte) error {
+	var aux appConfigJSON
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	c.locations = aux.Locations
+	c.gameVersion = aux.GameVersion
+	return nil
+}
+
+func (c *AppConfig) ToJson() error {
 	if c == nil {
-		return fmt.Errorf("%s", "invalid configuration")
+		return fmt.Errorf("invalid configuration")
+	}
+
+	if err := os.MkdirAll(filepath.Dir(c.filePath), 0755); err != nil {
+		return err
 	}
 
 	file, err := os.Create(c.filePath)
@@ -104,7 +121,7 @@ func (c *FFXAppConfig) ToJson() error {
 	return nil
 }
 
-func (c *FFXAppConfig) FromJson() error {
+func (c *AppConfig) FromJson() error {
 	file, err := os.ReadFile(c.filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -123,81 +140,24 @@ func (c *FFXAppConfig) FromJson() error {
 	return err
 }
 
-func (c *FFXAppConfig) GetField(field ConfigField) (any, error) {
-	if err := c.validateConfig(); err != nil {
-		return nil, err
-	}
-
-	switch field {
-	case ConfigGameVersion:
-		return c.FFXGameVersion, nil
-	case ConfigGameFilesLocation:
-		return c.GameFilesLocation, nil
-	case ConfigExtractLocation:
-		return c.ExtractLocation, nil
-	case ConfigTranslateLocation:
-		return c.TranslateLocation, nil
-	case ConfigImportLocation:
-		return c.ImportLocation, nil
-	default:
-		return nil, fmt.Errorf("%s", "invalid field: "+string(field))
-	}
+func (c *AppConfig) GetGameVersion() int {
+	return c.gameVersion
 }
 
-// TODO: Add a method to update the config file
-func (c *FFXAppConfig) UpdateField(field ConfigField, value any) error {
-	var changed bool
-
-	switch field {
-	case ConfigGameVersion:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("incompatible value type for gamepart field")
-		}
-		c.FFXGameVersion = v
-		changed = true
-	case ConfigGameFilesLocation:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("incompatible value type for GameFilesLocation field")
-		}
-		c.GameFilesLocation = v
-		changed = true
-	case ConfigExtractLocation:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("incompatible value type for Extractlocation field")
-		}
-		c.ExtractLocation = v
-		changed = true
-	case ConfigTranslateLocation:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("incompatible value type for TranslateLocation field")
-		}
-		c.TranslateLocation = v
-		changed = true
-	case ConfigImportLocation:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("incompatible value type for Importlocation field")
-		}
-		c.ImportLocation = v
-		changed = true
-	default:
-		return fmt.Errorf("%s", "invalid field: "+string(field))
-	}
-
-	if changed {
-		if err := c.ToJson(); err != nil {
-			return err
-		}
-	}
-
-	return nil
+func (c *AppConfig) SetGameVersion(version int) {
+	c.gameVersion = version
+	_ = c.ToJson()
 }
 
-func (c *FFXAppConfig) UpdateConfigFile(newFilePath string) error {
-	c.filePath = newFilePath
-	return c.ToJson()
+func (c *AppConfig) GetLocations() map[string]string {
+	return c.locations
+}
+
+func (c *AppConfig) GetLocation(name string) string {
+	return c.locations[name]
+}
+
+func (c *AppConfig) SetLocation(name, path string) {
+	c.locations[name] = path
+	_ = c.ToJson()
 }

@@ -28,12 +28,13 @@ type IBinaryHeader interface {
 
 // --- VERSÃO 1 ---
 type BinaryHeaderV1 struct {
-	Signature        [8]byte
+	SignatureA       uint32
+	SignatureB       uint32
 	MinIndex         uint16
 	MaxIndex         uint16
 	IndividualLength uint16
 	TotalLength      uint16
-	Unknown1         uint32 // 4 bytes de padding
+	Padding          uint32
 }
 
 func (h *BinaryHeaderV1) Read(r *bytes.Reader) error {
@@ -47,13 +48,13 @@ func (h *BinaryHeaderV1) GetMaxIndex() int         { return int(h.MaxIndex) }
 func (h *BinaryHeaderV1) GetIndividualLength() int { return int(h.IndividualLength) }
 func (h *BinaryHeaderV1) GetTotalLength() int      { return int(h.TotalLength) }
 func (h *BinaryHeaderV1) GetDataLength() int {
-	return int(h.TotalLength + uint16(h.Unknown1))
+	return int(h.TotalLength + uint16(h.Padding))
 }
 
 // --- VERSÃO 2 ---
 type BinaryHeaderV2 struct {
-	Signature        [4]byte
-	Unknown1         uint32
+	SignatureA       uint32
+	SignatureB       uint32
 	Unknown2         uint32
 	MinIndex         uint32
 	MaxIndex         uint32
@@ -76,7 +77,6 @@ func (h *BinaryHeaderV2) GetDataLength() int {
 	return int(h.HeaderSize)
 }
 
-// NewBinaryHeader instância o header correto sem poluir o resto do código
 func NewBinaryHeader() IBinaryHeader {
 	if common.GetGameVersionString() == "ffx2" {
 		return &BinaryHeaderV2{}
@@ -84,18 +84,8 @@ func NewBinaryHeader() IBinaryHeader {
 	return &BinaryHeaderV1{}
 }
 
-// CreatorFunc é a função que sabe instanciar o chunk correto (NameDesc, Plate, etc)
 type CreatorFunc func(chunkBytes []byte, stringBytes []byte, headerLength int, languageCode string) (datastore.IGlobalLocalizedTextObject, error)
 
-// JsonExporterFunc exporta objetos para JSON
-type JsonExporterFunc func(objects components.IList[datastore.IGlobalLocalizedTextObject], fileName string) error
-
-// JsonImporterFunc importa objetos de JSON
-type JsonImporterFunc func(fileName string, objectsList components.IList[datastore.IGlobalLocalizedTextObject]) error
-
-var _ datastore.IBinaryFile = (*BinaryFile)(nil)
-
-// BinaryFile orquestra todo o ciclo de vida de um arquivo binário de localização
 type BinaryFile struct {
 	Header       IBinaryHeader
 	Objects      components.IList[datastore.IGlobalLocalizedTextObject]
@@ -103,22 +93,23 @@ type BinaryFile struct {
 	creator      CreatorFunc
 	languageCode string
 	patternPath  string
-	relativePath string
 }
 
-// NewBinaryFile cria o orquestrador. Você passa a função que cria o objeto correto.
 func NewBinaryFile(patternPath string, creator CreatorFunc, languageCode string) *BinaryFile {
 	return &BinaryFile{
 		Header:       NewBinaryHeader(),
 		patternPath:  patternPath,
-		relativePath: filepath.Join(common.GetLocalizationRoot(common.DefaultLocalization), patternPath),
 		languageCode: languageCode,
 		creator:      creator,
 	}
 }
 
-func (b *BinaryFile) fileAcessor() ([]byte, error) {
-	fileAccessor, err := common.NewFileAccessor(b.relativePath)
+func (b *BinaryFile) resolveFilePath() string {
+	return filepath.Join(common.GetLocalizationRoot(b.languageCode), b.patternPath)
+}
+
+func (b *BinaryFile) readFile() ([]byte, error) {
+	fileAccessor, err := common.NewFileAccessor(b.resolveFilePath())
 	if err != nil {
 		common.LogVerbose("Error accessing file: %v", err)
 		return nil, errors.New("failed to access file")
@@ -138,29 +129,62 @@ func (b *BinaryFile) fileAcessor() ([]byte, error) {
 }
 
 func (b *BinaryFile) LoadFromBinary() error {
-	data, err := b.fileAcessor()
+	data, err := b.readFile()
 	if err != nil {
 		return err
 	}
 
 	reader := bytes.NewReader(data)
 
-	if err := b.Header.Read(reader); err != nil {
+	if err := b.readHeader(reader); err != nil {
+		return err
+	}
+
+	dataBytes, err := b.readChunks(reader)
+	if err != nil {
+		return err
+	}
+
+	if err := b.readStrings(reader); err != nil {
+		return err
+	}
+
+	b.buildObjects(dataBytes)
+
+	PopulateDataObjectLocalizationsWithIlist(b.patternPath, b.Objects, b.creator)
+	return nil
+}
+
+func (b *BinaryFile) readHeader(r *bytes.Reader) error {
+	if err := b.Header.Read(r); err != nil {
 		return fmt.Errorf("error reading header: %w", err)
 	}
+	return nil
+}
 
+func (b *BinaryFile) readChunks(r *bytes.Reader) ([]byte, error) {
 	dataBytes := make([]byte, b.Header.GetTotalLength())
-	if _, err := io.ReadFull(reader, dataBytes); err != nil {
-		return fmt.Errorf("error reading chunks: %w", err)
+	if _, err := io.ReadFull(r, dataBytes); err != nil {
+		return nil, fmt.Errorf("error reading chunks: %w", err)
 	}
+	return dataBytes, nil
+}
 
-	b.StringBytes = make([]byte, reader.Len())
-	io.ReadFull(reader, b.StringBytes)
+func (b *BinaryFile) readStrings(r *bytes.Reader) error {
+	b.StringBytes = make([]byte, r.Len())
+	if _, err := io.ReadFull(r, b.StringBytes); err != nil {
+		return fmt.Errorf("error reading strings: %w", err)
+	}
+	return nil
+}
 
+func (b *BinaryFile) buildObjects(dataBytes []byte) {
 	count := b.Header.GetMaxIndex() - b.Header.GetMinIndex()
 	b.Objects = components.NewList[datastore.IGlobalLocalizedTextObject](count + 1)
 
 	individualLength := b.Header.GetIndividualLength()
+	minIndex := b.Header.GetMinIndex()
+
 	for i := 0; i <= count; i++ {
 		from := i * individualLength
 		to := (i + 1) * individualLength
@@ -171,20 +195,15 @@ func (b *BinaryFile) LoadFromBinary() error {
 		chunk := slices.Clone(dataBytes[from:to])
 		obj, err := b.creator(chunk, b.StringBytes, individualLength, b.languageCode)
 		if err != nil {
-			common.LogVerbose("Error creating object at index %d: %v", i+b.Header.GetMinIndex(), err)
+			common.LogVerbose("Error creating object at index %d: %v", i+minIndex, err)
 			continue
 		}
 		if obj == nil {
-			common.LogVerbose("Skipping invalid V2 object at index %d", i+b.Header.GetMinIndex())
+			common.LogVerbose("Skipping invalid V2 object at index %d", i+minIndex)
 			continue
 		}
-
 		b.Objects.Add(obj)
 	}
-
-	PopulateDataObjectLocalizationsWithIlist(b.patternPath, b.Objects, b.creator)
-
-	return nil
 }
 
 func (b *BinaryFile) ExportToJson(filePath string) error {
@@ -202,66 +221,86 @@ func (b *BinaryFile) ImportFromJson(filePath string) error {
 }
 
 func (b *BinaryFile) SaveToBinary(filePath string) error {
-	buf := bytes.NewBuffer(make([]byte, 0, b.Header.GetDataLength()+len(b.StringBytes)+0x20))
+	var lastBuf []byte
 
 	for localizationKey := range common.SupportedLanguages {
 		if localizationKey != "us" {
 			continue // Skip non-US localizations for now
 		}
-		localizationRoot := common.GetLocalizationRoot(localizationKey)
-		localePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, localizationRoot, filePath)
-		localePath = filepath.FromSlash(localePath)
 
-		var allKeyedStrings []datastore.IGlobalKeyedString
-
-		b.Objects.RangeIndex(func(i int, obj datastore.IGlobalLocalizedTextObject) {
-			keyedStrings := obj.GetLocalizedKeyedStrings(localizationKey)
-			for _, ks := range keyedStrings {
-				if ks != nil {
-					allKeyedStrings = append(allKeyedStrings, ks)
-				} else {
-					common.LogVerbose("Keyed string is nil for object at index %d", obj.GetName(common.DefaultLocalization))
-				}
-			}
-		})
-
-		charset := ffxencoding.GetCharsetForLanguage(localizationKey)
-		b.StringBytes = RebuildKeyedStrings(allKeyedStrings, charset)
-
-		if err := b.Header.Write(buf); err != nil {
-			return fmt.Errorf("error writing header: %w", err)
+		buf, err := b.encodeLanguage(localizationKey)
+		if err != nil {
+			return err
 		}
 
-		var writeErr error
-		b.Objects.RangeIndex(func(i int, obj datastore.IGlobalLocalizedTextObject) {
-			if obj != nil && writeErr == nil {
-				chunkBytes, err := obj.ToBytes(b.languageCode)
-				if err != nil {
-					writeErr = fmt.Errorf("error converting object %d to bytes: %w", i, err)
-					return
-				}
-				buf.Write(chunkBytes)
-			}
-		})
-		if writeErr != nil {
-			return writeErr
+		if err := b.writeLocalizedFile(localizationKey, filePath, buf.Bytes()); err != nil {
+			return err
 		}
-
-		buf.Write(b.StringBytes)
-
-		dir := filepath.Dir(localePath)
-		if err := common.EnsurePathExists(dir); err != nil {
-			return fmt.Errorf("error when creating directory %s: %w", dir, err)
-		}
-
-		if err := common.WriteBytesToFile(localePath, buf.Bytes()); err != nil {
-			return fmt.Errorf("error when writing file %s: %w", localePath, err)
-		}
-
-		common.LogVerbose("Wrote localized data to %s (%d bytes)", localePath, len(buf.Bytes()))
+		lastBuf = buf.Bytes()
 	}
 
-	return common.WriteBytesToFile(filePath, buf.Bytes())
+	return common.WriteBytesToFile(filePath, lastBuf)
+}
+
+func (b *BinaryFile) encodeLanguage(localizationKey string) (*bytes.Buffer, error) {
+	keyedStrings := b.collectKeyedStrings(localizationKey)
+	charset := ffxencoding.GetCharsetForLanguage(localizationKey)
+	stringBytes := RebuildKeyedStrings(keyedStrings, charset)
+
+	buf := bytes.NewBuffer(make([]byte, 0, b.Header.GetDataLength()+len(stringBytes)+0x20))
+
+	if err := b.Header.Write(buf); err != nil {
+		return nil, fmt.Errorf("error writing header: %w", err)
+	}
+
+	var writeErr error
+	b.Objects.RangeIndex(func(i int, obj datastore.IGlobalLocalizedTextObject) {
+		if obj != nil && writeErr == nil {
+			chunkBytes, err := obj.ToBytes(localizationKey)
+			if err != nil {
+				writeErr = fmt.Errorf("error converting object %d to bytes: %w", i, err)
+				return
+			}
+			buf.Write(chunkBytes)
+		}
+	})
+	if writeErr != nil {
+		return nil, writeErr
+	}
+
+	buf.Write(stringBytes)
+	return buf, nil
+}
+
+func (b *BinaryFile) collectKeyedStrings(localizationKey string) []datastore.IGlobalKeyedString {
+	var all []datastore.IGlobalKeyedString
+	b.Objects.RangeIndex(func(_ int, obj datastore.IGlobalLocalizedTextObject) {
+		for _, ks := range obj.GetLocalizedKeyedStrings(localizationKey) {
+			if ks != nil {
+				all = append(all, ks)
+			} else {
+				common.LogVerbose("Keyed string is nil for object at index %d", obj.GetName(common.DefaultLocalization))
+			}
+		}
+	})
+	return all
+}
+
+func (b *BinaryFile) writeLocalizedFile(localizationKey, filePath string, data []byte) error {
+	localePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, common.GetLocalizationRoot(localizationKey), filePath)
+	localePath = filepath.FromSlash(localePath)
+
+	dir := filepath.Dir(localePath)
+	if err := common.EnsurePathExists(dir); err != nil {
+		return fmt.Errorf("error when creating directory %s: %w", dir, err)
+	}
+
+	if err := common.WriteBytesToFile(localePath, data); err != nil {
+		return fmt.Errorf("error when writing file %s: %w", localePath, err)
+	}
+
+	common.LogVerbose("Wrote localized data to %s (%d bytes)", localePath, len(data))
+	return nil
 }
 
 func (b *BinaryFile) GetObjects() components.IList[datastore.IGlobalLocalizedTextObject] {

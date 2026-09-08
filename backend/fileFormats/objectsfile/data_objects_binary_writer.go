@@ -188,7 +188,7 @@ func ConvertFFXLocalizedDataToBytes(objects []datastore.IGlobalLocalizedTextObje
 //   - CommandTextObjectV2: Name → Description
 //
 // It must NOT be used for segments that are written at arbitrary or non-sequential
-// positions within the binary chunk (e.g., NameDescriptionEffectTextObject where the Effect
+// positions within the binary chunk (e.g., JobTextObject where the Effect
 // segment is at a separate position offset). For those cases, use direct
 // models.WriteSegmentAt instead.
 //
