@@ -25,12 +25,6 @@ func TestBinaryFile(t *testing.T) {
 type integrityCase struct {
 	pattern string
 	read    func(string) datastore.IBinaryFile
-	// expectHashDiff marca arquivos cujo reimportado comprovadamente diverge
-	// do original (ply_save.bin: +8 bytes de padding de alinhamento na tabela
-	// de strings). É assertido como diferente de propósito: se o writer um
-	// dia reproduzir o empacotamento original, o teste falha avisando que a
-	// expectativa deve ser atualizada.
-	expectHashDiff bool
 }
 
 // Arquivos exercitados por examples/main.go (runFFXExamples).
@@ -52,7 +46,7 @@ var ffxIntegrityCases = []integrityCase{
 	{pattern: "battle/kernel/monmagic2.bin", read: objectsfile.ReadNameOnlyLocalizations},
 	{pattern: "battle/kernel/build_txt.bin", read: objectsfile.ReadNameOnlyLocalizations},
 	{pattern: "battle/kernel/ply_rom.bin", read: objectsfile.ReadCommandLocalizations},
-	{pattern: "battle/kernel/ply_save.bin", read: objectsfile.ReadNameOnlyLocalizations, expectHashDiff: true},
+	{pattern: "battle/kernel/ply_save.bin", read: objectsfile.ReadNameOnlyV2Localizations},
 	{pattern: "battle/kernel/sphere.bin", read: objectsfile.ReadNameOnlyLocalizations},
 	{pattern: "battle/kernel/save_txt.bin", read: objectsfile.ReadNameOnlyLocalizations},
 	{pattern: "battle/kernel/name_txt.bin", read: objectsfile.ReadNameOnlyLocalizations},
@@ -124,11 +118,7 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 		outBytes, err := os.ReadFile(outPath)
 		Expect(err).ToNot(HaveOccurred())
 
-		if tc.expectHashDiff {
-			Expect(sha256.Sum256(outBytes)).NotTo(Equal(sha256.Sum256(origBytes)))
-		} else {
-			Expect(sha256.Sum256(outBytes)).To(Equal(sha256.Sum256(origBytes)))
-		}
+		Expect(sha256.Sum256(outBytes)).To(Equal(sha256.Sum256(origBytes)))
 	}
 
 	BeforeAll(func() {
@@ -139,7 +129,8 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 		originalResources = common.ResourcesRoot
 
 		creator = func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
-			return objectsfile.NewNameOnlyTextObject(data, stringBytes, headerLength, localization)
+			gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
+			return objectsfile.NewNameOnlyTextObject(data, stringBytes, headerLength, localization, gameVersion)
 		}
 	})
 

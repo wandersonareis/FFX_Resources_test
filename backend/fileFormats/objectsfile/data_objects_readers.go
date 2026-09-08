@@ -18,15 +18,13 @@ import (
 // Pattern path: ex: "battle/kernel/command.bin"
 func ReadNameOnlyLocalizations(patternPath string) datastore.IBinaryFile {
 	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
+	if gameVersion != 1 {
+		common.LogVerbose("ReadNameOnlyLocalizations is only applicable for FFX (v1) game version.")
+		return nil
+	}
+
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
-		switch gameVersion {
-		case 2:
-			return NewNameOnlyTextObjectV2(cBytes, sBytes, hLen, lang)
-		case 1:
-			return NewNameOnlyTextObject(cBytes, sBytes, hLen, lang)
-		default:
-			return nil, fmt.Errorf("NameOnlyTextObject is only compatible with FFX (game version 1) or FFX-2 (game version 2), but got game version %d", gameVersion)
-		}
+		return NewNameOnlyTextObject(cBytes, sBytes, hLen, lang, gameVersion)
 	}
 
 	binaryDataFile := NewBinaryFile(
@@ -47,29 +45,15 @@ func ReadNameOnlyLocalizations(patternPath string) datastore.IBinaryFile {
 	return binaryDataFile
 }
 
-// ReadDescriptionOnlyLocalizations reads description-only data from a binary file
-// and loads all available localizations for each entry.
-//
-// This function reads DescriptionOnlyTextObject entries containing description and
-// simplified description information. Each entry includes localized text for all
-// supported languages in the game.
-//
-// Only applicable for FFX (v1) game version. Returns nil for other versions.
-//
-// File format: description only data (binary format)
-// Pattern path: Variable, passed as parameter
-func ReadDescriptionOnlyLocalizations(patternPath string) datastore.IBinaryFile {
+func ReadNameOnlyV2Localizations(patternPath string) datastore.IBinaryFile {
 	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
-	if gameVersion != 1 {
-		common.LogVerbose("ReadDescriptionOnlyLocalizations is only applicable for FFX (v1) game version.")
+	if gameVersion != 1 && gameVersion != 2 {
+		common.LogVerbose("ReadNameOnlyV2Localizations is only compatible with FFX (v1) or FFX-2 (v2) game versions.")
 		return nil
 	}
 
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
-		if gameVersion == 1 {
-			return NewDescriptionOnlyTextObject(cBytes, sBytes, hLen, lang, gameVersion)
-		}
-		return nil, fmt.Errorf("DescriptionOnlyTextObject is only compatible with FFX (game version 1), but got game version %d", gameVersion)
+		return NewNameOnlyTextObjectV2(cBytes, sBytes, hLen, lang, gameVersion)
 	}
 
 	binaryDataFile := NewBinaryFile(
@@ -79,14 +63,14 @@ func ReadDescriptionOnlyLocalizations(patternPath string) datastore.IBinaryFile 
 	)
 
 	if err := binaryDataFile.LoadFromBinary(); err != nil {
-		common.LogVerbose("Error loading description-only binary data: %v", err)
+		common.LogVerbose("Error loading commands binary data: %v", err)
 		return nil
 	}
 
 	if binaryDataFile.Objects != nil && !binaryDataFile.Objects.IsEmpty() {
-		common.LogVerbose("Loaded %d description-only objects with all localizations", binaryDataFile.Objects.Len())
+		common.LogVerbose("Loaded %d commands with all localizations", binaryDataFile.Objects.Len())
+		datastore.Commands = binaryDataFile.GetObjects()
 	}
-
 	return binaryDataFile
 }
 

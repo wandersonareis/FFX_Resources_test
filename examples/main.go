@@ -343,7 +343,7 @@ func runFFXExamples() {
 	common.LogInfo("[FFX] ✓ Player room text salvos com sucesso")
 
 	// ply_save.bin
-	playerSaveRoomBinaryFile := objectsfile.ReadNameOnlyLocalizations("battle/kernel/ply_save.bin")
+	playerSaveRoomBinaryFile := objectsfile.ReadNameOnlyV2Localizations("battle/kernel/ply_save.bin")
 	common.LogInfo("[FFX] ✓ Player save text carregados: %d\n", playerSaveRoomBinaryFile.GetObjects().Len())
 	if err := playerSaveRoomBinaryFile.ExportToJson("player_save_all_localizations.json"); err != nil {
 		common.LogError("[FFX] Error exporting player save text to JSON: %v\n", err)
@@ -533,7 +533,7 @@ func runFFX2Examples() {
 	common.LogInfo("[FFX-2] ✓ Menu text salvos com sucesso")
 
 	// oversoul.bin
-	oversoulBinaryFile := objectsfile.ReadNameOnlyLocalizations("battle/kernel/oversoul.bin")
+	oversoulBinaryFile := objectsfile.ReadNameOnlyV2Localizations("battle/kernel/oversoul.bin")
 	common.LogInfo("[FFX-2] oversoul carregados: %d\n", oversoulBinaryFile.GetObjects().Len())
 	if err := oversoulBinaryFile.ExportToJson("oversoul_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting oversoul text to JSON: %v\n", err)
@@ -549,7 +549,7 @@ func runFFX2Examples() {
 	common.LogInfo("[FFX-2] ✓ Oversoul text salvos com sucesso")
 
 	// btl_txt.bin
-	battleTextBinaryFile := objectsfile.ReadNameOnlyLocalizations("battle/kernel/btl_txt.bin")
+	battleTextBinaryFile := objectsfile.ReadNameOnlyV2Localizations("battle/kernel/btl_txt.bin")
 	common.LogInfo("[FFX-2] battle text carregados: %d\n", battleTextBinaryFile.GetObjects().Len())
 	if err := battleTextBinaryFile.ExportToJson("battle_text_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting battle text to JSON: %v\n", err)
@@ -565,7 +565,7 @@ func runFFX2Examples() {
 	common.LogInfo("[FFX-2] ✓ Battle text salvos com sucesso")
 
 	// btlend_txt.bin
-	battleEndTextBinaryFile := objectsfile.ReadNameOnlyLocalizations("battle/kernel/btlend_txt.bin")
+	battleEndTextBinaryFile := objectsfile.ReadNameOnlyV2Localizations("battle/kernel/btlend_txt.bin")
 	common.LogInfo("[FFX-2] battle end text: %d\n", datastore.BattleEndTxt.Len())
 	if err := battleEndTextBinaryFile.ExportToJson("battle_end_text_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting battle end text to JSON: %v\n", err)
@@ -710,7 +710,7 @@ func runFFX2Examples() {
 	common.LogInfo("[FFX-2] ✓ player save text salvos com sucesso")
 
 	// ply_rom.bin
-	playerRoomTextBinaryFile := objectsfile.ReadNameOnlyLocalizations("battle/kernel/ply_rom.bin")
+	playerRoomTextBinaryFile := objectsfile.ReadNameOnlyV2Localizations("battle/kernel/ply_rom.bin")
 	common.LogInfo("[FFX-2] player room carregados: %d\n", playerRoomTextBinaryFile.GetObjects().Len())
 	if err := playerRoomTextBinaryFile.ExportToJson("player_rom_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting player room text to JSON: %v\n", err)

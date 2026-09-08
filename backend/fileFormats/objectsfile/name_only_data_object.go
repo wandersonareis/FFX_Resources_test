@@ -5,6 +5,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/datastore"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
 	"fmt"
 	"slices"
@@ -56,7 +57,10 @@ func getValidHeader(data []byte, max int) []byte {
 	return data[:end:end]
 }
 
-func NewNameOnlyTextObject(data []byte, stringBytes []byte, headerLength int, languageCode string) (*NameOnlyTextObject, error) {
+func NewNameOnlyTextObject(data []byte, stringBytes []byte, headerLength int, languageCode string, gameVersion int) (*NameOnlyTextObject, error) {
+	if gameVersion != 1 {
+		return nil, fmt.Errorf("NameOnlyTextObject is only compatible with FFX (game version 1), but got game version %d", gameVersion)
+	}
 	if len(data) < headerLength {
 		return nil, fmt.Errorf("insufficient data to create NameOnlyTextObject: have %d bytes, need at least %d", len(data), headerLength)
 	}
@@ -95,8 +99,9 @@ func (n *NameOnlyTextObject) ToBytes(languageCode string) ([]byte, error) {
 }
 
 func (n *NameOnlyTextObject) ToList(filename string, languageCode string) components.IList[datastore.IGlobalLocalizedTextObject] {
+	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
 	creator := func(data []byte, stringBytes []byte, headerLength int, loc string) (datastore.IGlobalLocalizedTextObject, error) {
-		return NewNameOnlyTextObject(data, stringBytes, headerLength, loc)
+		return NewNameOnlyTextObject(data, stringBytes, headerLength, loc, gameVersion)
 	}
 	return ReadDataListWithIlist(filename, languageCode, creator)
 }
@@ -152,8 +157,11 @@ func (n *NameOnlyTextObject) String() string {
 	return n.ToString(common.DefaultLocalization)
 }
 
-func NewNameOnlyTextObjectV2(data []byte, stringBytes []byte, headerLength int, languageCode string) (*NameOnlyTextObjectV2, error) {
-	if len(data) < 4 {
+func NewNameOnlyTextObjectV2(data []byte, stringBytes []byte, headerLength int, languageCode string, gameVersion int) (*NameOnlyTextObjectV2, error) {
+	if gameVersion != 1 && gameVersion != 2 {
+		return nil, fmt.Errorf("NameOnlyTextObjectV2 is only compatible with FFX (game version 1) or FFX-2 (game version 2), but got game version %d", gameVersion)
+	}
+	if len(data) < headerLength {
 		return nil, fmt.Errorf("insufficient data to create NameOnlyTextObjectV2: have %d bytes, need at least 4", len(data))
 	}
 	n := &NameOnlyTextObjectV2{
