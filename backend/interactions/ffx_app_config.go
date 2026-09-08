@@ -158,6 +158,9 @@ func (c *AppConfig) GetLocation(name string) string {
 }
 
 func (c *AppConfig) SetLocation(name, path string) {
+	if c.locations == nil {
+		c.locations = make(map[string]string)
+	}
 	c.locations[name] = path
 	_ = c.ToJson()
 }
