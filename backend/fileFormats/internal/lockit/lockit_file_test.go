@@ -67,7 +67,8 @@ var _ = Describe("LockitFile", Ordered, func() {
 		reimportTempPath = filepath.Join(temp.TempFilePath, "reimport")
 		translatePath = filepath.Join(testDataPath, "translated")
 
-		config = &interactions.AppConfig{}
+		config = interactions.NewAppConfig()
+		Expect(config).NotTo(BeNil())
 		config.SetGameVersion(2)
 		config.SetLocation("GameFilesLocation", gameLocationPath)
 		config.SetLocation("ExtractLocation", extractTempPath)
