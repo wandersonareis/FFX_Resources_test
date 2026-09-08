@@ -167,7 +167,7 @@ var _ = Describe("Data Objects JSON Readers", Ordered, func() {
 	Context("ProcessCommandsJsonFile", func() {
 		BeforeEach(func() {
 			Expect(reader.InitializeInternals()).To(Succeed())
-			objectsfile.ReadNameDescriptionLocalizations()
+			objectsfile.ReadCommandLocalizations()
 		})
 
 		It("should process commands JSON file without error", func() {

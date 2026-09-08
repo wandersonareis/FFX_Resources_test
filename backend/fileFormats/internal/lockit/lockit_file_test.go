@@ -36,7 +36,7 @@ var _ = Describe("LockitFile", Ordered, func() {
 		gameVersionDir       string
 		testDataPath         string
 		gameLocationPath     string
-		config               *interactions.FFXAppConfig
+		config               *interactions.AppConfig
 		formatter            interfaces.ITextFormatter
 		fileOptions          core.ILockitFileOptions
 		source               interfaces.ISource
@@ -67,13 +67,12 @@ var _ = Describe("LockitFile", Ordered, func() {
 		reimportTempPath = filepath.Join(temp.TempFilePath, "reimport")
 		translatePath = filepath.Join(testDataPath, "translated")
 
-		config = &interactions.FFXAppConfig{
-			FFXGameVersion:    2,
-			GameFilesLocation: gameLocationPath,
-			ExtractLocation:   extractTempPath,
-			TranslateLocation: translatePath,
-			ImportLocation:    reimportTempPath,
-		}
+		config = &interactions.AppConfig{}
+		config.SetGameVersion(2)
+		config.SetLocation("GameFilesLocation", gameLocationPath)
+		config.SetLocation("ExtractLocation", extractTempPath)
+		config.SetLocation("TranslateLocation", translatePath)
+		config.SetLocation("ImportLocation", reimportTempPath)
 		Expect(config).NotTo(BeNil())
 
 		formatter = &formatters.TxtFormatter{
@@ -89,7 +88,7 @@ var _ = Describe("LockitFile", Ordered, func() {
 		Expect(interactionService.TextFormatter()).NotTo(BeNil())
 
 		gameVersionNumber := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
-		Expect(gameVersionNumber).To(Equal(config.FFXGameVersion))
+		Expect(gameVersionNumber).To(Equal(config.GetGameVersion()))
 
 		// Initialize file options
 		fileOptions = core.NewLockitFileOptions(gameVersionNumber)

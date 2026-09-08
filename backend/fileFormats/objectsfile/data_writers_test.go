@@ -145,7 +145,7 @@ var _ = Describe("Data Writers", Ordered, func() {
 	Context("WriteAllCommandsData", func() {
 		BeforeEach(func() {
 			Expect(reader.InitializeInternals()).To(Succeed())
-			objectsfile.ReadNameDescriptionLocalizations()
+			objectsfile.ReadCommandLocalizations()
 		})
 
 		It("should write commands data to binary and verify persistence", func() {
@@ -181,7 +181,7 @@ var _ = Describe("Data Writers", Ordered, func() {
 
 			// Clear memory and reload from binary
 			datastore.Commands.Clear()
-			objectsfile.ReadNameDescriptionLocalizations()
+			objectsfile.ReadCommandLocalizations()
 
 			// Disable mods after reading
 			common.SetModsEnabled(false)

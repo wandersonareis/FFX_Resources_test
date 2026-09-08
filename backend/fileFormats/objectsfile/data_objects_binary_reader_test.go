@@ -74,12 +74,12 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 		objectsfile.MacroLookup = make(map[int]*macrodic.LocalizedMacroStringObject) */
 	})
 
-	Context("ReadNameOnlyDataObjectsWithIlist", func() {
+	Context("ReadNameOnlyTextObjectsWithIlist", func() {
 		It("should read battle text data successfully", func() {
 			// Use a known pattern path that exists in test data
 			patternPath := "battle/kernel/btl_txt.bin"
 
-			result := objectsfile.ReadNameOnlyDataObjectsWithIlist(patternPath)
+			result := objectsfile.ReadNameOnlyTextObjectsWithIlist(patternPath)
 
 			Expect(result).ToNot(BeNil())
 			Expect(result.Len()).To(BeNumerically(">", 0))
@@ -103,7 +103,7 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 		It("should return nil for non-existent file", func() {
 			patternPath := "non/existent/file.bin"
 
-			result := objectsfile.ReadNameOnlyDataObjectsWithIlist(patternPath)
+			result := objectsfile.ReadNameOnlyTextObjectsWithIlist(patternPath)
 
 			Expect(result).ToNot(BeNil())
 			Expect(result.IsEmpty()).To(BeTrue())
@@ -112,19 +112,19 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 		It("should handle empty pattern path gracefully", func() {
 			patternPath := ""
 
-			result := objectsfile.ReadNameOnlyDataObjectsWithIlist(patternPath)
+			result := objectsfile.ReadNameOnlyTextObjectsWithIlist(patternPath)
 
 			Expect(result).ToNot(BeNil())
 			Expect(result.IsEmpty()).To(BeTrue())
 		})
 	})
 
-	Context("ReadNameDescriptionObjectsWithIlist", func() {
+	Context("ReadCommandObjectsWithIlist", func() {
 		It("should read key items data successfully", func() {
 			// Use a known pattern path that exists in test data
 			patternPath := "battle/kernel/important.bin"
 
-			result := objectsfile.ReadNameDescriptionObjectsWithIlist(patternPath)
+			result := objectsfile.ReadCommandObjectsWithIlist(patternPath)
 
 			Expect(result).ToNot(BeNil())
 			Expect(result.Len()).To(BeNumerically(">", 0))
@@ -154,7 +154,7 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 		It("should read commands data successfully", func() {
 			patternPath := "battle/kernel/command.bin"
 
-			result := objectsfile.ReadNameDescriptionObjectsWithIlist(patternPath)
+			result := objectsfile.ReadCommandObjectsWithIlist(patternPath)
 
 			Expect(result).ToNot(BeNil())
 			Expect(result.Len()).To(BeNumerically(">", 0))
@@ -176,7 +176,7 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 		It("should return nil for non-existent file", func() {
 			patternPath := "invalid/path/file.bin"
 
-			result := objectsfile.ReadNameDescriptionObjectsWithIlist(patternPath)
+			result := objectsfile.ReadCommandObjectsWithIlist(patternPath)
 
 			Expect(result).ToNot(BeNil())
 			Expect(result.IsEmpty()).To(BeTrue())
@@ -185,7 +185,7 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 		It("should handle empty pattern path gracefully", func() {
 			patternPath := ""
 
-			result := objectsfile.ReadNameDescriptionObjectsWithIlist(patternPath)
+			result := objectsfile.ReadCommandObjectsWithIlist(patternPath)
 
 			Expect(result).ToNot(BeNil())
 			Expect(result.IsEmpty()).To(BeTrue())
@@ -199,8 +199,8 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 			filename := filepath.Join(common.GetLocalizationRoot(common.DefaultLocalization), patternPath)
 
 			// Name-only creator function
-			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) datastore.IGlobalLocalizedTextObject {
-				return objectsfile.NewNameOnlyDataObject(data, stringBytes, headerLength, localization)
+			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
+				return objectsfile.NewNameOnlyTextObject(data, stringBytes, headerLength, localization)
 			}
 
 			result := objectsfile.ReadDataListWithIlist(filename, common.DefaultLocalization, creator)
@@ -219,8 +219,8 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 			filename := filepath.Join(common.GetLocalizationRoot(common.DefaultLocalization), patternPath)
 
 			// Name-description creator function
-			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) datastore.IGlobalLocalizedTextObject {
-				return objectsfile.NewNameDescriptionTextObject(data, stringBytes, headerLength, localization)
+			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
+				return objectsfile.NewCommandTextObject(data, stringBytes, headerLength, localization)
 			}
 
 			result := objectsfile.ReadDataListWithIlist(filename, common.DefaultLocalization, creator)
@@ -236,8 +236,8 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 		It("should return nil for non-existent file", func() {
 			filename := "/non/existent/file.bin"
 
-			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) datastore.IGlobalLocalizedTextObject {
-				return objectsfile.NewNameOnlyDataObject(data, stringBytes, headerLength, localization)
+			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
+				return objectsfile.NewNameOnlyTextObject(data, stringBytes, headerLength, localization)
 			}
 
 			result := objectsfile.ReadDataListWithIlist(filename, common.DefaultLocalization, creator)
@@ -250,8 +250,8 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 			patternPath := "battle/kernel/btl_txt.bin"
 			filename := filepath.Join(common.GetLocalizationRoot("us"), patternPath)
 
-			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) datastore.IGlobalLocalizedTextObject {
-				return objectsfile.NewNameOnlyDataObject(data, stringBytes, headerLength, localization)
+			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
+				return objectsfile.NewNameOnlyTextObject(data, stringBytes, headerLength, localization)
 			}
 
 			result := objectsfile.ReadDataListWithIlist(filename, "us", creator)
@@ -273,8 +273,8 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 			Expect(err).ToNot(HaveOccurred())
 			defer os.Remove(corruptedFile)
 
-			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) datastore.IGlobalLocalizedTextObject {
-				return objectsfile.NewNameOnlyDataObject(data, stringBytes, headerLength, localization)
+			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
+				return objectsfile.NewNameOnlyTextObject(data, stringBytes, headerLength, localization)
 			}
 
 			result := objectsfile.ReadDataListWithIlist(corruptedFile, common.DefaultLocalization, creator)
@@ -289,8 +289,8 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 			// First create a list with base objects
 			patternPath := "battle/kernel/btl_txt.bin"
 
-			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) datastore.IGlobalLocalizedTextObject {
-				return objectsfile.NewNameOnlyDataObject(data, stringBytes, headerLength, localization)
+			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
+				return objectsfile.NewNameOnlyTextObject(data, stringBytes, headerLength, localization)
 			}
 
 			filePath := filepath.Join(common.GetLocalizationRoot(common.DefaultLocalization), patternPath)
@@ -315,8 +315,8 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 		It("should handle empty objects list gracefully", func() {
 			emptyList := components.NewEmptyList[datastore.IGlobalLocalizedTextObject]()
 
-			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) datastore.IGlobalLocalizedTextObject {
-				return objectsfile.NewNameOnlyDataObject(data, stringBytes, headerLength, localization)
+			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
+				return objectsfile.NewNameOnlyTextObject(data, stringBytes, headerLength, localization)
 			}
 
 			// Should not panic
@@ -329,8 +329,8 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 			// Test the IsEmpty() check in the function
 			emptyList := components.NewEmptyList[datastore.IGlobalLocalizedTextObject]()
 
-			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) datastore.IGlobalLocalizedTextObject {
-				return objectsfile.NewNameOnlyDataObject(data, stringBytes, headerLength, localization)
+			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
+				return objectsfile.NewNameOnlyTextObject(data, stringBytes, headerLength, localization)
 			}
 
 			// Should exit early due to IsEmpty() check
@@ -346,12 +346,12 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 			objects := components.NewList[datastore.IGlobalLocalizedTextObject](1)
 
 			// Add a mock object
-			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) datastore.IGlobalLocalizedTextObject {
-				return objectsfile.NewNameOnlyDataObject(data, stringBytes, headerLength, localization)
+			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
+				return objectsfile.NewNameOnlyTextObject(data, stringBytes, headerLength, localization)
 			}
 
 			mockData := make([]byte, 4)
-			mockObject := creator(mockData, []byte("test"), 4, "us")
+			mockObject, _ := creator(mockData, []byte("test"), 4, "us")
 			objects.Add(mockObject)
 
 			// Try to populate with non-existent path - should not panic
@@ -367,8 +367,8 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 			// Create objects with a known pattern
 			patternPath := "battle/kernel/btl_txt.bin"
 
-			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) datastore.IGlobalLocalizedTextObject {
-				return objectsfile.NewNameOnlyDataObject(data, stringBytes, headerLength, localization)
+			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
+				return objectsfile.NewNameOnlyTextObject(data, stringBytes, headerLength, localization)
 			}
 
 			filePath := filepath.Join(common.GetLocalizationRoot(common.DefaultLocalization), patternPath)
@@ -397,7 +397,7 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 			// Test the complete workflow that mimics ReadBattleTextWithAllLocalizations
 			patternPath := "battle/kernel/btl_txt.bin"
 
-			result := objectsfile.ReadNameOnlyDataObjectsWithIlist(patternPath)
+			result := objectsfile.ReadNameOnlyTextObjectsWithIlist(patternPath)
 
 			if result != nil && result.Len() > 0 {
 				Expect(result.Len()).To(BeNumerically(">", 0))
@@ -422,7 +422,7 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 			// Test the complete workflow that mimics ReadKeyItemsWithAllLocalizations
 			patternPath := "battle/kernel/important.bin"
 
-			result := objectsfile.ReadNameDescriptionObjectsWithIlist(patternPath)
+			result := objectsfile.ReadCommandObjectsWithIlist(patternPath)
 
 			if result != nil && result.Len() > 0 {
 				Expect(result.Len()).To(BeNumerically(">", 0))
@@ -450,8 +450,8 @@ var _ = Describe("Data Objects Binary Reader", Ordered, func() {
 		})
 
 		It("should verify that different pattern paths produce different results", func() {
-			battleTextResult := objectsfile.ReadNameOnlyDataObjectsWithIlist("battle/kernel/btl_txt.bin")
-			keyItemsResult := objectsfile.ReadNameDescriptionObjectsWithIlist("battle/kernel/important.bin")
+			battleTextResult := objectsfile.ReadNameOnlyTextObjectsWithIlist("battle/kernel/btl_txt.bin")
+			keyItemsResult := objectsfile.ReadCommandObjectsWithIlist("battle/kernel/important.bin")
 
 			// Both should exist and have different characteristics
 			if battleTextResult != nil && keyItemsResult != nil {

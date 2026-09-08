@@ -41,7 +41,7 @@ var _ = Describe("KrnlFile", Ordered, func() {
 		translatePath         string
 		testDataPath          string
 		gameLocationPath      string
-		config                *interactions.FFXAppConfig
+		config                *interactions.AppConfig
 		mockNotifierService   *testcommon.MockNotifier
 		temp                  *common.TempProvider
 		log                   *testcommon.MockLogHandler
@@ -65,13 +65,12 @@ var _ = Describe("KrnlFile", Ordered, func() {
 		reimportTempPath = filepath.Join(temp.TempFilePath, "reimport")
 		translatePath = filepath.Join(testDataPath, "translated")
 
-		config = &interactions.FFXAppConfig{
-			FFXGameVersion:    2,
-			GameFilesLocation: gameLocationPath,
-			ExtractLocation:   extractTempPath,
-			TranslateLocation: translatePath,
-			ImportLocation:    reimportTempPath,
-		}
+		config = &interactions.AppConfig{}
+		config.SetGameVersion(2)
+		config.SetLocation("GameFilesLocation", gameLocationPath)
+		config.SetLocation("ExtractLocation", extractTempPath)
+		config.SetLocation("TranslateLocation", translatePath)
+		config.SetLocation("ImportLocation", reimportTempPath)
 
 		formatter = &formatters.TxtFormatter{
 			GameVersionDir:  gameVersionDir,

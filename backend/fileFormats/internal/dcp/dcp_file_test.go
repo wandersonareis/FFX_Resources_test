@@ -46,7 +46,7 @@ var _ = Describe("DcpFile", Ordered, func() {
 		dcpFileReader     dcp.IDcpFileExtractor
 		dcpFileWriter     dcp.IDcpFileCompressor
 		verifyService     components.IVerificationService
-		config            *interactions.FFXAppConfig
+		config            *interactions.AppConfig
 		temp              *common.TempProvider
 		log               *testcommon.MockLogHandler
 	)
@@ -173,20 +173,19 @@ var _ = Describe("DcpFile", Ordered, func() {
 			reimportTempPath = filepath.Join(temp.TempFilePath, "reimport")
 			translatePath = filepath.Join(testDataPath, "translated")
 
-			config = &interactions.FFXAppConfig{
-				FFXGameVersion:    2,
-				GameFilesLocation: gameLocationPath,
-				ExtractLocation:   extractTempPath,
-				TranslateLocation: translatePath,
-				ImportLocation:    reimportTempPath,
-			}
+		config = &interactions.AppConfig{}
+		config.SetGameVersion(2)
+		config.SetLocation("GameFilesLocation", gameLocationPath)
+		config.SetLocation("ExtractLocation", extractTempPath)
+		config.SetLocation("TranslateLocation", translatePath)
+		config.SetLocation("ImportLocation", reimportTempPath)
 
 			formatter = &formatters.TxtFormatter{
 				GameVersionDir: gameVersionDir,
 				GameFilesPath:  translatePath,
 			}
 
-			dcpFileProperties = models.NewDcpFileOptions(models.GameVersion(config.FFXGameVersion))
+			dcpFileProperties = models.NewDcpFileOptions(models.GameVersion(config.GetGameVersion()))
 
 			interactions.NewInteractionServiceWithConfig(config)
 			interactions.NewInteractionWithTextFormatter(formatter)
@@ -255,13 +254,12 @@ var _ = Describe("DcpFile", Ordered, func() {
 			reimportTempPath = filepath.Join(temp.TempFilePath, "reimport")
 			translatePath = filepath.Join(testDataPath, "translated")
 
-			config = &interactions.FFXAppConfig{
-				FFXGameVersion:    1,
-				GameFilesLocation: gameLocationPath,
-				ExtractLocation:   extractTempPath,
-				TranslateLocation: translatePath,
-				ImportLocation:    reimportTempPath,
-			}
+			config = &interactions.AppConfig{}
+			config.SetGameVersion(1)
+			config.SetLocation("GameFilesLocation", gameLocationPath)
+			config.SetLocation("ExtractLocation", extractTempPath)
+			config.SetLocation("TranslateLocation", translatePath)
+			config.SetLocation("ImportLocation", reimportTempPath)
 
 			formatter = &formatters.TxtFormatter{
 				GameVersionDir: gameVersionDir,

@@ -116,7 +116,7 @@ var _ = Describe("Data Objects Binary Writer", Ordered, func() {
 
 		It("should export and read back unchanged name-only data", func() {
 			// Read original data
-			originalData := objectsfile.ReadNameOnlyDataObjectsWithIlist(patternPath)
+			originalData := objectsfile.ReadNameOnlyTextObjectsWithIlist(patternPath)
 			Expect(originalData).ToNot(BeNil())
 			Expect(originalData.Len()).To(BeNumerically(">", 0))
 
@@ -131,7 +131,7 @@ var _ = Describe("Data Objects Binary Writer", Ordered, func() {
 			Expect(err).To(BeNil())
 
 			// Read back the exported data
-			exportedData := objectsfile.ReadNameOnlyDataObjectsWithIlist(patternPath)
+			exportedData := objectsfile.ReadNameOnlyTextObjectsWithIlist(patternPath)
 			Expect(exportedData).ToNot(BeNil())
 			Expect(exportedData.Len()).To(Equal(originalData.Len()))
 
@@ -146,7 +146,7 @@ var _ = Describe("Data Objects Binary Writer", Ordered, func() {
 
 		It("should export modified name-only data correctly", func() {
 			// Read original data
-			originalData := objectsfile.ReadNameOnlyDataObjectsWithIlist(patternPath)
+			originalData := objectsfile.ReadNameOnlyTextObjectsWithIlist(patternPath)
 			Expect(originalData).ToNot(BeNil())
 			Expect(originalData.Len()).To(BeNumerically(">", 0))
 
@@ -179,7 +179,7 @@ var _ = Describe("Data Objects Binary Writer", Ordered, func() {
 			Expect(err).To(BeNil())
 
 			// Read back the exported data
-			exportedData := objectsfile.ReadNameOnlyDataObjectsWithIlist(patternPath)
+			exportedData := objectsfile.ReadNameOnlyTextObjectsWithIlist(patternPath)
 			Expect(exportedData).ToNot(BeNil())
 
 			// Verify the modification was applied and persisted
@@ -198,7 +198,7 @@ var _ = Describe("Data Objects Binary Writer", Ordered, func() {
 		})
 	})
 
-	Context("ExportLocalizedTextData - Name Description Objects", func() {
+	Context("ExportLocalizedTextData - Command Objects", func() {
 		var patternPath string
 
 		BeforeEach(func() {
@@ -211,7 +211,7 @@ var _ = Describe("Data Objects Binary Writer", Ordered, func() {
 
 		It("should export and read back unchanged name-description data", func() {
 			// Read original data
-			originalData := objectsfile.ReadNameDescriptionObjectsWithIlist(patternPath)
+			originalData := objectsfile.ReadCommandObjectsWithIlist(patternPath)
 			Expect(originalData).ToNot(BeNil())
 			Expect(originalData.Len()).To(BeNumerically(">", 0))
 
@@ -230,7 +230,7 @@ var _ = Describe("Data Objects Binary Writer", Ordered, func() {
 			Expect(err).To(BeNil())
 
 			// Read back the exported data
-			exportedData := objectsfile.ReadNameDescriptionObjectsWithIlist(patternPath)
+			exportedData := objectsfile.ReadCommandObjectsWithIlist(patternPath)
 			Expect(exportedData).ToNot(BeNil())
 			Expect(exportedData.Len()).To(Equal(originalData.Len()))
 
@@ -250,7 +250,7 @@ var _ = Describe("Data Objects Binary Writer", Ordered, func() {
 
 		It("should export modified name-description data correctly", func() {
 			// Read original data
-			originalData := objectsfile.ReadNameDescriptionObjectsWithIlist(patternPath)
+			originalData := objectsfile.ReadCommandObjectsWithIlist(patternPath)
 			Expect(originalData).ToNot(BeNil())
 			Expect(originalData.Len()).To(BeNumerically(">", 0))
 
@@ -287,7 +287,7 @@ var _ = Describe("Data Objects Binary Writer", Ordered, func() {
 			Expect(err).To(BeNil())
 
 			// Read back the exported data
-			exportedData := objectsfile.ReadNameDescriptionObjectsWithIlist(patternPath)
+			exportedData := objectsfile.ReadCommandObjectsWithIlist(patternPath)
 			Expect(exportedData).ToNot(BeNil())
 
 			// Verify the modifications were applied and persisted
@@ -325,8 +325,8 @@ var _ = Describe("Data Objects Binary Writer", Ordered, func() {
 			Expect(err).To(BeNil())
 
 			// Parse binary data into objects
-			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) datastore.IGlobalLocalizedTextObject {
-				return objectsfile.NewNameOnlyDataObject(data, stringBytes, headerLength, localization)
+			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
+				return objectsfile.NewNameOnlyTextObject(data, stringBytes, headerLength, localization)
 			}
 
 			originalObjects := objectsfile.ParseDataListWithIlist(originalBinaryData, common.DefaultLocalization, creator)
@@ -376,8 +376,8 @@ var _ = Describe("Data Objects Binary Writer", Ordered, func() {
 			Expect(err).To(BeNil())
 
 			// Parse binary data into objects
-			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) datastore.IGlobalLocalizedTextObject {
-				return objectsfile.NewNameDescriptionTextObject(data, stringBytes, headerLength, localization)
+			creator := func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
+				return objectsfile.NewCommandTextObject(data, stringBytes, headerLength, localization)
 			}
 
 			originalObjects := objectsfile.ParseDataListWithIlist(originalBinaryData, common.DefaultLocalization, creator)

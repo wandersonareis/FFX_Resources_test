@@ -7,6 +7,7 @@ import (
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/fileFormats/objectsfile"
+	"ffxresources/backend/interactions"
 	"fmt"
 )
 
@@ -470,18 +471,18 @@ func runFFXExamples() {
 }
 
 func runFFX2Examples() {
-	fmt.Println("Extraindo arquivos de name+description do FFX-2 (v2) para JSON...")
+	common.LogInfo("Extraindo arquivos de name+description do FFX-2 (v2) para JSON...")
 
 	// Arquivos em comum com a v1 (mesmos nomes existem no FFX-2).
 	// important.bin
 	keyItemsBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/important.bin")
-	fmt.Printf("[FFX-2] ✓ Itens-chave carregados: %d\n", keyItemsBinaryFile.GetObjects().Len())
+	common.LogInfo("[FFX-2] ✓ Itens-chave carregados: %d\n", keyItemsBinaryFile.GetObjects().Len())
 	keyItemsBinaryFile.ExportToJson("key_items_all_localizations.json")
-	fmt.Println("[FFX-2] ✓ Itens-chave exportados para JSON")
+	common.LogInfo("[FFX-2] ✓ Itens-chave exportados para JSON")
 	keyItemsBinaryFile.ImportFromJson("key_items_all_localizations.json")
-	fmt.Println("[FFX-2] ✓ Itens-chave editados e salvos com sucesso")
+	common.LogInfo("[FFX-2] ✓ Itens-chave editados e salvos com sucesso")
 	keyItemsBinaryFile.SaveToBinary("battle/kernel/important.bin")
-	fmt.Println("[FFX-2] ✓ Itens-chave salvos com sucesso")
+	common.LogInfo("[FFX-2] ✓ Itens-chave salvos com sucesso")
 
 	// commands.bin
 	commandsBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/command.bin")

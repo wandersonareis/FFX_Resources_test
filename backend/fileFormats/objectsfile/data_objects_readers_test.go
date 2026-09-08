@@ -94,7 +94,7 @@ var _ = Describe("Data Objects Readers", Ordered, func() {
 			Expect(datastore.Commands.Len()).To(Equal(0))
 
 			// Act
-			objectsfile.ReadNameDescriptionLocalizations()
+			objectsfile.ReadCommandLocalizations()
 
 			// Assert
 			Expect(datastore.Commands.Len()).To(BeNumerically(">", 0))
@@ -111,7 +111,7 @@ var _ = Describe("Data Objects Readers", Ordered, func() {
 			Expect(datastore.Commands.Len()).To(Equal(0))
 
 			// Act
-			objectsfile.ReadNameDescriptionLocalizations()
+			objectsfile.ReadCommandLocalizations()
 
 			// Assert
 			Expect(datastore.Commands.Len()).To(Equal(0))
@@ -121,7 +121,7 @@ var _ = Describe("Data Objects Readers", Ordered, func() {
 	Context("ReadCommandsWithAllLocalizations - JSON Roundtrip", func() {
 		It("should produce identical JSON after export, import, save binary, reload and re-export", func() {
 			// 1. Load from binary
-			binFile := objectsfile.ReadNameDescriptionLocalizations()
+			binFile := objectsfile.ReadCommandLocalizations()
 			Expect(datastore.Commands.Len()).To(BeNumerically(">", 0))
 
 			// Get maxIndex from header
@@ -169,7 +169,7 @@ var _ = Describe("Data Objects Readers", Ordered, func() {
 			defer func() { common.GameFilesRoot = origGameFilesRoot }()
 
 			// 7. Load from temp binary
-			newBinFile := objectsfile.ReadNameDescriptionLocalizations()
+			newBinFile := objectsfile.ReadCommandLocalizations()
 			Expect(newBinFile.GetObjects().Len()).To(BeNumerically(">", 0))
 
 			// 8. Export to JSON from reloaded binary
@@ -593,7 +593,7 @@ var _ = Describe("Data Objects Readers", Ordered, func() {
 	Context("Integration Tests", func() {
 		It("should load multiple data types successfully", func() {
 			// Act - Load multiple data types
-			objectsfile.ReadNameDescriptionLocalizations()
+			objectsfile.ReadCommandLocalizations()
 			objectsfile.ReadKeyItemsWithAllLocalizations()
 			objectsfile.ReadItemsWithAllLocalizations()
 			objectsfile.ReadBattleTextWithAllLocalizations()
