@@ -53,6 +53,10 @@ func NewInteractionService() *InteractionService {
 			TranslateLocation: newTranslateLocation(translateDir, config),
 			ImportLocation:    newImportLocation(importDir, config),
 		}
+
+		if gameDir != "" {
+			common.SetGameFilesRoot(gameDir)
+		}
 	}
 	return interactionInstance
 }
@@ -72,6 +76,10 @@ func NewInteractionServiceWithConfig(config *AppConfig) *InteractionService {
 	s.TranslateLocation = newTranslateLocation(translateDir, config)
 	s.ImportLocation = newImportLocation(importDir, config)
 	s.mu.Unlock()
+
+	if gameDir != "" {
+		common.SetGameFilesRoot(gameDir)
+	}
 
 	return s
 }

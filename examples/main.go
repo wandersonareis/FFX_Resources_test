@@ -327,7 +327,7 @@ func runFFXExamples() {
 	common.LogInfo("[FFX] ✓ Panel text salvos com sucesso")
 
 	// ply_rom.bin
-	playerRoomBinaryFile := objectsfile.ReadNameOnlyLocalizations("battle/kernel/ply_rom.bin")
+	playerRoomBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/ply_rom.bin")
 	common.LogInfo("[FFX] ✓ Player room text carregados: %d\n", playerRoomBinaryFile.GetObjects().Len())
 	if err := playerRoomBinaryFile.ExportToJson("player_rom_all_localizations.json"); err != nil {
 		common.LogError("[FFX] Error exporting player room text to JSON: %v\n", err)
@@ -645,7 +645,7 @@ func runFFX2Examples() {
 	}
 	common.LogInfo("[FFX-2] ✓ monster magic text salvos com sucesso")
 
-	// monter.bin
+	// monster.bin
 	monsterBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/monster.bin")
 	common.LogInfo("[FFX-2] monster carregados: %d\n", monsterBinaryFile.GetObjects().Len())
 	if err := monsterBinaryFile.ExportToJson("monster_all_localizations.json"); err != nil {
@@ -661,7 +661,7 @@ func runFFX2Examples() {
 	}
 	common.LogInfo("[FFX-2] ✓ monsters text salvos com sucesso")
 
-	// monter2.bin
+	// monster2.bin
 	monster2BinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/monster2.bin")
 	common.LogInfo("[FFX-2] monster2 carregados: %d\n", monster2BinaryFile.GetObjects().Len())
 	if err := monster2BinaryFile.ExportToJson("monster2_all_localizations.json"); err != nil {
@@ -694,7 +694,7 @@ func runFFX2Examples() {
 	common.LogInfo("[FFX-2] ✓ plate text salvos com sucesso")
 
 	// ply_save.bin
-	playerSaveBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/ply_save.bin")
+	playerSaveBinaryFile := objectsfile.ReadNameOnlyLocalizations("battle/kernel/ply_save.bin")
 	common.LogInfo("[FFX-2] player save: %d\n", playerSaveBinaryFile.GetObjects().Len())
 	if err := playerSaveBinaryFile.ExportToJson("player_save_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting player save text to JSON: %v\n", err)
@@ -712,11 +712,11 @@ func runFFX2Examples() {
 	// ply_rom.bin
 	playerRoomTextBinaryFile := objectsfile.ReadNameOnlyLocalizations("battle/kernel/ply_rom.bin")
 	common.LogInfo("[FFX-2] player room carregados: %d\n", playerRoomTextBinaryFile.GetObjects().Len())
-	if err := playerRoomTextBinaryFile.ExportToJson("player_room_all_localizations.json"); err != nil {
+	if err := playerRoomTextBinaryFile.ExportToJson("player_rom_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting player room text to JSON: %v\n", err)
 	}
 	common.LogInfo("[FFX-2] ✓ Player room text exportados para JSON")
-	if err := playerRoomTextBinaryFile.ImportFromJson("player_room_all_localizations.json"); err != nil {
+	if err := playerRoomTextBinaryFile.ImportFromJson("player_rom_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error importing player room text from JSON: %v\n", err)
 	}
 	common.LogInfo("[FFX-2] ✓ Player room text editados e salvos com sucesso")

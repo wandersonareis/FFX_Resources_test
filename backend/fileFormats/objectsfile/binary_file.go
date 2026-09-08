@@ -6,8 +6,8 @@ import (
 	"errors"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
-	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/datastore"
+	"ffxresources/backend/interactions"
 	"fmt"
 	"io"
 	"os"
@@ -108,7 +108,23 @@ func (b *BinaryFile) resolveFilePath() string {
 	return filepath.Join(common.GetLocalizationRoot(b.languageCode), b.patternPath)
 }
 
+func interactionGameFilesDir() string {
+	svc := interactions.NewInteractionService()
+	if svc == nil || svc.GameLocation == nil {
+		return ""
+	}
+	return svc.GameLocation.GetTargetDirectory()
+}
+
 func (b *BinaryFile) readFile() ([]byte, error) {
+	if base := interactionGameFilesDir(); base != "" {
+		if data, err := b.readFileFromBase(base); err == nil {
+			return data, nil
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+	}
+
 	fileAccessor, err := common.NewFileAccessor(b.resolveFilePath())
 	if err != nil {
 		common.LogVerbose("Error accessing file: %v", err)
@@ -122,6 +138,38 @@ func (b *BinaryFile) readFile() ([]byte, error) {
 
 	data, err := os.ReadFile(fileAccessor.ResolvedPath)
 	if err != nil {
+		common.LogVerbose("Error reading file: %v", err)
+		return nil, errors.New("failed to read file")
+	}
+	return data, nil
+}
+
+func (b *BinaryFile) readFileFromBase(base string) ([]byte, error) {
+	rel := b.resolveFilePath()
+
+	if !common.AreModsEnabled() {
+		data, err := os.ReadFile(filepath.Join(base, rel))
+		if err != nil {
+			if os.IsNotExist(err) {
+				common.LogVerbose("File does not exist: %s", b.patternPath)
+				return nil, err
+			}
+			common.LogVerbose("Error reading file: %v", err)
+			return nil, errors.New("failed to read file")
+		}
+		return data, nil
+	}
+
+	if data, err := os.ReadFile(filepath.Join(base, common.ModsFolder, rel)); err == nil {
+		return data, nil
+	}
+
+	data, err := os.ReadFile(filepath.Join(base, rel))
+	if err != nil {
+		if os.IsNotExist(err) {
+			common.LogVerbose("File does not exist: %s", b.patternPath)
+			return nil, err
+		}
 		common.LogVerbose("Error reading file: %v", err)
 		return nil, errors.New("failed to read file")
 	}
@@ -221,86 +269,7 @@ func (b *BinaryFile) ImportFromJson(filePath string) error {
 }
 
 func (b *BinaryFile) SaveToBinary(filePath string) error {
-	var lastBuf []byte
-
-	for localizationKey := range common.SupportedLanguages {
-		if localizationKey != "us" {
-			continue // Skip non-US localizations for now
-		}
-
-		buf, err := b.encodeLanguage(localizationKey)
-		if err != nil {
-			return err
-		}
-
-		if err := b.writeLocalizedFile(localizationKey, filePath, buf.Bytes()); err != nil {
-			return err
-		}
-		lastBuf = buf.Bytes()
-	}
-
-	return common.WriteBytesToFile(filePath, lastBuf)
-}
-
-func (b *BinaryFile) encodeLanguage(localizationKey string) (*bytes.Buffer, error) {
-	keyedStrings := b.collectKeyedStrings(localizationKey)
-	charset := ffxencoding.GetCharsetForLanguage(localizationKey)
-	stringBytes := RebuildKeyedStrings(keyedStrings, charset)
-
-	buf := bytes.NewBuffer(make([]byte, 0, b.Header.GetDataLength()+len(stringBytes)+0x20))
-
-	if err := b.Header.Write(buf); err != nil {
-		return nil, fmt.Errorf("error writing header: %w", err)
-	}
-
-	var writeErr error
-	b.Objects.RangeIndex(func(i int, obj datastore.IGlobalLocalizedTextObject) {
-		if obj != nil && writeErr == nil {
-			chunkBytes, err := obj.ToBytes(localizationKey)
-			if err != nil {
-				writeErr = fmt.Errorf("error converting object %d to bytes: %w", i, err)
-				return
-			}
-			buf.Write(chunkBytes)
-		}
-	})
-	if writeErr != nil {
-		return nil, writeErr
-	}
-
-	buf.Write(stringBytes)
-	return buf, nil
-}
-
-func (b *BinaryFile) collectKeyedStrings(localizationKey string) []datastore.IGlobalKeyedString {
-	var all []datastore.IGlobalKeyedString
-	b.Objects.RangeIndex(func(_ int, obj datastore.IGlobalLocalizedTextObject) {
-		for _, ks := range obj.GetLocalizedKeyedStrings(localizationKey) {
-			if ks != nil {
-				all = append(all, ks)
-			} else {
-				common.LogVerbose("Keyed string is nil for object at index %d", obj.GetName(common.DefaultLocalization))
-			}
-		}
-	})
-	return all
-}
-
-func (b *BinaryFile) writeLocalizedFile(localizationKey, filePath string, data []byte) error {
-	localePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, common.GetLocalizationRoot(localizationKey), filePath)
-	localePath = filepath.FromSlash(localePath)
-
-	dir := filepath.Dir(localePath)
-	if err := common.EnsurePathExists(dir); err != nil {
-		return fmt.Errorf("error when creating directory %s: %w", dir, err)
-	}
-
-	if err := common.WriteBytesToFile(localePath, data); err != nil {
-		return fmt.Errorf("error when writing file %s: %w", localePath, err)
-	}
-
-	common.LogVerbose("Wrote localized data to %s (%d bytes)", localePath, len(data))
-	return nil
+	return SaveBinaryFile(b, filePath)
 }
 
 func (b *BinaryFile) GetObjects() components.IList[datastore.IGlobalLocalizedTextObject] {
