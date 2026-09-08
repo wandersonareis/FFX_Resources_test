@@ -5,117 +5,12 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/datastore"
-	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 )
-
-// ReadNameOnlyTextObjectsWithIlist reads binary data from a specified pattern path
-// and creates NameOnlyTextObject entries with all available localizations.
-//
-// This function reads LocalizedTextObject entries containing only name information
-// for various game elements that don't require descriptions. Each entry includes
-// localized text for all supported languages in the game, making it suitable for
-// simple text elements like labels, button text, or single-word entries.
-//
-// File format: name only data (binary format)
-// Pattern path: Variable, passed as parameter (e.g., "battle/kernel/btl_txt.bin")
-//
-// Parameters:
-//   - patternPath: Relative path to the binary file within the localization directory
-//
-// Returns: IList[ILocalizedTextObject] containing NameOnlyTextObject entries with full localization data
-func ReadNameOnlyTextObjectsWithIlist(patternPath string) components.IList[datastore.IGlobalLocalizedTextObject] {
-	filePath := filepath.Join(common.GetLocalizationRoot(common.DefaultLocalization), patternPath)
-
-	creator := func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
-		var (
-			obj datastore.IGlobalLocalizedTextObject
-			err error
-		)
-		if common.GetGameVersionString() == "ffx2" {
-			obj, err = NewNameOnlyTextObjectV2(data, stringBytes, headerLength, localization)
-		} else {
-			obj, err = NewNameOnlyTextObject(data, stringBytes, headerLength, localization)
-		}
-		if err != nil {
-			return nil, err
-		}
-		return obj, nil
-	}
-
-	nameObjects := ReadDataListWithIlist(filePath, common.DefaultLocalization, creator)
-	if nameObjects == nil || nameObjects.IsEmpty() {
-		common.LogVerbose("No name-only data objects found for %s\n", patternPath)
-		return components.NewList[datastore.IGlobalLocalizedTextObject](0)
-	}
-
-	PopulateDataObjectLocalizationsWithIlist(patternPath, nameObjects, creator)
-
-	common.LogVerbose("Loading %d name-only data objects...\n", nameObjects.Len())
-
-	return nameObjects
-}
-
-// ReadCommandObjectsWithIlist reads binary data from a specified pattern path
-// and creates CommandTextObject entries with all available localizations.
-//
-// This function reads LocalizedTextObject entries containing both name and description information
-// for various game elements that require detailed text. Each entry includes localized text for all
-// supported languages in the game, making it suitable for complex game objects like items, commands,
-// abilities, and other elements that need both a title and detailed description.
-//
-// File format: name and description data (binary format)
-// Pattern path: Variable, passed as parameter (e.g., "battle/kernel/command.bin")
-//
-// Parameters:
-//   - patternPath: Relative path to the binary file within the localization directory
-//
-// Returns: IList[ILocalizedTextObject] containing CommandTextObject entries with full localization data
-func ReadCommandObjectsWithIlist(patternPath string) components.IList[datastore.IGlobalLocalizedTextObject] {
-	filePath := filepath.Join(common.GetLocalizationRoot(common.DefaultLocalization), patternPath)
-
-	creator := func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
-		gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
-		switch gameVersion {
-		case 2:
-			obj, err := NewCommandTextObjectV2(data, stringBytes, headerLength, localization, gameVersion)
-			if err != nil {
-				return nil, err
-			}
-			return obj, nil
-		case 1:
-			obj, err := NewCommandTextObject(data, stringBytes, headerLength, localization, gameVersion)
-			if err != nil {
-				return nil, err
-			}
-			return obj, nil
-		default:
-			return nil, fmt.Errorf("unsupported game version: %d", gameVersion)
-		}
-
-	}
-
-	var commandObjects components.IList[datastore.IGlobalLocalizedTextObject]
-	if common.GetGameVersionString() == "ffx2" {
-		commandObjects = ReadDataListWithIlistV2(filePath, common.DefaultLocalization, creator)
-	} else {
-		commandObjects = ReadDataListWithIlist(filePath, common.DefaultLocalization, creator)
-	}
-	if commandObjects == nil || commandObjects.IsEmpty() {
-		common.LogVerbose("No command objects found for %s\n", patternPath)
-		return components.NewList[datastore.IGlobalLocalizedTextObject](0)
-	}
-
-	PopulateDataObjectLocalizationsWithIlist(patternPath, commandObjects, creator)
-
-	common.LogVerbose("Loading %d command objects...\n", commandObjects.Len())
-
-	return commandObjects
-}
 
 // PopulateDataObjectLocalizationsWithIlist populates localization data for all supported languages
 // by reading corresponding binary files for each language and merging the localized content
@@ -140,55 +35,6 @@ func PopulateDataObjectLocalizationsWithIlist(path string, objects components.IL
 		var localizationData components.IList[datastore.IGlobalLocalizedTextObject]
 		if common.GetGameVersionString() == "ffx2" {
 			localizationData = ReadDataListWithIlistV2(fullPath, locKey, creator)
-		} else {
-			localizationData = ReadDataListWithIlist(fullPath, locKey, creator)
-		}
-		if localizationData != nil {
-			maxLen := min(localizationData.Len(), objects.Len())
-			items := objects.Items()
-			locItems := localizationData.Items()
-			for i := range maxLen {
-				if items[i] == nil || locItems[i] == nil {
-					continue
-				}
-				items[i].SetLocalizations(locItems[i])
-			}
-		}
-	}
-}
-
-// PopulateDataObjectLocalizations populates localization data for all supported languages
-// by reading corresponding binary files for each language and merging the localized content
-// into the existing LocalizedTextObject instances within the provided IList.
-//
-// This function iterates through all supported languages, reads the binary files for each
-// language, and applies the localized text content to the corresponding objects in the IList,
-// leveraging IList's content() method for efficient access to the underlying collection.
-//
-// Parameters:
-//   - path: Relative path to the binary file pattern (e.g., "battle/kernel/command.bin")
-//   - objects: IList[ILocalizedTextObject] containing instances to be populated with localizations
-//   - creator: Function that creates LocalizedTextObject instances from binary data
-func PopulateDataObjectLocalizations(path string, objects components.IList[datastore.IGlobalLocalizedTextObject], creator func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error)) {
-	if objects == nil || objects.IsEmpty() {
-		return
-	}
-
-	for locKey := range common.SupportedLanguages {
-		fullPath := filepath.Join(common.GetLocalizationRoot(locKey), path)
-
-		var localizationData components.IList[datastore.IGlobalLocalizedTextObject]
-		if common.GetGameVersionString() == "ffx2" {
-			binary := NewBinaryFile(path, creator, locKey)
-			if binary == nil {
-				common.LogVerbose("Error creating binary file for localization %s", locKey)
-				continue
-			}
-			if err := binary.LoadFromBinary(); err != nil {
-				common.LogVerbose("Error loading binary file: %v", err)
-				continue
-			}
-			localizationData = binary.GetObjects()
 		} else {
 			localizationData = ReadDataListWithIlist(fullPath, locKey, creator)
 		}

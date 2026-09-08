@@ -2,7 +2,6 @@ package objectsfile
 
 const (
 	nameSegmentDefaultPosition                = 0x00
-	descriptionSegmentDefaultPosition         = 0x04
 	sensorTextSegmentDefaultPosition          = 0x04
 	simplifiedSensorTextSegmentPosition       = 0x08
 	scanTextSegmentDefaultPosition            = 0x0C

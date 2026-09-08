@@ -145,9 +145,6 @@ func updateObjectByType(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextO
 		updateNameEntry(jsonEntry, localizedTextObj.Name)
 	case *NameOnlyTextObjectV2:
 		updateNameEntry(jsonEntry, localizedTextObj.Name)
-	case *DescriptionOnlyTextObject:
-		updateDescriptionEntry(jsonEntry, localizedTextObj.Description)
-		updateSimplifiedDescriptionEntry(jsonEntry, localizedTextObj.SimplifiedDescription)
 	case *JobTextObject:
 		updateNameEntry(jsonEntry, localizedTextObj.Name)
 		updateDescriptionEntry(jsonEntry, localizedTextObj.Description)
