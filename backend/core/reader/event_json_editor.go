@@ -2,7 +2,6 @@ package reader
 
 import (
 	"bytes"
-	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
 	"ffxresources/backend/common"
@@ -14,169 +13,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 	"time"
 )
-
-func EditAndSaveEventCSVFiles() error {
-	csvPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits")
-
-	if !common.IsPathExists(csvPath) {
-		common.LogVerbose("Directory not found: %s", csvPath)
-		return fmt.Errorf("directory not found: %s", csvPath)
-	}
-
-	err := filepath.Walk(csvPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() && strings.HasSuffix(strings.ToLower(path), ".csv") {
-			common.LogVerbose("Processing CSV file: %s", path)
-			return editAndSaveEventFromCSV(path)
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		common.LogVerbose("Error processing CSV files: %v", err)
-		return err
-	}
-
-	return nil
-}
-
-func editAndSaveEventFromCSV(csvPath string) error {
-	// Best-effort reconstruction of the exported per-event metadata sidecar, if present.
-	if entries, metaErr := models.ReadEventsSidecar(csvPath); metaErr == nil {
-		for _, entry := range entries {
-		if entry.Metadata != nil && entry.Metadata.FileInfo.Path != "" {
-			common.LogVerbose("Reconstructed metadata for event %s: %s", entry.ID, entry.Metadata.FileInfo.Path)
-		}
-		}
-	} else {
-		common.LogVerbose("No metadata sidecar for %s: %v", csvPath, metaErr)
-	}
-
-	lines, err := csvToList(csvPath)
-	if err != nil {
-		common.LogVerbose("Error reading CSV file %s: %v", csvPath, err)
-		return err
-	}
-
-	if len(lines) <= 1 {
-		common.LogVerbose("CSV file is empty or has only header: %s", csvPath)
-		return nil
-	}
-
-	header := lines[0]
-	idCol := -1
-	stringIndexCol := -1
-	colToLocalization := make(map[int]string)
-
-	for i, col := range header {
-		colLower := strings.ToLower(strings.TrimSpace(col))
-		switch colLower {
-		case "string index":
-			stringIndexCol = i
-		case "id":
-			idCol = i
-		default:
-			if _, exists := common.SupportedLanguages[colLower]; exists {
-				colToLocalization[i] = colLower
-			}
-		}
-	}
-
-	if idCol < 0 || stringIndexCol < 0 {
-		common.LogVerbose("Required columns not found in file: %s (id=%d, string index=%d)", csvPath, idCol, stringIndexCol)
-		return nil
-	}
-
-	values := lines[1:] // Skip header
-	processedEventIDs := make(map[string]bool)
-
-	for _, cells := range values {
-		if len(cells) <= idCol || len(cells) <= stringIndexCol {
-			continue
-		}
-
-		eventID := strings.TrimSpace(cells[idCol])
-		stringIndexStr := strings.TrimSpace(cells[stringIndexCol])
-
-		stringIndex, err := strconv.Atoi(stringIndexStr)
-		if err != nil {
-			common.LogVerbose("Invalid string index '%s' in file %s", stringIndexStr, csvPath)
-			continue
-		}
-
-		eventFile := event.GetEvent(eventID)
-		if eventFile == nil {
-			common.LogVerbose("Event not found: %s", eventID)
-			continue
-		}
-
-		if stringIndex < 0 || stringIndex >= len(eventFile.Strings) {
-			common.LogVerbose("String index out of range for event %s: %d", eventID, stringIndex)
-			continue
-		}
-
-		processedEventIDs[eventID] = true
-
-		objToEdit := eventFile.Strings[stringIndex]
-		if common.IsVerboseMode() {
-			var localizedStrings []string
-			for colIdx := range colToLocalization {
-				if colIdx < len(cells) {
-					localizedStrings = append(localizedStrings, cells[colIdx])
-				}
-			}
-			fmt.Printf("Copying [\"%s\"] into %s[%d]\n",
-				strings.Join(localizedStrings, "\",\""), eventID, stringIndex)
-
-		}
-
-		for colIdx, localization := range colToLocalization {
-			if colIdx < len(cells) {
-				newString := strings.TrimSpace(cells[colIdx])
-				if newString != "" {
-					fieldString := objToEdit.GetLocalizedContent(localization)
-					if fieldString != nil {
-						fieldString.SetRegularString(newString)
-					}
-				}
-			}
-		}
-	}
-
-	for eventID := range processedEventIDs {
-		if err := ExportEventStringsToLocalizations(eventID); err != nil {
-			common.LogVerbose("Error saving event %s: %v", eventID, err)
-			return fmt.Errorf("error saving event %s: %w", eventID, err)
-		}
-	}
-
-	return nil
-}
-
-func csvToList(filename string) ([][]string, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	reader := csv.NewReader(file)
-	reader.FieldsPerRecord = -1
-
-	records, err := reader.ReadAll()
-	if err != nil {
-		return nil, err
-	}
-
-	return records, nil
-}
 
 func ExportEventStringsToLocalizations(eventID string) error {
 	eventFile := event.GetEvent(eventID)
@@ -477,7 +315,7 @@ type MacroLocalizationData struct {
 }
 
 // convertEventExports maps the wrapped export payload back into the reader-internal
-// EventFileData representation used by the CSV/JSON editors.
+// EventFileData representation used by the JSON editors.
 func convertEventExports(loaded []models.EventFileExport) []EventFileData {
 	events := make([]EventFileData, 0, len(loaded))
 	for _, e := range loaded {

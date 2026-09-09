@@ -24,31 +24,6 @@ func getLocalizationKeys() []string {
 	return keys
 }
 
-func ExampleWriteManagerUsage() {
-	fmt.Println("=== Write Manager Usage Example ===")
-
-	eventsFolder, err := common.NewFileAccessor(common.GetPathOriginalsEvent())
-	if err != nil {
-		return
-	}
-	// Ensure events are loaded first
-	if err := reader.ReadAllEvents(eventsFolder); err != nil { // false = don't skip blitzball
-		fmt.Printf("Error loading events: %v\n", err)
-		return
-	}
-
-	fmt.Println("\n1. Writing CSV files for all localizations:")
-	ExportAllEventsToCSV()
-
-	fmt.Println("\n3. Writing CSV files for Japanese localization:")
-	ExportAllEventsToCsvForLocalization("jp")
-
-	fmt.Println("\n5. Writing files for English localization:")
-	ExportAllEventsToCsvForLocalization("us")
-
-	fmt.Println("\n=== Write operations completed ===")
-}
-
 type MacroStringData struct {
 	Index          int    `json:"index"`
 	RegularText    string `json:"regular_text"`

@@ -12,7 +12,6 @@ const (
 	DirExtracted  = "extracted"
 	DirTranslated = "translated"
 	DirReimported = "reimported"
-	csvLineRegex  = `,(?=([^\"]*\"[^\"]*\")*[^\"]*$)`
 )
 
 var (

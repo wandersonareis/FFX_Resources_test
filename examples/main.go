@@ -16,7 +16,7 @@ MENU PRINCIPAL DE EXEMPLOS
 =========================
 
 Este arquivo contém o main() principal que organiza e executa todas as funções de exemplo
-dos editores de eventos CSV e JSON.
+dos editores de eventos JSON.
 */
 func main() {
 	fmt.Println("=== EXEMPLOS DO SISTEMA DE EVENTOS FFX ===")
@@ -778,13 +778,10 @@ func readEvents() error {
 
 func showMainMenu() {
 	// ===== EXEMPLOS BÁSICOS =====
-	writer.ExampleWriteManagerUsage()
 	ExportMacroDictionaryExample() // Exemplo de exportação de dicionário de macros (JSON com metadados)
-	// ExampleCsvEditorUsage()
 	// ExampleJSONEditorUsage()
 
 	// ===== WORKFLOWS COMPLETOS =====
-	// ExampleCompleteWorkflow()
 	// ExampleCompleteJSONWorkflow()
 	// ===== EDIÇÃO DIRECIONADA =====
 	//writer.WriteStringsEventForAllLocalizationsJSON("znkd1500", true)
@@ -794,8 +791,7 @@ func showMainMenu() {
 	writer.WriteMacroDictionaryJSON(true)
 	//reader.EditAndSaveMacroDictJSONFiles(true) // Exemplo de fluxo completo de exportação/importação
 	reader.EditAndSaveSpecificEventFromJSON("znkd1500") // Edita e salva o evento "znkd1500" do JSON
-	// ===== COMPARAÇÃO CSV vs JSON =====
-	// demoWorkflowCSV()
+	// ===== WORKFLOW JSON =====
 	// demoWorkflowJSON()
 	// exemploEditorEspecificoDemo()	// ===== EXEMPLO ATIVO (descomente para testar) =====
 	// Exemplo básico ativo para teste:

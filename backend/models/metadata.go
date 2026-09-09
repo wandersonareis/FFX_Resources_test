@@ -6,7 +6,6 @@ import (
 	"ffxresources/backend/common"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // FileMetadata wraps the SpiraFileInfo of an ORIGINAL game binary so an exported
@@ -96,50 +95,6 @@ func saveNoEscape(v any, filePath string) error {
 		return err
 	}
 	return os.WriteFile(filePath, buf.Bytes(), 0644)
-}
-
-// ---- sidecar metadata (CSV) ----------------------------------------------------
-
-// SidecarMetadataPath returns the path of the side-by-side .meta.json file for an exported file.
-func SidecarMetadataPath(exportedPath string) string {
-	ext := filepath.Ext(exportedPath)
-	return strings.TrimSuffix(exportedPath, ext) + ".meta.json"
-}
-
-// WriteSidecarMetadata writes metadata as a bare {"data": ...} sidecar file (legacy helper).
-func WriteSidecarMetadata(exportedPath string, info *SpiraFileInfo) error {
-	if info == nil {
-		return nil
-	}
-	return SaveDataFile(NewFileMetadata(info), SidecarMetadataPath(exportedPath))
-}
-
-// ReadSidecarMetadata reads the SpiraFileInfo from a side-by-side .meta.json file.
-func ReadSidecarMetadata(exportedPath string) (*SpiraFileInfo, error) {
-	meta, err := LoadDataFile[*FileMetadata](SidecarMetadataPath(exportedPath))
-	if err != nil {
-		return nil, err
-	}
-	if meta == nil {
-		return nil, nil
-	}
-	return &meta.FileInfo, nil
-}
-
-// EventMetadataEntry links an event ID to the metadata of its original binary.
-type EventMetadataEntry struct {
-	ID       string        `json:"id"`
-	Metadata *FileMetadata `json:"metadata"`
-}
-
-// WriteEventsSidecar writes the per-event binary metadata array for a CSV export.
-func WriteEventsSidecar(entries []EventMetadataEntry, csvPath string) error {
-	return SaveDataFile(entries, SidecarMetadataPath(csvPath))
-}
-
-// ReadEventsSidecar reads the per-event binary metadata array for a CSV export.
-func ReadEventsSidecar(csvPath string) ([]EventMetadataEntry, error) {
-	return LoadDataFile[[]EventMetadataEntry](SidecarMetadataPath(csvPath))
 }
 
 // ---- export payload types ------------------------------------------------------

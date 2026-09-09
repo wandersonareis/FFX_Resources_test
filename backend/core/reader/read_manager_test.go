@@ -169,21 +169,6 @@ var _ = Describe("ReadManager", Ordered, func() {
 	})
 
 	Context("should read all event files", func() {
-		It("should read all event files and populate the EventFiles map", func() {
-			// Initialize internals to read event files
-			Expect(reader.InitializeInternals()).To(Succeed())
-
-			resolvedPath, err := common.NewFileAccessor(common.GetPathOriginalsEvent())
-			Expect(err).ToNot(HaveOccurred(), "Resolving events directory should not return an error")
-
-			Expect(reader.ReadAllEvents(resolvedPath)).To(Succeed(), "Reading all events should not return an error")
-
-			// Verify that EventFiles map is populated
-			Expect(event.HasEvents()).To(BeTrue(), "Events should be populated in datastore")
-			writer.ExportAllEventsToCSV()
-			Expect(reader.EditAndSaveEventCSVFiles()).To(Succeed())
-		})
-
 		It("should read event file and write event file binary successfully", func() {
 			// Initialize internals to read event files
 			err := reader.InitializeInternals()
