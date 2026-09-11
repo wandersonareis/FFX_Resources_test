@@ -10,7 +10,7 @@ import (
 
 type EventFile struct {
 	ID                 string
-	Version            int
+	Version            common.GameVersion
 	EventScript        *AtelScriptObject // This would need to be defined separately
 	ScriptBytes        []byte
 	JapaneseTextBytes  []byte
@@ -24,7 +24,7 @@ const (
 	DefaultAssumedChunkCount = 10
 )
 
-func NewEventFile(id string, bytes []byte, version int) *EventFile {
+func NewEventFile(id string, bytes []byte, version common.GameVersion) *EventFile {
 	ef := &EventFile{
 		ID:      id,
 		Version: version,

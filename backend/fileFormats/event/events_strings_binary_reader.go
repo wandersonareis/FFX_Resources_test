@@ -247,7 +247,7 @@ func buildEventFilePaths(eventID string) EventFilePaths {
 //     to avoid coupling low-level decoding to global state.
 //
 // Returns: EventFile object with binary data loaded, or error if reading fails
-func ReadEventBinaryFile(eventID string, pathAccessor common.FileAccessor, version int) (*EventFile, error) {
+func ReadEventBinaryFile(eventID string, pathAccessor common.FileAccessor, version common.GameVersion) (*EventFile, error) {
 	if !pathAccessor.Exists {
 		return nil, fmt.Errorf("event file not found: %s", pathAccessor.ResolvedPath)
 	}
