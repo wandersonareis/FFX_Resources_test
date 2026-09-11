@@ -11,19 +11,21 @@ import (
 
 type KeyedString struct {
 	Charset string
+	Version int
 /* 	Offset  uint16
 	Key     uint16 */
 	Segment models.Segment
 	Bytes   []byte
 }
 
-func NewKeyedString(charset string, segment models.Segment, data []byte) datastore.IGlobalKeyedString {
+func NewKeyedString(charset string, segment models.Segment, data []byte, version int) datastore.IGlobalKeyedString {
 	if segment.Offset == 0 && segment.Key == 0 {
 		return nil
 	}
 
 	ks := &KeyedString{
 		Charset: charset,
+		Version: version,
 		/* Offset:  segment.Offset,
 		Key:     segment.Key, */
 		Segment: segment,
@@ -92,7 +94,7 @@ func (ks *KeyedString) String() string {
 }
 
 func (ks *KeyedString) GetString() string {
-	return converter.BytesToString(ks.Bytes, ks.Charset)
+	return converter.BytesToString(ks.Bytes, ks.Charset, ks.Version)
 }
 
 func (ks *KeyedString) IsEmpty() bool {
@@ -103,17 +105,17 @@ func (ks *KeyedString) SetString(str, newCharset string) {
 	if newCharset != "" && newCharset != ks.Charset {
 		ks.Charset = newCharset
 	}
-	ks.Bytes = converter.StringToBytes(str, ks.Charset)
+	ks.Bytes = converter.StringToBytes(str, ks.Charset, models.GameVersion(ks.Version))
 }
 
-func RebuildKeyedStrings(strings []datastore.IGlobalKeyedString, charset string) []byte {
+func RebuildKeyedStrings(strings []datastore.IGlobalKeyedString, charset string, version models.GameVersion) []byte {
 	var buf bytes.Buffer
 
 	for _, ks := range strings {
 		s := ks.GetString()
 
 		ks.SetOffset(models.Offset(buf.Len()))
-		converter.FillByteList(s, &buf, charset)
+		converter.FillByteList(s, &buf, charset, version)
 	}
 
 	return buf.Bytes()

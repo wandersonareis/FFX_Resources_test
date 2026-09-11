@@ -109,15 +109,15 @@ func NewCommandTextObject(bytes []byte, stringBytes []byte, headerLength int, la
 		HeaderLength:          headerLength,
 	}
 
-	if err := n.mapBytes(stringBytes, languageCode); err != nil {
+	if err := n.mapBytes(stringBytes, languageCode, gameVersion); err != nil {
 		return nil, err
 	}
 	return n, nil
 }
 
-func (n *CommandTextObject) mapBytes(stringBytes []byte, languageCode string) error {
+func (n *CommandTextObject) mapBytes(stringBytes []byte, languageCode string, version int) error {
 	r := bytes.NewReader(n.Bytes)
-	return readStringSegments(r, stringBytes, languageCode,
+	return readStringSegments(r, stringBytes, languageCode, version,
 		n.Name,
 		n.SimplifiedName,
 		n.Description,

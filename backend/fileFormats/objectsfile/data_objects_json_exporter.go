@@ -10,6 +10,7 @@ import (
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
 )
 
@@ -333,9 +334,14 @@ func buildEventStringDataJSON(index int, str interface{ GetLocalizedString(strin
 	return stringData
 }
 
+// currentGameVersion resolves the active game version for versioned event lookups.
+func currentGameVersion() models.GameVersion {
+	return interactions.CurrentGameVersion()
+}
+
 // processEventFromMemory processes an event from memory and creates EventFileDataJSON
 func processEventFromMemory(eventID string, localizationKeys []string) *EventFileDataJSON {
-	eventFile := event.GetEvent(eventID)
+	eventFile := event.GetEvent(currentGameVersion(), eventID)
 	if eventFile == nil || eventFile.Strings == nil || len(eventFile.Strings) == 0 {
 		return nil
 	}
@@ -364,7 +370,8 @@ func processEventFromFile(eventID string, localizationKeys []string) *EventFileD
 		common.LogVerbose("Exporting event file to JSON: %s", eventID)
 	}
 
-	eventFileStrings, err := event.ReadLocalizedEventStrings(eventID)
+	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+	eventFileStrings, err := event.ReadLocalizedEventStrings(eventID, version)
 	if err != nil {
 		common.LogVerbose("Error loading localized strings: %v", err)
 		return nil
@@ -427,7 +434,7 @@ func writeEventJSONFile(events []EventFileDataJSON, fileName string) error {
 func ExportAllEventsToJSON() error {
 	fileName := "events_all_localizations.json"
 	localizationKeys := getSortedLocalizationKeys()
-	eventIDs := event.GetAllEventIDs()
+	eventIDs := event.GetAllEventIDs(currentGameVersion())
 
 	var allEvents []EventFileDataJSON
 	var count int
@@ -449,7 +456,7 @@ func ExportAllEventsToJSON() error {
 
 // ExportEventsForLocalizationToJSON exports event data for a specific language to a JSON file.
 func ExportEventsForLocalizationToJSON(languageCode string) error {
-	eventIDs := event.GetAllEventIDs()
+	eventIDs := event.GetAllEventIDs(currentGameVersion())
 	localizationKeys := []string{languageCode}
 
 	var allEvents []EventFileDataJSON

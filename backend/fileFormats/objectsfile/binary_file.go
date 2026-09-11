@@ -77,8 +77,8 @@ func (h *BinaryHeaderV2) GetDataLength() int {
 	return int(h.HeaderSize)
 }
 
-func NewBinaryHeader() IBinaryHeader {
-	if common.GetGameVersionString() == "ffx2" {
+func NewBinaryHeader(version int) IBinaryHeader {
+	if version == 2 {
 		return &BinaryHeaderV2{}
 	}
 	return &BinaryHeaderV1{}
@@ -93,14 +93,16 @@ type BinaryFile struct {
 	creator      CreatorFunc
 	languageCode string
 	patternPath  string
+	Version      int
 }
 
-func NewBinaryFile(patternPath string, creator CreatorFunc, languageCode string) *BinaryFile {
+func NewBinaryFile(patternPath string, creator CreatorFunc, languageCode string, version int) *BinaryFile {
 	return &BinaryFile{
-		Header:       NewBinaryHeader(),
+		Header:       NewBinaryHeader(version),
 		patternPath:  patternPath,
 		languageCode: languageCode,
 		creator:      creator,
+		Version:      version,
 	}
 }
 
@@ -199,7 +201,7 @@ func (b *BinaryFile) LoadFromBinary() error {
 
 	b.buildObjects(dataBytes)
 
-	PopulateDataObjectLocalizationsWithIlist(b.patternPath, b.Objects, b.creator)
+	PopulateDataObjectLocalizationsWithIlist(b.patternPath, b.Objects, b.creator, b.Version)
 	return nil
 }
 

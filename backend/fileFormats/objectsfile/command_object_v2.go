@@ -32,16 +32,16 @@ func NewCommandTextObjectV2(bytes []byte, stringBytes []byte, headerLength int, 
 		HeaderLength: headerLength,
 	}
 
-	if err := n.mapBytes(stringBytes, languageCode); err != nil {
+	if err := n.mapBytes(stringBytes, languageCode, gameVersion); err != nil {
 		return nil, err
 	}
 	return n, nil
 }
 
-func (n *CommandTextObjectV2) mapBytes(stringBytes []byte, languageCode string) error {
+func (n *CommandTextObjectV2) mapBytes(stringBytes []byte, languageCode string, version int) error {
 	r := bytes.NewReader(n.Bytes)
 
-	if err := readStringSegments(r, stringBytes, languageCode, n.Name, n.Description); err != nil {
+	if err := readStringSegments(r, stringBytes, languageCode, version, n.Name, n.Description); err != nil {
 		common.LogError("Error reading CommandTextObjectV2 segments: %v", err)
 		return err
 	}

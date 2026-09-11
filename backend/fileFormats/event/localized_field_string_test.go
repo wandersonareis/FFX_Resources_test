@@ -3,6 +3,7 @@ package event_test
 import (
 	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/models"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -47,7 +48,7 @@ var _ = Describe("LocalizedFieldStringObject", func() {
 
 	Describe("NewLocalizedFieldStringObjectWithContent", func() {
 		It("should create object with initial content", func() {
-			fieldString := event.NewFieldString(charset, 0x00000010, 0x00000010, testBytes)
+			fieldString := event.NewFieldString(charset, 0x00000010, 0x00000010, testBytes, 1)
 			newObj := event.NewLocalizedFieldStringObjectWithContent("us", fieldString)
 
 			Expect(newObj).ToNot(BeNil())
@@ -58,7 +59,7 @@ var _ = Describe("LocalizedFieldStringObject", func() {
 	Describe("SetLocalizedContent", func() {
 		Context("when setting new content", func() {
 			It("should store the content for the localization", func() {
-				fieldString := event.NewFieldString(charset, 0x00000010, 0x00000010, testBytes)
+				fieldString := event.NewFieldString(charset, 0x00000010, 0x00000010, testBytes, 1)
 				obj.SetLocalizedContent("us", fieldString)
 
 				Expect(obj.GetLocalizedContent("us")).To(Equal(fieldString))
@@ -66,11 +67,11 @@ var _ = Describe("LocalizedFieldStringObject", func() {
 
 			It("should overwrite existing non-empty content", func() {
 				// Set initial content
-				fieldString1 := event.NewFieldString(charset, 0x00000010, 0x00000010, testBytes)
+				fieldString1 := event.NewFieldString(charset, 0x00000010, 0x00000010, testBytes, 1)
 				obj.SetLocalizedContent("us", fieldString1)
 
 				// Set new content
-				fieldString2 := event.NewFieldString(charset, 0x00000011, 0x00000011, testBytes)
+				fieldString2 := event.NewFieldString(charset, 0x00000011, 0x00000011, testBytes, 1)
 				obj.SetLocalizedContent("us", fieldString2)
 
 				Expect(obj.GetLocalizedContent("us")).To(Equal(fieldString2))
@@ -78,7 +79,7 @@ var _ = Describe("LocalizedFieldStringObject", func() {
 
 			It("should not overwrite existing content with empty content", func() {
 				// Set initial content
-				fieldString1 := event.NewFieldString(charset, 0x00000010, 0x00000010, testBytes)
+				fieldString1 := event.NewFieldString(charset, 0x00000010, 0x00000010, testBytes, 1)
 				obj.SetLocalizedContent("us", fieldString1)
 
 				// Try to set empty content (offset pointing to null)
@@ -97,7 +98,7 @@ var _ = Describe("LocalizedFieldStringObject", func() {
 
 	Describe("ReadAndSetLocalizedContent", func() {
 		It("should read and set content from byte data", func() {
-			obj.ReadAndSetLocalizedContent("us", testBytes, 0x00000008, 0x0000000C)
+			obj.ReadAndSetLocalizedContent("us", testBytes, 0x00000008, 0x0000000C, 1)
 
 			content := obj.GetLocalizedContent("us")
 			str := content.GetRegularString()
@@ -108,14 +109,14 @@ var _ = Describe("LocalizedFieldStringObject", func() {
 		})
 
 		It("should handle nil bytes gracefully", func() {
-			obj.ReadAndSetLocalizedContent("us", nil, 0x00000010, 0x00000014)
+			obj.ReadAndSetLocalizedContent("us", nil, 0x00000010, 0x00000014, 1)
 			Expect(obj.GetLocalizedContent("us")).To(BeNil())
 		})
 	})
 
 	Describe("GetLocalizedContent", func() {
 		It("should return content for existing localization", func() {
-			fieldString := event.NewFieldString(charset, 0x00000010, 0x00000010, testBytes)
+			fieldString := event.NewFieldString(charset, 0x00000010, 0x00000010, testBytes, 1)
 			obj.SetLocalizedContent("us", fieldString)
 
 			result := obj.GetLocalizedContent("us")
@@ -130,7 +131,7 @@ var _ = Describe("LocalizedFieldStringObject", func() {
 
 	Describe("GetLocalizedString", func() {
 		It("should return string for existing localization", func() {
-			fieldString := event.NewFieldString(charset, 0x00000008, 0x00000008, testBytes)
+			fieldString := event.NewFieldString(charset, 0x00000008, 0x00000008, testBytes, 1)
 			obj.SetLocalizedContent("us", fieldString)
 
 			result := obj.GetLocalizedString("us")
@@ -145,7 +146,7 @@ var _ = Describe("LocalizedFieldStringObject", func() {
 
 	Describe("GetDefaultContent", func() {
 		It("should return US content as default", func() {
-			fieldString := event.NewFieldString(charset, 0x00000010, 0x00000010, testBytes)
+			fieldString := event.NewFieldString(charset, 0x00000010, 0x00000010, testBytes, 1)
 			obj.SetLocalizedContent("us", fieldString)
 
 			result := obj.GetDefaultContent()
@@ -161,8 +162,8 @@ var _ = Describe("LocalizedFieldStringObject", func() {
 	Describe("CopyInto", func() {
 		It("should copy all content into another object", func() {
 			// Setup source object
-			fieldString1 := event.NewFieldString(charset, 0x00000010, 0x00000010, testBytes)
-			fieldString2 := event.NewFieldString(charset, 0x00000014, 0x00000014, testBytes)
+			fieldString1 := event.NewFieldString(charset, 0x00000010, 0x00000010, testBytes, 1)
+			fieldString2 := event.NewFieldString(charset, 0x00000014, 0x00000014, testBytes, 1)
 
 			obj.SetLocalizedContent("us", fieldString1)
 			obj.SetLocalizedContent("jp", fieldString2)
@@ -182,8 +183,8 @@ var _ = Describe("LocalizedFieldStringObject", func() {
 	Describe("WriteAllContent", func() {
 		It("should format all content with localization names", func() {
 			// Setup content for multiple localizations
-			fieldString1 := event.NewFieldString(charset, 0x00000008, 0x00000008, testBytes)
-			fieldString2 := event.NewFieldString(charset, 0x0000000C, 0x0000000C, testBytes)
+			fieldString1 := event.NewFieldString(charset, 0x00000008, 0x00000008, testBytes, 1)
+			fieldString2 := event.NewFieldString(charset, 0x0000000C, 0x0000000C, testBytes, 1)
 
 			obj.SetLocalizedContent("us", fieldString1)
 			obj.SetLocalizedContent("jp", fieldString2)
@@ -205,7 +206,7 @@ var _ = Describe("LocalizedFieldStringObject", func() {
 
 	Describe("String", func() {
 		It("should return string representation of default content", func() {
-			fieldString := event.NewFieldString(charset, 0x00000008, 0x00000008, testBytes)
+			fieldString := event.NewFieldString(charset, 0x00000008, 0x00000008, testBytes, 1)
 			obj.SetLocalizedContent("us", fieldString)
 
 			result := obj.String()
@@ -237,6 +238,6 @@ func setupLocalizedCharMaps() {
 	usReverseMap['D'] = 0x53
 	usReverseMap['E'] = 0x54
 
-	ffxencoding.SetCharMap("us", usMap, usReverseMap)
-	ffxencoding.SetCharMap("jp", usMap, usReverseMap)
+	ffxencoding.SetCharMap(models.FFX, "us", usMap, usReverseMap)
+	ffxencoding.SetCharMap(models.FFX, "jp", usMap, usReverseMap)
 }

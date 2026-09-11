@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/encoding"
+	"ffxresources/backend/models"
 	"fmt"
 	"path/filepath"
 )
@@ -17,8 +18,8 @@ import (
 // that the current state of events (updated or not) is exported.
 //
 // Returns: error if no events are loaded or if any export operation fails
-func ExportAllEventsForLocalizations() error {
-	eventIDs := GetAllEventIDs()
+func ExportAllEventsForLocalizations(gameVersion models.GameVersion) error {
+	eventIDs := GetAllEventIDs(gameVersion)
 	if len(eventIDs) == 0 {
 		return fmt.Errorf("no events loaded in datastore")
 	}
@@ -29,7 +30,7 @@ func ExportAllEventsForLocalizations() error {
 	var failedEvents []string
 
 	for _, eventID := range eventIDs {
-		if err := ExportEventStringsToLocalizations(eventID); err != nil {
+		if err := ExportEventStringsToLocalizations(gameVersion, eventID); err != nil {
 			common.LogVerbose("Failed to export event %s: %v", eventID, err)
 			failedEvents = append(failedEvents, eventID)
 			continue
@@ -58,11 +59,12 @@ func ExportAllEventsForLocalizations() error {
 // - String pointers/references only
 //
 // Parameters:
+//   - gameVersion: Game version (FFX / FFX-2)
 //   - eventID: The unique identifier for the event (e.g., "ev001", "btl_001")
 //
 // Returns: error if event is not found or export fails
-func ExportEventStringsToLocalizations(eventID string) error {
-	eventFile := GetEvent(eventID)
+func ExportEventStringsToLocalizations(gameVersion models.GameVersion, eventID string) error {
+	eventFile := GetEvent(gameVersion, eventID)
 	if eventFile == nil {
 		return fmt.Errorf("event not found: %s", eventID)
 	}
@@ -77,7 +79,7 @@ func ExportEventStringsToLocalizations(eventID string) error {
 
 	pathPattern := filepath.Join("event/obj_ps3/", eventID[:2], eventID, eventID+".bin")
 
-	return writeEventStringsToAllLocalizations(pathPattern, eventFile.Strings)
+	return writeEventStringsToAllLocalizations(pathPattern, eventFile.Strings, eventFile.Version)
 }
 
 // writeEventStringsToAllLocalizations writes event string data to binary files for all
@@ -91,9 +93,10 @@ func ExportEventStringsToLocalizations(eventID string) error {
 // Parameters:
 //   - pathPattern: Relative path pattern for the event binary files
 //   - localizedStrings: Slice of LocalizedFieldStringObject containing the event text data
+//   - version: Game version as int (1 = FFX, 2 = FFX-2), used for empty placeholders
 //
 // Returns: error if directory creation or file writing fails
-func writeEventStringsToAllLocalizations(pathPattern string, localizedStrings []*LocalizedFieldStringObject) error {
+func writeEventStringsToAllLocalizations(pathPattern string, localizedStrings []*LocalizedFieldStringObject, version int) error {
 	common.LogVerbose("Writing event strings to: %s", pathPattern)
 
 	if len(localizedStrings) == 0 {
@@ -106,7 +109,7 @@ func writeEventStringsToAllLocalizations(pathPattern string, localizedStrings []
 		localePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, localizationRoot, pathPattern)
 		localePath = filepath.FromSlash(localePath)
 
-		stringBytes, err := convertEventStringsToBytes(localizedStrings, localizationKey)
+		stringBytes, err := convertEventStringsToBytes(localizedStrings, localizationKey, version)
 		if err != nil {
 			return fmt.Errorf("error converting event strings to bytes (localization %s): %w", localizationKey, err)
 		}
@@ -142,15 +145,16 @@ func writeEventStringsToAllLocalizations(pathPattern string, localizedStrings []
 // Parameters:
 //   - localizedStrings: Slice of LocalizedFieldStringObject to convert
 //   - languageCode: Target language code for the conversion
+//   - version: Game version as int (1 = FFX, 2 = FFX-2)
 //
 // Returns: byte slice containing the binary data, or error if conversion fails
-func convertEventStringsToBytes(localizedStrings []*LocalizedFieldStringObject, languageCode string) ([]byte, error) {
+func convertEventStringsToBytes(localizedStrings []*LocalizedFieldStringObject, languageCode string, version int) ([]byte, error) {
 	if len(localizedStrings) == 0 {
 		return []byte{}, nil
 	}
 
 	charset := ffxencoding.GetCharsetForLanguage(languageCode)
-	fieldStrings := extractFieldStringsForLanguage(localizedStrings, languageCode, charset)
+	fieldStrings := extractFieldStringsForLanguage(localizedStrings, languageCode, charset, version)
 
 	return buildEventStringsBinaryData(fieldStrings)
 }
@@ -163,9 +167,10 @@ func convertEventStringsToBytes(localizedStrings []*LocalizedFieldStringObject, 
 //   - localizedStrings: Source localized string objects
 //   - languageCode: Target language code
 //   - charset: Character set to use for string encoding
+//   - version: Game version as int (1 = FFX, 2 = FFX-2), used for empty placeholders
 //
 // Returns: slice of FieldString objects ready for binary conversion
-func extractFieldStringsForLanguage(localizedStrings []*LocalizedFieldStringObject, languageCode string, charset string) []*FieldString {
+func extractFieldStringsForLanguage(localizedStrings []*LocalizedFieldStringObject, languageCode string, charset string, version int) []*FieldString {
 	fieldStrings := make([]*FieldString, 0, len(localizedStrings))
 
 	for _, localizedObj := range localizedStrings {
@@ -175,7 +180,7 @@ func extractFieldStringsForLanguage(localizedStrings []*LocalizedFieldStringObje
 
 		fieldString := localizedObj.GetLocalizedContent(languageCode)
 		if fieldString == nil {
-			fieldString = NewEmptyFieldString(charset)
+			fieldString = NewEmptyFieldString(charset, version)
 		}
 
 		fieldStrings = append(fieldStrings, fieldString)
@@ -202,7 +207,8 @@ func buildEventStringsBinaryData(fieldStrings []*FieldString) ([]byte, error) {
 		return []byte{}, nil
 	}
 
-	stringBytes := RebuildFieldStrings(fieldStrings, fieldStrings[0].Charset)
+	version := models.GameVersion(fieldStrings[0].Version)
+	stringBytes := RebuildFieldStrings(fieldStrings, fieldStrings[0].Charset, version)
 
 	var buf bytes.Buffer
 
@@ -231,7 +237,7 @@ func buildEventStringsBinaryData(fieldStrings []*FieldString) ([]byte, error) {
 //   - jsonPath: Absolute path to the JSON file containing event data
 //
 // Returns: error if file reading, JSON parsing, or export fails
-func EditAndSaveEventFromJSON(jsonPath string) error {
+func EditAndSaveEventFromJSON(gameVersion models.GameVersion, jsonPath string) error {
 	allEvents, err := common.ReadJsonFile[[]EventFileData](jsonPath)
 	if err != nil {
 		return fmt.Errorf("error reading json file %s: %w", jsonPath, err)
@@ -240,7 +246,7 @@ func EditAndSaveEventFromJSON(jsonPath string) error {
 	processedEventIDs := make(map[string]bool)
 
 	for _, eventData := range allEvents {
-		eventFile := GetEvent(eventData.ID)
+		eventFile := GetEvent(gameVersion, eventData.ID)
 		if eventFile == nil {
 			common.LogVerbose("Event not found: %s", eventData.ID)
 			continue
@@ -276,11 +282,11 @@ func EditAndSaveEventFromJSON(jsonPath string) error {
 		}
 
 		// Atualizar o evento no datastore após modificações
-		SetEvent(eventData.ID, eventFile)
+		SetEvent(gameVersion, eventData.ID, eventFile)
 	}
 
 	for eventID := range processedEventIDs {
-		if err := ExportEventStringsToLocalizations(eventID); err != nil {
+		if err := ExportEventStringsToLocalizations(gameVersion, eventID); err != nil {
 			return fmt.Errorf("error saving event %s: %w", eventID, err)
 		}
 	}

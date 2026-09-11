@@ -3,6 +3,7 @@ package event_test
 import (
 	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/models"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -54,7 +55,7 @@ var _ = Describe("FieldString", func() {
 				regularHeader := 0x02010014    // offset=20, flags=1, choices=2
 				simplifiedHeader := 0x03020018 // offset=24, flags=2, choices=3
 
-				fs := event.NewFieldString(charset, regularHeader, simplifiedHeader, testBytes)
+				fs := event.NewFieldString(charset, regularHeader, simplifiedHeader, testBytes, 1)
 
 				Expect(fs.Charset).To(Equal(charset))
 				Expect(fs.RegularOffset).To(Equal(20))
@@ -69,7 +70,7 @@ var _ = Describe("FieldString", func() {
 				regularHeader := 0x00000014    // offset=20
 				simplifiedHeader := 0x00000018 // offset=24
 
-				fs := event.NewFieldString(charset, regularHeader, simplifiedHeader, testBytes)
+				fs := event.NewFieldString(charset, regularHeader, simplifiedHeader, testBytes, 1)
 
 				// Should extract "ABC" and "DE"
 				Expect(fs.RegularBytes).To(Equal([]byte{0x50, 0x51, 0x52}))
@@ -80,7 +81,7 @@ var _ = Describe("FieldString", func() {
 				regularHeader := 0x00000014    // offset=20
 				simplifiedHeader := 0x00000014 // same offset=20
 
-				fs := event.NewFieldString(charset, regularHeader, simplifiedHeader, testBytes)
+				fs := event.NewFieldString(charset, regularHeader, simplifiedHeader, testBytes, 1)
 
 				// Both should point to same byte sequence
 				Expect(fs.RegularBytes).To(Equal(fs.SimplifiedBytes))
@@ -91,7 +92,7 @@ var _ = Describe("FieldString", func() {
 	Describe("FromFieldStringData", func() {
 		Context("when parsing field string data", func() {
 			It("should correctly parse multiple field strings", func() {
-				strings, err := event.FromFieldStringData(testBytes, charset)
+				strings, err := event.FromFieldStringData(testBytes, charset, 1)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(strings).To(HaveLen(2))
@@ -108,7 +109,7 @@ var _ = Describe("FieldString", func() {
 			})
 
 			It("should handle empty byte arrays", func() {
-				strings, err := event.FromFieldStringData([]byte{}, charset)
+				strings, err := event.FromFieldStringData([]byte{}, charset, 1)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(strings).To(BeEmpty())
@@ -116,7 +117,7 @@ var _ = Describe("FieldString", func() {
 
 			It("should support print option", func() {
 				// This mainly tests that print doesn't cause errors
-				strings, err := event.FromFieldStringData(testBytes, charset)
+				strings, err := event.FromFieldStringData(testBytes, charset, 1)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(strings).To(HaveLen(2))
@@ -155,7 +156,7 @@ var _ = Describe("FieldString", func() {
 		var fs *event.FieldString
 
 		BeforeEach(func() {
-			fs = event.NewFieldString(charset, 0x00000014, 0x00000018, testBytes)
+			fs = event.NewFieldString(charset, 0x00000014, 0x00000018, testBytes, 1)
 		})
 
 		It("should return regular string", func() {
@@ -173,7 +174,7 @@ var _ = Describe("FieldString", func() {
 		})
 
 		It("should detect same simplified strings", func() {
-			sameFs := event.NewFieldString(charset, 0x00000014, 0x00000014, testBytes)
+			sameFs := event.NewFieldString(charset, 0x00000014, 0x00000014, testBytes, 1)
 			Expect(sameFs.HasDistinctSimplified()).To(BeFalse())
 		})
 
@@ -183,13 +184,13 @@ var _ = Describe("FieldString", func() {
 		})
 
 		It("should format string representation without simplified when same", func() {
-			sameFs := event.NewFieldString(charset, 0x00000014, 0x00000014, testBytes)
+			sameFs := event.NewFieldString(charset, 0x00000014, 0x00000014, testBytes, 1)
 			result := sameFs.String()
 			Expect(result).To(Equal("ABC"))
 		})
 
 		It("should detect empty strings", func() {
-			emptyFs := event.NewFieldString(charset, 0x0000001E, 0x0000001E, testBytes)
+			emptyFs := event.NewFieldString(charset, 0x0000001E, 0x0000001E, testBytes, 1)
 			Expect(emptyFs.IsEmpty()).To(BeTrue())
 		})
 	})
@@ -198,7 +199,7 @@ var _ = Describe("FieldString", func() {
 		var fs *event.FieldString
 
 		BeforeEach(func() {
-			fs = event.NewFieldString(charset, 0x00000014, 0x00000018, testBytes)
+			fs = event.NewFieldString(charset, 0x00000014, 0x00000018, testBytes, 1)
 		})
 
 		It("should set regular string", func() {
@@ -213,7 +214,7 @@ var _ = Describe("FieldString", func() {
 
 		It("should sync simplified when setting regular on synced strings", func() {
 			// Create a synced field string
-			syncedFs := event.NewFieldString(charset, 0x00000014, 0x00000014, testBytes)
+			syncedFs := event.NewFieldString(charset, 0x00000014, 0x00000014, testBytes, 1)
 			Expect(syncedFs.HasDistinctSimplified()).To(BeFalse())
 
 			syncedFs.SetRegularString("SYNCED")
@@ -261,7 +262,7 @@ var _ = Describe("FieldString", func() {
 			})
 
 			It("should rebuild strings into byte format", func() {
-				result := event.RebuildFieldStrings(fieldStrings, charset)
+				result := event.RebuildFieldStrings(fieldStrings, charset, models.FFX)
 
 				// Should contain the string bytes
 				Expect(result).ToNot(BeEmpty())
@@ -269,7 +270,7 @@ var _ = Describe("FieldString", func() {
 			})
 
 			It("should handle empty field strings list", func() {
-				result := event.RebuildFieldStrings([]*event.FieldString{}, charset)
+				result := event.RebuildFieldStrings([]*event.FieldString{}, charset, models.FFX)
 				Expect(result).To(BeEmpty())
 			})
 		})
@@ -351,7 +352,7 @@ var _ = Describe("FieldString", func() {
 				regularHeader := 0x00000000
 				simplifiedHeader := 0x00000000
 
-				localizedObj.ReadAndSetLocalizedContent("us", testBytes, regularHeader, simplifiedHeader)
+				localizedObj.ReadAndSetLocalizedContent("us", testBytes, regularHeader, simplifiedHeader, 1)
 
 				content := localizedObj.GetLocalizedContent("us")
 				Expect(content).ToNot(BeNil())
@@ -359,7 +360,7 @@ var _ = Describe("FieldString", func() {
 			})
 
 			It("should handle nil bytes gracefully", func() {
-				localizedObj.ReadAndSetLocalizedContent("us", nil, 0, 0)
+				localizedObj.ReadAndSetLocalizedContent("us", nil, 0, 0, 1)
 				Expect(localizedObj.GetLocalizedContent("us")).To(BeNil())
 			})
 		})
@@ -473,5 +474,5 @@ func setupFieldStringCharMaps() {
 	usReverseMap['D'] = 0x53
 	usReverseMap['E'] = 0x54
 
-	ffxencoding.SetCharMap("us", usMap, usReverseMap)
+	ffxencoding.SetCharMap(models.FFX, "us", usMap, usReverseMap)
 }

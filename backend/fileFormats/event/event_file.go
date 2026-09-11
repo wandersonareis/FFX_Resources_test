@@ -9,6 +9,7 @@ import (
 
 type EventFile struct {
 	ID                 string
+	Version            int
 	EventScript        *AtelScriptObject // This would need to be defined separately
 	ScriptBytes        []byte
 	JapaneseTextBytes  []byte
@@ -22,9 +23,10 @@ const (
 	DefaultAssumedChunkCount = 10
 )
 
-func NewEventFile(id string, bytes []byte) *EventFile {
+func NewEventFile(id string, bytes []byte, version int) *EventFile {
 	ef := &EventFile{
-		ID: id,
+		ID:      id,
+		Version: version,
 	}
 
 	chunks := components.BytesToChunks(bytes, DefaultAssumedChunkCount, 4)
@@ -101,7 +103,7 @@ func (ef *EventFile) mapChunks(chunks []models.Chunk) {
 
 func (ef *EventFile) mapStrings() {
 	if len(ef.JapaneseTextBytes) > 0 {
-		japaneseStrings, err := FromFieldStringData(ef.JapaneseTextBytes, "jp")
+		japaneseStrings, err := FromFieldStringData(ef.JapaneseTextBytes, "jp", ef.Version)
 		if err == nil && japaneseStrings != nil {
 			localizedJpStringObjects := make([]*LocalizedFieldStringObject, len(japaneseStrings))
 			for i, str := range japaneseStrings {
@@ -113,7 +115,7 @@ func (ef *EventFile) mapStrings() {
 	}
 
 	if len(ef.EnglishTextBytes) > 0 {
-		englishStrings, err := FromFieldStringData(ef.EnglishTextBytes, "us")
+		englishStrings, err := FromFieldStringData(ef.EnglishTextBytes, "us", ef.Version)
 		if err == nil && englishStrings != nil {
 			localizedUsStringObjects := make([]*LocalizedFieldStringObject, len(englishStrings))
 			for i, str := range englishStrings {
@@ -197,12 +199,13 @@ func (ef *EventFile) stringsToStringFileBytes(localization string) []byte {
 			} else {
 				emptyFieldString := &FieldString{
 					Charset: charset,
+					Version: ef.Version,
 				}
 				fieldStrings = append(fieldStrings, emptyFieldString)
 			}
 		}
 	}
-	return RebuildFieldStrings(fieldStrings, charset)
+	return RebuildFieldStrings(fieldStrings, charset, models.GameVersion(ef.Version))
 }
 
 func (ef *EventFile) chunksToBytes(chunks [][]byte) []byte {

@@ -2,25 +2,37 @@ package datastore
 
 import (
 	"ffxresources/backend/core/components"
+	"ffxresources/backend/models"
 	"sort"
 	"sync"
 )
 
-// GlobalDataStore mantém o estado global de todos os dados
+// GlobalDataStore mantém o estado global de todos os dados,
+// segregado por versão do jogo (FFX / FFX-2) para macros e events.
 type GlobalDataStore struct {
 	mu sync.RWMutex
 	//KeyItems components.IList[IGlobalLocalizedTextObject]
-	macros components.IMap[int, IGlobalLocalizedMacroStringObject]
-	events map[string]IEventObject
-	lists  map[string]interface{} // Para armazenar IList[T] genéricos
+	macros map[models.GameVersion]components.IMap[int, IGlobalLocalizedMacroStringObject]
+	events map[models.GameVersion]map[string]IEventObject
+	lists  map[string]any // Para armazenar IList[T] genéricos
 }
 
-var Instance = &GlobalDataStore{
-	//KeyItems: components.NewEmptyList[IGlobalLocalizedTextObject](),
-	macros: components.NewEmptyMap[int, IGlobalLocalizedMacroStringObject](),
-	events: make(map[string]IEventObject),
-	lists:  make(map[string]any),
+func newGlobalDataStore() *GlobalDataStore {
+	return &GlobalDataStore{
+		//KeyItems: components.NewEmptyList[IGlobalLocalizedTextObject](),
+		macros: map[models.GameVersion]components.IMap[int, IGlobalLocalizedMacroStringObject]{
+			models.FFX:  components.NewEmptyMap[int, IGlobalLocalizedMacroStringObject](),
+			models.FFX2: components.NewEmptyMap[int, IGlobalLocalizedMacroStringObject](),
+		},
+		events: map[models.GameVersion]map[string]IEventObject{
+			models.FFX:  make(map[string]IEventObject),
+			models.FFX2: make(map[string]IEventObject),
+		},
+		lists: make(map[string]any),
+	}
 }
+
+var Instance = newGlobalDataStore()
 
 var (
 	KeyItems      components.IList[IGlobalLocalizedTextObject] = components.NewEmptyList[IGlobalLocalizedTextObject]()
@@ -38,6 +50,47 @@ var (
 	PlayerRoomTxt components.IList[IGlobalLocalizedTextObject] = components.NewEmptyList[IGlobalLocalizedTextObject]()
 	SaveTxt       components.IList[IGlobalLocalizedTextObject] = components.NewEmptyList[IGlobalLocalizedTextObject]()
 )
+
+// normalizeGameVersion garante que apenas FFX ou FFX2 sejam usados.
+// Qualquer valor desconhecido (ex.: 0) cai para FFX.
+func normalizeGameVersion(gameVersion models.GameVersion) models.GameVersion {
+	if gameVersion == models.FFX2 {
+		return models.FFX2
+	}
+	return models.FFX
+}
+
+// macrosFor retorna o mapa de macros da versão indicada.
+// Deve ser chamado com o lock (R ou W) já adquirido.
+// Inicializa sob demanda caso a versão ainda não exista.
+func (ds *GlobalDataStore) macrosFor(gameVersion models.GameVersion) components.IMap[int, IGlobalLocalizedMacroStringObject] {
+	v := normalizeGameVersion(gameVersion)
+	m, ok := ds.macros[v]
+	if !ok || m == nil {
+		m = components.NewEmptyMap[int, IGlobalLocalizedMacroStringObject]()
+		if ds.macros == nil {
+			ds.macros = make(map[models.GameVersion]components.IMap[int, IGlobalLocalizedMacroStringObject])
+		}
+		ds.macros[v] = m
+	}
+	return m
+}
+
+// eventsFor retorna o mapa de events da versão indicada.
+// Deve ser chamado com o lock (R ou W) já adquirido.
+// Inicializa sob demanda caso a versão ainda não exista.
+func (ds *GlobalDataStore) eventsFor(gameVersion models.GameVersion) map[string]IEventObject {
+	v := normalizeGameVersion(gameVersion)
+	e, ok := ds.events[v]
+	if !ok || e == nil {
+		e = make(map[string]IEventObject)
+		if ds.events == nil {
+			ds.events = make(map[models.GameVersion]map[string]IEventObject)
+		}
+		ds.events[v] = e
+	}
+	return e
+}
 
 // ============= KEY ITEMS =============
 
@@ -93,87 +146,111 @@ var (
 
 // ============= MACROS =============
 
-func (ds *GlobalDataStore) GetMacro(idx int) (IGlobalLocalizedMacroStringObject, bool) {
+func (ds *GlobalDataStore) GetMacro(gameVersion models.GameVersion, idx int) (IGlobalLocalizedMacroStringObject, bool) {
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
 
-	return ds.macros.Get(idx)
+	return ds.macrosFor(gameVersion).Get(idx)
 }
 
-func (ds *GlobalDataStore) GetMacros() components.IMap[int, IGlobalLocalizedMacroStringObject] {
+func (ds *GlobalDataStore) GetMacros(gameVersion models.GameVersion) components.IMap[int, IGlobalLocalizedMacroStringObject] {
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
 
-	return ds.macros
+	return ds.macrosFor(gameVersion)
 }
 
-func (ds *GlobalDataStore) SetMacro(idx int, macro IGlobalLocalizedMacroStringObject) {
+func (ds *GlobalDataStore) SetMacro(gameVersion models.GameVersion, idx int, macro IGlobalLocalizedMacroStringObject) {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
 	if macro != nil {
-		ds.macros.Add(idx, macro)
+		ds.macrosFor(gameVersion).Add(idx, macro)
 	}
 }
 
-func (ds *GlobalDataStore) SetMacros(macros components.IMap[int, IGlobalLocalizedMacroStringObject]) {
+func (ds *GlobalDataStore) SetMacros(gameVersion models.GameVersion, macros components.IMap[int, IGlobalLocalizedMacroStringObject]) {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
-	ds.macros.Clear()
+	target := ds.macrosFor(gameVersion)
+	target.Clear()
+	if macros == nil {
+		return
+	}
 	macros.ForEach(func(idx int, macro IGlobalLocalizedMacroStringObject) {
 		if macro != nil {
-			ds.macros.Add(idx, macro)
+			target.Add(idx, macro)
 		}
 	})
 }
 
-func (ds *GlobalDataStore) IsEmpty() bool {
+func (ds *GlobalDataStore) IsEmpty(gameVersion models.GameVersion) bool {
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
 
-	return ds.macros.Count() > 0
+	return ds.macrosFor(gameVersion).Count() > 0
 }
 
-func (ds *GlobalDataStore) ClearMacros() {
+func (ds *GlobalDataStore) ClearMacros(gameVersion models.GameVersion) {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
-	ds.macros.Clear()
+	ds.macrosFor(gameVersion).Clear()
+}
+
+func (ds *GlobalDataStore) ClearAllMacros() {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+
+	for _, m := range ds.macros {
+		if m != nil {
+			m.Clear()
+		}
+	}
 }
 
 // ============= EVENTS =============
 
-func (ds *GlobalDataStore) GetEvent(id string) IEventObject {
+func (ds *GlobalDataStore) GetEvent(gameVersion models.GameVersion, id string) IEventObject {
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
 
-	return ds.events[id]
+	return ds.eventsFor(gameVersion)[id]
 }
 
-func (ds *GlobalDataStore) SetEvent(id string, event IEventObject) {
+func (ds *GlobalDataStore) SetEvent(gameVersion models.GameVersion, id string, event IEventObject) {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
 	if event != nil {
-		ds.events[id] = event
+		ds.eventsFor(gameVersion)[id] = event
 	}
 }
 
-func (ds *GlobalDataStore) ClearEvents() {
+func (ds *GlobalDataStore) ClearEvents(gameVersion models.GameVersion) {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
-	ds.events = make(map[string]IEventObject)
+	ds.events[normalizeGameVersion(gameVersion)] = make(map[string]IEventObject)
 }
 
-// GetAllEventIDs returns all event IDs registered in the datastore
-func (ds *GlobalDataStore) GetAllEventIDs() []string {
+func (ds *GlobalDataStore) ClearAllEvents() {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+
+	for v := range ds.events {
+		ds.events[v] = make(map[string]IEventObject)
+	}
+}
+
+// GetAllEventIDs returns all event IDs registered in the datastore for the given game version
+func (ds *GlobalDataStore) GetAllEventIDs(gameVersion models.GameVersion) []string {
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
 
 	var eventIDs []string
-	for id := range ds.events {
+	for id := range ds.eventsFor(gameVersion) {
 		eventIDs = append(eventIDs, id)
 	}
 	sort.Strings(eventIDs)
@@ -210,31 +287,31 @@ func (ds *GlobalDataStore) GetAllEventIDs() []string {
 	Instance.SetKeyItem(idx, item)
 } */
 
-func GetMacro(idx int) (IGlobalLocalizedMacroStringObject, bool) {
-	return Instance.GetMacro(idx)
+func GetMacro(gameVersion models.GameVersion, idx int) (IGlobalLocalizedMacroStringObject, bool) {
+	return Instance.GetMacro(gameVersion, idx)
 }
 
-func GetMacros() components.IMap[int, IGlobalLocalizedMacroStringObject] {
+func GetMacros(gameVersion models.GameVersion) components.IMap[int, IGlobalLocalizedMacroStringObject] {
 	Instance.mu.RLock()
 	defer Instance.mu.RUnlock()
 
-	return Instance.macros
+	return Instance.macrosFor(gameVersion)
 }
 
-func SetMacro(idx int, macro IGlobalLocalizedMacroStringObject) {
-	Instance.SetMacro(idx, macro)
+func SetMacro(gameVersion models.GameVersion, idx int, macro IGlobalLocalizedMacroStringObject) {
+	Instance.SetMacro(gameVersion, idx, macro)
 }
 
-func HasMacros() bool {
-	return Instance.IsEmpty()
+func HasMacros(gameVersion models.GameVersion) bool {
+	return Instance.IsEmpty(gameVersion)
 }
 
-func GetEvent(id string) IEventObject {
-	return Instance.GetEvent(id)
+func GetEvent(gameVersion models.GameVersion, id string) IEventObject {
+	return Instance.GetEvent(gameVersion, id)
 }
 
-func SetEvent(id string, event IEventObject) {
-	Instance.SetEvent(id, event)
+func SetEvent(gameVersion models.GameVersion, id string, event IEventObject) {
+	Instance.SetEvent(gameVersion, id, event)
 }
 
 // ============= BULK OPERATIONS =============
@@ -247,26 +324,31 @@ func SetEvent(id string, event IEventObject) {
 	Instance.KeyItems = items
 } */
 
-func SetMacros(macros components.IMap[int, IGlobalLocalizedMacroStringObject]) {
+func SetMacros(gameVersion models.GameVersion, macros components.IMap[int, IGlobalLocalizedMacroStringObject]) {
 	Instance.mu.Lock()
 	defer Instance.mu.Unlock()
 
-	Instance.macros.Clear()
+	target := Instance.macrosFor(gameVersion)
+	target.Clear()
+	if macros == nil {
+		return
+	}
 	macros.ForEach(func(idx int, macro IGlobalLocalizedMacroStringObject) {
 		//for idx, macro := range macros {
 		if macro != nil {
-			Instance.macros.Add(idx, macro)
+			target.Add(idx, macro)
 		}
 	})
 }
 
-func SetEvents(events map[string]IEventObject) {
+func SetEvents(gameVersion models.GameVersion, events map[string]IEventObject) {
 	Instance.mu.Lock()
 	defer Instance.mu.Unlock()
 
+	target := Instance.eventsFor(gameVersion)
 	for id, event := range events {
 		if event != nil {
-			Instance.events[id] = event
+			target[id] = event
 		}
 	}
 }

@@ -35,7 +35,7 @@ type IEventObject interface {
 // Não depende de tipos concretos do pacote objectsfile
 
 type IGlobalLocalizedKeyedStringObject interface {
-	ReadAndSetLocalizedContent(languageCode string, bytes []byte, offset models.Offset, key models.Key)
+	ReadAndSetLocalizedContent(languageCode string, bytes []byte, offset models.Offset, key models.Key, version int)
 	SetLocalizedContent(languageCode string, content IGlobalKeyedString)
 	GetLocalizedContent(languageCode string) IGlobalKeyedString
 	GetLocalizedString(languageCode string) string

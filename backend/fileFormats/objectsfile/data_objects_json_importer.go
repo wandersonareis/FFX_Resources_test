@@ -6,6 +6,7 @@ import (
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/converter"
 	"ffxresources/backend/datastore"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
 	"fmt"
 	"path/filepath"
@@ -88,7 +89,8 @@ func ImportFromJson(
 
 	localizedObjects := extractLocalizedObjects(objectsList)
 
-	if err := updateLocalizedObjectEntries(jsonData, localizedObjects); err != nil {
+	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+	if err := updateLocalizedObjectEntries(jsonData, localizedObjects, version); err != nil {
 		common.LogVerbose("Error processing JSON file: %v", err)
 		return err
 	}
@@ -131,34 +133,34 @@ func isValidID(id int, length int) bool {
 //   - obj: The localized object to update
 //
 // Returns: error if object type is not supported
-func updateObjectByType(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextObject) error {
+func updateObjectByType(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextObject, version int) error {
 	switch localizedTextObj := obj.(type) {
 	case *CommandTextObject:
-		updateNameEntry(jsonEntry, localizedTextObj.Name)
-		updateSimplifiedNameEntry(jsonEntry, localizedTextObj.SimplifiedName)
-		updateDescriptionEntry(jsonEntry, localizedTextObj.Description)
-		updateSimplifiedDescriptionEntry(jsonEntry, localizedTextObj.SimplifiedDescription)
+		updateNameEntry(jsonEntry, localizedTextObj.Name, version)
+		updateSimplifiedNameEntry(jsonEntry, localizedTextObj.SimplifiedName, version)
+		updateDescriptionEntry(jsonEntry, localizedTextObj.Description, version)
+		updateSimplifiedDescriptionEntry(jsonEntry, localizedTextObj.SimplifiedDescription, version)
 	case *CommandTextObjectV2:
-		updateNameEntry(jsonEntry, localizedTextObj.Name)
-		updateDescriptionEntry(jsonEntry, localizedTextObj.Description)
+		updateNameEntry(jsonEntry, localizedTextObj.Name, version)
+		updateDescriptionEntry(jsonEntry, localizedTextObj.Description, version)
 	case *NameOnlyTextObject:
-		updateNameEntry(jsonEntry, localizedTextObj.Name)
+		updateNameEntry(jsonEntry, localizedTextObj.Name, version)
 	case *NameOnlyTextObjectV2:
-		updateNameEntry(jsonEntry, localizedTextObj.Name)
+		updateNameEntry(jsonEntry, localizedTextObj.Name, version)
 	case *JobTextObject:
-		updateNameEntry(jsonEntry, localizedTextObj.Name)
-		updateDescriptionEntry(jsonEntry, localizedTextObj.Description)
-		updateEffectEntry(jsonEntry, localizedTextObj.Effect)
+		updateNameEntry(jsonEntry, localizedTextObj.Name, version)
+		updateDescriptionEntry(jsonEntry, localizedTextObj.Description, version)
+		updateEffectEntry(jsonEntry, localizedTextObj.Effect, version)
 	case *NameDescriptionEffectAbilityTextObject:
-		updateNameEntry(jsonEntry, localizedTextObj.Name)
-		updateDescriptionEntry(jsonEntry, localizedTextObj.Description)
-		updateAbilitiesEntry(jsonEntry, localizedTextObj.Abilities)
+		updateNameEntry(jsonEntry, localizedTextObj.Name, version)
+		updateDescriptionEntry(jsonEntry, localizedTextObj.Description, version)
+		updateAbilitiesEntry(jsonEntry, localizedTextObj.Abilities, version)
 	case *NameSensorScanTextObject:
-		updateNameEntry(jsonEntry, localizedTextObj.Name)
-		updateSensorTextEntry(jsonEntry, localizedTextObj)
-		updateScanTextEntry(jsonEntry, localizedTextObj)
+		updateNameEntry(jsonEntry, localizedTextObj.Name, version)
+		updateSensorTextEntry(jsonEntry, localizedTextObj, version)
+		updateScanTextEntry(jsonEntry, localizedTextObj, version)
 	case *WeaponsNameTextObject:
-		updateWeaponsEntry(jsonEntry, localizedTextObj)
+		updateWeaponsEntry(jsonEntry, localizedTextObj, version)
 	default:
 		common.LogVerbose("Object type not recognized for ID %d", jsonEntry.ID)
 		return fmt.Errorf("unknown type for ID object %d", jsonEntry.ID)
@@ -178,7 +180,7 @@ func updateObjectByType(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextO
 //   - objects: Slice of ILocalizedTextObject instances to be updated
 //
 // Returns: error if any update operations fail
-func updateLocalizedObjectEntries(itemsData []JSONEntry, objects []datastore.IGlobalLocalizedTextObject) error {
+func updateLocalizedObjectEntries(itemsData []JSONEntry, objects []datastore.IGlobalLocalizedTextObject, version int) error {
 	for _, jsonEntry := range itemsData {
 		id := jsonEntry.ID
 
@@ -195,7 +197,7 @@ func updateLocalizedObjectEntries(itemsData []JSONEntry, objects []datastore.IGl
 
 		common.LogVerbose("Processing localized object %d", id)
 
-		if err := updateObjectByType(jsonEntry, localizedObj); err != nil {
+		if err := updateObjectByType(jsonEntry, localizedObj, version); err != nil {
 			common.LogVerbose("Error updating object %d: %v", id, err)
 			return err
 		}
@@ -208,7 +210,7 @@ func updateLocalizedObjectEntries(itemsData []JSONEntry, objects []datastore.IGl
 // Parameters:
 //   - sourceData: JSON data containing name translations
 //   - segment: The object to update
-func updateNameEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject) {
+func updateNameEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version int) {
 	if len(sourceData.Name) == 0 || segment == nil {
 		common.LogVerbose("No name found for item %d, skipping...", sourceData.ID)
 		return
@@ -227,7 +229,7 @@ func updateNameEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKey
 			continue
 		}
 
-		updateOrCreateSegment(segment, newNameText, languageCode)
+		updateOrCreateSegment(segment, newNameText, languageCode, version)
 	}
 }
 
@@ -236,7 +238,7 @@ func updateNameEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKey
 // Parameters:
 //   - sourceData: JSON data containing description translations
 //   - segment: The object to update
-func updateDescriptionEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject) {
+func updateDescriptionEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version int) {
 	if len(sourceData.Description) == 0 || segment == nil {
 		common.LogVerbose("No description found for item %d, skipping...", sourceData.ID)
 		return
@@ -255,7 +257,7 @@ func updateDescriptionEntry(sourceData JSONEntry, segment datastore.IGlobalLocal
 			continue
 		}
 
-		updateOrCreateSegment(segment, newDescriptionText, languageCode)
+		updateOrCreateSegment(segment, newDescriptionText, languageCode, version)
 	}
 }
 
@@ -264,7 +266,7 @@ func updateDescriptionEntry(sourceData JSONEntry, segment datastore.IGlobalLocal
 // Parameters:
 //   - sourceData: JSON data containing simplifiedName translations
 //   - segment: The object to update
-func updateSimplifiedNameEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject) {
+func updateSimplifiedNameEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version int) {
 	if len(sourceData.SimplifiedName) == 0 || segment == nil {
 		return
 	}
@@ -280,7 +282,7 @@ func updateSimplifiedNameEntry(sourceData JSONEntry, segment datastore.IGlobalLo
 			continue
 		}
 
-		updateOrCreateSegment(segment, newText, languageCode)
+		updateOrCreateSegment(segment, newText, languageCode, version)
 	}
 }
 
@@ -289,7 +291,7 @@ func updateSimplifiedNameEntry(sourceData JSONEntry, segment datastore.IGlobalLo
 // Parameters:
 //   - sourceData: JSON data containing simplifiedDescription translations
 //   - segment: The object to update
-func updateSimplifiedDescriptionEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject) {
+func updateSimplifiedDescriptionEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version int) {
 	if len(sourceData.SimplifiedDescription) == 0 || segment == nil {
 		return
 	}
@@ -305,11 +307,11 @@ func updateSimplifiedDescriptionEntry(sourceData JSONEntry, segment datastore.IG
 			continue
 		}
 
-		updateOrCreateSegment(segment, newText, languageCode)
+		updateOrCreateSegment(segment, newText, languageCode, version)
 	}
 }
 
-func updateAbilitiesEntry(sourceData JSONEntry, segments []datastore.IGlobalLocalizedKeyedStringObject) {
+func updateAbilitiesEntry(sourceData JSONEntry, segments []datastore.IGlobalLocalizedKeyedStringObject, version int) {
 	if len(sourceData.Abilities) == 0 {
 		common.LogVerbose("No abilities found for item %d, skipping...", sourceData.ID)
 		return
@@ -350,7 +352,7 @@ func updateAbilitiesEntry(sourceData JSONEntry, segments []datastore.IGlobalLoca
 				continue
 			}
 
-			updateOrCreateSegment(segment, newAbilityText, languageCode)
+			updateOrCreateSegment(segment, newAbilityText, languageCode, version)
 			common.LogVerbose("Updated ability %d for language %s: %s",
 				abilityIdx+1, languageCode, newAbilityText)
 		}
@@ -362,7 +364,7 @@ func updateAbilitiesEntry(sourceData JSONEntry, segments []datastore.IGlobalLoca
 // Parameters:
 //   - sourceData: JSON data containing sensor translations
 //   - targetObject: The NameSensorScanTextObject object to update
-func updateSensorTextEntry(sourceData JSONEntry, targetObject *NameSensorScanTextObject) {
+func updateSensorTextEntry(sourceData JSONEntry, targetObject *NameSensorScanTextObject, version int) {
 	if len(sourceData.SensorText) > 0 && targetObject.SensorText != nil {
 		for languageCode, newText := range sourceData.SensorText {
 			if newText == "" {
@@ -374,7 +376,7 @@ func updateSensorTextEntry(sourceData JSONEntry, targetObject *NameSensorScanTex
 			if newText == targetObject.SensorText.GetLocalizedString(languageCode) {
 				continue
 			}
-			updateOrCreateSegment(targetObject.SensorText, newText, languageCode)
+			updateOrCreateSegment(targetObject.SensorText, newText, languageCode, version)
 		}
 	}
 
@@ -389,7 +391,7 @@ func updateSensorTextEntry(sourceData JSONEntry, targetObject *NameSensorScanTex
 			if newText == targetObject.SimplifiedSensorText.GetLocalizedString(languageCode) {
 				continue
 			}
-			updateOrCreateSegment(targetObject.SimplifiedSensorText, newText, languageCode)
+			updateOrCreateSegment(targetObject.SimplifiedSensorText, newText, languageCode, version)
 		}
 	}
 }
@@ -399,7 +401,7 @@ func updateSensorTextEntry(sourceData JSONEntry, targetObject *NameSensorScanTex
 // Parameters:
 //   - sourceData: JSON data containing scan translations
 //   - targetObject: The NameSensorScanTextObject object to update
-func updateScanTextEntry(sourceData JSONEntry, targetObject *NameSensorScanTextObject) {
+func updateScanTextEntry(sourceData JSONEntry, targetObject *NameSensorScanTextObject, version int) {
 	if len(sourceData.ScanText) > 0 && targetObject.ScanText != nil {
 		for languageCode, newText := range sourceData.ScanText {
 			if newText == "" {
@@ -411,7 +413,7 @@ func updateScanTextEntry(sourceData JSONEntry, targetObject *NameSensorScanTextO
 			if newText == targetObject.ScanText.GetLocalizedString(languageCode) {
 				continue
 			}
-			updateOrCreateSegment(targetObject.ScanText, newText, languageCode)
+			updateOrCreateSegment(targetObject.ScanText, newText, languageCode, version)
 		}
 	}
 
@@ -426,13 +428,13 @@ func updateScanTextEntry(sourceData JSONEntry, targetObject *NameSensorScanTextO
 			if newText == targetObject.SimplifiedScanText.GetLocalizedString(languageCode) {
 				continue
 			}
-			updateOrCreateSegment(targetObject.SimplifiedScanText, newText, languageCode)
+			updateOrCreateSegment(targetObject.SimplifiedScanText, newText, languageCode, version)
 		}
 	}
 }
 
 // updateEffectEntry applies effect updates to a JobTextObject.
-func updateEffectEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject) {
+func updateEffectEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version int) {
 	if len(sourceData.Effect) == 0 || segment == nil {
 		common.LogVerbose("No effect found for item %d, skipping...", sourceData.ID)
 		return
@@ -453,7 +455,7 @@ func updateEffectEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedK
 			continue
 		}
 
-		updateOrCreateSegment(segment, newEffectText, languageCode)
+		updateOrCreateSegment(segment, newEffectText, languageCode, version)
 	}
 }
 
@@ -462,15 +464,17 @@ func updateEffectEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedK
 // Parameters:
 //   - text: The string content
 //   - charset: The character encoding to use
+//   - version: Game version as int (1 = FFX, 2 = FFX-2)
 //
 // Returns: A new KeyedString instance with default offset and key values
-func createNewKeyedString(text string, charset string) *KeyedString {
+func createNewKeyedString(text string, charset string, version int) *KeyedString {
 	return &KeyedString{
 		Charset: charset,
-		/* 		Offset:  0,
-		   		Key:     0, */
+		Version: version,
+/* 		Offset:  0,
+	   		Key:     0, */
 		Segment: models.Segment{Offset: 0, Key: 0},
-		Bytes:   converter.StringToBytes(text, charset),
+		Bytes:   converter.StringToBytes(text, charset, models.GameVersion(version)),
 	}
 }
 
@@ -481,20 +485,20 @@ func createNewKeyedString(text string, charset string) *KeyedString {
 //   - segment: The keyed-string segment to update (Name/Description of either version)
 //   - text: The new text content
 //   - languageCode: Language code (e.g., "us", "sp")
-func updateOrCreateSegment(segment datastore.IGlobalLocalizedKeyedStringObject, newText, languageCode string) {
+func updateOrCreateSegment(segment datastore.IGlobalLocalizedKeyedStringObject, newText, languageCode string, version int) {
 	existingContent := segment.GetLocalizedContent(languageCode)
 	charset := common.LanguageCodeToCharset(languageCode)
 
 	if existingContent != nil {
 		existingContent.SetString(newText, charset)
 	} else {
-		segment.SetLocalizedContent(languageCode, createNewKeyedString(newText, charset))
+		segment.SetLocalizedContent(languageCode, createNewKeyedString(newText, charset, version))
 	}
 
 	common.LogVerbose("Segment updated (%s): %s", languageCode, newText)
 }
 
-func updateWeaponsEntry(sourceData JSONEntry, obj *WeaponsNameTextObject) {
+func updateWeaponsEntry(sourceData JSONEntry, obj *WeaponsNameTextObject, version int) {
 	if len(sourceData.Weapons) == 0 {
 		common.LogVerbose("No weapons found, skipping...")
 		return
@@ -505,12 +509,12 @@ func updateWeaponsEntry(sourceData JSONEntry, obj *WeaponsNameTextObject) {
 		if !ok {
 			continue
 		}
-		updateWeaponField(obj, ref.key, texts.Name, ref.name)
-		updateWeaponField(obj, "s"+ref.key, texts.SimplifiedName, ref.name+" simplified")
+		updateWeaponField(obj, ref.key, texts.Name, ref.name, version)
+		updateWeaponField(obj, "s"+ref.key, texts.SimplifiedName, ref.name+" simplified", version)
 	}
 }
 
-func updateWeaponField(obj *WeaponsNameTextObject, key string, fieldTexts map[string]string, label string) {
+func updateWeaponField(obj *WeaponsNameTextObject, key string, fieldTexts map[string]string, label string, version int) {
 	if len(fieldTexts) == 0 {
 		return
 	}
@@ -531,7 +535,7 @@ func updateWeaponField(obj *WeaponsNameTextObject, key string, fieldTexts map[st
 			continue
 		}
 
-		updateOrCreateSegment(segment, newText, languageCode)
+		updateOrCreateSegment(segment, newText, languageCode, version)
 		common.LogVerbose("Updated weapon %s for language %s: %s", label, languageCode, newText)
 	}
 }

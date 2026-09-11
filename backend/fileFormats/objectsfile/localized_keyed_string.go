@@ -43,12 +43,12 @@ func (l *LocalizedKeyedStringObject) SetLocalizedContent(languageCode string, co
 	}
 }
 
-func (l *LocalizedKeyedStringObject) ReadAndSetLocalizedContent(languageCode string, bytes []byte, offset models.Offset, key models.Key) {
+func (l *LocalizedKeyedStringObject) ReadAndSetLocalizedContent(languageCode string, bytes []byte, offset models.Offset, key models.Key, version int) {
 	if bytes == nil {
 		return
 	}
 	charset := ffxencoding.GetCharsetForLanguage(languageCode)
-	ks := NewKeyedString(charset, models.Segment{Offset: offset, Key: key}, bytes)
+	ks := NewKeyedString(charset, models.Segment{Offset: offset, Key: key}, bytes, version)
 	if ks == nil {
 		return
 	}

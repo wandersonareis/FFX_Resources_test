@@ -19,6 +19,7 @@ type NameDescriptionEffectAbilityTextObject struct {
 	Effect         datastore.IGlobalLocalizedKeyedStringObject
 	EffectPosition int64
 	HeaderLength   int
+	Version        int
 }
 
 func NewNameDescriptionEffectAbilityTextObject(
@@ -28,9 +29,10 @@ func NewNameDescriptionEffectAbilityTextObject(
 	abilitiesCount int,
 	effectSegmentPosition int64,
 	languageCode string,
+	version int,
 ) (*NameDescriptionEffectAbilityTextObject, error) {
-	if common.GetGameVersionString() != "ffx2" {
-		return nil, fmt.Errorf("NameDescriptionEffectAbilityTextObject is only compatible with FFX-2")
+	if version != 2 {
+		return nil, fmt.Errorf("NameDescriptionEffectAbilityTextObject is only compatible with FFX-2 (game version 2), but got game version %d", version)
 	}
 
 	if len(bytes) < headerLength {
@@ -45,27 +47,28 @@ func NewNameDescriptionEffectAbilityTextObject(
 		EffectPosition: effectSegmentPosition,
 		Abilities:      make([]datastore.IGlobalLocalizedKeyedStringObject, abilitiesCount),
 		HeaderLength:   headerLength,
+		Version:        version,
 	}
 
 	for i := range p.Abilities {
 		p.Abilities[i] = NewLocalizedKeyedStringObject()
 	}
 
-	if err := p.mapBytes(stringBytes, languageCode); err != nil {
+	if err := p.mapBytes(stringBytes, languageCode, version); err != nil {
 		return nil, err
 	}
 
 	return p, nil
 }
 
-func (p *NameDescriptionEffectAbilityTextObject) mapBytes(stringBytes []byte, languageCode string) error {
+func (p *NameDescriptionEffectAbilityTextObject) mapBytes(stringBytes []byte, languageCode string, version int) error {
 	r := bytes.NewReader(p.Bytes)
 
 	sequentialSegments := make([]datastore.IGlobalLocalizedKeyedStringObject, 0, 2+len(p.Abilities))
 	sequentialSegments = append(sequentialSegments, p.Name, p.Description)
 	sequentialSegments = append(sequentialSegments, p.Abilities...)
 
-	if err := readStringSegments(r, stringBytes, languageCode, sequentialSegments...); err != nil {
+	if err := readStringSegments(r, stringBytes, languageCode, version, sequentialSegments...); err != nil {
 		common.LogError("Error reading NameDescriptionEffectAbility sequential segments: %v", err)
 		return err
 	}
@@ -80,7 +83,7 @@ func (p *NameDescriptionEffectAbilityTextObject) mapBytes(stringBytes []byte, la
 		common.LogError("Error reading NameDescriptionEffectAbility effect: %v", err)
 		return err
 	}
-	p.Effect.ReadAndSetLocalizedContent(languageCode, stringBytes, effectSeg.Offset, effectSeg.Key)
+	p.Effect.ReadAndSetLocalizedContent(languageCode, stringBytes, effectSeg.Offset, effectSeg.Key, version)
 
 	return nil
 }

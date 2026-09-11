@@ -129,7 +129,7 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 		originalResources = common.ResourcesRoot
 
 		creator = func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
-			gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
+			gameVersion := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
 			return objectsfile.NewNameOnlyTextObject(data, stringBytes, headerLength, localization, gameVersion)
 		}
 	})
@@ -174,7 +174,8 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 
 	Context("Access errors", func() {
 		It("should fail LoadFromBinary when file does not exist", func() {
-			binFile := objectsfile.NewBinaryFile("battle/kernel/does_not_exist.bin", creator, common.DefaultLocalization)
+			version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+			binFile := objectsfile.NewBinaryFile("battle/kernel/does_not_exist.bin", creator, common.DefaultLocalization, version)
 			err := binFile.LoadFromBinary()
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("file does not exist"))
@@ -185,28 +186,28 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 			dirAsFile := filepath.Join(gameDir, common.GetLocalizationRoot(common.DefaultLocalization), "battle", "kernel", "dir_as_file.bin")
 			Expect(os.MkdirAll(dirAsFile, 0755)).To(Succeed())
 
-			binFile := objectsfile.NewBinaryFile("battle/kernel/dir_as_file.bin", creator, common.DefaultLocalization)
+			binFile := objectsfile.NewBinaryFile("battle/kernel/dir_as_file.bin", creator, common.DefaultLocalization, interactions.NewInteractionService().FFXAppConfig().GetGameVersion())
 			err := binFile.LoadFromBinary()
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("failed to read file"))
 		})
 
 		It("should fail ExportToJson when file path is empty", func() {
-			binFile := objectsfile.NewBinaryFile("battle/kernel/command.bin", creator, common.DefaultLocalization)
+			binFile := objectsfile.NewBinaryFile("battle/kernel/command.bin", creator, common.DefaultLocalization, interactions.NewInteractionService().FFXAppConfig().GetGameVersion())
 			err := binFile.ExportToJson("")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("json file not configured"))
 		})
 
 		It("should fail ImportFromJson when file path is empty", func() {
-			binFile := objectsfile.NewBinaryFile("battle/kernel/command.bin", creator, common.DefaultLocalization)
+			binFile := objectsfile.NewBinaryFile("battle/kernel/command.bin", creator, common.DefaultLocalization, interactions.NewInteractionService().FFXAppConfig().GetGameVersion())
 			err := binFile.ImportFromJson("")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("json file not configured"))
 		})
 
 		It("should fail ImportFromJson when json file does not exist", func() {
-			binFile := objectsfile.NewBinaryFile("battle/kernel/command.bin", creator, common.DefaultLocalization)
+			binFile := objectsfile.NewBinaryFile("battle/kernel/command.bin", creator, common.DefaultLocalization, interactions.NewInteractionService().FFXAppConfig().GetGameVersion())
 			err := binFile.ImportFromJson("binary_integrity_missing.json")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("JSON file not found"))

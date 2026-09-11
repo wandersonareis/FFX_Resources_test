@@ -18,6 +18,7 @@ type JobTextObject struct {
 	Effect                datastore.IGlobalLocalizedKeyedStringObject
 	EffectSegmentPosition int64
 	HeaderLength          int
+	Version               int
 }
 
 func NewJobTextObject(
@@ -26,9 +27,10 @@ func NewJobTextObject(
 	headerLength int,
 	effectSegmentPosition int64,
 	languageCode string,
+	version int,
 ) (*JobTextObject, error) {
-	if common.GetGameVersionString() != "ffx2" {
-		return nil, fmt.Errorf("JobTextObject is only compatible with FFX-2")
+	if version != 2 {
+		return nil, fmt.Errorf("JobTextObject is only compatible with FFX-2 (game version 2), but got game version %d", version)
 	}
 
 	if len(bytes) < headerLength {
@@ -42,9 +44,10 @@ func NewJobTextObject(
 		Effect:                NewLocalizedKeyedStringObject(),
 		EffectSegmentPosition: effectSegmentPosition,
 		HeaderLength:          headerLength,
+		Version:               version,
 	}
 
-	if err := p.mapBytes(stringBytes, languageCode); err != nil {
+	if err := p.mapBytes(stringBytes, languageCode, version); err != nil {
 		return nil, err
 	}
 
@@ -54,10 +57,11 @@ func NewJobTextObject(
 func (p *JobTextObject) mapBytes(
 	stringBytes []byte,
 	languageCode string,
+	version int,
 ) error {
 	r := bytes.NewReader(p.Bytes)
 
-	if err := readStringSegments(r, stringBytes, languageCode, p.Name, p.Description); err != nil {
+	if err := readStringSegments(r, stringBytes, languageCode, version, p.Name, p.Description); err != nil {
 		common.LogError("Error reading JobTextObject sequential segments: %v", err)
 		return err
 	}
@@ -72,7 +76,7 @@ func (p *JobTextObject) mapBytes(
 		common.LogError("Error reading JobTextObject effect: %v", err)
 		return err
 	}
-	p.Effect.ReadAndSetLocalizedContent(languageCode, stringBytes, effectSeg.Offset, effectSeg.Key)
+	p.Effect.ReadAndSetLocalizedContent(languageCode, stringBytes, effectSeg.Offset, effectSeg.Key, version)
 
 	return nil
 }

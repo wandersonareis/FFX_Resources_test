@@ -4,9 +4,11 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/core/writer"
+	"ffxresources/backend/datastore"
 	"ffxresources/backend/fileFormats/event"
-	"ffxresources/backend/fileFormats/macrodic"
 	"ffxresources/backend/core/encoding"
+	"ffxresources/backend/interactions"
+	"ffxresources/backend/models"
 	testcommon "ffxresources/testData"
 	"os"
 	"path/filepath"
@@ -15,6 +17,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
+
+func interactionsVersion() int {
+	return interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+}
 
 func TestReadManager(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -46,9 +52,8 @@ var _ = Describe("ReadManager", Ordered, func() {
 		common.ResourcesRoot = originalResourcesRoot
 
 		// Clear any global state that might have been set
-		ffxencoding.ByteToCharMaps = make(map[string]map[uint]rune)
-		ffxencoding.CharToByteMaps = make(map[string]map[rune]uint)
-		macrodic.MacroLookup = make(map[int]*macrodic.LocalizedMacroStringObject)
+		ffxencoding.ClearAllCharMaps()
+		datastore.Instance.ClearAllMacros()
 	})
 	Context("when testing FFX (version 1)", func() {
 		BeforeEach(func() {
@@ -62,12 +67,12 @@ var _ = Describe("ReadManager", Ordered, func() {
 
 				// Verify that character maps were created for each charset
 				for _, charset := range common.Charsets {
-					byteToChar, exists := ffxencoding.ByteToCharMaps[charset]
-					Expect(exists).To(BeTrue(), "ByteToChar map should exist for charset %s", charset)
+					byteToChar := ffxencoding.GetByteToCharMap(models.FFX, charset)
+					Expect(byteToChar).ToNot(BeNil(), "ByteToChar map should exist for charset %s", charset)
 					Expect(byteToChar).ToNot(BeEmpty(), "ByteToChar map should be populated for charset %s", charset)
 
-					charToByte, exists := ffxencoding.CharToByteMaps[charset]
-					Expect(exists).To(BeTrue(), "CharToByte map should exist for charset %s", charset)
+					charToByte := ffxencoding.GetCharToByteMap(models.FFX, charset)
+					Expect(charToByte).ToNot(BeNil(), "CharToByte map should exist for charset %s", charset)
 					Expect(charToByte).ToNot(BeEmpty(), "CharToByte map should be populated for charset %s", charset)
 				}
 			})
@@ -75,10 +80,10 @@ var _ = Describe("ReadManager", Ordered, func() {
 			It("should prepare string macros for all localizations", func() {
 				Expect(reader.InitializeInternals()).To(Succeed())
 
-				// Verify that macro lookups were created
+				// Verify that macros were published into the datastore
 				// Since we can't access specific macros by localization directly,
-				// we'll check that the global MacroLookup was populated
-				Expect(macrodic.MacroLookup).ToNot(BeEmpty(), "MacroLookup should be populated")
+				// we'll check that the datastore macros were populated
+				Expect(datastore.GetMacros(models.FFX).Count()).To(BeNumerically(">", 0), "Datastore macros should be populated")
 			})
 			It("should handle Korean and Chinese localizations without output", func() {
 				// This test verifies that kr and ch localizations are processed
@@ -87,7 +92,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 
 				// We can't directly test the printOutput behavior in unit tests,
 				// but we can verify the function completes without error
-				Expect(macrodic.MacroLookup).ToNot(BeNil())
+				Expect(datastore.GetMacros(models.FFX)).ToNot(BeNil())
 			})
 		})
 	})
@@ -104,12 +109,12 @@ var _ = Describe("ReadManager", Ordered, func() {
 
 				// Verify that character maps were created for each charset
 				for _, charset := range common.Charsets {
-					byteToChar, exists := ffxencoding.ByteToCharMaps[charset]
-					Expect(exists).To(BeTrue(), "ByteToChar map should exist for charset %s", charset)
+					byteToChar := ffxencoding.GetByteToCharMap(models.FFX2, charset)
+					Expect(byteToChar).ToNot(BeNil(), "ByteToChar map should exist for charset %s", charset)
 					Expect(byteToChar).ToNot(BeEmpty(), "ByteToChar map should be populated for charset %s", charset)
 
-					charToByte, exists := ffxencoding.CharToByteMaps[charset]
-					Expect(exists).To(BeTrue(), "CharToByte map should exist for charset %s", charset)
+					charToByte := ffxencoding.GetCharToByteMap(models.FFX2, charset)
+					Expect(charToByte).ToNot(BeNil(), "CharToByte map should exist for charset %s", charset)
 					Expect(charToByte).ToNot(BeEmpty(), "CharToByte map should be populated for charset %s", charset)
 				}
 			})
@@ -117,10 +122,10 @@ var _ = Describe("ReadManager", Ordered, func() {
 			It("should prepare string macros for all localizations", func() {
 				Expect(reader.InitializeInternals()).To(Succeed())
 
-				// Verify that macro lookups were created
+				// Verify that macros were published into the datastore
 				// Since we can't access specific macros by localization directly,
-				// we'll check that the global MacroLookup was populated
-				Expect(macrodic.MacroLookup).ToNot(BeEmpty(), "MacroLookup should be populated")
+				// we'll check that the datastore macros were populated
+				Expect(datastore.GetMacros(models.FFX2).Count()).To(BeNumerically(">", 0), "Datastore macros should be populated")
 			})
 			It("should handle Korean and Chinese localizations without output", func() {
 				// This test verifies that kr and ch localizations are processed
@@ -129,7 +134,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 
 				// We can't directly test the printOutput behavior in unit tests,
 				// but we can verify the function completes without error
-				Expect(macrodic.MacroLookup).ToNot(BeNil())
+				Expect(datastore.GetMacros(models.FFX2)).ToNot(BeNil())
 			})
 		})
 	})
@@ -181,7 +186,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 			Expect(err).ToNot(HaveOccurred(), "Reading all events should not return an error")
 
 			// Verify that EventFiles map is populated
-			Expect(event.HasEvents()).To(BeTrue(), "Events should be populated in datastore")
+			Expect(event.HasEvents(models.GameVersion(interactionsVersion()))).To(BeTrue(), "Events should be populated in datastore")
 			writer.ExportAllLocalizationsToJSON()
 			Expect(reader.EditAndSaveEventJSONFiles()).To(Succeed())
 		})

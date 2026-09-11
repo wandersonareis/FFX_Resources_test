@@ -71,15 +71,15 @@ func NewNameOnlyTextObject(data []byte, stringBytes []byte, headerLength int, la
 		SimplifiedName: NewLocalizedKeyedStringObject(),
 		HeaderLength:   headerLength,
 	}
-	if err := n.mapBytes(stringBytes, languageCode); err != nil {
+	if err := n.mapBytes(stringBytes, languageCode, gameVersion); err != nil {
 		return nil, err
 	}
 	return n, nil
 }
 
-func (n *NameOnlyTextObject) mapBytes(stringBytes []byte, languageCode string) error {
+func (n *NameOnlyTextObject) mapBytes(stringBytes []byte, languageCode string, version int) error {
 	r := bytes.NewReader(getValidHeader(n.Bytes, NameOnlyTextObjectLength))
-	return readStringSegments(r, stringBytes, languageCode,
+	return readStringSegments(r, stringBytes, languageCode, version,
 		n.Name,
 		n.SimplifiedName,
 	)
@@ -99,11 +99,11 @@ func (n *NameOnlyTextObject) ToBytes(languageCode string) ([]byte, error) {
 }
 
 func (n *NameOnlyTextObject) ToList(filename string, languageCode string) components.IList[datastore.IGlobalLocalizedTextObject] {
-	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
+	gameVersion := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
 	creator := func(data []byte, stringBytes []byte, headerLength int, loc string) (datastore.IGlobalLocalizedTextObject, error) {
 		return NewNameOnlyTextObject(data, stringBytes, headerLength, loc, gameVersion)
 	}
-	return ReadDataListWithIlist(filename, languageCode, creator)
+	return ReadDataListWithIlist(filename, languageCode, creator, gameVersion)
 }
 
 func (n *NameOnlyTextObject) GetTextObject() datastore.IGlobalLocalizedTextObject {
@@ -169,16 +169,16 @@ func NewNameOnlyTextObjectV2(data []byte, stringBytes []byte, headerLength int, 
 		Name:         NewLocalizedKeyedStringObject(),
 		HeaderLength: headerLength,
 	}
-	if err := n.mapBytes(stringBytes, languageCode); err != nil {
+	if err := n.mapBytes(stringBytes, languageCode, gameVersion); err != nil {
 		return nil, err
 	}
 	return n, nil
 }
 
-func (n *NameOnlyTextObjectV2) mapBytes(stringBytes []byte, languageCode string) error {
+func (n *NameOnlyTextObjectV2) mapBytes(stringBytes []byte, languageCode string, version int) error {
 	r := bytes.NewReader(n.Bytes)
 
-	if err := readStringSegments(r, stringBytes, languageCode, n.Name); err != nil {
+	if err := readStringSegments(r, stringBytes, languageCode, version, n.Name); err != nil {
 		common.LogError("Error reading NameOnlyTextObjectV2 name segment: %v", err)
 		return err
 	}

@@ -24,7 +24,8 @@ import (
 //   - path: Relative path to the binary file pattern (e.g., "battle/kernel/command.bin")
 //   - objects: IList[ILocalizedTextObject] containing instances to be populated with localizations
 //   - creator: Function that creates LocalizedTextObject instances from binary data
-func PopulateDataObjectLocalizationsWithIlist(path string, objects components.IList[datastore.IGlobalLocalizedTextObject], creator func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error)) {
+//   - version: Game version as int (1 = FFX, 2 = FFX-2)
+func PopulateDataObjectLocalizationsWithIlist(path string, objects components.IList[datastore.IGlobalLocalizedTextObject], creator func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error), version int) {
 	if objects == nil || objects.IsEmpty() {
 		return
 	}
@@ -33,10 +34,10 @@ func PopulateDataObjectLocalizationsWithIlist(path string, objects components.IL
 		fullPath := filepath.Join(common.GetLocalizationRoot(locKey), path)
 
 		var localizationData components.IList[datastore.IGlobalLocalizedTextObject]
-		if common.GetGameVersionString() == "ffx2" {
+		if version == 2 {
 			localizationData = ReadDataListWithIlistV2(fullPath, locKey, creator)
 		} else {
-			localizationData = ReadDataListWithIlist(fullPath, locKey, creator)
+			localizationData = ReadDataListWithIlist(fullPath, locKey, creator, version)
 		}
 		if localizationData != nil {
 			maxLen := min(localizationData.Len(), objects.Len())
@@ -63,9 +64,10 @@ func PopulateDataObjectLocalizationsWithIlist(path string, objects components.IL
 //   - languageCode: Language code for localization (e.g., "us", "jp", "de")
 //   - creator: Function that creates ILocalizedTextObject instances from binary data
 //     Parameters: (objData []byte, stringBytes []byte, headerLength int, languageCode string)
+//   - version: Game version as int (1 = FFX, 2 = FFX-2)
 //
 // Returns: IList[ILocalizedTextObject] containing localized text entries, or nil if reading fails
-func ReadDataListWithIlist(filename string, languageCode string, creator func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error)) components.IList[datastore.IGlobalLocalizedTextObject] {
+func ReadDataListWithIlist(filename string, languageCode string, creator func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error), version int) components.IList[datastore.IGlobalLocalizedTextObject] {
 	fileAccessor, err := common.NewFileAccessor(filename)
 	if err != nil {
 		common.LogVerbose("Error accessing file: %v", err)
@@ -83,7 +85,7 @@ func ReadDataListWithIlist(filename string, languageCode string, creator func([]
 		return components.NewList[datastore.IGlobalLocalizedTextObject](0)
 	}
 
-	return ParseDataListWithIlist(data, languageCode, creator)
+	return ParseDataListWithIlist(data, languageCode, creator, version)
 }
 
 // ParseDataListWithIlist parses binary data and creates localized text objects using a custom creator function.
@@ -109,11 +111,11 @@ func ReadDataListWithIlist(filename string, languageCode string, creator func([]
 //     Parameters: (objData []byte, stringBytes []byte, headerLength int, languageCode string)
 //
 // Returns: IList[ILocalizedTextObject] containing localized text entries, or nil if parsing fails
-func ParseDataListWithIlist(data []byte, languageCode string, creator func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error)) components.IList[datastore.IGlobalLocalizedTextObject] {
+func ParseDataListWithIlist(data []byte, languageCode string, creator func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error), version int) components.IList[datastore.IGlobalLocalizedTextObject] {
 	// No FFX-2 (v2) o cabeçalho é de 0x20 bytes e usa campos uint32 a partir do
 	// offset 16. Quando a versão do jogo é FFX-2, delegamos ao parser V2 (que lê
 	// offset := 16 e uint32), idêntico a ParseDataListWithIlistV2.
-	if common.GetGameVersionString() == "ffx2" {
+	if version == 2 {
 		return ParseDataListWithIlistV2(data, languageCode, creator)
 	}
 
@@ -335,13 +337,13 @@ func ParseDataListWithIlistV2(data []byte, languageCode string, creator func([]b
 //
 // Returns: nil on success, or a wrapped fmt.Errorf indicating which segment index
 // failed to read (e.g., "reading segment 2: EOF").
-func readStringSegments(r io.Reader, stringBytes []byte, languageCode string, segments ...datastore.IGlobalLocalizedKeyedStringObject) error {
+func readStringSegments(r io.Reader, stringBytes []byte, languageCode string, version int, segments ...datastore.IGlobalLocalizedKeyedStringObject) error {
 	for i, seg := range segments {
 		s, err := models.ReadSegment(r)
 		if err != nil {
 			return fmt.Errorf("reading segment %d: %w", i, err)
 		}
-		seg.ReadAndSetLocalizedContent(languageCode, stringBytes, s.Offset, s.Key)
+		seg.ReadAndSetLocalizedContent(languageCode, stringBytes, s.Offset, s.Key, version)
 	}
 	return nil
 }

@@ -5,10 +5,12 @@ import (
 	"encoding/binary"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/converter"
+	"ffxresources/backend/models"
 )
 
 type FieldString struct {
 	Charset           string
+	Version           int
 	RegularOffset     int
 	RegularFlags      int
 	RegularChoices    int
@@ -19,15 +21,17 @@ type FieldString struct {
 	SimplifiedBytes   []byte
 }
 
-func NewEmptyFieldString(charset string) *FieldString {
+func NewEmptyFieldString(charset string, version int) *FieldString {
 	return &FieldString{
 		Charset: charset,
+		Version: version,
 	}
 }
 
-func NewFieldString(charset string, regularHeader, simplifiedHeader int, stringBytes []byte) *FieldString {
+func NewFieldString(charset string, regularHeader, simplifiedHeader int, stringBytes []byte, version int) *FieldString {
 	fs := &FieldString{
 		Charset:           charset,
+		Version:           version,
 		RegularOffset:     regularHeader & 0x0000FFFF,
 		RegularFlags:      (regularHeader & 0x00FF0000) >> 16,
 		RegularChoices:    (regularHeader & 0xFF000000) >> 24,
@@ -47,7 +51,7 @@ func NewFieldString(charset string, regularHeader, simplifiedHeader int, stringB
 	return fs
 }
 
-func FromFieldStringData(bytes []byte, charset string) ([]*FieldString, error) {
+func FromFieldStringData(bytes []byte, charset string, version int) ([]*FieldString, error) {
 	if len(bytes) == 0 {
 		return []*FieldString{}, nil
 	}
@@ -60,14 +64,14 @@ func FromFieldStringData(bytes []byte, charset string) ([]*FieldString, error) {
 	for i := 0; i < count; i++ {
 		regularHeader := Read4Bytes(bytes, i*0x08)
 		simplifiedHeader := Read4Bytes(bytes, i*0x08+0x04)
-		fieldString := NewFieldString(charset, regularHeader, simplifiedHeader, bytes)
+		fieldString := NewFieldString(charset, regularHeader, simplifiedHeader, bytes, version)
 		strings = append(strings, fieldString)
 	}
 
 	return strings, nil
 }
 
-func RebuildFieldStrings(strings []*FieldString, charset string) []byte {
+func RebuildFieldStrings(strings []*FieldString, charset string, version models.GameVersion) []byte {
 	count := len(strings)
 	contentOffset := count * 8
 	offsetMap := make(map[string]int)
@@ -84,7 +88,7 @@ func RebuildFieldStrings(strings []*FieldString, charset string) []byte {
 		} else {
 			fieldString.RegularOffset = contentOffset + buf.Len()
 			offsetMap[regularString] = buf.Len()
-			converter.FillByteList(regularString, &buf, charset)
+			converter.FillByteList(regularString, &buf, charset, version)
 		}
 
 		simplifiedString := fieldString.GetSimplifiedString()
@@ -97,7 +101,7 @@ func RebuildFieldStrings(strings []*FieldString, charset string) []byte {
 		} else {
 			fieldString.SimplifiedOffset = contentOffset + buf.Len()
 			offsetMap[simplifiedString] = buf.Len()
-			converter.FillByteList(simplifiedString, &buf, charset)
+			converter.FillByteList(simplifiedString, &buf, charset, version)
 		}
 	}
 
@@ -130,11 +134,11 @@ func (fs *FieldString) IsEmpty() bool {
 }
 
 func (fs *FieldString) GetRegularString() string {
-	return converter.BytesToString(fs.RegularBytes, fs.Charset)
+	return converter.BytesToString(fs.RegularBytes, fs.Charset, fs.Version)
 }
 
 func (fs *FieldString) GetSimplifiedString() string {
-	return converter.BytesToString(fs.SimplifiedBytes, fs.Charset)
+	return converter.BytesToString(fs.SimplifiedBytes, fs.Charset, fs.Version)
 }
 
 func (fs *FieldString) HasDistinctSimplified() bool {
@@ -155,7 +159,7 @@ func (fs *FieldString) SetRegularString(str string, newCharset ...string) {
 	}
 
 	keepSimplifiedSynced := !fs.HasDistinctSimplified()
-	fs.RegularBytes = converter.StringToBytes(str, fs.Charset)
+	fs.RegularBytes = converter.StringToBytes(str, fs.Charset, models.GameVersion(fs.Version))
 
 	if keepSimplifiedSynced {
 		fs.SimplifiedBytes = fs.RegularBytes
@@ -167,7 +171,7 @@ func (fs *FieldString) SetSimplifiedString(str string, newCharset ...string) {
 		fs.SetCharset(newCharset[0])
 	}
 
-	fs.SimplifiedBytes = converter.StringToBytes(str, fs.Charset)
+	fs.SimplifiedBytes = converter.StringToBytes(str, fs.Charset, models.GameVersion(fs.Version))
 }
 
 func (fs *FieldString) SetCharset(newCharset string) {

@@ -3,6 +3,7 @@ package event
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
+	"ffxresources/backend/models"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -30,7 +31,7 @@ import (
 //   - eventsFolder: FileAccessor pointing to the root events directory
 //
 // Returns: error if directory access fails or critical errors occur during processing
-func ReadAllEventFiles(eventsFolder common.FileAccessor) error {
+func ReadAllEventFiles(eventsFolder common.FileAccessor, version int) error {
 	if !eventsFolder.Exists {
 		if common.IsVerboseMode() {
 			fmt.Println("Cannot locate events at:", eventsFolder)
@@ -43,7 +44,7 @@ func ReadAllEventFiles(eventsFolder common.FileAccessor) error {
 		return fmt.Errorf("failed to discover event files: %w", err)
 	}
 
-	return loadDiscoveredEvents(eventIDs)
+	return loadDiscoveredEvents(eventIDs, version)
 }
 
 // discoverEventFiles discovers all event files in the events directory structure.
@@ -120,18 +121,20 @@ func discoverSubdirectoryEvents(eventsRoot, subdirName string) (components.IList
 //
 // Parameters:
 //   - eventIDs: IList[string] containing event IDs to load
+//   - version: Game version as int (1 = FFX, 2 = FFX-2), stored in each EventFile
 //
 // Returns: error only if critical system-level failures occur
-func loadDiscoveredEvents(eventIDs components.IList[string]) error {
+func loadDiscoveredEvents(eventIDs components.IList[string], version int) error {
+	gameVersion := models.GameVersion(version)
 	eventIDs.Range(func(eventID string) {
-		eventFile, err := ReadCompleteEventFile(eventID)
+		eventFile, err := ReadCompleteEventFile(eventID, version)
 		if err != nil {
 			fmt.Printf("failed to read event file %s: %v\n", eventID, err)
 			return
 		}
 		if eventFile != nil {
 			// Registrar diretamente no datastore (fonte única da verdade)
-			SetEvent(eventID, eventFile)
+			SetEvent(gameVersion, eventID, eventFile)
 		}
 	})
 
@@ -151,9 +154,11 @@ func loadDiscoveredEvents(eventIDs components.IList[string]) error {
 //
 // Parameters:
 //   - eventID: Unique identifier for the event (e.g., "ev001", "btl_001")
+//   - version: Game version as int (1 = FFX, 2 = FFX-2), stored in the EventFile
+//     and passed to all decoding helpers
 //
 // Returns: Complete EventFile with all localizations, or nil/error if loading fails
-func ReadCompleteEventFile(eventID string) (*EventFile, error) {
+func ReadCompleteEventFile(eventID string, version int) (*EventFile, error) {
 	if len(eventID) < 2 {
 		if common.IsVerboseMode() {
 			fmt.Printf("Invalid event ID: %s\n", eventID)
@@ -163,7 +168,7 @@ func ReadCompleteEventFile(eventID string) (*EventFile, error) {
 
 	// TODO: find better solution for this junk event files
 	// Handle special cases for specific game versions
-	if common.GetGameVersionString() == "ffx2" && eventID == "crcr0000" {
+	if version == 2 && eventID == "crcr0000" {
 		if common.IsVerboseMode() {
 			fmt.Println("Skipping crcr0000 event in FFX-2")
 		}
@@ -182,12 +187,12 @@ func ReadCompleteEventFile(eventID string) (*EventFile, error) {
 		return nil, nil
 	}
 
-	event, err := ReadEventBinaryFile(eventID, originalsPath)
+	event, err := ReadEventBinaryFile(eventID, originalsPath, version)
 	if err != nil || event == nil {
 		return nil, fmt.Errorf("failed to read event file %s: %w", eventID, err)
 	}
 
-	localizedStrings := ReadLocalizedStringFiles(pathInfo.LocalizationPattern)
+	localizedStrings := ReadLocalizedStringFiles(pathInfo.LocalizationPattern, event.Version)
 	if localizedStrings != nil {
 		event.AddLocalizations(localizedStrings)
 	}
@@ -240,9 +245,11 @@ func buildEventFilePaths(eventID string) EventFilePaths {
 // Parameters:
 //   - eventID: Unique identifier for the event
 //   - pathAccessor: FileAccessor pointing to the event binary file
+//   - version: Game version as int (1 = FFX, 2 = FFX-2), passed through to NewEventFile
+//     to avoid coupling low-level decoding to global state.
 //
 // Returns: EventFile object with binary data loaded, or error if reading fails
-func ReadEventBinaryFile(eventID string, pathAccessor common.FileAccessor) (*EventFile, error) {
+func ReadEventBinaryFile(eventID string, pathAccessor common.FileAccessor, version int) (*EventFile, error) {
 	if !pathAccessor.Exists {
 		return nil, fmt.Errorf("event file not found: %s", pathAccessor.ResolvedPath)
 	}
@@ -256,7 +263,7 @@ func ReadEventBinaryFile(eventID string, pathAccessor common.FileAccessor) (*Eve
 		return nil, fmt.Errorf("no data read from event file: %v", pathAccessor)
 	}
 
-	eventFile := NewEventFile(eventID, data)
+	eventFile := NewEventFile(eventID, data, version)
 
 	common.LogVerbose("Successfully read event file: %s (%d bytes)", eventID, len(data))
 	return eventFile, nil

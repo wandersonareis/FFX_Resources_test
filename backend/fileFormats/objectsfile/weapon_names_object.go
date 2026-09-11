@@ -62,18 +62,18 @@ func NewWeaponsNameTextObject(bytes []byte, stringBytes []byte, headerLength int
 		w.SimplifiedNames[i] = NewLocalizedKeyedStringObject()
 	}
 
-	if err := w.mapBytes(stringBytes, languageCode); err != nil {
+	if err := w.mapBytes(stringBytes, languageCode, gameVersion); err != nil {
 		return nil, err
 	}
 	return w, nil
 }
 
-func (w *WeaponsNameTextObject) mapBytes(stringBytes []byte, languageCode string) error {
+func (w *WeaponsNameTextObject) mapBytes(stringBytes []byte, languageCode string, version int) error {
 	r := bytes.NewReader(w.Bytes)
-	if err := readStringSegments(r, stringBytes, languageCode, w.Names[:]...); err != nil {
+	if err := readStringSegments(r, stringBytes, languageCode, version, w.Names[:]...); err != nil {
 		return fmt.Errorf("reading names: %w", err)
 	}
-	return readStringSegments(r, stringBytes, languageCode, w.SimplifiedNames[:]...)
+	return readStringSegments(r, stringBytes, languageCode, version, w.SimplifiedNames[:]...)
 }
 
 func (w *WeaponsNameTextObject) ToBytes(languageCode string) ([]byte, error) {

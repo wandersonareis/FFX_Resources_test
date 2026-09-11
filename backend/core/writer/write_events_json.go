@@ -3,11 +3,16 @@ package writer
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
 	"fmt"
 	"path/filepath"
 	"sort"
 )
+
+func currentGameVersion() models.GameVersion {
+	return interactions.CurrentGameVersion()
+}
 
 type EventStringData struct {
 	Index int               `json:"index"`
@@ -28,7 +33,7 @@ func prepareOutputDirectory() (string, error) {
 }
 
 func getSortedEventIDs() []string {
-	eventIDs := event.GetAllEventIDs()
+	eventIDs := event.GetAllEventIDs(currentGameVersion())
 	sort.Strings(eventIDs)
 	return eventIDs
 }
@@ -54,7 +59,7 @@ func buildEventStringData(index int, str interface{ GetLocalizedString(string) s
 }
 
 func processEventFromMemory(eventID string, localizationKeys []string) *EventFileData {
-	eventFile := event.GetEvent(eventID)
+	eventFile := event.GetEvent(currentGameVersion(), eventID)
 	if eventFile == nil || eventFile.Strings == nil || len(eventFile.Strings) == 0 {
 		return nil
 	}

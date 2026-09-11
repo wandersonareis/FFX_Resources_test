@@ -32,13 +32,13 @@ func (obj *LocalizedFieldStringObject) SetLocalizedContent(localization string, 
 	obj.Contents[localization] = content
 }
 
-func (obj *LocalizedFieldStringObject) ReadAndSetLocalizedContent(localization string, bytes []byte, regularHeader, simplifiedHeader int) {
+func (obj *LocalizedFieldStringObject) ReadAndSetLocalizedContent(localization string, bytes []byte, regularHeader, simplifiedHeader int, version int) {
 	if bytes == nil {
 		return
 	}
 
 	charset := ffxencoding.GetCharsetForLanguage(localization)
-	fieldString := NewFieldString(charset, regularHeader, simplifiedHeader, bytes)
+	fieldString := NewFieldString(charset, regularHeader, simplifiedHeader, bytes, version)
 	obj.SetLocalizedContent(localization, fieldString)
 }
 
@@ -96,7 +96,7 @@ func (obj *LocalizedFieldStringObject) String() string {
 // Behavior:
 //   - For directories: Recursively processes all non-hidden files in sorted order
 //   - For files: Resolves path, reads bytes, and parses as string data using appropriate charset
-func ReadStringFile(filename string, languageCode string) []*FieldString {
+func ReadStringFile(filename string, languageCode string, version int) []*FieldString {
 	resolvedPath, err := common.NewFileAccessor(filename)
 	if err != nil {
 		if common.IsVerboseMode() {
@@ -114,7 +114,7 @@ func ReadStringFile(filename string, languageCode string) []*FieldString {
 	}
 
 	charset := ffxencoding.GetCharsetForLanguage(languageCode)
-	fieldStrings, err := FromFieldStringData(bytes, charset)
+	fieldStrings, err := FromFieldStringData(bytes, charset, version)
 	if err != nil {
 		if common.IsVerboseMode() {
 			fmt.Printf("Error parsing string data from %s: %v\n", filename, err)
@@ -139,12 +139,12 @@ func ReadStringFile(filename string, languageCode string) []*FieldString {
 //   - Reads string files using ReadStringFile
 //   - Merges all localized content into LocalizedFieldStringObject instances
 //   - Each index in the returned slice contains all localizations for that string
-func ReadLocalizedStringFiles(path string) []*LocalizedFieldStringObject {
+func ReadLocalizedStringFiles(path string, version int) []*LocalizedFieldStringObject {
 	localized := make([]*LocalizedFieldStringObject, 0)
 
 	for key := range common.SupportedLanguages {
 		fullPath := filepath.Join(common.GetLocalizationRoot(key), path)
-		localizedStrings := ReadStringFile(fullPath, key)
+		localizedStrings := ReadStringFile(fullPath, key, version)
 
 		for i, fieldString := range localizedStrings {
 			for len(localized) <= i {
@@ -158,13 +158,13 @@ func ReadLocalizedStringFiles(path string) []*LocalizedFieldStringObject {
 	return localized
 }
 
-func ReadLocalizedEventStrings(eventId string) ([]*LocalizedFieldStringObject, error) {
+func ReadLocalizedEventStrings(eventId string, version int) ([]*LocalizedFieldStringObject, error) {
 	if len(eventId) < 2 {
 		return nil, fmt.Errorf("invalid event ID: %s", eventId)
 	}
 	shortened := eventId[:2]
 	midPath := filepath.Join(shortened, eventId, eventId)
-	localizedStrings := ReadLocalizedStringFiles("event/obj_ps3/" + midPath + ".bin")
+	localizedStrings := ReadLocalizedStringFiles("event/obj_ps3/"+midPath+".bin", version)
 	if localizedStrings == nil {
 		return nil, fmt.Errorf("failed to read localized strings for event %s", eventId)
 	}

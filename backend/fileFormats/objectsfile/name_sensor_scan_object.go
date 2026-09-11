@@ -17,6 +17,7 @@ type NameSensorScanTextObject struct {
 	ScanText              datastore.IGlobalLocalizedKeyedStringObject
 	SimplifiedScanText    datastore.IGlobalLocalizedKeyedStringObject
 	HeaderLength          int
+	Version               int
 }
 
 func NewNameSensorScanTextObject(
@@ -24,6 +25,7 @@ func NewNameSensorScanTextObject(
 	stringBytes []byte,
 	headerLength int,
 	languageCode string,
+	version int,
 ) (*NameSensorScanTextObject, error) {
 	if len(bytes) < headerLength {
 		return nil, fmt.Errorf("insufficient data to create NameSensorScanTextObject: have %d bytes, need at least %d", len(bytes), headerLength)
@@ -37,9 +39,10 @@ func NewNameSensorScanTextObject(
 		ScanText:             NewLocalizedKeyedStringObject(),
 		SimplifiedScanText:   NewLocalizedKeyedStringObject(),
 		HeaderLength:         headerLength,
+		Version:              version,
 	}
 
-	if err := p.mapBytes(stringBytes, languageCode); err != nil {
+	if err := p.mapBytes(stringBytes, languageCode, version); err != nil {
 		return nil, err
 	}
 
@@ -49,9 +52,10 @@ func NewNameSensorScanTextObject(
 func (p *NameSensorScanTextObject) mapBytes(
 	stringBytes []byte,
 	languageCode string,
+	version int,
 ) error {
 	r := bytes.NewReader(p.Bytes)
-	return readStringSegments(r, stringBytes, languageCode,
+	return readStringSegments(r, stringBytes, languageCode, version,
 		p.Name,
 		p.SensorText,
 		p.SimplifiedSensorText,

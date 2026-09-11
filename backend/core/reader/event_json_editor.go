@@ -2,22 +2,23 @@ package reader
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/encoding"
-	"ffxresources/backend/core/converter"
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/fileFormats/macrodic"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
 	"fmt"
-	"os"
 	"path/filepath"
-	"time"
 )
 
+func currentGameVersion() models.GameVersion {
+	return interactions.CurrentGameVersion()
+}
+
 func ExportEventStringsToLocalizations(eventID string) error {
-	eventFile := event.GetEvent(eventID)
+	eventFile := event.GetEvent(currentGameVersion(), eventID)
 	if eventFile == nil {
 		return fmt.Errorf("event not found: %s", eventID)
 	}
@@ -74,7 +75,11 @@ func stringsToStringFileBytes(localizedStrings []*event.LocalizedFieldStringObje
 		fieldStrings = append(fieldStrings, fieldString)
 	}
 
-	stringBytes := event.RebuildFieldStrings(fieldStrings, charset)
+	version := currentGameVersion()
+	if len(fieldStrings) > 0 && fieldStrings[0] != nil {
+		version = models.GameVersion(fieldStrings[0].Version)
+	}
+	stringBytes := event.RebuildFieldStrings(fieldStrings, charset, version)
 
 	var buf bytes.Buffer
 	for _, str := range fieldStrings {
@@ -131,7 +136,7 @@ func editAndSaveEventFromJSON(jsonPath string) error {
 	processedEventIDs := make(map[string]bool)
 
 	for _, eventData := range allEvents {
-		eventFile := event.GetEvent(eventData.ID)
+		eventFile := event.GetEvent(currentGameVersion(), eventData.ID)
 		if eventFile == nil {
 			common.LogVerbose("Event not found: %s", eventData.ID)
 			continue
@@ -229,7 +234,7 @@ func EditAndSaveSpecificEventFromJSON(eventID string) error {
 	common.LogVerbose("Event %s found in JSON with %d strings", eventID, len(targetEventData.Strings))
 
 	// Validate event exists in memory
-	eventFile := event.GetEvent(eventID)
+	eventFile := event.GetEvent(currentGameVersion(), eventID)
 	if eventFile == nil {
 		return fmt.Errorf("event not found in memory: %s", eventID)
 	}
@@ -278,6 +283,20 @@ func EditAndSaveSpecificEventFromJSON(eventID string) error {
 // This matches the format exported by WriteEventFileForAllLocalizationsJSON
 type EventFileDataJSON = EventFileData
 
+// convertEventExports maps the wrapped export payload back into the reader-internal
+// EventFileData representation used by the JSON editors.
+func convertEventExports(loaded []models.EventFileExport) []EventFileData {
+	events := make([]EventFileData, 0, len(loaded))
+	for _, e := range loaded {
+		strings := make([]EventStringData, 0, len(e.Strings))
+		for _, s := range e.Strings {
+			strings = append(strings, EventStringData{Index: s.Index, Text: s.Text})
+		}
+		events = append(events, EventFileData{ID: e.ID, Strings: strings})
+	}
+	return events
+}
+
 // EventStringDataJSON represents a single event string with its localizations
 // This matches the format exported by WriteEventFileForAllLocalizationsJSON
 //type EventStringDataJSON = EventStringData
@@ -294,115 +313,33 @@ type EventStringData struct {
 	Text  map[string]string `json:"text"`
 }
 
-// MacroStringData represents a single macro string with its text variations
-type MacroStringData struct {
-	Index          int    `json:"index"`
-	RegularText    string `json:"regular_text"`
-	SimplifiedText string `json:"simplified_text"`
-	HasDistinct    bool   `json:"has_distinct_simplified"`
-}
-
-// MacroChunkData represents a chunk of macro strings
-type MacroChunkData struct {
-	ChunkIndex int               `json:"chunk_index"`
-	Strings    []MacroStringData `json:"strings"`
-}
-
-// MacroLocalizationData represents macro dictionary data for a specific localization
-type MacroLocalizationData struct {
-	Localization string           `json:"localization"`
-	Chunks       []MacroChunkData `json:"chunks"`
-}
-
-// convertEventExports maps the wrapped export payload back into the reader-internal
-// EventFileData representation used by the JSON editors.
-func convertEventExports(loaded []models.EventFileExport) []EventFileData {
-	events := make([]EventFileData, 0, len(loaded))
-	for _, e := range loaded {
-		strings := make([]EventStringData, 0, len(e.Strings))
-		for _, s := range e.Strings {
-			strings = append(strings, EventStringData{Index: s.Index, Text: s.Text})
-		}
-		events = append(events, EventFileData{ID: e.ID, Strings: strings})
-	}
-	return events
-}
-
-// convertMacroExports maps the wrapped export payload back into the reader-internal
-// MacroLocalizationData representation used by the macro editors.
-func convertMacroExports(loaded []models.MacroLocalizationExport) []MacroLocalizationData {
-	localizations := make([]MacroLocalizationData, 0, len(loaded))
-	for _, loc := range loaded {
-		chunks := make([]MacroChunkData, 0, len(loc.Chunks))
-		for _, c := range loc.Chunks {
-			strings := make([]MacroStringData, 0, len(c.Strings))
-			for _, s := range c.Strings {
-				strings = append(strings, MacroStringData{
-					Index:          s.Index,
-					RegularText:    s.RegularText,
-					SimplifiedText: s.SimplifiedText,
-					HasDistinct:    s.HasDistinct,
-				})
-			}
-			chunks = append(chunks, MacroChunkData{ChunkIndex: c.ChunkIndex, Strings: strings})
-		}
-		localizations = append(localizations, MacroLocalizationData{
-			Localization: loc.Localization,
-			Chunks:       chunks,
-		})
-	}
-	return localizations
-}
-
 /*
-JSON MACRO DICTIONARY EDITOR FUNCTIONS
-======================================
+JSON MACRO DICTIONARY EDITOR FUNCTIONS (container-based)
+=========================================================
 
-This section contains JSON equivalents for macro dictionary editor functions.
-These functions process the single JSON file created by WriteMacroDictionaryJSON.
-
-1. EditAndSaveMacroDictJSONFiles(print) - Processes the macro_dictionary_all_localizations.json file
-  - Reads the specific JSON file created by WriteMacroDictionaryJSON
-  - Processes all macro dictionaries from the single JSON file
-  - Applies changes back to the MACRODICTFILE component
-  - Uses internal implementation to avoid circular dependencies
-
-2. editAndSaveMacroDictFromJSON(print, path) - Processes a single JSON file
-  - Reads JSON content and parses it internally
-  - Updates MACRODICTFILE with macro dictionary data
-  - Reconstructs MacroString objects from JSON data
-
-3. EditAndSaveSpecificMacroDictFromJSON(localization, print) - Processes a specific localization
-  - Loads the macro_dictionary_all_localizations.json file
-  - Searches for the specified localization by code
-  - Processes only that localization and applies changes back to MACRODICTFILE
-
-Usage:
-
-	EditAndSaveMacroDictJSONFiles(true)  // Process macro_dictionary_all_localizations.json with debug output
-	EditAndSaveMacroDictJSONFiles(false) // Process silently
-
-	EditAndSaveSpecificMacroDictFromJSON("us", true)  // Process only US localization with debug output
-	EditAndSaveSpecificMacroDictFromJSON("jp", false) // Process only Japanese localization silently
+This section imports the merged JSON file created by WriteMacroDictionaryJSON
+(one entry per chunk/string holding every localization) and saves the rebuilt
+binaries back to the game files.
 */
+
+// EditAndSaveMacroDictJSONFiles imports every localization in the merged macro
+// dictionary JSON file and saves all rebuilt binaries.
 func EditAndSaveMacroDictJSONFiles() error {
-	jsonPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "macrodic")
-
-	if !common.IsPathExists(jsonPath) {
-		return fmt.Errorf("directory not found: %s", jsonPath)
-	}
-
-	jsonFilePath := filepath.Join(jsonPath, common.WithVersionSuffix("macro_dictionary_all_localizations.json"))
-
-	if !common.IsPathExists(jsonFilePath) {
-		return fmt.Errorf("JSON file not found: %s", jsonFilePath)
-	}
-
-	common.LogVerbose("Processing macro dictionary JSON file: %s", jsonFilePath)
-
-	err := editAndSaveMacroDictFromJSON(jsonFilePath)
+	imp, err := macrodic.LoadMacroDictionaryJson(macrodic.MacroDictionaryJSONFileName)
 	if err != nil {
-		common.LogVerbose("Error processing macro dictionary JSON file: %v", err)
+		common.LogVerbose("Error loading macro dictionary JSON file: %v", err)
+		return err
+	}
+
+	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+	containers, err := macrodic.ImportFromJson(imp, version)
+	if err != nil {
+		common.LogVerbose("Error importing macro dictionary JSON: %v", err)
+		return err
+	}
+
+	if err := macrodic.SaveMacroDictionaryBinaries(containers); err != nil {
+		common.LogVerbose("Error saving macro dictionary binaries: %v", err)
 		return err
 	}
 
@@ -410,366 +347,39 @@ func EditAndSaveMacroDictJSONFiles() error {
 	return nil
 }
 
-func editAndSaveMacroDictFromJSON(jsonPath string) error {
-	common.LogVerbose("Loading macro dictionary data from JSON file: %s", jsonPath)
-
-	// Read JSON file
-	resolvedFile, err := common.NewFileAccessor(jsonPath)
-	if err != nil {
-		return fmt.Errorf("error resolving JSON file path: %v", err)
-	}
-	/* jsonData, err := common.ReadFile(resolvedFile.ResolvedPath)
-	if err != nil {
-		return fmt.Errorf("error reading JSON file: %v", err)
-	} */
-
-	// Try to parse as array of localizations first (all localizations file)
-	loaded, loadErr := models.LoadDataFile[[]models.MacroLocalizationExport](resolvedFile.ResolvedPath)
-	var allLocalizations []MacroLocalizationData
-	if loadErr != nil {
-		raw, rawErr := common.ReadFile(resolvedFile.ResolvedPath)
-		if rawErr != nil {
-			return fmt.Errorf("error reading JSON file: %v", rawErr)
-		}
-		if err := json.Unmarshal(raw, &allLocalizations); err != nil {
-			return fmt.Errorf("error parsing JSON: %v", err)
-		}
-	} else {
-		allLocalizations = convertMacroExports(loaded)
-	}
-
-	common.LogVerbose("Found %d localizations in JSON file", len(allLocalizations))
-	var debugEntries []DebugMacroDicEntry
-
-	// Process each localization
-	for _, locData := range allLocalizations {
-		/* if locData.Localization != "us" {
-			continue
-		} */
-		common.LogVerbose("Processing localization: %s (%d chunks)", locData.Localization, len(locData.Chunks))
-
-		// Clear existing data for this localization
-		//macrodic.MACRODICTFILE[locData.Localization] = make([][]*components.MacroString, 0)
-		macroCharsetStrings := macrodic.MACRODICTFILE[locData.Localization]
-
-		// Find the maximum chunk index to properly size the array
-		maxChunkIndex := 15
-
-		// Initialize the chunks array with proper size
-		chunks := make([][]*macrodic.MacroString, maxChunkIndex+1)
-		for i := range chunks {
-			chunks[i] = make([]*macrodic.MacroString, 0)
-		}
-
-		// Process each chunk
-		for _, chunkData := range locData.Chunks {
-			chunkIndex := chunkData.ChunkIndex
-
-			common.LogVerbose("Processing chunk %d (%d strings)", chunkIndex, len(chunkData.Strings))
-
-			// Find the maximum string index to properly size the chunk
-			maxStringIndex := -1
-			for _, stringData := range chunkData.Strings {
-				if stringData.Index > maxStringIndex {
-					maxStringIndex = stringData.Index
-				}
-			}
-
-			// Initialize the strings array for this chunk
-			if maxStringIndex >= 0 {
-				chunks[chunkIndex] = make([]*macrodic.MacroString, maxStringIndex+1)
-			}
-
-			charset := ffxencoding.GetCharsetForLanguage(locData.Localization)
-			for _, stringData := range chunkData.Strings {
-				stringIndex := stringData.Index
-
-				simplifiedText := stringData.SimplifiedText
-				var regularBytes []byte
-				var simplifiedBytes []byte
-
-				regularBytes = converter.StringToBytes(stringData.RegularText, charset)
-				bytesToString := converter.BytesToString(regularBytes, charset)
-
-				// Verificar se bytesToString é diferente de stringData.RegularText
-				if bytesToString != stringData.RegularText {
-					// Obter dados originais do macroCharsetStrings
-					var originalBytes []byte
-					var originalString string
-
-					if chunkIndex < len(macroCharsetStrings) && stringIndex < len(macroCharsetStrings[chunkIndex]) {
-						originalMacroString := macroCharsetStrings[chunkIndex][stringIndex]
-						if originalMacroString != nil {
-							originalBytes = originalMacroString.GetRegularBytes()
-							originalString = originalMacroString.GetRegularString()
-						}
-					} // Criar entrada de debug
-					debugEntry := DebugMacroDicEntry{
-						Localization:      locData.Localization,
-						ChunkIndex:        chunkIndex,
-						StringIndex:       stringIndex,
-						OriginalBytes:     hex.EncodeToString(originalBytes),
-						OriginalString:    originalString,
-						TextJSON:          stringData.RegularText,
-						ConvertedTextJSON: bytesToString,
-					}
-					debugEntries = append(debugEntries, debugEntry)
-				}
-
-				if stringData.HasDistinct {
-					simplifiedBytes = converter.StringToBytes(simplifiedText, charset)
-				}
-
-				// Create MacroString object
-				macroString := &macrodic.MacroString{
-					Charset:          charset,
-					RegularOffset:    0, // These offsets are not relevant when reconstructing from JSON
-					SimplifiedOffset: 0, // They are used during binary parsing only
-					RegularBytes:     regularBytes,
-					SimplifiedBytes:  simplifiedBytes,
-				}
-
-				if stringIndex >= len(chunks[chunkIndex]) {
-					newSize := stringIndex + 1
-					newSlice := make([]*macrodic.MacroString, newSize)
-					copy(newSlice, chunks[chunkIndex])
-					chunks[chunkIndex] = newSlice
-				}
-				chunks[chunkIndex][stringIndex] = macroString
-			}
-			macrodic.RebuildMacroStrings(chunks[chunkIndex], charset, false)
-		}
-
-		// Update the global MACRODICTFILE
-		macrodic.MACRODICTFILE[locData.Localization] = chunks
-		common.LogVerbose("Localization %s updated successfully with %d chunks", locData.Localization, len(chunks))
-	}
-
-	if common.IsVerboseMode() {
-		common.LogVerbose("Macro dictionary data loaded successfully")
-
-		totalLocalizations := len(macrodic.MACRODICTFILE)
-		totalStrings := 0
-
-		for localization, chunks := range macrodic.MACRODICTFILE {
-			localizationStrings := 0
-			for _, chunk := range chunks {
-				for _, macroString := range chunk {
-					if macroString != nil && !macroString.IsEmpty() {
-						localizationStrings++
-					}
-				}
-			}
-			totalStrings += localizationStrings
-			common.LogVerbose("- Localization %s: %d chunks, %d strings", localization, len(chunks), localizationStrings)
-		}
-		common.LogVerbose("Total: %d localizations, %d macro strings loaded", totalLocalizations, totalStrings)
-	}
-
-	// Criar arquivo de debug se houver entradas
-	if len(debugEntries) > 0 {
-		if err := createDebugMacroDicFile(debugEntries); err != nil {
-			common.LogVerbose("Warning: could not create debug file: %v", err)
-		}
-	}
-
-	return nil
-}
-
-// EditAndSaveSpecificMacroDictFromJSON processes a specific localization from the macro_dictionary_all_localizations.json file
-// This function loads the JSON file, finds the specified localization, and applies changes only to that localization
+// EditAndSaveSpecificMacroDictFromJSON imports only the requested localization
+// from the merged macro dictionary JSON file and saves its rebuilt binary.
 //
 // Parameters:
 //   - localization: The localization code to process (e.g., "us", "jp", "de", etc.)
 //
 // Returns:
-//   - error: Any error that occurred during processing
+//   - error: nil if successful, error if the localization is not found or processing fails
 func EditAndSaveSpecificMacroDictFromJSON(localization string) error {
-	jsonPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits")
-	jsonFilePath := filepath.Join(jsonPath, common.WithVersionSuffix("macro_dictionary_all_localizations.json"))
-
-	if !common.IsPathExists(jsonFilePath) {
-		return fmt.Errorf("arquivo JSON não encontrado: %s", jsonFilePath)
-	}
-
-	common.LogVerbose("Processing specific localization %s from macro dictionary JSON file: %s",
-		localization, jsonFilePath)
-
-	// Read JSON file
-	resolvedFile, err := common.NewFileAccessor(jsonFilePath)
+	imp, err := macrodic.LoadMacroDictionaryJson(macrodic.MacroDictionaryJSONFileName)
 	if err != nil {
-		return fmt.Errorf("error resolving JSON file path: %v", err)
-	}
-	loaded, loadErr := models.LoadDataFile[[]models.MacroLocalizationExport](resolvedFile.ResolvedPath)
-	var allLocalizations []MacroLocalizationData
-	if loadErr != nil {
-		raw, rawErr := common.ReadFile(resolvedFile.ResolvedPath)
-		if rawErr != nil {
-			return fmt.Errorf("error on reading JSON file: %v", rawErr)
-		}
-		if err := json.Unmarshal(raw, &allLocalizations); err != nil {
-			return fmt.Errorf("error on parsing JSON file: %v", err)
-		}
-	} else {
-		allLocalizations = convertMacroExports(loaded)
+		common.LogVerbose("Error loading macro dictionary JSON file: %v", err)
+		return err
 	}
 
-	/* jsonData, err := common.ReadFile(resolvedFile.ResolvedPath)
+	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+	containers, err := macrodic.ImportFromJson(imp, version)
 	if err != nil {
-		return fmt.Errorf("erro ao ler arquivo JSON: %v", err)
+		common.LogVerbose("Error importing macro dictionary JSON: %v", err)
+		return err
 	}
 
-	// Parse JSON to find all localizations
-	var allLocalizations []MacroLocalizationData
-	if err := json.Unmarshal(jsonData, &allLocalizations); err != nil {
-		// If that fails, try to parse as single localization
-		var singleLocalization MacroLocalizationData
-		if err := json.Unmarshal(jsonData, &singleLocalization); err != nil {
-			return fmt.Errorf("erro ao fazer parse do JSON: %v", err)
-		}
-		// Convert single localization to array
-		allLocalizations = []MacroLocalizationData{singleLocalization}
-	} */
-
-	// Find the specific localization
-	var targetLocalization *MacroLocalizationData
-	for i, locData := range allLocalizations {
-		if locData.Localization == localization {
-			targetLocalization = &allLocalizations[i]
-			break
-		}
+	c, ok := containers[localization]
+	if !ok || c == nil {
+		return fmt.Errorf("localization %s not found in the JSON file", localization)
 	}
 
-	if targetLocalization == nil {
-		return fmt.Errorf("location %s not found in the json file", localization)
+	if err := macrodic.SaveMacroDictionaryBinaries(map[string]*macrodic.MacroDictionaryTextContainer{localization: c}); err != nil {
+		common.LogVerbose("Error saving macro dictionary binary for %s: %v", localization, err)
+		return err
 	}
 
-	common.LogVerbose("Location %s found with %d chunks", localization, len(targetLocalization.Chunks))
-
-	// Clear existing data for this localization only
-	macrodic.MACRODICTFILE[localization] = make([][]*macrodic.MacroString, 0)
-
-	// Find the maximum chunk index to properly size the array
-	maxChunkIndex := 15
-
-	// Initialize the chunks array with proper size
-	chunks := make([][]*macrodic.MacroString, maxChunkIndex+1)
-	for i := range chunks {
-		chunks[i] = make([]*macrodic.MacroString, 0)
-	}
-
-	// Process each chunk for the target localization
-	for _, chunkData := range targetLocalization.Chunks {
-		chunkIndex := chunkData.ChunkIndex
-
-		common.LogVerbose("Processing chunk %d (%d strings)", chunkIndex, len(chunkData.Strings))
-
-		// Find the maximum string index to properly size the chunk
-		maxStringIndex := -1
-		for _, stringData := range chunkData.Strings {
-			if stringData.Index > maxStringIndex {
-				maxStringIndex = stringData.Index
-			}
-		}
-
-		// Initialize the strings array for this chunk
-		for _, stringData := range chunkData.Strings {
-			stringIndex := stringData.Index
-
-			// Get the text for this localization
-			regularText := stringData.RegularText
-			simplifiedText := stringData.SimplifiedText
-
-			// If no simplified text is provided, use regular text
-			if simplifiedText == "" {
-				simplifiedText = regularText
-			}
-
-			// Convert strings back to bytes using the localization's charset
-			charset := ffxencoding.GetCharsetForLanguage(localization)
-			regularBytes := converter.StringToBytes(regularText, charset)
-			simplifiedBytes := converter.StringToBytes(simplifiedText, charset)
-
-			// Create MacroString object
-			macroString := &macrodic.MacroString{
-				Charset:          charset,
-				RegularOffset:    0, // These offsets are not relevant when reconstructing from JSON
-				SimplifiedOffset: 0, // They are used during binary parsing only
-				RegularBytes:     regularBytes,
-				SimplifiedBytes:  simplifiedBytes,
-			}
-
-			// Add to chunk (ensure the array is large enough)
-			if stringIndex >= len(chunks[chunkIndex]) {
-				// Expand the array to accommodate this index
-				newSize := stringIndex + 1
-				newSlice := make([]*macrodic.MacroString, newSize)
-				copy(newSlice, chunks[chunkIndex])
-				chunks[chunkIndex] = newSlice
-			}
-			chunks[chunkIndex][stringIndex] = macroString
-		}
-	}
-
-	// Update the global MACRODICTFILE for this specific localization only
-	macrodic.MACRODICTFILE[localization] = chunks
-
-	if common.IsVerboseMode() {
-		stringCount := 0
-		for _, chunk := range chunks {
-			for _, macroString := range chunk {
-				if macroString != nil && !macroString.IsEmpty() {
-					stringCount++
-				}
-			}
-		}
-		common.LogVerbose("✓ Location %S successfully processed: %of chunks, %d strings",
-			localization, len(chunks), stringCount)
-	}
-
+	common.LogVerbose("Localization %s processed and saved successfully", localization)
 	return nil
 }
 
-// Estrutura para armazenar dados de debug de comparação de strings
-type DebugMacroDicEntry struct {
-	Localization      string `json:"localization"`
-	ChunkIndex        int    `json:"chunkIndex"`
-	StringIndex       int    `json:"stringIndex"`
-	OriginalBytes     string `json:"originalBytes"` // Hex representation
-	OriginalString    string `json:"originalString"`
-	TextJSON          string `json:"textJson"`
-	ConvertedTextJSON string `json:"convertedTextJson"`
-}
-
-type DebugMacroDicEntries struct {
-	ErrorsCount int                  `json:"errorsCount"`
-	Entries     []DebugMacroDicEntry `json:"entries"`
-}
-
-// Função para criar arquivo de debug com dados de comparação de strings
-func createDebugMacroDicFile(entries []DebugMacroDicEntry) error {
-	if len(entries) == 0 {
-		return nil
-	}
-
-	// Criar nome do arquivo com data e hora
-	timestamp := time.Now().Format("2006-01-02_15-04-05")
-	filename := fmt.Sprintf("debug_macrodic_%s.json", timestamp)
-	debugEntries := DebugMacroDicEntries{
-		ErrorsCount: len(entries),
-		Entries:     entries,
-	}
-	// Criar o arquivo JSON
-	jsonData, err := json.MarshalIndent(debugEntries, "", "  ")
-	if err != nil {
-		return fmt.Errorf("erro ao serializar dados de debug: %v", err)
-	}
-
-	err = os.WriteFile(filename, jsonData, 0644)
-	if err != nil {
-		return fmt.Errorf("erro ao criar arquivo de debug %s: %v", filename, err)
-	}
-
-	fmt.Printf("Arquivo de debug criado: %s com %d entradas\n", filename, len(entries))
-	return nil
-}

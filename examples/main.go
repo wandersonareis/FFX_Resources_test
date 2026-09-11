@@ -8,6 +8,7 @@ import (
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/fileFormats/objectsfile"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/models"
 	"fmt"
 )
 
@@ -36,7 +37,7 @@ func main() {
 		return
 	}
 	// Executa os exemplos para FFX v1
-	runFFXExamples()
+	//runFFXExamples()
 
 	// ===== FFX-2 (v2) =====
 	common.SetGameVersion(2)
@@ -454,6 +455,8 @@ func runFFXExamples() {
 	}
 	common.LogInfo("[FFX] ✓ Name text salvos com sucesso")
 
+	BinaryReconstructionExample()
+
 	// Carregar eventos primeiro
 	if err := readEvents(); err != nil {
 		fmt.Printf("Erro ao carregar eventos: %v\n", err)
@@ -462,9 +465,10 @@ func runFFXExamples() {
 
 	//converter.ExportAllEventsToJSON()
 	fmt.Println("✓ Eventos exportados para JSON")
-	event.ImportEventsDataFromJsonFile()
+	gameVersion := models.GameVersion(interactions.NewInteractionService().FFXAppConfig().GetGameVersion())
+	event.ImportEventsDataFromJsonFile(gameVersion)
 	fmt.Println("✓ Eventos editados e salvos com sucesso")
-	event.ExportAllEventsForLocalizations()
+	event.ExportAllEventsForLocalizations(gameVersion)
 	fmt.Println("✓ Eventos salvos com sucesso")
 
 	showMainMenu()
@@ -694,7 +698,7 @@ func runFFX2Examples() {
 	common.LogInfo("[FFX-2] ✓ plate text salvos com sucesso")
 
 	// ply_save.bin
-	playerSaveBinaryFile := objectsfile.ReadNameOnlyLocalizations("battle/kernel/ply_save.bin")
+	playerSaveBinaryFile := objectsfile.ReadNameOnlyV2Localizations("battle/kernel/ply_save.bin")
 	common.LogInfo("[FFX-2] player save: %d\n", playerSaveBinaryFile.GetObjects().Len())
 	if err := playerSaveBinaryFile.ExportToJson("player_save_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting player save text to JSON: %v\n", err)
@@ -749,9 +753,10 @@ func runFFX2Examples() {
 
 	//converter.ExportAllEventsToJSON()
 	fmt.Println("✓ Eventos exportados para JSON")
-	event.ImportEventsDataFromJsonFile()
+	gameVersion := models.GameVersion(interactions.NewInteractionService().FFXAppConfig().GetGameVersion())
+	event.ImportEventsDataFromJsonFile(gameVersion)
 	fmt.Println("✓ Eventos editados e salvos com sucesso")
-	event.ExportAllEventsForLocalizations()
+	event.ExportAllEventsForLocalizations(gameVersion)
 	fmt.Println("✓ Eventos salvos com sucesso")
 
 	fmt.Println("✓ FFX-2 (v2) extraído para JSON (arquivos *_v2_*.json)")
@@ -765,13 +770,14 @@ func readEvents() error {
 	if err != nil {
 		return fmt.Errorf("failed to resolve events directory: %w", err)
 	}
-	if err := event.ReadAllEventFiles(eventsFolder); err != nil {
+	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+	if err := event.ReadAllEventFiles(eventsFolder, version); err != nil {
 		fmt.Printf("Erro ao carregar eventos: %v\n", err)
 		return err
 	}
 
 	// Contar eventos carregados no datastore
-	eventIDs := event.GetAllEventIDs()
+	eventIDs := event.GetAllEventIDs(models.GameVersion(version))
 	fmt.Printf("✓ Carregados %d eventos no datastore\n", len(eventIDs))
 	return nil
 }
@@ -788,7 +794,7 @@ func showMainMenu() {
 	//ExportMacroDictionaryExample()           // Exemplo de exportação de dicionário de macros
 	writer.ExportAllLocalizationsToJSON() // Exporta todos os eventos para JSON
 	//writer.WriteStringsEventForAllLocalizationsJSON("akagi0100", true) // Exporta o evento "akagi0100" para JSON
-	writer.WriteMacroDictionaryJSON(true)
+	writer.ExportMacroDictionaryToJSON()
 	//reader.EditAndSaveMacroDictJSONFiles(true) // Exemplo de fluxo completo de exportação/importação
 	reader.EditAndSaveSpecificEventFromJSON("znkd1500") // Edita e salva o evento "znkd1500" do JSON
 	// ===== WORKFLOW JSON =====
