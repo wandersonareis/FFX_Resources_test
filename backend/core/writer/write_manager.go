@@ -23,7 +23,7 @@ func getLocalizationKeys() []string {
 // objectfile exports do.
 func ExportMacroDictionaryToJSON() {
 	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	containers, err := macrodic.ReadMacroDictionaryContainers(version)
+	containers, err := macrodic.ReadMacroDictionaryContainers(common.ToInt(version))
 	if err != nil {
 		common.LogError("Error reading macro dictionary containers: %v\n", err)
 		return
@@ -54,7 +54,7 @@ func ExportMacroDictionaryToJSON() {
 // its own merged-shape JSON file.
 func WriteMacroDictionaryForLocalizationJSON(localization string) {
 	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	containers, err := macrodic.ReadMacroDictionaryContainers(version)
+	containers, err := macrodic.ReadMacroDictionaryContainers(common.ToInt(version))
 	if err != nil {
 		common.LogError("Error reading macro dictionary containers: %v\n", err)
 		return
@@ -101,7 +101,7 @@ func EditAndSaveMacrodicFromJson(jsonFilePath string) error {
 	}
 
 	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	containers, err := macrodic.ImportFromJson(imp, version)
+	containers, err := macrodic.ImportFromJson(imp, common.ToInt(version))
 	if err != nil {
 		return fmt.Errorf("erro ao importar dados do JSON: %v", err)
 	}

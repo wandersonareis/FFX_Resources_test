@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"sort"
 
+	"ffxresources/backend/common"
 	"ffxresources/backend/core/converter"
 	"ffxresources/backend/core/encoding"
-	"ffxresources/backend/models"
 	"fmt"
 )
 
@@ -80,7 +80,7 @@ func ImportFromJson(data *MacroDictionaryJsonImport, version int) (map[string]*M
 			if s.Index < 0 {
 				continue
 			}
-			gameVersion := models.GameVersion(version)
+			gameVersion := common.GameVersion(version)
 			for _, loc := range locKeys {
 				charset := ffxencoding.GetCharsetForLanguage(loc)
 				nameBytes := converter.StringToBytes(s.Name[loc], charset, gameVersion)

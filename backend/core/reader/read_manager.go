@@ -5,7 +5,6 @@ import (
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/fileFormats/macrodic"
 	"ffxresources/backend/interactions"
-	"ffxresources/backend/models"
 	"path/filepath"
 )
 
@@ -27,7 +26,7 @@ func PrepareStringMacros(filename, localization string, version int) error {
 
 func InitializeInternals() error {
 	gameVersion := interactions.CurrentGameVersion()
-	version := int(gameVersion)
+	version := common.ToInt(gameVersion)
 	for _, cs := range common.Charsets {
 		if err := PrepareCharset(gameVersion, cs); err != nil {
 			return err
@@ -59,7 +58,7 @@ func InitializeAllInternals() error {
 	return nil
 }
 
-func logMacroLookup(gameVersion models.GameVersion) {
+func logMacroLookup(gameVersion common.GameVersion) {
 	if common.IsVerboseMode() {
 		datastore.GetMacros(gameVersion).ForEach(func(_ int, strings datastore.IGlobalLocalizedMacroStringObject) {
 			for loc := range common.SupportedLanguages {

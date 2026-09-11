@@ -1,9 +1,9 @@
 package macrodic
 
 import (
+	"ffxresources/backend/common"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/models"
 )
 
 // IMacroDictionaryFile é o contrato de um arquivo de dicionário de macros
@@ -19,7 +19,7 @@ type IMacroDictionaryFile interface {
 	// PublishStrings mescla esta localization no datastore versionado.
 	PublishStrings() error
 	GetLocalization() string
-	GetVersion() models.GameVersion
+	GetVersion() common.GameVersion
 }
 
 var (

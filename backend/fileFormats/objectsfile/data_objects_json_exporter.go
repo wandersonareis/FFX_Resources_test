@@ -335,7 +335,7 @@ func buildEventStringDataJSON(index int, str interface{ GetLocalizedString(strin
 }
 
 // currentGameVersion resolves the active game version for versioned event lookups.
-func currentGameVersion() models.GameVersion {
+func currentGameVersion() common.GameVersion {
 	return interactions.CurrentGameVersion()
 }
 
@@ -371,7 +371,7 @@ func processEventFromFile(eventID string, localizationKeys []string) *EventFileD
 	}
 
 	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	eventFileStrings, err := event.ReadLocalizedEventStrings(eventID, version)
+	eventFileStrings, err := event.ReadLocalizedEventStrings(eventID, common.ToInt(version))
 	if err != nil {
 		common.LogVerbose("Error loading localized strings: %v", err)
 		return nil

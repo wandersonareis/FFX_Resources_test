@@ -120,7 +120,7 @@ type ObjectsFileExport struct {
 }
 
 // NewFileInfoFromPath builds a SpiraFileInfo for an arbitrary file (such as a game binary)
-// without requiring an FFX/FFX-2 prefix in the path. The version resolves to Unknown (0)
+// without requiring an FFX/FFX-2 prefix in the path. The version resolves to ffx
 // when the prefix is absent. It never returns an error.
 func NewFileInfoFromPath(path string) *SpiraFileInfo {
 	aPath, err := filepath.Abs(path)
@@ -137,7 +137,7 @@ func NewFileInfoFromPath(path string) *SpiraFileInfo {
 			Path:       path,
 			Parent:     filepath.Dir(path),
 			Type:       guessFileType(path),
-			Version:    GameVersion(getVersionFromPrefix(aPath)),
+			Version:    getVersionFromPrefix(aPath),
 		}
 	}
 
@@ -149,12 +149,12 @@ func NewFileInfoFromPath(path string) *SpiraFileInfo {
 		Path:       path,
 		Parent:     filepath.Dir(path),
 		Type:       guessFileType(path),
-		Version:    GameVersion(getVersionFromPrefix(aPath)),
+		Version:    getVersionFromPrefix(aPath),
 	}
 
 	if !info.IsDir() && fileInfo.Type != DcpParts {
 		if v, verr := common.CheckFFXPath(aPath); verr == nil {
-			fileInfo.Version = GameVersion(v)
+			fileInfo.Version = v
 			if rp, rerr := common.RelativePathFromMatch(aPath); rerr == nil {
 				fileInfo.RelativePath = rp
 			}

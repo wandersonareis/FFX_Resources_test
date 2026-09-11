@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	ffxencoding "ffxresources/backend/core/encoding"
-	"ffxresources/backend/models"
+	"ffxresources/backend/common"
 )
 
 var (
@@ -19,7 +19,7 @@ var (
 	reHEX    = regexp.MustCompile(`^HEX:([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2})*)$`)
 )
 
-func CharToBytes(chr rune, charset string, version models.GameVersion) []uint {
+func CharToBytes(chr rune, charset string, version common.GameVersion) []uint {
 	if chr == '\n' {
 		return []uint{0x03}
 	}
@@ -75,7 +75,7 @@ func GetFirstChoiceInString(s string) (uint16, bool) {
 	return 0, false
 }
 
-func FillByteList(s string, buf *bytes.Buffer, charset string, version models.GameVersion) {
+func FillByteList(s string, buf *bytes.Buffer, charset string, version common.GameVersion) {
 	runes := []rune(s)
 
 	for i := 0; i < len(runes); i++ {
@@ -105,7 +105,7 @@ func FillByteList(s string, buf *bytes.Buffer, charset string, version models.Ga
 	buf.WriteByte(0x00)
 }
 
-func StringToByteList(runes []rune, charset string, version models.GameVersion) []byte {
+func StringToByteList(runes []rune, charset string, version common.GameVersion) []byte {
 	var buf bytes.Buffer
 	for i := 0; i < len(runes); i++ {
 		r := runes[i]
@@ -132,7 +132,7 @@ func StringToByteList(runes []rune, charset string, version models.GameVersion) 
 	return buf.Bytes()
 }
 
-func StringToBytes(s, charset string, version models.GameVersion) []byte {
+func StringToBytes(s, charset string, version common.GameVersion) []byte {
 	runes := []rune(s)
 	return StringToByteList(runes, charset, version)
 }

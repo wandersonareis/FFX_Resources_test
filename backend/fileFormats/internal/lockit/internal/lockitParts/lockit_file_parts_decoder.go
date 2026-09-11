@@ -1,16 +1,16 @@
 package lockitParts
 
 import (
+	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	ffxencoding "ffxresources/backend/core/encoding"
 	lockitFileEncoder "ffxresources/backend/fileFormats/internal/lockit/internal/encoder"
-	"ffxresources/backend/models"
 	"fmt"
 )
 
 type (
 	ILockitFilePartsDecoder interface {
-		DecodeFileParts(partsList components.IList[LockitFileParts], lockitEncoding ffxencoding.IFFXTextLockitEncoding, gameVersion models.GameVersion) error
+		DecodeFileParts(partsList components.IList[LockitFileParts], lockitEncoding ffxencoding.IFFXTextLockitEncoding, gameVersion common.GameVersion) error
 	}
 
 	LockitFilePartsDecoder struct{}
@@ -20,7 +20,7 @@ func NewLockitFilePartsDecoder() ILockitFilePartsDecoder {
 	return &LockitFilePartsDecoder{}
 }
 
-func (ld *LockitFilePartsDecoder) DecodeFileParts(partsList components.IList[LockitFileParts], lockitEncoding ffxencoding.IFFXTextLockitEncoding, gameVersion models.GameVersion) error {
+func (ld *LockitFilePartsDecoder) DecodeFileParts(partsList components.IList[LockitFileParts], lockitEncoding ffxencoding.IFFXTextLockitEncoding, gameVersion common.GameVersion) error {
 	if partsList.Len() == 0 {
 		return fmt.Errorf("lockit file parts list is empty")
 	}
@@ -42,7 +42,7 @@ func (ld *LockitFilePartsDecoder) DecodeFileParts(partsList components.IList[Loc
 	return nil
 }
 
-func (le *LockitFilePartsDecoder) chooseDecodingStrategy(index int, gameVersion models.GameVersion) lockitFileEncoder.ILockitProcessingStrategy {
+func (le *LockitFilePartsDecoder) chooseDecodingStrategy(index int, gameVersion common.GameVersion) lockitFileEncoder.ILockitProcessingStrategy {
 	getStrategyV1 := func(index int) lockitFileEncoder.ILockitProcessingStrategy {
 		if index > 0 && index%2 == 0 {
 			return lockitFileEncoder.NewLockitDecoderUTF8Strategy()
@@ -58,9 +58,9 @@ func (le *LockitFilePartsDecoder) chooseDecodingStrategy(index int, gameVersion 
 	}
 
 	switch gameVersion {
-	case models.FFX:
+	case common.GameVersionFFX:
 		return getStrategyV1(index)
-	case models.FFX2:
+	case common.GameVersionFFX2, common.GameVersionLastMiss:
 		return getStrategyV2(index)
 	default:
 		return getStrategyV1(index)

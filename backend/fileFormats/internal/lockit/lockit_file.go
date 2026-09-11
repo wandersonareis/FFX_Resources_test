@@ -23,7 +23,7 @@ type LockitFile struct {
 }
 
 func NewLockitFile(source interfaces.ISource, destination locations.IDestination) interfaces.IFileProcessor {
-	options := core.NewLockitFileOptions(interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber())
+	options := core.NewLockitFileOptions(interactions.CurrentGameVersion())
 
 	return &LockitFile{
 		IBaseFileFormat: baseFormats.NewFormatsBase(source, destination),

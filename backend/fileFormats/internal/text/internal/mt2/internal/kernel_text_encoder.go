@@ -6,7 +6,6 @@ import (
 	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/locations"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/models"
 	"fmt"
 )
 
@@ -45,7 +44,7 @@ func (e *krnlEncoder) Encoder(
 	return nil
 }
 
-func (d *krnlEncoder) encodeKernel(sourceFile, targetFile, outputFile string, encodingInfo ffxencoding.IFFXTextKrnlEncoding, gameVersion models.GameVersion) error {
+func (d *krnlEncoder) encodeKernel(sourceFile, targetFile, outputFile string, encodingInfo ffxencoding.IFFXTextKrnlEncoding, gameVersion common.GameVersion) error {
 	encodingFilePath := encodingInfo.GetEncodingFile()
 	if encodingFilePath == "" {
 		return fmt.Errorf("kernel encoding file path is empty")

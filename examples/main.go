@@ -24,8 +24,7 @@ func main() {
 	fmt.Println()
 
 	// ===== FFX (v1) =====
-	common.SetGameVersion(1)
-	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(1)
+	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(common.GameVersionFFX)
 	common.SetGameFilesRoot("/home/mestre/FFX_Resources/build/bin/data/") // Defina o caminho correto para os arquivos do jogo
 	common.SetVerboseMode(false)                                          // Ativa o modo verboso para depuração
 
@@ -40,8 +39,7 @@ func main() {
 	//runFFXExamples()
 
 	// ===== FFX-2 (v2) =====
-	common.SetGameVersion(2)
-	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(2)
+	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(common.GameVersionFFX2)
 	common.SetGameFilesRoot("/home/mestre/FFX_Resources/build/bin/data/") // Defina o caminho correto para os arquivos do jogo
 
 	fmt.Println("\n=== FFX-2 (v2) ===")
@@ -465,7 +463,7 @@ func runFFXExamples() {
 
 	//converter.ExportAllEventsToJSON()
 	fmt.Println("✓ Eventos exportados para JSON")
-	gameVersion := models.GameVersion(interactions.NewInteractionService().FFXAppConfig().GetGameVersion())
+	gameVersion := interactions.CurrentGameVersion()
 	event.ImportEventsDataFromJsonFile(gameVersion)
 	fmt.Println("✓ Eventos editados e salvos com sucesso")
 	event.ExportAllEventsForLocalizations(gameVersion)
@@ -769,7 +767,7 @@ func runFFX2Examples() {
 
 	//converter.ExportAllEventsToJSON()
 	fmt.Println("✓ Eventos exportados para JSON")
-	gameVersion := models.GameVersion(interactions.NewInteractionService().FFXAppConfig().GetGameVersion())
+	gameVersion := interactions.CurrentGameVersion()
 	event.ImportEventsDataFromJsonFile(gameVersion)
 	fmt.Println("✓ Eventos editados e salvos com sucesso")
 	event.ExportAllEventsForLocalizations(gameVersion)
@@ -786,8 +784,8 @@ func readEvents() error {
 	if err != nil {
 		return fmt.Errorf("failed to resolve events directory: %w", err)
 	}
-	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	if err := event.ReadAllEventFiles(eventsFolder, version); err != nil {
+	version := interactions.CurrentGameVersion()
+	if err := event.ReadAllEventFiles(eventsFolder, string(version)); err != nil {
 		fmt.Printf("Erro ao carregar eventos: %v\n", err)
 		return err
 	}

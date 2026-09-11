@@ -1,6 +1,9 @@
 package interfaces
 
-import "ffxresources/backend/models"
+import (
+	"ffxresources/backend/common"
+	"ffxresources/backend/models"
+)
 
 type (
 	IExtractor interface {
@@ -23,7 +26,7 @@ type (
 		GetParentPath() string
 		GetSize() int64
 		GetType() models.NodeType
-		GetVersion() models.GameVersion
+		GetVersion() common.GameVersion
 		IsDir() bool
 		PopulateDuplicatesFiles()
 	}

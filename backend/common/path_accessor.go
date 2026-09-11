@@ -3,38 +3,60 @@ package common
 import "path/filepath"
 
 func GetEncodingDir() string {
-	return GetEncodingDirForVersionString(GetGameVersionString())
+	return GetEncodingDirForVersion(CurrentGameVersion())
 }
 
-// GetEncodingDirForVersionString resolve o diretório de encoding sem depender
-// do GAME_VERSION global ("ffx" -> ffx_encoding, "ffx2" -> ffx2_encoding).
-func GetEncodingDirForVersionString(gameVersionString string) string {
-	switch gameVersionString {
-	case "ffx2":
+// GetEncodingDirForVersion resolve o diretório de encoding sem depender
+// de estado global ("ffx" -> ffx_encoding, "ffx2" -> ffx2_encoding,
+// "lastmiss" reaproveita ffx2_encoding).
+func GetEncodingDirForVersion(gv GameVersion) string {
+	switch gv.Normalize() {
+	case GameVersionFFX2, GameVersionLastMiss:
 		return "ffx2_encoding"
 	default:
 		return "ffx_encoding"
 	}
 }
 
+// GetEncodingDirForVersionString mantém compatibilidade com chamadores legados.
+func GetEncodingDirForVersionString(gameVersionString string) string {
+	return GetEncodingDirForVersion(ParseGameVersion(gameVersionString))
+}
+
 func GetEncodingPath(charset string) string {
-	return GetEncodingPathForVersion(GetGameVersionString(), charset)
+	return GetEncodingPathForVersion(CurrentGameVersion(), charset)
 }
 
 // GetEncodingPathForVersion monta o caminho do charset para uma versão
 // explícita, sem ler o estado global.
-func GetEncodingPathForVersion(gameVersionString, charset string) string {
-	encodingDir := GetEncodingDirForVersionString(gameVersionString)
-	return filepath.Join(encodingDir, gameVersionString+"sjistbl_"+charset+".bin")
+func GetEncodingPathForVersion(gv GameVersion, charset string) string {
+	encodingDir := GetEncodingDirForVersion(gv)
+	base := string(gv.Normalize())
+	if gv.Normalize() == GameVersionLastMiss {
+		base = string(GameVersionFFX2)
+	}
+	return filepath.Join(encodingDir, base+"sjistbl_"+charset+".bin")
 }
 
+// GetPathRoot monta a raiz ffx_ps2/<versão>/master da versão ativa.
 func GetPathRoot() string {
-	return GetPathRootForVersion(GetGameVersionString())
+	return GetPathRootForVersion(CurrentGameVersion())
 }
 
 // GetPathRootForVersion monta ffx_ps2/<versão>/master para uma versão explícita.
-func GetPathRootForVersion(gameVersionString string) string {
-	return filepath.Join("ffx_ps2", gameVersionString, "master")
+// LastMiss vive sob a árvore ffx2.
+func GetPathRootForVersion(gv GameVersion) string {
+	switch gv.Normalize() {
+	case GameVersionLastMiss:
+		return filepath.Join("ffx_ps2", string(GameVersionFFX2), "master")
+	default:
+		return filepath.Join("ffx_ps2", string(gv.Normalize()), "master")
+	}
+}
+
+// GetPathRootForVersionString mantém compatibilidade com chamadores legados.
+func GetPathRootForVersionString(gameVersionString string) string {
+	return GetPathRootForVersion(ParseGameVersion(gameVersionString))
 }
 
 func GetPathOriginalsRoot() string {

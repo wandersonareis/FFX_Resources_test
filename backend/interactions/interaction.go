@@ -4,7 +4,6 @@ import (
 	"context"
 	"ffxresources/backend/common"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/models"
 	"sync"
 )
 
@@ -57,6 +56,8 @@ func NewInteractionService() *InteractionService {
 		if gameDir != "" {
 			common.SetGameFilesRoot(gameDir)
 		}
+
+		common.SetCurrentGameVersion(config.GetGameVersion())
 	}
 	return interactionInstance
 }
@@ -80,6 +81,8 @@ func NewInteractionServiceWithConfig(config *AppConfig) *InteractionService {
 	if gameDir != "" {
 		common.SetGameFilesRoot(gameDir)
 	}
+
+	common.SetCurrentGameVersion(config.GetGameVersion())
 
 	return s
 }
@@ -108,10 +111,6 @@ func NewInteractionWithTextFormatter(formatter interfaces.ITextFormatter) *Inter
 
 func (i *InteractionService) FFXAppConfig() IAppConfig {
 	return i.ffxAppConfig
-}
-
-func (i *InteractionService) FFXGameVersion() models.IGameVersionProvider {
-	return models.NewFFXGameVersion(i.ffxAppConfig.GetGameVersion())
 }
 
 func (i *InteractionService) TextFormatter() interfaces.ITextFormatter {

@@ -3,7 +3,6 @@ package event
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
-	"ffxresources/backend/models"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -31,7 +30,7 @@ import (
 //   - eventsFolder: FileAccessor pointing to the root events directory
 //
 // Returns: error if directory access fails or critical errors occur during processing
-func ReadAllEventFiles(eventsFolder common.FileAccessor, version int) error {
+func ReadAllEventFiles(eventsFolder common.FileAccessor, version common.GameVersion) error {
 	if !eventsFolder.Exists {
 		if common.IsVerboseMode() {
 			fmt.Println("Cannot locate events at:", eventsFolder)
@@ -124,8 +123,7 @@ func discoverSubdirectoryEvents(eventsRoot, subdirName string) (components.IList
 //   - version: Game version as int (1 = FFX, 2 = FFX-2), stored in each EventFile
 //
 // Returns: error only if critical system-level failures occur
-func loadDiscoveredEvents(eventIDs components.IList[string], version int) error {
-	gameVersion := models.GameVersion(version)
+func loadDiscoveredEvents(eventIDs components.IList[string], version common.GameVersion) error {
 	eventIDs.Range(func(eventID string) {
 		eventFile, err := ReadCompleteEventFile(eventID, version)
 		if err != nil {
@@ -134,7 +132,7 @@ func loadDiscoveredEvents(eventIDs components.IList[string], version int) error 
 		}
 		if eventFile != nil {
 			// Registrar diretamente no datastore (fonte única da verdade)
-			SetEvent(gameVersion, eventID, eventFile)
+			SetEvent(version, eventID, eventFile)
 		}
 	})
 
@@ -158,7 +156,7 @@ func loadDiscoveredEvents(eventIDs components.IList[string], version int) error 
 //     and passed to all decoding helpers
 //
 // Returns: Complete EventFile with all localizations, or nil/error if loading fails
-func ReadCompleteEventFile(eventID string, version int) (*EventFile, error) {
+func ReadCompleteEventFile(eventID string, version common.GameVersion) (*EventFile, error) {
 	if len(eventID) < 2 {
 		if common.IsVerboseMode() {
 			fmt.Printf("Invalid event ID: %s\n", eventID)
@@ -168,7 +166,7 @@ func ReadCompleteEventFile(eventID string, version int) (*EventFile, error) {
 
 	// TODO: find better solution for this junk event files
 	// Handle special cases for specific game versions
-	if version == 2 && eventID == "crcr0000" {
+	if version == common.GameVersionFFX2 && eventID == "crcr0000" {
 		if common.IsVerboseMode() {
 			fmt.Println("Skipping crcr0000 event in FFX-2")
 		}

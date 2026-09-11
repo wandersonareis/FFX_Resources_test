@@ -3,13 +3,12 @@ package encodingHandler
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/util"
-	"ffxresources/backend/models"
 	"fmt"
 )
 
 type (
 	IKernelTextHandler interface {
-		GetKernelTextHandler(gameVersion models.GameVersion) (string, error)
+		GetKernelTextHandler(gameVersion common.GameVersion) (string, error)
 		Dispose()
 	}
 
@@ -26,11 +25,11 @@ func NewKrnlTextsHandler() IKernelTextHandler {
 	}
 }
 
-func (kth *kernelTextHandler) GetKernelTextHandler(gameVersion models.GameVersion) (string, error) {
-	switch gameVersion {
-	case models.FFX:
+func (kth *kernelTextHandler) GetKernelTextHandler(gameVersion common.GameVersion) (string, error) {
+	switch gameVersion.Normalize() {
+	case common.GameVersionFFX:
 		return kth.ffxKernelTextHandler()
-	case models.FFX2:
+	case common.GameVersionFFX2, common.GameVersionLastMiss:
 		return kth.ffx2KernelTexthandler()
 	default:
 		return "", fmt.Errorf("game version not supported for kernel text handler: %s", gameVersion)

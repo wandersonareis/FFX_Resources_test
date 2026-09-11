@@ -105,10 +105,10 @@ func (ks *KeyedString) SetString(str, newCharset string) {
 	if newCharset != "" && newCharset != ks.Charset {
 		ks.Charset = newCharset
 	}
-	ks.Bytes = converter.StringToBytes(str, ks.Charset, models.GameVersion(ks.Version))
+	ks.Bytes = converter.StringToBytes(str, ks.Charset, common.GameVersion(ks.Version))
 }
 
-func RebuildKeyedStrings(strings []datastore.IGlobalKeyedString, charset string, version models.GameVersion) []byte {
+func RebuildKeyedStrings(strings []datastore.IGlobalKeyedString, charset string, version common.GameVersion) []byte {
 	var buf bytes.Buffer
 
 	for _, ks := range strings {

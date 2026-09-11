@@ -1,5 +1,7 @@
 package models
 
+import "ffxresources/backend/common"
+
 type (
 	IDcpFileProperties interface {
 		GetNameBase() string
@@ -16,12 +18,10 @@ type (
 	}
 )
 
-func NewDcpFileOptions(gameVersion GameVersion) IDcpFileProperties {
-	switch gameVersion {
-	case FFX2:
+func NewDcpFileOptions(gameVersion common.GameVersion) IDcpFileProperties {
+	switch gameVersion.Normalize() {
+	case common.GameVersionFFX2, common.GameVersionLastMiss:
 		return NewFFX2DcpFile()
-	case FFX:
-		return NewFFXDcpFile()
 	default:
 		return NewFFXDcpFile()
 	}

@@ -1,5 +1,7 @@
 package core
 
+import "ffxresources/backend/common"
+
 type (
 	lockitFileOptions struct {
 		nameBase        string
@@ -64,11 +66,11 @@ func (ffx2 *FFX2LockitFile) GetPartsSizes() []int {
 	return ffx2.partsSizes[:]
 }
 
-func NewLockitFileOptions(gameVersion int) ILockitFileOptions {
-	switch gameVersion {
-	case 1:
+func NewLockitFileOptions(gameVersion common.GameVersion) ILockitFileOptions {
+	switch gameVersion.Normalize() {
+	case common.GameVersionFFX:
 		return &FFXLockitFile{}
-	case 2:
+	case common.GameVersionFFX2:
 		return NewFFX2LockitFile()
 	default:
 		return &FFXLockitFile{}

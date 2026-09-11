@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"ffxresources/backend/common"
 	"ffxresources/backend/interactions"
 	"fmt"
 
@@ -38,7 +39,7 @@ func EventsOnSaveConfig(ctx context.Context) {
 }
 
 func emitGameVersion(ctx context.Context) {
-	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
+	gameVersion := interactions.CurrentGameVersion()
 	runtime.EventsEmit(ctx, "GameVersion", gameVersion)
 }
 
@@ -92,8 +93,8 @@ func emitimportLocation(ctx context.Context) {
 }
 
 func eventOnSetGameVersion(ctx context.Context) {
-	updateGameVersionNumber := func(version int) {
-		interactions.NewInteractionService().FFXGameVersion().SetGameVersionNumber(version)
+	updateGameVersion := func(version common.GameVersion) {
+		common.SetCurrentGameVersion(version)
 		
 		interactions.NewInteractionService().FFXAppConfig().ToJson()
 	}
@@ -101,7 +102,8 @@ func eventOnSetGameVersion(ctx context.Context) {
 	runtime.EventsOn(ctx, "GameVersionChanged", func(data ...any) {
 		fmt.Println("GameVersionChanged", data[0])
 		
-		updateGameVersionNumber(int(data[0].(float64)))
+		gameVer := common.ParseGameVersion(data[0].(string))
+		updateGameVersion(gameVer)
 
 		emitGameVersion(ctx)
 	})

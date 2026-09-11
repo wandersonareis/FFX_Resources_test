@@ -250,7 +250,7 @@ func (lfc *LockitFileCompressor) encodingFilesParts(extractedBinaryPartsList com
 	lfc.logger.Info("Encoding files parts to: %s", lfc.GetDestination().Import().GetTargetPath())
 
 	// TODO: Implement a way to get the game version from the source file
-	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
+	gameVersion := interactions.CurrentGameVersion()
 
 	if err := lfc.lockitFilePartsEncoder.EncodeFilesParts(extractedBinaryPartsList, lfc.lockitEncoding, gameVersion); err != nil {
 		return fmt.Errorf("error when encoding files parts: %s", err.Error())

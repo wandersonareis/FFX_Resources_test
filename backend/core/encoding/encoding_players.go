@@ -1,7 +1,7 @@
 package ffxencoding
 
 import (
-	"ffxresources/backend/models"
+	"ffxresources/backend/common"
 )
 
 var (
@@ -89,8 +89,9 @@ var (
 	}
 )
 
-func GetPlayerChar(pc byte, version models.GameVersion) string {
-	if version == models.FFX2 {
+func GetPlayerChar(pc byte, version common.GameVersion) string {
+	v := version.Normalize()
+	if v == common.GameVersionFFX2 || v == common.GameVersionLastMiss {
 		if name, ok := playerCharMapV2[pc]; ok {
 			return name
 		}
@@ -105,7 +106,7 @@ func GetPlayerChar(pc byte, version models.GameVersion) string {
 // GetPlayerCharByNumber mantém compatibilidade com chamadores que ainda
 // trafegam a versão como int (1/2).
 func GetPlayerCharByNumber(pc byte, version int) string {
-	return GetPlayerChar(pc, models.GameVersion(version))
+	return GetPlayerChar(pc, common.GameVersion(version))
 }
 
 func GetIconName(iconIdx byte) string {

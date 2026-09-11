@@ -20,8 +20,8 @@ type SpiraFileInfo struct {
 	Parent       string      `json:"parent"`
 	RelativePath string      `json:"relative_path"`
 	Size         int64       `json:"size"`
-	Type         NodeType    `json:"type"`
-	Version      GameVersion `json:"version"`
+	Type         NodeType           `json:"type"`
+	Version      common.GameVersion `json:"version"`
 }
 
 func NewSpiraFileInfo(path string) (*SpiraFileInfo, error) {
@@ -50,7 +50,7 @@ func NewSpiraFileInfo(path string) (*SpiraFileInfo, error) {
 		return nil, err
 	}
 
-	spiraFileInfo.Version = GameVersion(version)
+	spiraFileInfo.Version = version
 
 	relativePath := getRelativePath(aPath, version)
 	spiraFileInfo.RelativePath = relativePath
@@ -61,7 +61,7 @@ func NewSpiraFileInfo(path string) (*SpiraFileInfo, error) {
 			return nil, err
 		}
 
-		spiraFileInfo.Version = GameVersion(version)
+		spiraFileInfo.Version = version
 
 		relativePath, err = common.RelativePathFromMatch(aPath)
 		if err != nil {
@@ -89,10 +89,10 @@ func getFileInfo(aPath string) (os.FileInfo, error) {
 	return os.Stat(aPath)
 }
 
-func determineVersion(aPath string) (int, error) {
+func determineVersion(aPath string) (common.GameVersion, error) {
 	v := getVersionFromPrefix(aPath)
-	if v == 0 {
-		return 0, fmt.Errorf("invalid path: %s", aPath)
+	if !v.IsValid() {
+		return common.GameVersionFFX, fmt.Errorf("invalid path: %s", aPath)
 	}
 	return v, nil
 }
@@ -138,23 +138,23 @@ func getDirSize(path string) (int64, error) {
 	return size, err
 }
 
-func getVersionFromPrefix(path string) int {
+func getVersionFromPrefix(path string) common.GameVersion {
 	rxFFX2 := regexp.MustCompile(`(?i)FFX-2`)
 	rxFFX := regexp.MustCompile(`(?i)FFX`)
 
 	switch {
 	case rxFFX2.MatchString(path):
-		return 2
+		return common.GameVersionFFX2
 	case rxFFX.MatchString(path):
-		return 1
+		return common.GameVersionFFX
 	default:
-		return 0
+		return ""
 	}
 }
 
-func getRelativePath(path string, version int) string {
-	switch version {
-	case 1:
+func getRelativePath(path string, version common.GameVersion) string {
+	switch version.Normalize() {
+	case common.GameVersionFFX:
 		idx := strings.Index(path, "FFX"+string(os.PathSeparator))
 		if idx < 0 {
 			return ""
@@ -164,7 +164,7 @@ func getRelativePath(path string, version int) string {
 			return ""
 		}
 		return path[idx:]
-	case 2:
+	case common.GameVersionFFX2:
 		idx := strings.Index(path, "FFX-2"+string(os.PathSeparator))
 		if idx < 0 {
 			return ""

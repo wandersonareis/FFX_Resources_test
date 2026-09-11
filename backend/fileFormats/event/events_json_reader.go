@@ -1,7 +1,7 @@
 package event
 
 import (
-	"ffxresources/backend/models"
+	"ffxresources/backend/common"
 )
 
 // ProcessEventsJsonFile reads a JSON file and updates all events data in EVENTS.
@@ -14,7 +14,7 @@ import (
 // Target: EVENTS (multiple entries)
 //
 // Returns: error if import fails or file cannot be read
-func ProcessEventsJsonFile(gameVersion models.GameVersion) error {
+func ProcessEventsJsonFile(gameVersion common.GameVersion) error {
 	return ImportEventsDataFromJsonFile(gameVersion)
 }
 
@@ -32,6 +32,6 @@ func ProcessEventsJsonFile(gameVersion models.GameVersion) error {
 //   - eventID: The ID of the specific event to process (e.g., "ev001", "btl_001")
 //
 // Returns: error if import fails, file cannot be read, or event is not found
-func ProcessEventJsonFile(gameVersion models.GameVersion, eventID string) error {
+func ProcessEventJsonFile(gameVersion common.GameVersion, eventID string) error {
 	return ImportEventDataFromJsonFile(gameVersion, eventID)
 }

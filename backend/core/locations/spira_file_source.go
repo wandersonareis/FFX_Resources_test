@@ -1,6 +1,7 @@
 package locations
 
 import (
+	"ffxresources/backend/common"
 	"ffxresources/backend/duplicateFilesData"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/models"
@@ -77,7 +78,7 @@ func (g *Source) GetType() models.NodeType {
 	return g.FileInfo.Type
 }
 
-func (g *Source) GetVersion() models.GameVersion {
+func (g *Source) GetVersion() common.GameVersion {
 	return g.FileInfo.Version
 }
 
@@ -86,11 +87,11 @@ func (g *Source) IsDir() bool {
 }
 
 func (g *Source) PopulateDuplicatesFiles() {
-	switch g.FileInfo.Version {
-	case models.FFX:
+	switch g.FileInfo.Version.Normalize() {
+	case common.GameVersionFFX:
 		//TODO: return NewFfxDuplicate().AddFfxTextDuplicate()
 		fallthrough
-	case models.FFX2:
+	case common.GameVersionFFX2, common.GameVersionLastMiss:
 		ffx2FilesDupe := getFfx2FileDuplicates()
 		g.FileInfo.ClonedItems = ffx2FilesDupe.TryFind(g.FileInfo.NamePrefix)
 	}

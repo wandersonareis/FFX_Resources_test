@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 )
 
-func currentGameVersion() models.GameVersion {
+func currentGameVersion() common.GameVersion {
 	return interactions.CurrentGameVersion()
 }
 
@@ -77,7 +77,7 @@ func stringsToStringFileBytes(localizedStrings []*event.LocalizedFieldStringObje
 
 	version := currentGameVersion()
 	if len(fieldStrings) > 0 && fieldStrings[0] != nil {
-		version = models.GameVersion(fieldStrings[0].Version)
+		version = common.GameVersion(fieldStrings[0].Version)
 	}
 	stringBytes := event.RebuildFieldStrings(fieldStrings, charset, version)
 
@@ -332,7 +332,7 @@ func EditAndSaveMacroDictJSONFiles() error {
 	}
 
 	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	containers, err := macrodic.ImportFromJson(imp, version)
+	containers, err := macrodic.ImportFromJson(imp, common.ToInt(version))
 	if err != nil {
 		common.LogVerbose("Error importing macro dictionary JSON: %v", err)
 		return err
@@ -363,7 +363,7 @@ func EditAndSaveSpecificMacroDictFromJSON(localization string) error {
 	}
 
 	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	containers, err := macrodic.ImportFromJson(imp, version)
+	containers, err := macrodic.ImportFromJson(imp, common.ToInt(version))
 	if err != nil {
 		common.LogVerbose("Error importing macro dictionary JSON: %v", err)
 		return err

@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/datastore"
-	"ffxresources/backend/models"
+	"ffxresources/backend/common"
 	"fmt"
 	"io"
 	"strings"
@@ -23,7 +23,7 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
     var (
         out               strings.Builder
         charset           = ffxencoding.GetCharsetForLanguage(localization)
-        gameVersion       = models.GameVersion(version)
+        gameVersion       = common.GameVersion(version)
         extraFiveSections bool
         buf               = bytes.NewReader(table[offset:])
     )

@@ -51,22 +51,6 @@ func GetTempDir() string {
 	return os.TempDir()
 }
 
-func GetGameVersionString() string {
-	version := os.Getenv("GAME_VERSION")
-	if version == "ffx2" {
-		return "ffx2"
-	}
-	return "ffx"
-}
-
-func SetGameVersion(version int) {
-	if version >= 2 {
-		os.Setenv("GAME_VERSION", "ffx2")
-		return
-	}
-	os.Setenv("GAME_VERSION", "ffx")
-}
-
 func SetVerboseMode(enabled bool) {
 	if enabled {
 		os.Setenv("VERBOSE_MODE", "1")

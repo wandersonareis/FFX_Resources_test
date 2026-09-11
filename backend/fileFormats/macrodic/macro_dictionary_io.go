@@ -5,7 +5,6 @@ import (
 	"sort"
 
 	"ffxresources/backend/common"
-	"ffxresources/backend/models"
 	"fmt"
 )
 
@@ -75,7 +74,7 @@ func SaveMacroDictionaryBinaries(containers map[string]*MacroDictionaryBinaryFil
 		if c == nil || len(c.Bytes) == 0 {
 			continue
 		}
-		path := models.MacroBinaryPath(loc)
+		path := common.MacroBinaryPath(loc)
 		if err := common.WriteBytesToFile(path, c.Bytes); err != nil {
 			return fmt.Errorf("failed to write macro dictionary binary for localization %s: %w", loc, err)
 		}

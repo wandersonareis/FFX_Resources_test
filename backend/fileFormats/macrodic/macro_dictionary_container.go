@@ -7,7 +7,6 @@ import (
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/datastore"
-	"ffxresources/backend/models"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -99,8 +98,8 @@ func (c *MacroDictionaryBinaryFile) GetLocalization() string {
 }
 
 // GetVersion returns this container game version.
-func (c *MacroDictionaryBinaryFile) GetVersion() models.GameVersion {
-	return models.GameVersion(c.Version)
+func (c *MacroDictionaryBinaryFile) GetVersion() common.GameVersion {
+	return common.GameVersion(c.Version)
 }
 
 // mapBytes parses the chunk offset table at the start of the container Bytes.
@@ -267,7 +266,7 @@ func (c *MacroDictionaryBinaryFile) GetObjects() components.IList[datastore.IGlo
 // MCR lookups in getStringAtLookupOffsetBinary resolve through
 // datastore.GetMacro(gameVersion, chunk*0x100 + index).
 func (c *MacroDictionaryBinaryFile) PublishStrings() error {
-	gameVersion := models.GameVersion(c.Version)
+	gameVersion := common.GameVersion(c.Version)
 	macros := c.GetMapObjects()
 	var firstErr error
 	macros.ForEach(func(key int, macroO datastore.IGlobalLocalizedMacroStringObject) {
@@ -342,7 +341,7 @@ func (c *MacroDictionaryBinaryFile) ImportFromJson(filePath string) error {
 // to filePath, defaulting to this localization game file.
 func (c *MacroDictionaryBinaryFile) SaveToBinary(filePath string) error {
 	if filePath == "" {
-		filePath = models.MacroBinaryPath(c.Localization)
+		filePath = common.MacroBinaryPath(c.Localization)
 	}
 	files, err := c.Files()
 	if err != nil {

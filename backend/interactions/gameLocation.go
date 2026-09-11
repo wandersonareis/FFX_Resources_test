@@ -40,7 +40,7 @@ func (g *GameLocation) IsSpira() error {
 		return err
 	}
 
-	if version > 0 {
+	if version.IsValid() {
 		return nil
 	}
 

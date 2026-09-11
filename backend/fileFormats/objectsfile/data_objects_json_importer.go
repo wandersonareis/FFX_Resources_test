@@ -90,7 +90,7 @@ func ImportFromJson(
 	localizedObjects := extractLocalizedObjects(objectsList)
 
 	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	if err := updateLocalizedObjectEntries(jsonData, localizedObjects, version); err != nil {
+	if err := updateLocalizedObjectEntries(jsonData, localizedObjects, common.ToInt(version)); err != nil {
 		common.LogVerbose("Error processing JSON file: %v", err)
 		return err
 	}
@@ -474,7 +474,7 @@ func createNewKeyedString(text string, charset string, version int) *KeyedString
 /* 		Offset:  0,
 	   		Key:     0, */
 		Segment: models.Segment{Offset: 0, Key: 0},
-		Bytes:   converter.StringToBytes(text, charset, models.GameVersion(version)),
+		Bytes:   converter.StringToBytes(text, charset, common.GameVersion(version)),
 	}
 }
 

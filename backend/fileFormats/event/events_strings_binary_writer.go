@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/encoding"
-	"ffxresources/backend/models"
 	"fmt"
 	"path/filepath"
 )
@@ -18,7 +17,7 @@ import (
 // that the current state of events (updated or not) is exported.
 //
 // Returns: error if no events are loaded or if any export operation fails
-func ExportAllEventsForLocalizations(gameVersion models.GameVersion) error {
+func ExportAllEventsForLocalizations(gameVersion common.GameVersion) error {
 	eventIDs := GetAllEventIDs(gameVersion)
 	if len(eventIDs) == 0 {
 		return fmt.Errorf("no events loaded in datastore")
@@ -63,7 +62,7 @@ func ExportAllEventsForLocalizations(gameVersion models.GameVersion) error {
 //   - eventID: The unique identifier for the event (e.g., "ev001", "btl_001")
 //
 // Returns: error if event is not found or export fails
-func ExportEventStringsToLocalizations(gameVersion models.GameVersion, eventID string) error {
+func ExportEventStringsToLocalizations(gameVersion common.GameVersion, eventID string) error {
 	eventFile := GetEvent(gameVersion, eventID)
 	if eventFile == nil {
 		return fmt.Errorf("event not found: %s", eventID)
@@ -207,7 +206,7 @@ func buildEventStringsBinaryData(fieldStrings []*FieldString) ([]byte, error) {
 		return []byte{}, nil
 	}
 
-	version := models.GameVersion(fieldStrings[0].Version)
+	version := common.GameVersion(fieldStrings[0].Version)
 	stringBytes := RebuildFieldStrings(fieldStrings, fieldStrings[0].Charset, version)
 
 	var buf bytes.Buffer
@@ -237,7 +236,7 @@ func buildEventStringsBinaryData(fieldStrings []*FieldString) ([]byte, error) {
 //   - jsonPath: Absolute path to the JSON file containing event data
 //
 // Returns: error if file reading, JSON parsing, or export fails
-func EditAndSaveEventFromJSON(gameVersion models.GameVersion, jsonPath string) error {
+func EditAndSaveEventFromJSON(gameVersion common.GameVersion, jsonPath string) error {
 	allEvents, err := common.ReadJsonFile[[]EventFileData](jsonPath)
 	if err != nil {
 		return fmt.Errorf("error reading json file %s: %w", jsonPath, err)

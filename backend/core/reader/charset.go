@@ -11,7 +11,6 @@ import (
 
     "ffxresources/backend/common"
     "ffxresources/backend/core/encoding"
-    "ffxresources/backend/models"
 )
 
 const puaBase = 0xE000
@@ -87,12 +86,12 @@ func applySlotFixes(runes []rune, fixes []slotFix, charset string) {
 
 const maxSingleByteSlots = 0xFF - 0x30 + 1
 
-func PrepareCharset(version models.GameVersion, charset string) error {
-    versionModel := version.Model()
+func PrepareCharset(version common.GameVersion, charset string) error {
+    version = version.Normalize()
     path := filepath.Join(
-        common.GetPathRootForVersion(string(versionModel)),
+        common.GetPathRootForVersion(version),
         common.OriginalsFolder,
-        common.GetEncodingPathForVersion(string(versionModel), charset),
+        common.GetEncodingPathForVersion(version, charset),
     )
     filePath, err := common.NewFileAccessor(path)
     if err != nil {
@@ -124,7 +123,7 @@ func PrepareCharset(version models.GameVersion, charset string) error {
 // Erros de uma versão não bloqueiam a outra; retorna o último erro encontrado.
 func PrepareAllCharsets(charset string) error {
     var lastErr error
-    for _, v := range []models.GameVersion{models.FFX, models.FFX2} {
+    for _, v := range []common.GameVersion{common.GameVersionFFX, common.GameVersionFFX2} {
         if err := PrepareCharset(v, charset); err != nil {
             lastErr = err
         }

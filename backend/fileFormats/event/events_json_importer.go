@@ -35,7 +35,7 @@ type (
 // Target: EVENTS (multiple entries)
 //
 // Returns: error if import fails or file cannot be read
-func ImportEventsDataFromJsonFile(gameVersion models.GameVersion) error {
+func ImportEventsDataFromJsonFile(gameVersion common.GameVersion) error {
 	return importEventJsonFile(gameVersion, "", false)
 }
 
@@ -53,7 +53,7 @@ func ImportEventsDataFromJsonFile(gameVersion models.GameVersion) error {
 //   - eventID: The ID of the specific event to process (e.g., "ev001", "btl_001")
 //
 // Returns: error if import fails, file cannot be read, or event is not found
-func ImportEventDataFromJsonFile(gameVersion models.GameVersion, eventID string) error {
+func ImportEventDataFromJsonFile(gameVersion common.GameVersion, eventID string) error {
 	return importEventJsonFile(gameVersion, eventID, true)
 }
 
@@ -66,7 +66,7 @@ func ImportEventDataFromJsonFile(gameVersion models.GameVersion, eventID string)
 //   - singleEvent: Whether to process only a single event (true) or all events (false)
 //
 // Returns: error if processing fails
-func importEventJsonFile(gameVersion models.GameVersion, eventID string, singleEvent bool) error {
+func importEventJsonFile(gameVersion common.GameVersion, eventID string, singleEvent bool) error {
 	jsonFilePath, err := getEventsJsonFilePath()
 	if err != nil {
 		return err
@@ -148,7 +148,7 @@ func loadEventJsonData(jsonFilePath string) ([]EventFileData, error) {
 //   - eventID: The specific event ID to process
 //
 // Returns: error if event is not found or processing fails
-func processSingleEventData(gameVersion models.GameVersion, eventDataList []EventFileData, eventID string) error {
+func processSingleEventData(gameVersion common.GameVersion, eventDataList []EventFileData, eventID string) error {
 	common.LogVerbose("Looking for specific event: %s", eventID)
 
 	var targetEventData *EventFileData
@@ -185,7 +185,7 @@ func processSingleEventData(gameVersion models.GameVersion, eventDataList []Even
 //   - eventDataList: List of all event data from JSON
 //
 // Returns: error if any critical processing fails
-func processAllEventData(gameVersion models.GameVersion, eventDataList []EventFileData) error {
+func processAllEventData(gameVersion common.GameVersion, eventDataList []EventFileData) error {
 	common.LogVerbose("Processing all events from JSON (%d total)", len(eventDataList))
 
 	processedEventIDs := make(map[string]bool)
@@ -210,7 +210,7 @@ func processAllEventData(gameVersion models.GameVersion, eventDataList []EventFi
 //   - eventData: The event data from JSON containing updates to apply
 //
 // Returns: error if the event is not found in memory or updating fails
-func updateEventFromJsonData(gameVersion models.GameVersion, eventData EventFileData) error {
+func updateEventFromJsonData(gameVersion common.GameVersion, eventData EventFileData) error {
 	eventFile := GetEvent(gameVersion, eventData.ID)
 	if eventFile == nil {
 		return fmt.Errorf("event not found in memory: %s", eventData.ID)

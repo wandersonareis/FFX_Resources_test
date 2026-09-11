@@ -3,9 +3,9 @@ package event
 import (
 	"bytes"
 	"encoding/binary"
+	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/converter"
-	"ffxresources/backend/models"
 )
 
 type FieldString struct {
@@ -71,7 +71,7 @@ func FromFieldStringData(bytes []byte, charset string, version int) ([]*FieldStr
 	return strings, nil
 }
 
-func RebuildFieldStrings(strings []*FieldString, charset string, version models.GameVersion) []byte {
+func RebuildFieldStrings(strings []*FieldString, charset string, version common.GameVersion) []byte {
 	count := len(strings)
 	contentOffset := count * 8
 	offsetMap := make(map[string]int)
@@ -159,7 +159,7 @@ func (fs *FieldString) SetRegularString(str string, newCharset ...string) {
 	}
 
 	keepSimplifiedSynced := !fs.HasDistinctSimplified()
-	fs.RegularBytes = converter.StringToBytes(str, fs.Charset, models.GameVersion(fs.Version))
+	fs.RegularBytes = converter.StringToBytes(str, fs.Charset, common.GameVersion(fs.Version))
 
 	if keepSimplifiedSynced {
 		fs.SimplifiedBytes = fs.RegularBytes
@@ -171,7 +171,7 @@ func (fs *FieldString) SetSimplifiedString(str string, newCharset ...string) {
 		fs.SetCharset(newCharset[0])
 	}
 
-	fs.SimplifiedBytes = converter.StringToBytes(str, fs.Charset, models.GameVersion(fs.Version))
+	fs.SimplifiedBytes = converter.StringToBytes(str, fs.Charset, common.GameVersion(fs.Version))
 }
 
 func (fs *FieldString) SetCharset(newCharset string) {

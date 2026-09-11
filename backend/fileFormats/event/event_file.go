@@ -1,6 +1,7 @@
 package event
 
 import (
+	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/models"
@@ -205,7 +206,7 @@ func (ef *EventFile) stringsToStringFileBytes(localization string) []byte {
 			}
 		}
 	}
-	return RebuildFieldStrings(fieldStrings, charset, models.GameVersion(ef.Version))
+	return RebuildFieldStrings(fieldStrings, charset, common.GameVersion(ef.Version))
 }
 
 func (ef *EventFile) chunksToBytes(chunks [][]byte) []byte {

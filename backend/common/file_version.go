@@ -5,21 +5,26 @@ import (
 	"strings"
 )
 
-// FileVersionSuffix returns the file-name suffix for the active game version:
-// "v2" for FFX-2, "v1" for FFX.
+// FileVersionSuffix retorna o sufixo unificado da versão ativa:
+// _ffx, _ffx2 ou _lastmiss.
 func FileVersionSuffix() string {
-	if GetGameVersionString() == "ffx2" {
-		return "v2"
-	}
-	return "v1"
+	return CurrentGameVersion().Suffix()
 }
 
-// WithVersionSuffix inserts the active game-version suffix (v1/v2) into a filename,
-// just before its extension, so exported/imported artifacts are unambiguously tied
-// to the game they were extracted from.
+// WithVersionSuffix insere o sufixo da versão ativa no nome do arquivo,
+// antes da extensão (ex: events_all_localizations.json ->
+// events_all_localizations_ffx2.json).
 func WithVersionSuffix(fileName string) string {
 	suffix := FileVersionSuffix()
 	ext := filepath.Ext(fileName)
 	base := strings.TrimSuffix(fileName, ext)
-	return base + "_" + suffix + ext
+	return base + suffix + ext
+}
+
+// WithVersionSuffixFor é a variante explícita, sem ler o estado global.
+func WithVersionSuffixFor(fileName string, gv GameVersion) string {
+	suffix := gv.Normalize().Suffix()
+	ext := filepath.Ext(fileName)
+	base := strings.TrimSuffix(fileName, ext)
+	return base + suffix + ext
 }

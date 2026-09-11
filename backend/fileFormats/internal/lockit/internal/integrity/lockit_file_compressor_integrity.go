@@ -76,7 +76,7 @@ func (lfi *lockitFileCompressorIntegrity) verifyDataIntegrity(file string, locki
 		return fmt.Errorf("error when checking lockit file integrity:: %w", err)
 	}
 
-	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
+		gameVersion := interactions.CurrentGameVersion()
 	if err := lfi.temporaryPartsDecoder(tempExtractedBinaryPartsList, lockitEncoding, gameVersion); err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func (lfi *lockitFileCompressorIntegrity) populateTemporaryBinaryPartsList(tempP
 	return nil
 }
 
-func (lfi *lockitFileCompressorIntegrity) temporaryPartsDecoder(tempPartsList components.IList[lockitParts.LockitFileParts], lockitEncoding ffxencoding.IFFXTextLockitEncoding, gameVersion models.GameVersion) error {
+func (lfi *lockitFileCompressorIntegrity) temporaryPartsDecoder(tempPartsList components.IList[lockitParts.LockitFileParts], lockitEncoding ffxencoding.IFFXTextLockitEncoding, gameVersion common.GameVersion) error {
 	defaultIntegrityError := fmt.Errorf("error when checking lockit file integrity")
 
 	if tempPartsList.IsEmpty() {

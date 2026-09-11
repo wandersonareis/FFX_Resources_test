@@ -16,7 +16,7 @@ import (
 // Returns: error if the operation fails
 func ReadAllEvents(eventsFolder common.FileAccessor) error {
 	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	return event.ReadAllEventFiles(eventsFolder, version)
+	return event.ReadAllEventFiles(eventsFolder, common.ToInt(version))
 }
 
 // ReadEventFull reads a complete event file with all localizations.

@@ -121,7 +121,7 @@ func (lfe *LockitFileExtractor) decodeFileParts(partsList components.IList[locki
 	lfe.log.Info("Decoding lockit file parts...")
 
 	// TODO: Implement a way to get the game version from the source file
-	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
+	gameVersion := interactions.CurrentGameVersion()
 	filePartsDecoder := lockitParts.NewLockitFilePartsDecoder()
 	if err := filePartsDecoder.DecodeFileParts(partsList, lfe.lockitEncoding, gameVersion); err != nil {
 		lfe.log.Error(err, "failed to decode lockit file parts")

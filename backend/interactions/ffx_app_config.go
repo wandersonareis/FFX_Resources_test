@@ -10,13 +10,13 @@ import (
 )
 
 type IGetAppConfig interface {
-	GetGameVersion() int
+	GetGameVersion() common.GameVersion
 	GetLocations() map[string]string
 	GetLocation(name string) string
 }
 
 type ISetAppConfig interface {
-	SetGameVersion(version int)
+	SetGameVersion(version common.GameVersion)
 	SetLocation(name, path string)
 }
 
@@ -30,12 +30,12 @@ type IAppConfig interface {
 type AppConfig struct {
 	filePath    string
 	locations   map[string]string
-	gameVersion int
+	gameVersion common.GameVersion
 }
 
 type appConfigJSON struct {
 	Locations   map[string]string `json:"Locations"`
-	GameVersion int               `json:"GameVersion"`
+	GameVersion common.GameVersion `json:"GameVersion"`
 }
 
 func NewAppConfig() *AppConfig {
@@ -44,7 +44,7 @@ func NewAppConfig() *AppConfig {
 	c := &AppConfig{
 		filePath:    filePath,
 		locations:   make(map[string]string),
-		gameVersion: 1,
+		gameVersion: common.GameVersionFFX,
 	}
 
 	if err := c.FromJson(); err != nil {
@@ -57,8 +57,8 @@ func NewAppConfig() *AppConfig {
 func (c *AppConfig) validateConfig() error {
 	changed := false
 
-	if c.gameVersion <= 0 {
-		c.gameVersion = 1
+	if !c.gameVersion.Normalize().IsValid() {
+		c.gameVersion = common.GameVersionFFX
 		changed = true
 	}
 
@@ -77,7 +77,7 @@ func (c *AppConfig) validateConfig() error {
 func (c *AppConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(appConfigJSON{
 		Locations:   c.locations,
-		GameVersion: c.gameVersion,
+		GameVersion: c.gameVersion.Normalize(),
 	})
 }
 
@@ -87,7 +87,10 @@ func (c *AppConfig) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	c.locations = aux.Locations
-	c.gameVersion = aux.GameVersion
+	c.gameVersion = aux.GameVersion.Normalize()
+	if !c.gameVersion.IsValid() {
+		c.gameVersion = common.GameVersionFFX
+	}
 	return nil
 }
 
@@ -140,12 +143,13 @@ func (c *AppConfig) FromJson() error {
 	return err
 }
 
-func (c *AppConfig) GetGameVersion() int {
-	return c.gameVersion
+func (c *AppConfig) GetGameVersion() common.GameVersion {
+	return c.gameVersion.Normalize()
 }
 
-func (c *AppConfig) SetGameVersion(version int) {
-	c.gameVersion = version
+func (c *AppConfig) SetGameVersion(version common.GameVersion) {
+	c.gameVersion = version.Normalize()
+	common.SetCurrentGameVersion(c.gameVersion)
 	_ = c.ToJson()
 }
 

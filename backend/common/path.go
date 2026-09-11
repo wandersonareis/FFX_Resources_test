@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"slices"
+	"strings"
 )
 
 func sanitizationPath(path string) string {
@@ -153,59 +153,59 @@ func hasExactComponent(path, component string) bool {
 	return slices.Contains(parts, component)
 }
 
-func checkPS2Version1(path string) (int, string, bool) {
+func checkPS2Version1(path string) (GameVersion, string, bool) {
 	p1 := "ffx_ps2"
 	p2 := "ffx"
 	p3 := "master"
 
 	if hasExactComponent(path, p1) && hasExactComponent(path, p2) && hasExactComponent(path, p3) {
-		return 1, p1, true
+		return GameVersionFFX, p1, true
 	}
-	return 0, "", false
+	return "", "", false
 }
 
-func checkPS2Version2(path string) (int, string, bool) {
+func checkPS2Version2(path string) (GameVersion, string, bool) {
 	p1 := filepath.Join("ffx_ps2")
 	p2 := filepath.Join("ffx2")
 	p3 := filepath.Join("master")
 	if hasExactComponent(path, p1) && hasExactComponent(path, p2) && hasExactComponent(path, p3) {
-		return 2, p1, true
+		return GameVersionFFX2, p1, true
 	}
-	return 0, "", false
+	return "", "", false
 }
 
-func checkDataVersion1(path string) (int, string, bool) {
+func checkDataVersion1(path string) (GameVersion, string, bool) {
 	p1 := filepath.Join("ffx_data")
 	p2 := filepath.Join("gamedata")
 	p3 := filepath.Join("ps3data")
 	if hasExactComponent(path, p1) && hasExactComponent(path, p2) && hasExactComponent(path, p3) {
-		return 1, p1, true
+		return GameVersionFFX, p1, true
 	}
-	return 0, "", false
+	return "", "", false
 }
 
-func checkDataVersion2(path string) (int, string, bool) {
+func checkDataVersion2(path string) (GameVersion, string, bool) {
 	p1 := filepath.Join("ffx-2_data")
 	p2 := filepath.Join("gamedata")
 	p3 := filepath.Join("ps3data")
 	if hasExactComponent(path, p1) && hasExactComponent(path, p2) && hasExactComponent(path, p3) {
-		return 2, p1, true
+		return GameVersionFFX2, p1, true
 	}
-	return 0, "", false
+	return "", "", false
 }
 
 // CheckFFXPath resolves the given path to its absolute form and then validates it
 // by running a series of checks for known PS2 and Data version patterns. If one of
-// the checks succeeds, the function returns the detected version number along with
-// a nil error. If no check passes, it returns 0 and an error indicating that the
+// the checks succeeds, the function returns the detected game version along with
+// a nil error. If no check passes, it returns ffx and an error indicating that the
 // supplied path does not conform to a valid spira us path.
-func CheckFFXPath(path string) (int, error) {
+func CheckFFXPath(path string) (GameVersion, error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return 0, fmt.Errorf("error getting absolute path: %s", err.Error())
+		return GameVersionFFX, fmt.Errorf("error getting absolute path: %s", err.Error())
 	}
 
-	checks := []func(string) (int, string, bool){
+	checks := []func(string) (GameVersion, string, bool){
 		checkPS2Version1,
 		checkPS2Version2,
 		checkDataVersion1,
@@ -216,7 +216,7 @@ func CheckFFXPath(path string) (int, error) {
 			return version, nil
 		}
 	}
-	return 0, fmt.Errorf("not a valid spira us path: %s", path)
+	return GameVersionFFX, fmt.Errorf("not a valid spira us path: %s", path)
 }
 
 // RelativePathFromMatch converts the given file path into its absolute path form,
@@ -239,7 +239,7 @@ func RelativePathFromMatch(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	checks := []func(string) (int, string, bool){
+	checks := []func(string) (GameVersion, string, bool){
 		checkPS2Version1,
 		checkPS2Version2,
 		checkDataVersion1,
@@ -254,4 +254,11 @@ func RelativePathFromMatch(path string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("not a valid spira us path: %s", path)
+}
+
+// MacroBinaryPath returns the absolute path of a macro dictionary binary for a
+// given localization (e.g. "us" -> .../new_uspc/menu/macrodic.dcp).
+func MacroBinaryPath(localization string) string {
+	rel := filepath.Join("menu", "macrodic.dcp")
+	return filepath.Join(GameFilesRoot, ModsFolder, GetLocalizationRoot(localization), rel)
 }

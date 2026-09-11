@@ -1,13 +1,14 @@
 package lib
 
 import (
+	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/models"
 	"fmt"
 )
 
-func TextSegmentsCounter(file string, fileType models.NodeType, gameVersion models.GameVersion) (int, error) {
+func TextSegmentsCounter(file string, fileType models.NodeType, gameVersion common.GameVersion) (int, error) {
 	switch fileType {
 	case models.Dialogs, models.DialogsSpecial, models.Tutorial, models.DcpParts:
 		return dialogsSegmentsCounter(file, fileType)
@@ -32,7 +33,7 @@ func dialogsSegmentsCounter(dialogFile string, dialogType models.NodeType) (int,
 	return components.GetDialogSegmentsCount(executable, args)
 }
 
-func kernelSegmentsCounter(kernelFile string, gameVersion models.GameVersion) (int, error) {
+func kernelSegmentsCounter(kernelFile string, gameVersion common.GameVersion) (int, error) {
 	encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextKrnlEncoding()
 	defer encoding.Dispose()
 

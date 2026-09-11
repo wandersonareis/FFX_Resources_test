@@ -100,10 +100,11 @@ func (n *NameOnlyTextObject) ToBytes(languageCode string) ([]byte, error) {
 
 func (n *NameOnlyTextObject) ToList(filename string, languageCode string) components.IList[datastore.IGlobalLocalizedTextObject] {
 	gameVersion := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+	version := common.ToInt(gameVersion)
 	creator := func(data []byte, stringBytes []byte, headerLength int, loc string) (datastore.IGlobalLocalizedTextObject, error) {
-		return NewNameOnlyTextObject(data, stringBytes, headerLength, loc, gameVersion)
+		return NewNameOnlyTextObject(data, stringBytes, headerLength, loc, version)
 	}
-	return ReadDataListWithIlist(filename, languageCode, creator, gameVersion)
+	return ReadDataListWithIlist(filename, languageCode, creator, version)
 }
 
 func (n *NameOnlyTextObject) GetTextObject() datastore.IGlobalLocalizedTextObject {

@@ -10,7 +10,7 @@ import (
 	"sort"
 )
 
-func currentGameVersion() models.GameVersion {
+func currentGameVersion() common.GameVersion {
 	return interactions.CurrentGameVersion()
 }
 
