@@ -1,5 +1,9 @@
 package ffxencoding
 
+import (
+	"ffxresources/backend/models"
+)
+
 var (
 	playerCharMap = map[byte]string{
 		0x00: "TIDUS",
@@ -85,11 +89,23 @@ var (
 	}
 )
 
-func GetPlayerChar(pc byte) string {
+func GetPlayerChar(pc byte, version models.GameVersion) string {
+	if version == models.FFX2 {
+		if name, ok := playerCharMapV2[pc]; ok {
+			return name
+		}
+		return "?"
+	}
 	if name, ok := playerCharMap[pc]; ok {
 		return name
 	}
 	return "?"
+}
+
+// GetPlayerCharByNumber mantém compatibilidade com chamadores que ainda
+// trafegam a versão como int (1/2).
+func GetPlayerCharByNumber(pc byte, version int) string {
+	return GetPlayerChar(pc, models.GameVersion(version))
 }
 
 func GetIconName(iconIdx byte) string {

@@ -5,6 +5,8 @@ type (
 		GetGameVersion() GameVersion
 		GetGameVersionNumber() int
 		SetGameVersionNumber(int)
+		GetGameVersionModel() GameVersionModel
+		GetGameVersionString() string
 	}
 
 	FFXGameVersion struct {
@@ -18,12 +20,24 @@ func NewFFXGameVersion(version int) *FFXGameVersion {
 	return gameVersion
 }
 
+func NewFFXGameVersionFromModel(model GameVersionModel) *FFXGameVersion {
+	return NewFFXGameVersion(model.Number())
+}
+
 func (f *FFXGameVersion) GetGameVersion() GameVersion {
 	return f.gameVersion
 }
 
 func (f *FFXGameVersion) GetGameVersionNumber() int {
 	return int(f.gameVersion)
+}
+
+func (f *FFXGameVersion) GetGameVersionModel() GameVersionModel {
+	return f.gameVersion.Model()
+}
+
+func (f *FFXGameVersion) GetGameVersionString() string {
+	return string(f.gameVersion.Model())
 }
 
 func (f *FFXGameVersion) SetGameVersionNumber(partNumber int) {
@@ -36,4 +50,8 @@ func (f *FFXGameVersion) SetGameVersionNumber(partNumber int) {
 	}
 
 	f.gameVersion = GameVersion(partNumber)
+}
+
+func (f *FFXGameVersion) SetGameVersionModel(model GameVersionModel) {
+	f.gameVersion = model.ToGameVersion()
 }

@@ -11,6 +11,7 @@ import (
 
     "ffxresources/backend/common"
     "ffxresources/backend/core/encoding"
+    "ffxresources/backend/models"
 )
 
 const puaBase = 0xE000
@@ -86,8 +87,13 @@ func applySlotFixes(runes []rune, fixes []slotFix, charset string) {
 
 const maxSingleByteSlots = 0xFF - 0x30 + 1
 
-func PrepareCharset(charset string) error {
-    path := filepath.Join(common.GetPathOriginalsRoot(), common.GetEncodingPath(charset))
+func PrepareCharset(version models.GameVersion, charset string) error {
+    versionModel := version.Model()
+    path := filepath.Join(
+        common.GetPathRootForVersion(string(versionModel)),
+        common.OriginalsFolder,
+        common.GetEncodingPathForVersion(string(versionModel), charset),
+    )
     filePath, err := common.NewFileAccessor(path)
     if err != nil {
         return err
@@ -110,8 +116,20 @@ func PrepareCharset(charset string) error {
     strict := len(runes) <= maxSingleByteSlots
 
     byteToChar, charToByte := buildMappings(runes, strict, charset)
-    ffxencoding.SetCharMap(charset, byteToChar, charToByte)
+    ffxencoding.SetCharMap(version, charset, byteToChar, charToByte)
     return nil
+}
+
+// PrepareAllCharsets carrega um charset para as duas versões (FFX e FFX-2).
+// Erros de uma versão não bloqueiam a outra; retorna o último erro encontrado.
+func PrepareAllCharsets(charset string) error {
+    var lastErr error
+    for _, v := range []models.GameVersion{models.FFX, models.FFX2} {
+        if err := PrepareCharset(v, charset); err != nil {
+            lastErr = err
+        }
+    }
+    return lastErr
 }
 
 

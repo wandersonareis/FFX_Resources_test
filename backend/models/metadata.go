@@ -112,27 +112,6 @@ type EventFileExport struct {
 	Strings  []EventStringDataExport `json:"strings"`
 }
 
-// MacroStringExport is the JSON form of a single macro string.
-type MacroStringExport struct {
-	Index          int    `json:"index"`
-	RegularText    string `json:"regular_text"`
-	SimplifiedText string `json:"simplified_text"`
-	HasDistinct    bool   `json:"has_distinct_simplified"`
-}
-
-// MacroChunkExport is the JSON form of a macro chunk.
-type MacroChunkExport struct {
-	ChunkIndex int                  `json:"chunk_index"`
-	Strings    []MacroStringExport `json:"strings"`
-}
-
-// MacroLocalizationExport is one localization in the macro dictionary export.
-type MacroLocalizationExport struct {
-	Metadata    *FileMetadata       `json:"metadata"`
-	Localization string             `json:"localization"`
-	Chunks       []MacroChunkExport `json:"chunks"`
-}
-
 // ObjectsFileExport is an objectsfile export: binary metadata + the text strings.
 // Strings is kept as raw JSON so the objectsfile package can (un)marshal its own types.
 type ObjectsFileExport struct {

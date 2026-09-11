@@ -3,8 +3,13 @@ package common
 import "path/filepath"
 
 func GetEncodingDir() string {
-	gameVersion := GetGameVersionString()
-	switch gameVersion {
+	return GetEncodingDirForVersionString(GetGameVersionString())
+}
+
+// GetEncodingDirForVersionString resolve o diretório de encoding sem depender
+// do GAME_VERSION global ("ffx" -> ffx_encoding, "ffx2" -> ffx2_encoding).
+func GetEncodingDirForVersionString(gameVersionString string) string {
+	switch gameVersionString {
 	case "ffx2":
 		return "ffx2_encoding"
 	default:
@@ -13,14 +18,23 @@ func GetEncodingDir() string {
 }
 
 func GetEncodingPath(charset string) string {
-	encodingDir := GetEncodingDir()
-	gameVersion := GetGameVersionString()
-	return filepath.Join(encodingDir, gameVersion+"sjistbl_"+charset+".bin")
+	return GetEncodingPathForVersion(GetGameVersionString(), charset)
+}
+
+// GetEncodingPathForVersion monta o caminho do charset para uma versão
+// explícita, sem ler o estado global.
+func GetEncodingPathForVersion(gameVersionString, charset string) string {
+	encodingDir := GetEncodingDirForVersionString(gameVersionString)
+	return filepath.Join(encodingDir, gameVersionString+"sjistbl_"+charset+".bin")
 }
 
 func GetPathRoot() string {
-	gameVersion := GetGameVersionString()
-	return filepath.Join("ffx_ps2", gameVersion, "master")
+	return GetPathRootForVersion(GetGameVersionString())
+}
+
+// GetPathRootForVersion monta ffx_ps2/<versão>/master para uma versão explícita.
+func GetPathRootForVersion(gameVersionString string) string {
+	return filepath.Join("ffx_ps2", gameVersionString, "master")
 }
 
 func GetPathOriginalsRoot() string {

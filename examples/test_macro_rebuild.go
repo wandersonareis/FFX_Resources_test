@@ -5,12 +5,14 @@ import (
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/core/writer"
 	"ffxresources/backend/fileFormats/macrodic"
+	"ffxresources/backend/interactions"
 	"fmt"
 )
 
-// TestMacroStringRebuild tests the RebuildMacroStrings function
+// TestMacroStringRebuild tests the container-based rebuild roundtrip:
+// binary -> TextFile -> ToBytes -> reparse, comparing texts.
 func TestMacroStringRebuild() {
-	fmt.Println("=== Teste da Função RebuildMacroStrings ===")
+	fmt.Println("=== Teste de Reconstrução de Macro Dictionary ===")
 
 	// Initialize data first
 	fmt.Println("Inicializando dados...")
@@ -19,51 +21,76 @@ func TestMacroStringRebuild() {
 		return
 	}
 
-	// Get test data from MACRODICTFILE
+	// Get test data from available containers
+	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+	containers, err := macrodic.ReadMacroDictionaryContainers(version)
+	if err != nil {
+		fmt.Printf("Erro ao ler containers: %v\n", err)
+		return
+	}
 	testLocalization := "us"
-	if chunks, exists := macrodic.MACRODICTFILE[testLocalization]; exists && len(chunks) > 0 {
-		chunk := chunks[0]
-		if len(chunk) > 0 {
-			fmt.Printf("Testando com chunk 0 da localização %s (%d strings)\n", testLocalization, len(chunk))
+	c, ok := containers[testLocalization]
+	if !ok {
+		fmt.Printf("Nenhum dado encontrado para localização %s\n", testLocalization)
+		return
+	}
 
-			// Test the rebuild function
-			charset := encoding.GetCharsetForLanguage(testLocalization)
-			rebuiltData := macrodic.GenerateMacroStringData(chunk, charset, true)
+	// Use the first non-empty chunk
+	var chunkIndex int = -1
+	for i := range c.ChunkOffsets {
+		f, err := c.FileAt(i)
+		if err != nil || len(f.Segments) == 0 {
+			continue
+		}
+		chunkIndex = i
+		break
+	}
+	if chunkIndex < 0 {
+		fmt.Printf("Nenhum chunk com dados para localização %s\n", testLocalization)
+		return
+	}
 
-			fmt.Printf("Dados reconstruídos: %d bytes\n", len(rebuiltData))
+	f, _ := c.FileAt(chunkIndex)
+	fmt.Printf("Testando com chunk %d da localização %s (%d segmentos)\n", chunkIndex, testLocalization, len(f.Segments))
 
-			// Test complete conversion
-			completeData := macrodic.MacroStringsToBytes(chunk, charset, true)
-			fmt.Printf("Dados completos (com cabeçalho): %d bytes\n", len(completeData))
+	// Rebuild and reparse
+	rebuilt, err := f.ToBytes()
+	if err != nil {
+		fmt.Printf("Erro ao reconstruir: %v\n", err)
+		return
+	}
+	fmt.Printf("Dados reconstruídos: %d bytes\n", len(rebuilt))
 
-			// Verify by parsing back
-			parsedStrings := macrodic.FromStringData(completeData[2:], charset)
-			fmt.Printf("Strings analisadas de volta: %d\n", len(parsedStrings))
+	charset := encoding.GetCharsetForLanguage(testLocalization)
+	reparsed, err := macrodic.NewMacroDictionaryTextFile(rebuilt, charset, c.Version)
+	if err != nil {
+		fmt.Printf("Erro ao reler: %v\n", err)
+		return
+	}
+	fmt.Printf("Segmentos analisados de volta: %d\n", len(reparsed.Segments))
 
-			// Compare first few strings
-			fmt.Println("Comparando primeiras strings:")
-			compareCount := 3
-			if len(chunk) < compareCount {
-				compareCount = len(chunk)
-			}
-			if len(parsedStrings) < compareCount {
-				compareCount = len(parsedStrings)
-			}
+	// Compare first few strings
+	fmt.Println("Comparando primeiras strings:")
+	compareCount := 3
+	if len(f.Segments) < compareCount {
+		compareCount = len(f.Segments)
+	}
+	if len(reparsed.Segments) < compareCount {
+		compareCount = len(reparsed.Segments)
+	}
 
-			for i := 0; i < compareCount; i++ {
-				if chunk[i] != nil && parsedStrings[i] != nil {
-					original := chunk[i].GetRegularString()
-					parsed := parsedStrings[i].GetRegularString()
-					if original == parsed {
-						fmt.Printf("  ✓ String %d: '%s'\n", i, original)
-					} else {
-						fmt.Printf("  ❌ String %d: '%s' != '%s'\n", i, original, parsed)
-					}
-				}
+	origStrings := f.ToMacroStrings()
+	newStrings := reparsed.ToMacroStrings()
+	for i := 0; i < compareCount; i++ {
+		if origStrings[i] != nil && newStrings[i] != nil {
+			original := origStrings[i].GetRegularString()
+			parsed := newStrings[i].GetRegularString()
+			if original == parsed {
+				fmt.Printf("  ✓ String %d: '%s'\n", i, original)
+			} else {
+				fmt.Printf("  ❌ String %d: '%s' != '%s'\n", i, original, parsed)
 			}
 		}
-	} else {
-		fmt.Printf("Nenhum dado encontrado para localização %s\n", testLocalization)
 	}
 
 	fmt.Println("=== Teste Concluído ===")
@@ -79,7 +106,7 @@ func TestFullWorkflow() {
 	fmt.Println("\n=== Testando Funcionalidades de Writer ===")
 
 	// Test writer functions
-	writer.TestMacroStringReconstruction()
+	writer.ExampleMacroDictionaryUsage()
 
 	fmt.Println("=== Todos os Testes Concluídos ===")
 }
