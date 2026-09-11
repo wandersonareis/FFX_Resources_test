@@ -27,7 +27,7 @@ func ReadNameOnlyLocalizations(patternPath string) datastore.IBinaryFile {
 		return NewNameOnlyTextObject(cBytes, sBytes, hLen, lang, gameVersion)
 	}
 
-	binaryDataFile := NewBinaryFile(
+	binaryDataFile := NewObjectBinaryFile(
 		patternPath,
 		creatorFunc,
 		common.DefaultLocalization,
@@ -57,7 +57,7 @@ func ReadNameOnlyV2Localizations(patternPath string) datastore.IBinaryFile {
 		return NewNameOnlyTextObjectV2(cBytes, sBytes, hLen, lang, gameVersion)
 	}
 
-	binaryDataFile := NewBinaryFile(
+	binaryDataFile := NewObjectBinaryFile(
 		patternPath,
 		creatorFunc,
 		common.DefaultLocalization,
@@ -98,7 +98,7 @@ func ReadCommandLocalizations(patternPath string) datastore.IBinaryFile {
 		}
 	}
 
-	binaryDataFile := NewBinaryFile(
+	binaryDataFile := NewObjectBinaryFile(
 		patternPath,
 		creatorFunc,
 		common.DefaultLocalization,
@@ -131,7 +131,7 @@ func ReadJobLocalizations(patternPath string, effectSegmentPosition int64) datas
 		return nil, fmt.Errorf("JobTextObject is only compatible with FFX-2 (game version 2), but got game version %d", gameVersion)
 	}
 
-	binaryDataFile := NewBinaryFile(
+	binaryDataFile := NewObjectBinaryFile(
 		patternPath,
 		creatorFunc,
 		common.DefaultLocalization,
@@ -165,7 +165,7 @@ func ReadNameDescriptionEffectAbilitiesLocalizations(patternPath string, abiliti
 		return nil, fmt.Errorf("Name description effect abilities is only compatible with FFX-2 (game version 2), but got game version %d", gameVersion)
 	}
 
-	binaryDataFile := NewBinaryFile(
+	binaryDataFile := NewObjectBinaryFile(
 		patternPath,
 		creatorFunc,
 		common.DefaultLocalization,
@@ -198,7 +198,7 @@ func ReadNameSensorScanLocalizations(patternPath string) datastore.IBinaryFile {
 		return nil, fmt.Errorf("Name sensor scan is only compatible with FFX (game version 1), but got game version %d", gameVersion)
 	}
 
-	binaryDataFile := NewBinaryFile(
+	binaryDataFile := NewObjectBinaryFile(
 		patternPath,
 		creatorFunc,
 		common.DefaultLocalization,
@@ -231,7 +231,7 @@ func ReadWeaponNamesLocalizations(patternPath string) datastore.IBinaryFile {
 		return nil, fmt.Errorf("Weapon names are only compatible with FFX (game version 1), but got game version %d", gameVersion)
 	}
 
-	binaryDataFile := NewBinaryFile(
+	binaryDataFile := NewObjectBinaryFile(
 		patternPath,
 		creatorFunc,
 		common.DefaultLocalization,

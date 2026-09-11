@@ -10,11 +10,11 @@ import (
 	"path/filepath"
 )
 
-// SaveBinaryFile persists a BinaryFile's objects back to binary form.
+// SaveBinaryFile persists a ObjectBinaryFile's objects back to binary form.
 // It mirrors the lifecycle used in examples/main.go: objects already loaded
 // in memory are re-encoded for the default (us) localization, written to the
 // localized mods tree and finally to filePath itself.
-func SaveBinaryFile(b *BinaryFile, filePath string) error {
+func SaveBinaryFile(b *ObjectBinaryFile, filePath string) error {
 	var lastBuf []byte
 
 	for localizationKey := range common.SupportedLanguages {
@@ -36,7 +36,7 @@ func SaveBinaryFile(b *BinaryFile, filePath string) error {
 	return common.WriteBytesToFile(filePath, lastBuf)
 }
 
-func encodeBinaryLanguage(b *BinaryFile, localizationKey string) (*bytes.Buffer, error) {
+func encodeBinaryLanguage(b *ObjectBinaryFile, localizationKey string) (*bytes.Buffer, error) {
 	keyedStrings := collectBinaryKeyedStrings(b, localizationKey)
 	charset := ffxencoding.GetCharsetForLanguage(localizationKey)
 	stringBytes := RebuildKeyedStrings(keyedStrings, charset, models.GameVersion(b.Version))
@@ -66,7 +66,7 @@ func encodeBinaryLanguage(b *BinaryFile, localizationKey string) (*bytes.Buffer,
 	return buf, nil
 }
 
-func collectBinaryKeyedStrings(b *BinaryFile, localizationKey string) []datastore.IGlobalKeyedString {
+func collectBinaryKeyedStrings(b *ObjectBinaryFile, localizationKey string) []datastore.IGlobalKeyedString {
 	var all []datastore.IGlobalKeyedString
 	b.Objects.RangeIndex(func(_ int, obj datastore.IGlobalLocalizedTextObject) {
 		for _, ks := range obj.GetLocalizedKeyedStrings(localizationKey) {
@@ -80,7 +80,7 @@ func collectBinaryKeyedStrings(b *BinaryFile, localizationKey string) []datastor
 	return all
 }
 
-func writeBinaryLocalizedFile(b *BinaryFile, localizationKey, filePath string, data []byte) error {
+func writeBinaryLocalizedFile(b *ObjectBinaryFile, localizationKey, filePath string, data []byte) error {
 	_ = b
 	localePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, common.GetLocalizationRoot(localizationKey), filePath)
 	localePath = filepath.FromSlash(localePath)

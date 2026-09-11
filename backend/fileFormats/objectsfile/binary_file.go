@@ -8,6 +8,7 @@ import (
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/interfaces"
 	"fmt"
 	"io"
 	"os"
@@ -86,7 +87,9 @@ func NewBinaryHeader(version int) IBinaryHeader {
 
 type CreatorFunc func(chunkBytes []byte, stringBytes []byte, headerLength int, languageCode string) (datastore.IGlobalLocalizedTextObject, error)
 
-type BinaryFile struct {
+// ObjectBinaryFile é a implementação concreta de interfaces.IBinaryFile
+// para arquivos de objetos com strings localizadas.
+type ObjectBinaryFile struct {
 	Header       IBinaryHeader
 	Objects      components.IList[datastore.IGlobalLocalizedTextObject]
 	StringBytes  []byte
@@ -96,8 +99,11 @@ type BinaryFile struct {
 	Version      int
 }
 
-func NewBinaryFile(patternPath string, creator CreatorFunc, languageCode string, version int) *BinaryFile {
-	return &BinaryFile{
+// Garante em tempo de compilação que ObjectBinaryFile implementa a interface.
+var _ interfaces.IBinaryFile[datastore.IGlobalLocalizedTextObject] = (*ObjectBinaryFile)(nil)
+
+func NewObjectBinaryFile(patternPath string, creator CreatorFunc, languageCode string, version int) *ObjectBinaryFile {
+	return &ObjectBinaryFile{
 		Header:       NewBinaryHeader(version),
 		patternPath:  patternPath,
 		languageCode: languageCode,
@@ -106,7 +112,7 @@ func NewBinaryFile(patternPath string, creator CreatorFunc, languageCode string,
 	}
 }
 
-func (b *BinaryFile) resolveFilePath() string {
+func (b *ObjectBinaryFile) resolveFilePath() string {
 	return filepath.Join(common.GetLocalizationRoot(b.languageCode), b.patternPath)
 }
 
@@ -118,7 +124,7 @@ func interactionGameFilesDir() string {
 	return svc.GameLocation.GetTargetDirectory()
 }
 
-func (b *BinaryFile) readFile() ([]byte, error) {
+func (b *ObjectBinaryFile) readFile() ([]byte, error) {
 	if base := interactionGameFilesDir(); base != "" {
 		if data, err := b.readFileFromBase(base); err == nil {
 			return data, nil
@@ -146,7 +152,7 @@ func (b *BinaryFile) readFile() ([]byte, error) {
 	return data, nil
 }
 
-func (b *BinaryFile) readFileFromBase(base string) ([]byte, error) {
+func (b *ObjectBinaryFile) readFileFromBase(base string) ([]byte, error) {
 	rel := b.resolveFilePath()
 
 	if !common.AreModsEnabled() {
@@ -178,7 +184,7 @@ func (b *BinaryFile) readFileFromBase(base string) ([]byte, error) {
 	return data, nil
 }
 
-func (b *BinaryFile) LoadFromBinary() error {
+func (b *ObjectBinaryFile) LoadFromBinary() error {
 	data, err := b.readFile()
 	if err != nil {
 		return err
@@ -205,14 +211,14 @@ func (b *BinaryFile) LoadFromBinary() error {
 	return nil
 }
 
-func (b *BinaryFile) readHeader(r *bytes.Reader) error {
+func (b *ObjectBinaryFile) readHeader(r *bytes.Reader) error {
 	if err := b.Header.Read(r); err != nil {
 		return fmt.Errorf("error reading header: %w", err)
 	}
 	return nil
 }
 
-func (b *BinaryFile) readChunks(r *bytes.Reader) ([]byte, error) {
+func (b *ObjectBinaryFile) readChunks(r *bytes.Reader) ([]byte, error) {
 	dataBytes := make([]byte, b.Header.GetTotalLength())
 	if _, err := io.ReadFull(r, dataBytes); err != nil {
 		return nil, fmt.Errorf("error reading chunks: %w", err)
@@ -220,7 +226,7 @@ func (b *BinaryFile) readChunks(r *bytes.Reader) ([]byte, error) {
 	return dataBytes, nil
 }
 
-func (b *BinaryFile) readStrings(r *bytes.Reader) error {
+func (b *ObjectBinaryFile) readStrings(r *bytes.Reader) error {
 	b.StringBytes = make([]byte, r.Len())
 	if _, err := io.ReadFull(r, b.StringBytes); err != nil {
 		return fmt.Errorf("error reading strings: %w", err)
@@ -228,7 +234,7 @@ func (b *BinaryFile) readStrings(r *bytes.Reader) error {
 	return nil
 }
 
-func (b *BinaryFile) buildObjects(dataBytes []byte) {
+func (b *ObjectBinaryFile) buildObjects(dataBytes []byte) {
 	count := b.Header.GetMaxIndex() - b.Header.GetMinIndex()
 	b.Objects = components.NewList[datastore.IGlobalLocalizedTextObject](count + 1)
 
@@ -256,24 +262,24 @@ func (b *BinaryFile) buildObjects(dataBytes []byte) {
 	}
 }
 
-func (b *BinaryFile) ExportToJson(filePath string) error {
+func (b *ObjectBinaryFile) ExportToJson(filePath string) error {
 	if filePath == "" {
 		return fmt.Errorf("json file not configured")
 	}
 	return ExportToJSON(b.Objects, filePath)
 }
 
-func (b *BinaryFile) ImportFromJson(filePath string) error {
+func (b *ObjectBinaryFile) ImportFromJson(filePath string) error {
 	if filePath == "" {
 		return fmt.Errorf("json file not configured")
 	}
 	return ImportFromJson(filePath, b.Objects)
 }
 
-func (b *BinaryFile) SaveToBinary(filePath string) error {
+func (b *ObjectBinaryFile) SaveToBinary(filePath string) error {
 	return SaveBinaryFile(b, filePath)
 }
 
-func (b *BinaryFile) GetObjects() components.IList[datastore.IGlobalLocalizedTextObject] {
+func (b *ObjectBinaryFile) GetObjects() components.IList[datastore.IGlobalLocalizedTextObject] {
 	return b.Objects
 }

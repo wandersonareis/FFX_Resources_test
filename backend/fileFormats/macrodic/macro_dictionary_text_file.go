@@ -20,7 +20,7 @@ type MacroDictionaryTextSegment struct {
 
 // MacroDictionaryTextFile holds the raw bytes of a single file contained in a
 // macro dictionary container, along with its parsed Name/SimplifiedName segments.
-// It follows the BinaryFile/NameOnlyTextObject pattern: Bytes keeps the raw data,
+// It follows the ObjectBinaryFile/NameOnlyTextObject pattern: Bytes keeps the raw data,
 // mapBytes parses it, ToBytes rebuilds it from zero. Nil segments are empty
 // placeholders that rebuild as zero entries, preserving index alignment.
 type MacroDictionaryTextFile struct {
