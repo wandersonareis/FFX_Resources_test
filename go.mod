@@ -1,6 +1,6 @@
 module ffxresources
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/denisvmedia/asar v0.0.0-20220910114414-6afbb52dd143
@@ -8,16 +8,15 @@ require (
 	github.com/onsi/ginkgo/v2 v2.22.2
 	github.com/onsi/gomega v1.36.2
 	github.com/rs/zerolog v1.35.1
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.1
 	github.com/wailsapp/wails/v2 v2.15.0
-	golang.org/x/text v0.41.0
+	golang.org/x/text v0.42.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
 require (
 	git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3 // indirect
 	github.com/bep/debounce v1.2.1 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-extras/errors v0.11.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
@@ -37,19 +36,19 @@ require (
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/samber/lo v1.53.0 // indirect
-	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/tkrajina/go-reflector v0.5.8 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/wailsapp/go-webview2 v1.0.23 // indirect
 	github.com/wailsapp/mimetype v1.4.1 // indirect
-	golang.org/x/crypto v0.55.0 // indirect
-	golang.org/x/net v0.58.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/tools v0.48.0 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
+	golang.org/x/crypto v0.57.0 // indirect
+	golang.org/x/net v0.59.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/tools v0.49.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
