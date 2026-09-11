@@ -50,9 +50,9 @@ var ffxIntegrityCases = []integrityCase{
 	{pattern: "battle/kernel/sphere.bin", read: objectsfile.ReadNameOnlyLocalizations},
 	{pattern: "battle/kernel/save_txt.bin", read: objectsfile.ReadNameOnlyLocalizations},
 	{pattern: "battle/kernel/name_txt.bin", read: objectsfile.ReadNameOnlyLocalizations},
-	{pattern: "battle/kernel/monster1.bin", read: objectsfile.ReadNameSensorScanLocalizations},
-	{pattern: "battle/kernel/monster2.bin", read: objectsfile.ReadNameSensorScanLocalizations},
-	{pattern: "battle/kernel/monster3.bin", read: objectsfile.ReadNameSensorScanLocalizations},
+	{pattern: "battle/kernel/monster1.bin", read: objectsfile.ReadMonsterLocalizations},
+	{pattern: "battle/kernel/monster2.bin", read: objectsfile.ReadMonsterLocalizations},
+	{pattern: "battle/kernel/monster3.bin", read: objectsfile.ReadMonsterLocalizations},
 	{pattern: "battle/kernel/w_name.bin", read: objectsfile.ReadWeaponNamesLocalizations},
 }
 

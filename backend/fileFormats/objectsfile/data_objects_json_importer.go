@@ -155,7 +155,7 @@ func updateObjectByType(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextO
 		updateNameEntry(jsonEntry, localizedTextObj.Name, version)
 		updateDescriptionEntry(jsonEntry, localizedTextObj.Description, version)
 		updateAbilitiesEntry(jsonEntry, localizedTextObj.Abilities, version)
-	case *NameSensorScanTextObject:
+	case *MonsterTextObject:
 		updateNameEntry(jsonEntry, localizedTextObj.Name, version)
 		updateSensorTextEntry(jsonEntry, localizedTextObj, version)
 		updateScanTextEntry(jsonEntry, localizedTextObj, version)
@@ -359,12 +359,12 @@ func updateAbilitiesEntry(sourceData JSONEntry, segments []datastore.IGlobalLoca
 	}
 }
 
-// updateSensorTextEntry applies sensor text updates to a NameSensorScanTextObject.
+// updateSensorTextEntry applies sensor text updates to a MonsterTextObject.
 //
 // Parameters:
 //   - sourceData: JSON data containing sensor translations
-//   - targetObject: The NameSensorScanTextObject object to update
-func updateSensorTextEntry(sourceData JSONEntry, targetObject *NameSensorScanTextObject, version int) {
+//   - targetObject: The MonsterTextObject object to update
+func updateSensorTextEntry(sourceData JSONEntry, targetObject *MonsterTextObject, version int) {
 	if len(sourceData.SensorText) > 0 && targetObject.SensorText != nil {
 		for languageCode, newText := range sourceData.SensorText {
 			if newText == "" {
@@ -396,12 +396,12 @@ func updateSensorTextEntry(sourceData JSONEntry, targetObject *NameSensorScanTex
 	}
 }
 
-// updateScanTextEntry applies scan text updates to a NameSensorScanTextObject.
+// updateScanTextEntry applies scan text updates to a MonsterTextObject.
 //
 // Parameters:
 //   - sourceData: JSON data containing scan translations
-//   - targetObject: The NameSensorScanTextObject object to update
-func updateScanTextEntry(sourceData JSONEntry, targetObject *NameSensorScanTextObject, version int) {
+//   - targetObject: The MonsterTextObject object to update
+func updateScanTextEntry(sourceData JSONEntry, targetObject *MonsterTextObject, version int) {
 	if len(sourceData.ScanText) > 0 && targetObject.ScanText != nil {
 		for languageCode, newText := range sourceData.ScanText {
 			if newText == "" {

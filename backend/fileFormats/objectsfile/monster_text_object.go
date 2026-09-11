@@ -9,7 +9,7 @@ import (
 	"ffxresources/backend/models"
 )
 
-type NameSensorScanTextObject struct {
+type MonsterTextObject struct {
 	Bytes                 []byte
 	Name                  datastore.IGlobalLocalizedKeyedStringObject
 	SensorText            datastore.IGlobalLocalizedKeyedStringObject
@@ -20,18 +20,18 @@ type NameSensorScanTextObject struct {
 	Version               int
 }
 
-func NewNameSensorScanTextObject(
+func NewMonsterTextObject(
 	bytes []byte,
 	stringBytes []byte,
 	headerLength int,
 	languageCode string,
 	version int,
-) (*NameSensorScanTextObject, error) {
+) (*MonsterTextObject, error) {
 	if len(bytes) < headerLength {
-		return nil, fmt.Errorf("insufficient data to create NameSensorScanTextObject: have %d bytes, need at least %d", len(bytes), headerLength)
+		return nil, fmt.Errorf("insufficient data to create MonsterTextObject: have %d bytes, need at least %d", len(bytes), headerLength)
 	}
 
-	p := &NameSensorScanTextObject{
+	p := &MonsterTextObject{
 		Bytes:                bytes,
 		Name:                 NewLocalizedKeyedStringObject(),
 		SensorText:           NewLocalizedKeyedStringObject(),
@@ -49,7 +49,7 @@ func NewNameSensorScanTextObject(
 	return p, nil
 }
 
-func (p *NameSensorScanTextObject) mapBytes(
+func (p *MonsterTextObject) mapBytes(
 	stringBytes []byte,
 	languageCode string,
 	version int,
@@ -64,7 +64,7 @@ func (p *NameSensorScanTextObject) mapBytes(
 	)
 }
 
-func (p *NameSensorScanTextObject) ToBytes(languageCode string) ([]byte, error) {
+func (p *MonsterTextObject) ToBytes(languageCode string) ([]byte, error) {
 	data := make([]byte, len(p.Bytes))
 	copy(data, p.Bytes)
 
@@ -101,11 +101,11 @@ func (p *NameSensorScanTextObject) ToBytes(languageCode string) ([]byte, error) 
 	return data, nil
 }
 
-func (p *NameSensorScanTextObject) GetName(languageCode string) string {
+func (p *MonsterTextObject) GetName(languageCode string) string {
 	return p.Name.GetLocalizedString(languageCode)
 }
 
-func (p *NameSensorScanTextObject) GetKeyedString(title string) datastore.IGlobalLocalizedKeyedStringObject {
+func (p *MonsterTextObject) GetKeyedString(title string) datastore.IGlobalLocalizedKeyedStringObject {
 	switch title {
 	case "name":
 		return p.Name
@@ -122,16 +122,16 @@ func (p *NameSensorScanTextObject) GetKeyedString(title string) datastore.IGloba
 	}
 }
 
-func (p *NameSensorScanTextObject) GetHeaderLength() int {
+func (p *MonsterTextObject) GetHeaderLength() int {
 	return p.HeaderLength
 }
 
-func (p *NameSensorScanTextObject) GetTextObject() datastore.IGlobalLocalizedTextObject {
+func (p *MonsterTextObject) GetTextObject() datastore.IGlobalLocalizedTextObject {
 	return p
 }
 
-func (p *NameSensorScanTextObject) SetLocalizations(other datastore.IGlobalLocalizationSetter) {
-	if o, ok := other.(*NameSensorScanTextObject); ok {
+func (p *MonsterTextObject) SetLocalizations(other datastore.IGlobalLocalizationSetter) {
+	if o, ok := other.(*MonsterTextObject); ok {
 		o.Name.CopyInto(p.Name)
 		o.SensorText.CopyInto(p.SensorText)
 		o.SimplifiedSensorText.CopyInto(p.SimplifiedSensorText)
@@ -140,7 +140,7 @@ func (p *NameSensorScanTextObject) SetLocalizations(other datastore.IGlobalLocal
 	}
 }
 
-func (p *NameSensorScanTextObject) GetLocalizedKeyedStrings(localization string) []datastore.IGlobalKeyedString {
+func (p *MonsterTextObject) GetLocalizedKeyedStrings(localization string) []datastore.IGlobalKeyedString {
 	return []datastore.IGlobalKeyedString{
 		p.Name.GetLocalizedContent(localization),
 		p.SensorText.GetLocalizedContent(localization),
@@ -150,7 +150,7 @@ func (p *NameSensorScanTextObject) GetLocalizedKeyedStrings(localization string)
 	}
 }
 
-func (p *NameSensorScanTextObject) ToString(languageCode string) string {
+func (p *MonsterTextObject) ToString(languageCode string) string {
 	nameStr := p.GetName(languageCode)
 	sensorStr := ""
 	if sensorContent := p.SensorText.GetLocalizedContent(languageCode); sensorContent != nil {
@@ -171,6 +171,6 @@ func (p *NameSensorScanTextObject) ToString(languageCode string) string {
 	return fmt.Sprintf("%s - %s - %s - %s - %s", nameStr, sensorStr, simplifiedSensorStr, scanStr, simplifiedScanStr)
 }
 
-func (p *NameSensorScanTextObject) String() string {
+func (p *MonsterTextObject) String() string {
 	return p.ToString(common.DefaultLocalization)
 }

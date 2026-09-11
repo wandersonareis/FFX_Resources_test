@@ -200,7 +200,7 @@ func runFFXExamples() {
 	common.LogInfo("[FFX] ✓ Monster magic 2 text salvos com sucesso")
 
 	// monster1.bin
-	monsterBinaryFile := objectsfile.ReadNameSensorScanLocalizations("battle/kernel/monster1.bin")
+	monsterBinaryFile := objectsfile.ReadMonsterLocalizations("battle/kernel/monster1.bin")
 	common.LogInfo("[FFX] monster 1 carregados: %d\n", monsterBinaryFile.GetObjects().Len())
 	if err := monsterBinaryFile.ExportToJson("monster1_all_localizations.json"); err != nil {
 		common.LogError("[FFX] Error exporting monsters 1 text to JSON: %v\n", err)
@@ -216,7 +216,7 @@ func runFFXExamples() {
 	common.LogInfo("[FFX] ✓ monsters 1 text salvos com sucesso")
 
 	// monster2.bin
-	monster2BinaryFile := objectsfile.ReadNameSensorScanLocalizations("battle/kernel/monster2.bin")
+	monster2BinaryFile := objectsfile.ReadMonsterLocalizations("battle/kernel/monster2.bin")
 	common.LogInfo("[FFX] monster 2 carregados: %d\n", monster2BinaryFile.GetObjects().Len())
 	if err := monster2BinaryFile.ExportToJson("monster2_all_localizations.json"); err != nil {
 		common.LogError("[FFX] Error exporting monsters 2 text to JSON: %v\n", err)
@@ -232,7 +232,7 @@ func runFFXExamples() {
 	common.LogInfo("[FFX] ✓ monsters 2 text salvos com sucesso")
 
 	// monster3.bin
-	monster3BinaryFile := objectsfile.ReadNameSensorScanLocalizations("battle/kernel/monster3.bin")
+	monster3BinaryFile := objectsfile.ReadMonsterLocalizations("battle/kernel/monster3.bin")
 	common.LogInfo("[FFX] monster 3 carregados: %d\n", monster3BinaryFile.GetObjects().Len())
 	if err := monster3BinaryFile.ExportToJson("monster3_all_localizations.json"); err != nil {
 		common.LogError("[FFX] Error exporting monsters 3 text to JSON: %v\n", err)
@@ -744,6 +744,22 @@ func runFFX2Examples() {
 		common.LogError("[FFX-2] Error saving save text to binary: %v\n", err)
 	}
 	common.LogInfo("[FFX-2] ✓ Save text salvos com sucesso")
+
+	// lm_accesary.bin
+	lmAccesaryTextBinaryFile := objectsfile.ReadCommandLocalizations("lastmiss/kernel/lm_accesary.bin")
+	common.LogInfo("[FFX-2] Last mission accesary text carregados: %d\n", lmAccesaryTextBinaryFile.GetObjects().Len())
+	if err := lmAccesaryTextBinaryFile.ExportToJson("lm_accesary_text_all_localizations.json"); err != nil {
+		common.LogError("[FFX-2] Error exporting last mission accesary text to JSON: %v\n", err)
+	}
+	common.LogInfo("[FFX-2] ✓ Last mission accesary text exportados para JSON")
+	if err := lmAccesaryTextBinaryFile.ImportFromJson("lm_accesary_text_all_localizations.json"); err != nil {
+		common.LogError("[FFX-2] Error importing last mission accesary text from JSON: %v\n", err)
+	}
+	common.LogInfo("[FFX-2] ✓ Last mission accesary text editados e salvos com sucesso")
+	if err := lmAccesaryTextBinaryFile.SaveToBinary("lastmiss/kernel/lm_accesary.bin"); err != nil {
+		common.LogError("[FFX-2] Error saving last mission accesary text to binary: %v\n", err)
+	}
+	common.LogInfo("[FFX-2] ✓ Last mission accesary text salvos com sucesso")
 
 	// Carregar eventos
 	if err := readEvents(); err != nil {

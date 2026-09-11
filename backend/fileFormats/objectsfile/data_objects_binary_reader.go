@@ -316,7 +316,7 @@ func ParseDataListWithIlistV2(data []byte, languageCode string, creator func([]b
 // stored contiguously at the beginning of the chunk, with no gaps or non-string
 // bytes between them. Examples:
 //   - CommandTextObject: Name → SimplifiedName → Description → SimplifiedDescription
-//   - NameSensorScanTextObject: Name → SensorText → SimplifiedSensorText → ScanText → SimplifiedScanText
+//   - MonsterTextObject: Name → SensorText → SimplifiedSensorText → ScanText → SimplifiedScanText
 //   - NameOnlyTextObject: Name → SimplifiedName
 //
 // It must NOT be used for segments that are located at arbitrary or non-sequential

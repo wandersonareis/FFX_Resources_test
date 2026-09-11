@@ -184,18 +184,18 @@ func ReadNameDescriptionEffectAbilitiesLocalizations(patternPath string, abiliti
 	return binaryDataFile
 }
 
-func ReadNameSensorScanLocalizations(patternPath string) datastore.IBinaryFile {
+func ReadMonsterLocalizations(patternPath string) datastore.IBinaryFile {
 	gameVersion := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
 	if gameVersion != 1 {
-		common.LogVerbose("ReadNameSensorScanLocalizations is only compatible with FFX (game version 1), but got game version %d", gameVersion)
+		common.LogVerbose("ReadMonsterLocalizations is only compatible with FFX (game version 1), but got game version %d", gameVersion)
 		return nil
 	}
 
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
 		if gameVersion == 1 {
-			return NewNameSensorScanTextObject(cBytes, sBytes, hLen, lang, gameVersion)
+			return NewMonsterTextObject(cBytes, sBytes, hLen, lang, gameVersion)
 		}
-		return nil, fmt.Errorf("Name sensor scan is only compatible with FFX (game version 1), but got game version %d", gameVersion)
+		return nil, fmt.Errorf("Monster is only compatible with FFX (game version 1), but got game version %d", gameVersion)
 	}
 
 	binaryDataFile := NewObjectBinaryFile(
