@@ -31,8 +31,8 @@ func DefaultFirstLocalizations() []string {
 // ReadMacroDictionaryContainers reads the macro dictionary binary of the default
 // localization first, then populates with the other available localizations.
 // A missing default file is an error; other missing files are skipped.
-func ReadMacroDictionaryContainers(version int) (map[string]*MacroDictionaryTextContainer, error) {
-	result := make(map[string]*MacroDictionaryTextContainer)
+func ReadMacroDictionaryContainers(version int) (map[string]*MacroDictionaryBinaryFile, error) {
+	result := make(map[string]*MacroDictionaryBinaryFile)
 	for _, loc := range DefaultFirstLocalizations() {
 		path := filepath.Join(common.GetLocalizationRoot(loc), "menu", "macrodic.dcp")
 		accessor, err := common.NewFileAccessor(path)
@@ -47,7 +47,7 @@ func ReadMacroDictionaryContainers(version int) (map[string]*MacroDictionaryText
 			common.LogVerbose("Skipping missing macro dictionary for localization: %s", loc)
 			continue
 		}
-		c, err := NewMacroDictionaryTextContainer(data, loc, version)
+		c, err := NewMacroDictionaryBinaryFileFromBytes(data, loc, version)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse macro dictionary for localization %s: %w", loc, err)
 		}
@@ -59,17 +59,17 @@ func ReadMacroDictionaryContainers(version int) (map[string]*MacroDictionaryText
 // PublishMacroDictionaryContainers publishes every given container into the
 // datastore, default localization first, so MCR lookups resolve for all
 // available languages.
-func PublishMacroDictionaryContainers(containers map[string]*MacroDictionaryTextContainer) {
+func PublishMacroDictionaryContainers(containers map[string]*MacroDictionaryBinaryFile) {
 	for _, loc := range DefaultFirstLocalizations() {
 		if c, ok := containers[loc]; ok && c != nil {
-			c.PublishStrings()
+			_ = c.PublishStrings()
 		}
 	}
 }
 
 // SaveMacroDictionaryBinaries writes each container binary back to its game
 // file (mods path per localization), like objectfile SaveBinaryFile does.
-func SaveMacroDictionaryBinaries(containers map[string]*MacroDictionaryTextContainer) error {
+func SaveMacroDictionaryBinaries(containers map[string]*MacroDictionaryBinaryFile) error {
 	for _, loc := range SortedLocalizationKeys(containers) {
 		c := containers[loc]
 		if c == nil || len(c.Bytes) == 0 {
@@ -86,7 +86,7 @@ func SaveMacroDictionaryBinaries(containers map[string]*MacroDictionaryTextConta
 
 // SaveMacroDictionaryJson exports all given containers into a single merged JSON
 // file holding every available localization, like objectfile exports do.
-func SaveMacroDictionaryJson(containers map[string]*MacroDictionaryTextContainer, fileName string) error {
+func SaveMacroDictionaryJson(containers map[string]*MacroDictionaryBinaryFile, fileName string) error {
 	raw, err := MarshalToJson(ExportToJson(containers))
 	if err != nil {
 		return fmt.Errorf("failed to marshal macro dictionary JSON: %w", err)

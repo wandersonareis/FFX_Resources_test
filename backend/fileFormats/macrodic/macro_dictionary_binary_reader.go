@@ -3,7 +3,7 @@
 // MapChunks returns the chunk offsets parsed from the container Bytes.
 // Returns a slice of uint32 offsets corresponding to each chunk in the binary data.
 // Each offset points to the start of the chunk data within the container Bytes.
-func (c *MacroDictionaryTextContainer) MapChunks() []uint32 {
+func (c *MacroDictionaryBinaryFile) MapChunks() []uint32 {
 	if c.Bytes == nil || len(c.ChunkOffsets) == 0 {
 		return c.ChunkOffsets
 	}
@@ -13,7 +13,7 @@ func (c *MacroDictionaryTextContainer) MapChunks() []uint32 {
 // MapStrings parses a single chunk of binary data into an array of MacroString.
 // It resolves the chunk through the container FileAt boundary scan and converts
 // the file segments.
-func (c *MacroDictionaryTextContainer) MapStrings(chunkIndex int) []*MacroString {
+func (c *MacroDictionaryBinaryFile) MapStrings(chunkIndex int) []*MacroString {
 	f, err := c.FileAt(chunkIndex)
 	if err != nil || len(f.Segments) == 0 {
 		return nil
@@ -23,7 +23,7 @@ func (c *MacroDictionaryTextContainer) MapStrings(chunkIndex int) []*MacroString
 
 // MapAllStrings maps all chunks in the container to their respective MacroString arrays.
 // Returns a 2D slice where each row corresponds to a chunk's strings.
-func (c *MacroDictionaryTextContainer) MapAllStrings() [][]*MacroString {
+func (c *MacroDictionaryBinaryFile) MapAllStrings() [][]*MacroString {
 	if c.Bytes == nil || len(c.ChunkOffsets) == 0 {
 		return nil
 	}
@@ -38,7 +38,7 @@ func (c *MacroDictionaryTextContainer) MapAllStrings() [][]*MacroString {
 // This is the main entry point for reading a macro dictionary binary into
 // MacroString objects.
 func MapStringsWithLocalization(data []byte, localization string, version int) [][]*MacroString {
-	container, err := NewMacroDictionaryTextContainer(data, localization, version)
+	container, err := NewMacroDictionaryBinaryFileFromBytes(data, localization, version)
 	if err != nil {
 		return nil
 	}

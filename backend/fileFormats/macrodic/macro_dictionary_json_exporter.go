@@ -46,7 +46,7 @@ func fillMacroLocalized(m map[string]string, text, locKey string) map[string]str
 // document, following the objectfile ExportToJson pattern: it iterates over every
 // localization and fills the per-entry Name/SimplifiedName maps. Entries without
 // any text in any language are skipped.
-func ExportToJson(containers map[string]*MacroDictionaryTextContainer) *MacroDictionaryJsonExport {
+func ExportToJson(containers map[string]*MacroDictionaryBinaryFile) *MacroDictionaryJsonExport {
 	locKeys := SortedLocalizationKeys(containers)
 
 	type entryKey struct {
@@ -118,7 +118,7 @@ func MarshalToJson(export *MacroDictionaryJsonExport) ([]byte, error) {
 
 // SortedLocalizationKeys returns the sorted localization keys of the given
 // containers for deterministic export output.
-func SortedLocalizationKeys(containers map[string]*MacroDictionaryTextContainer) []string {
+func SortedLocalizationKeys(containers map[string]*MacroDictionaryBinaryFile) []string {
 	keys := make([]string, 0, len(containers))
 	for loc := range containers {
 		keys = append(keys, loc)

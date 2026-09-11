@@ -99,10 +99,7 @@ type ObjectBinaryFile struct {
 	Version      int
 }
 
-// Garante em tempo de compilação que ObjectBinaryFile implementa a interface.
-var _ interfaces.IBinaryFile[datastore.IGlobalLocalizedTextObject] = (*ObjectBinaryFile)(nil)
-
-func NewObjectBinaryFile(patternPath string, creator CreatorFunc, languageCode string, version int) *ObjectBinaryFile {
+func NewObjectBinaryFile(patternPath string, creator CreatorFunc, languageCode string, version int) interfaces.IBinaryFile[datastore.IGlobalLocalizedTextObject] {
 	return &ObjectBinaryFile{
 		Header:       NewBinaryHeader(version),
 		patternPath:  patternPath,

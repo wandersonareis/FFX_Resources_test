@@ -7,20 +7,27 @@ import (
 	"sync"
 )
 
+// MacroObjects: objetos de macro de uma versão, indexados por ID
+// (chunk*0x100 + índice dentro do chunk).
+type MacroObjects = components.IMap[int, IGlobalLocalizedMacroStringObject]
+
+// VersionedMacros: objetos de macro indexados por versão do jogo.
+type VersionedMacros = components.IMap[models.GameVersion, MacroObjects]
+
 // GlobalDataStore mantém o estado global de todos os dados,
 // segregado por versão do jogo (FFX / FFX-2) para macros e events.
 type GlobalDataStore struct {
 	mu sync.RWMutex
 	//KeyItems components.IList[IGlobalLocalizedTextObject]
-	macros map[models.GameVersion]components.IMap[int, IGlobalLocalizedMacroStringObject]
+	macros map[models.GameVersion]MacroObjects
 	events map[models.GameVersion]map[string]IEventObject
-	lists  map[string]any // Para armazenar IList[T] genéricos
+	lists  map[string]interface{} // Para armazenar IList[T] genéricos
 }
 
 func newGlobalDataStore() *GlobalDataStore {
 	return &GlobalDataStore{
 		//KeyItems: components.NewEmptyList[IGlobalLocalizedTextObject](),
-		macros: map[models.GameVersion]components.IMap[int, IGlobalLocalizedMacroStringObject]{
+		macros: map[models.GameVersion]MacroObjects{
 			models.FFX:  components.NewEmptyMap[int, IGlobalLocalizedMacroStringObject](),
 			models.FFX2: components.NewEmptyMap[int, IGlobalLocalizedMacroStringObject](),
 		},
@@ -63,13 +70,13 @@ func normalizeGameVersion(gameVersion models.GameVersion) models.GameVersion {
 // macrosFor retorna o mapa de macros da versão indicada.
 // Deve ser chamado com o lock (R ou W) já adquirido.
 // Inicializa sob demanda caso a versão ainda não exista.
-func (ds *GlobalDataStore) macrosFor(gameVersion models.GameVersion) components.IMap[int, IGlobalLocalizedMacroStringObject] {
+func (ds *GlobalDataStore) macrosFor(gameVersion models.GameVersion) MacroObjects {
 	v := normalizeGameVersion(gameVersion)
 	m, ok := ds.macros[v]
 	if !ok || m == nil {
 		m = components.NewEmptyMap[int, IGlobalLocalizedMacroStringObject]()
 		if ds.macros == nil {
-			ds.macros = make(map[models.GameVersion]components.IMap[int, IGlobalLocalizedMacroStringObject])
+			ds.macros = make(map[models.GameVersion]MacroObjects)
 		}
 		ds.macros[v] = m
 	}
@@ -153,7 +160,7 @@ func (ds *GlobalDataStore) GetMacro(gameVersion models.GameVersion, idx int) (IG
 	return ds.macrosFor(gameVersion).Get(idx)
 }
 
-func (ds *GlobalDataStore) GetMacros(gameVersion models.GameVersion) components.IMap[int, IGlobalLocalizedMacroStringObject] {
+func (ds *GlobalDataStore) GetMacros(gameVersion models.GameVersion) MacroObjects {
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
 
@@ -169,7 +176,20 @@ func (ds *GlobalDataStore) SetMacro(gameVersion models.GameVersion, idx int, mac
 	}
 }
 
-func (ds *GlobalDataStore) SetMacros(gameVersion models.GameVersion, macros components.IMap[int, IGlobalLocalizedMacroStringObject]) {
+// TryAddMacro insere apenas se o ID ainda não existir na versão indicada,
+// retornando false caso contrário. A trava de escrita é mantida aqui dentro,
+// então o check-and-set é atômico frente a outros acessos ao datastore.
+func (ds *GlobalDataStore) TryAddMacro(gameVersion models.GameVersion, idx int, macro IGlobalLocalizedMacroStringObject) bool {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+
+	if macro == nil {
+		return false
+	}
+	return ds.macrosFor(gameVersion).TryAdd(idx, macro)
+}
+
+func (ds *GlobalDataStore) SetMacros(gameVersion models.GameVersion, macros MacroObjects) {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
@@ -291,7 +311,7 @@ func GetMacro(gameVersion models.GameVersion, idx int) (IGlobalLocalizedMacroStr
 	return Instance.GetMacro(gameVersion, idx)
 }
 
-func GetMacros(gameVersion models.GameVersion) components.IMap[int, IGlobalLocalizedMacroStringObject] {
+func GetMacros(gameVersion models.GameVersion) MacroObjects {
 	Instance.mu.RLock()
 	defer Instance.mu.RUnlock()
 
@@ -300,6 +320,10 @@ func GetMacros(gameVersion models.GameVersion) components.IMap[int, IGlobalLocal
 
 func SetMacro(gameVersion models.GameVersion, idx int, macro IGlobalLocalizedMacroStringObject) {
 	Instance.SetMacro(gameVersion, idx, macro)
+}
+
+func TryAddMacro(gameVersion models.GameVersion, idx int, macro IGlobalLocalizedMacroStringObject) bool {
+	return Instance.TryAddMacro(gameVersion, idx, macro)
 }
 
 func HasMacros(gameVersion models.GameVersion) bool {
@@ -324,7 +348,7 @@ func SetEvent(gameVersion models.GameVersion, id string, event IEventObject) {
 	Instance.KeyItems = items
 } */
 
-func SetMacros(gameVersion models.GameVersion, macros components.IMap[int, IGlobalLocalizedMacroStringObject]) {
+func SetMacros(gameVersion models.GameVersion, macros MacroObjects) {
 	Instance.mu.Lock()
 	defer Instance.mu.Unlock()
 

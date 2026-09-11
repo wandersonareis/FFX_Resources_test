@@ -13,21 +13,15 @@ import (
 // container and publishes its strings into the datastore. Missing files are
 // skipped so unavailable localizations never break initialization.
 func PrepareStringMacros(filename, localization string, version int) error {
-	resolvedFile, err := common.NewFileAccessor(filename)
-	if err != nil {
-		return err
-	}
-	data := resolvedFile.ReadBytes()
-	if len(data) == 0 {
-		common.LogVerbose("Skipping missing macro dictionary file: %s", filename)
+	c := macrodic.NewMacroDictionaryBinaryFile(localization, version)
+	if err := c.LoadFromBinary(); err != nil {
+		common.LogVerbose("Skipping missing macro dictionary file: %s (%v)", filename, err)
 		return nil
 	}
-	c, err := macrodic.NewMacroDictionaryTextContainer(data, localization, version)
-	if err != nil {
+	if err := c.PublishStrings(); err != nil {
 		common.LogVerbose("Skipping unreadable macro dictionary file %s: %v", filename, err)
 		return nil
 	}
-	c.PublishStrings()
 	return nil
 }
 

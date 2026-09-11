@@ -67,7 +67,7 @@ func WriteMacroDictionaryForLocalizationJSON(localization string) {
 	}
 
 	fileName := fmt.Sprintf("macro_dictionary_%s.json", localization)
-	if err := macrodic.SaveMacroDictionaryJson(map[string]*macrodic.MacroDictionaryTextContainer{localization: c}, fileName); err != nil {
+	if err := macrodic.SaveMacroDictionaryJson(map[string]*macrodic.MacroDictionaryBinaryFile{localization: c}, fileName); err != nil {
 		common.LogError("Error writing macro dictionary JSON: %v\n", err)
 		return
 	}

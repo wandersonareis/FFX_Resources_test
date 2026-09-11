@@ -25,6 +25,10 @@ type IList[T any] interface {
 // V can be any type for the map value.
 type IMap[K comparable, V any] interface {
 	Add(key K, value V)
+	// TryAdd insere apenas se a chave ainda não existir, retornando false
+	// caso contrário. Não é atômico: a sincronização é responsabilidade do
+	// dono do mapa (ex.: o mu do datastore).
+	TryAdd(key K, value V) bool
 	AddAll(entries map[K]V)
 	Remove(key K)
 	Get(key K) (V, bool)

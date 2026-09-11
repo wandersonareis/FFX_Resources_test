@@ -40,7 +40,7 @@ type MacroDictionaryJsonImport struct {
 // the per-language charset; a missing/empty SimplifiedName entry falls back to
 // the Name bytes, so both point to the same text in the rebuilt binary. Entries
 // are placed by index (gaps stay nil and rebuild as zero entries).
-func ImportFromJson(data *MacroDictionaryJsonImport, version int) (map[string]*MacroDictionaryTextContainer, error) {
+func ImportFromJson(data *MacroDictionaryJsonImport, version int) (map[string]*MacroDictionaryBinaryFile, error) {
 	if data == nil {
 		return nil, fmt.Errorf("nil import data")
 	}
@@ -100,13 +100,13 @@ func ImportFromJson(data *MacroDictionaryJsonImport, version int) (map[string]*M
 		}
 	}
 
-	result := make(map[string]*MacroDictionaryTextContainer, len(locKeys))
+	result := make(map[string]*MacroDictionaryBinaryFile, len(locKeys))
 	for _, loc := range locKeys {
 		raw, err := BuildContainerBinary(filesByLoc[loc])
 		if err != nil {
 			return nil, fmt.Errorf("failed to rebuild macro dictionary for localization %s: %w", loc, err)
 		}
-		c, err := NewMacroDictionaryTextContainer(raw, loc, version)
+		c, err := NewMacroDictionaryBinaryFileFromBytes(raw, loc, version)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse rebuilt macro dictionary for localization %s: %w", loc, err)
 		}

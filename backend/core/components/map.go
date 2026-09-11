@@ -21,14 +21,33 @@ func NewEmptyMap[K comparable, V any]() *Map[K, V] {
 	return &Map[K, V]{items: make(map[K]V)}
 }
 
+func (m *Map[K, V]) ensureInit() {
+	if m.items == nil {
+		m.items = make(map[K]V)
+	}
+}
+
 func (m *Map[K, V]) Add(key K, value V) {
+	m.ensureInit()
 	m.items[key] = value
+}
+
+// TryAdd insere apenas se a chave ainda não existir, retornando false caso
+// contrário. Não é atômico nem travado: chame sob o lock do dono do mapa.
+func (m *Map[K, V]) TryAdd(key K, value V) bool {
+	m.ensureInit()
+	if _, ok := m.items[key]; ok {
+		return false
+	}
+	m.items[key] = value
+	return true
 }
 
 func (m *Map[K, V]) AddAll(entries map[K]V) {
 	if entries == nil {
 		return
 	}
+	m.ensureInit()
 	for k, v := range entries {
 		m.items[k] = v
 	}

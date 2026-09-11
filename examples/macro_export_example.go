@@ -97,29 +97,29 @@ func ImportMacroDictionaryExample() {
 
 // CompleteWorkflowExample demonstrates the complete export/import workflow
 func CompleteWorkflowExample() {
-	fmt.Println("=== Exemplo de Fluxo Completo: Exportação → Modificação → Importação ===")
+	common.LogInfo("=== Exemplo de Fluxo Completo: Exportação → Modificação → Importação ===")
 
 	// Step 1: Initialize data
-	fmt.Println("1. Inicializando dados do jogo...")
+	common.LogInfo("1. Inicializando dados do jogo...")
 	if err := reader.InitializeInternals(); err != nil {
-		fmt.Printf("Erro ao inicializar dados: %v\n", err)
+		common.LogError("Erro ao inicializar dados: %v\n", err)
 		return
 	}
-	fmt.Println("   ✓ Dados inicializados")
+	common.LogInfo("   ✓ Dados inicializados")
 
 	// Step 2: Export to JSON
-	fmt.Println("\n2. Exportando para JSON...")
+	common.LogInfo("\n2. Exportando para JSON...")
 	ExportMacroDictionaryExample()
 
 	// Step 3: Simulate modification by clearing and reloading
-	fmt.Println("\n3. Simulando modificação (limpando dados atuais)...")
+	common.LogInfo("\n3. Simulando modificação (limpando dados atuais)...")
 	// In real usage, user would edit the JSON files here
 
 	// Step 4: Import from JSON
-	fmt.Println("\n4. Reimportando do JSON...")
+	common.LogInfo("\n4. Reimportando do JSON...")
 	ImportMacroDictionaryExample()
 
-	fmt.Println("\n✓ Fluxo completo concluído com sucesso!")
+	common.LogInfo("\n✓ Fluxo completo concluído com sucesso!")
 }
 
 // BinaryReconstructionExample demonstrates the complete workflow including binary reconstruction

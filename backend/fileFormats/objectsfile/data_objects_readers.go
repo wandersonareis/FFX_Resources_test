@@ -39,9 +39,9 @@ func ReadNameOnlyLocalizations(patternPath string) datastore.IBinaryFile {
 		return nil
 	}
 
-	if binaryDataFile.Objects != nil && !binaryDataFile.Objects.IsEmpty() {
-		common.LogVerbose("Loaded %d commands with all localizations", binaryDataFile.Objects.Len())
-		datastore.Commands = binaryDataFile.GetObjects()
+	if objects := binaryDataFile.GetObjects(); objects != nil && !objects.IsEmpty() {
+		common.LogVerbose("Loaded %d commands with all localizations", objects.Len())
+		datastore.Commands = objects
 	}
 	return binaryDataFile
 }
@@ -69,9 +69,9 @@ func ReadNameOnlyV2Localizations(patternPath string) datastore.IBinaryFile {
 		return nil
 	}
 
-	if binaryDataFile.Objects != nil && !binaryDataFile.Objects.IsEmpty() {
-		common.LogVerbose("Loaded %d commands with all localizations", binaryDataFile.Objects.Len())
-		datastore.Commands = binaryDataFile.GetObjects()
+	if objects := binaryDataFile.GetObjects(); objects != nil && !objects.IsEmpty() {
+		common.LogVerbose("Loaded %d commands with all localizations", objects.Len())
+		datastore.Commands = objects
 	}
 	return binaryDataFile
 }
@@ -110,9 +110,9 @@ func ReadCommandLocalizations(patternPath string) datastore.IBinaryFile {
 		return nil
 	}
 
-	if binaryDataFile.Objects != nil && !binaryDataFile.Objects.IsEmpty() {
-		common.LogVerbose("Loaded %d commands with all localizations", binaryDataFile.Objects.Len())
-		datastore.Commands = binaryDataFile.GetObjects()
+	if objects := binaryDataFile.GetObjects(); objects != nil && !objects.IsEmpty() {
+		common.LogVerbose("Loaded %d commands with all localizations", objects.Len())
+		datastore.Commands = objects
 	}
 	return binaryDataFile
 }
@@ -143,9 +143,9 @@ func ReadJobLocalizations(patternPath string, effectSegmentPosition int64) datas
 		return nil
 	}
 
-	if binaryDataFile.Objects != nil && !binaryDataFile.Objects.IsEmpty() {
-		common.LogVerbose("Loaded %d commands with all localizations", binaryDataFile.Objects.Len())
-		datastore.Commands = binaryDataFile.GetObjects()
+	if objects := binaryDataFile.GetObjects(); objects != nil && !objects.IsEmpty() {
+		common.LogVerbose("Loaded %d commands with all localizations", objects.Len())
+		datastore.Commands = objects
 	}
 	return binaryDataFile
 }
@@ -177,9 +177,9 @@ func ReadNameDescriptionEffectAbilitiesLocalizations(patternPath string, abiliti
 		return nil
 	}
 
-	if binaryDataFile.Objects != nil && !binaryDataFile.Objects.IsEmpty() {
-		common.LogVerbose("Loaded %d commands with all localizations", binaryDataFile.Objects.Len())
-		datastore.Commands = binaryDataFile.GetObjects()
+	if objects := binaryDataFile.GetObjects(); objects != nil && !objects.IsEmpty() {
+		common.LogVerbose("Loaded %d commands with all localizations", objects.Len())
+		datastore.Commands = objects
 	}
 	return binaryDataFile
 }
@@ -210,9 +210,9 @@ func ReadNameSensorScanLocalizations(patternPath string) datastore.IBinaryFile {
 		return nil
 	}
 
-	if binaryDataFile.Objects != nil && !binaryDataFile.Objects.IsEmpty() {
-		common.LogVerbose("Loaded %d commands with all localizations", binaryDataFile.Objects.Len())
-		datastore.Commands = binaryDataFile.GetObjects()
+	if objects := binaryDataFile.GetObjects(); objects != nil && !objects.IsEmpty() {
+		common.LogVerbose("Loaded %d commands with all localizations", objects.Len())
+		datastore.Commands = objects
 	}
 	return binaryDataFile
 }
@@ -243,9 +243,9 @@ func ReadWeaponNamesLocalizations(patternPath string) datastore.IBinaryFile {
 		return nil
 	}
 
-	if binaryDataFile.Objects != nil && !binaryDataFile.Objects.IsEmpty() {
-		common.LogVerbose("Loaded %d commands with all localizations", binaryDataFile.Objects.Len())
-		datastore.Commands = binaryDataFile.GetObjects()
+	if objects := binaryDataFile.GetObjects(); objects != nil && !objects.IsEmpty() {
+		common.LogVerbose("Loaded %d commands with all localizations", objects.Len())
+		datastore.Commands = objects
 	}
 	return binaryDataFile
 }

@@ -374,7 +374,7 @@ func EditAndSaveSpecificMacroDictFromJSON(localization string) error {
 		return fmt.Errorf("localization %s not found in the JSON file", localization)
 	}
 
-	if err := macrodic.SaveMacroDictionaryBinaries(map[string]*macrodic.MacroDictionaryTextContainer{localization: c}); err != nil {
+	if err := macrodic.SaveMacroDictionaryBinaries(map[string]*macrodic.MacroDictionaryBinaryFile{localization: c}); err != nil {
 		common.LogVerbose("Error saving macro dictionary binary for %s: %v", localization, err)
 		return err
 	}
