@@ -91,9 +91,9 @@ type (
 	}
 )
 
-func NewCommandTextObject(bytes []byte, stringBytes []byte, headerLength int, languageCode string, gameVersion int) (*CommandTextObject, error) {
-	if gameVersion != 1 {
-		return nil, fmt.Errorf("CommandTextObject is only compatible with FFX (game version 1), but got game version %d", gameVersion)
+func NewCommandTextObject(bytes []byte, stringBytes []byte, headerLength int, languageCode string, gameVersion common.GameVersion) (*CommandTextObject, error) {
+	if gameVersion.Normalize() != common.GameVersionFFX {
+		return nil, fmt.Errorf("CommandTextObject is only compatible with FFX (ffx), but got game version %s", gameVersion)
 	}
 
 	if len(bytes) < headerLength {
@@ -115,7 +115,7 @@ func NewCommandTextObject(bytes []byte, stringBytes []byte, headerLength int, la
 	return n, nil
 }
 
-func (n *CommandTextObject) mapBytes(stringBytes []byte, languageCode string, version int) error {
+func (n *CommandTextObject) mapBytes(stringBytes []byte, languageCode string, version common.GameVersion) error {
 	r := bytes.NewReader(n.Bytes)
 	return readStringSegments(r, stringBytes, languageCode, version,
 		n.Name,

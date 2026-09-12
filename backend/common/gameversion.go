@@ -82,29 +82,3 @@ func CurrentGameVersion() GameVersion {
 func SetCurrentGameVersion(g GameVersion) {
 	currentGameVersion = g.Normalize()
 }
-
-// GameVersionFromInt converts the legacy int version to GameVersion.
-// Legacy: 0/1 → FFX, 2 → FFX2, 3 → LastMiss.
-func GameVersionFromInt(v int) GameVersion {
-	switch v {
-	case 2:
-		return GameVersionFFX2
-	case 3:
-		return GameVersionLastMiss
-	default:
-		return GameVersionFFX
-	}
-}
-
-// ToInt converts a GameVersion to the legacy int format.
-// FFX → 1, FFX2 → 2, LastMiss → 3, others → 1.
-func ToInt(g GameVersion) int {
-	switch g.Normalize() {
-	case GameVersionFFX2:
-		return 2
-	case GameVersionLastMiss:
-		return 3
-	default:
-		return 1
-	}
-}

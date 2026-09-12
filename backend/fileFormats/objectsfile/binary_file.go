@@ -78,11 +78,11 @@ func (h *BinaryHeaderV2) GetDataLength() int {
 	return int(h.HeaderSize)
 }
 
-func NewBinaryHeader(version int) IBinaryHeader {
-	if version == 2 {
-		return &BinaryHeaderV2{}
+func NewBinaryHeader(version common.GameVersion) IBinaryHeader {
+	if version.Normalize() == common.GameVersionFFX {
+		return &BinaryHeaderV1{}
 	}
-	return &BinaryHeaderV1{}
+	return &BinaryHeaderV2{}
 }
 
 type CreatorFunc func(chunkBytes []byte, stringBytes []byte, headerLength int, languageCode string) (datastore.IGlobalLocalizedTextObject, error)
@@ -96,10 +96,10 @@ type ObjectBinaryFile struct {
 	creator      CreatorFunc
 	languageCode string
 	patternPath  string
-	Version      int
+	Version      common.GameVersion
 }
 
-func NewObjectBinaryFile(patternPath string, creator CreatorFunc, languageCode string, version int) interfaces.IBinaryFile[datastore.IGlobalLocalizedTextObject] {
+func NewObjectBinaryFile(patternPath string, creator CreatorFunc, languageCode string, version common.GameVersion) interfaces.IBinaryFile[datastore.IGlobalLocalizedTextObject] {
 	return &ObjectBinaryFile{
 		Header:       NewBinaryHeader(version),
 		patternPath:  patternPath,

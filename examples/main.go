@@ -8,7 +8,6 @@ import (
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/fileFormats/objectsfile"
 	"ffxresources/backend/interactions"
-	"ffxresources/backend/models"
 	"fmt"
 )
 
@@ -785,13 +784,13 @@ func readEvents() error {
 		return fmt.Errorf("failed to resolve events directory: %w", err)
 	}
 	version := interactions.CurrentGameVersion()
-	if err := event.ReadAllEventFiles(eventsFolder, string(version)); err != nil {
+	if err := event.ReadAllEventFiles(eventsFolder, version); err != nil {
 		fmt.Printf("Erro ao carregar eventos: %v\n", err)
 		return err
 	}
 
 	// Contar eventos carregados no datastore
-	eventIDs := event.GetAllEventIDs(models.GameVersion(version))
+	eventIDs := event.GetAllEventIDs(version)
 	fmt.Printf("✓ Carregados %d eventos no datastore\n", len(eventIDs))
 	return nil
 }

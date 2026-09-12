@@ -40,7 +40,7 @@ type MacroDictionaryJsonImport struct {
 // the per-language charset; a missing/empty SimplifiedName entry falls back to
 // the Name bytes, so both point to the same text in the rebuilt binary. Entries
 // are placed by index (gaps stay nil and rebuild as zero entries).
-func ImportFromJson(data *MacroDictionaryJsonImport, version int) (map[string]*MacroDictionaryBinaryFile, error) {
+func ImportFromJson(data *MacroDictionaryJsonImport, version common.GameVersion) (map[string]*MacroDictionaryBinaryFile, error) {
 	if data == nil {
 		return nil, fmt.Errorf("nil import data")
 	}
@@ -80,7 +80,7 @@ func ImportFromJson(data *MacroDictionaryJsonImport, version int) (map[string]*M
 			if s.Index < 0 {
 				continue
 			}
-			gameVersion := common.GameVersion(version)
+			gameVersion := version
 			for _, loc := range locKeys {
 				charset := ffxencoding.GetCharsetForLanguage(loc)
 				nameBytes := converter.StringToBytes(s.Name[loc], charset, gameVersion)

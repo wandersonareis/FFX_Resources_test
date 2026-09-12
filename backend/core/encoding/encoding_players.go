@@ -103,12 +103,6 @@ func GetPlayerChar(pc byte, version common.GameVersion) string {
 	return "?"
 }
 
-// GetPlayerCharByNumber mantém compatibilidade com chamadores que ainda
-// trafegam a versão como int (1/2).
-func GetPlayerCharByNumber(pc byte, version int) string {
-	return GetPlayerChar(pc, common.GameVersion(version))
-}
-
 func GetIconName(iconIdx byte) string {
 	if name, ok := iconMap[iconIdx]; ok {
 		return name

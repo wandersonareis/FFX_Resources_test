@@ -4,7 +4,6 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/core/encoding"
-	"ffxresources/backend/models"
 	testcommon "ffxresources/testData"
 	"fmt"
 	"testing"
@@ -41,7 +40,7 @@ var _ = Describe("PrepareCharset", Ordered, func() {
 		common.ResourcesRoot = originalResourcesRoot
 	})
 
-	assertVersionedCharset := func(version models.GameVersion) {
+	assertVersionedCharset := func(version common.GameVersion) {
 		// Test each charset in common.Charsets
 		for _, charset := range common.Charsets {
 			err := reader.PrepareCharset(version, charset)
@@ -77,44 +76,44 @@ var _ = Describe("PrepareCharset", Ordered, func() {
 		}
 	}
 
-	Context("when testing FFX (version 1)", func() {
+	Context("when testing FFX (ffx)", func() {
 		BeforeEach(func() {
-			common.SetGameVersion(1)
+			common.SetCurrentGameVersion(common.GameVersionFFX)
 		})
 
 		It("should prepare charset maps for all expected charsets", func() {
-			assertVersionedCharset(models.FFX)
+			assertVersionedCharset(common.GameVersionFFX)
 		})
 
 		It("should keep FFX and FFX-2 buckets isolated", func() {
-			Expect(reader.PrepareCharset(models.FFX, "us")).To(Succeed())
-			Expect(ffxencoding.GetByteToCharMap(models.FFX, "us")).ToNot(BeNil())
+			Expect(reader.PrepareCharset(common.GameVersionFFX, "us")).To(Succeed())
+			Expect(ffxencoding.GetByteToCharMap(common.GameVersionFFX, "us")).ToNot(BeNil())
 		})
 	})
 
-	Context("when testing FFX-2 (version 2)", func() {
+	Context("when testing FFX-2 (ffx2)", func() {
 		BeforeEach(func() {
-			common.SetGameVersion(2)
+			common.SetCurrentGameVersion(common.GameVersionFFX2)
 		})
 
 		It("should prepare charset maps for all expected charsets", func() {
-			assertVersionedCharset(models.FFX2)
+			assertVersionedCharset(common.GameVersionFFX2)
 		})
 	})
 
-	Context("version model mapping", func() {
-		It("should map GameVersion to GameVersionModel", func() {
-			Expect(models.FFX.Model()).To(Equal(models.GameVersionModelFFX))
-			Expect(models.FFX2.Model()).To(Equal(models.GameVersionModelFFX2))
-			Expect(models.NewGameVersionModelFromInt(2)).To(Equal(models.GameVersionModelFFX2))
-			Expect(models.NewGameVersionModelFromString("ffx2").ToGameVersion()).To(Equal(models.FFX2))
+	Context("version identity mapping", func() {
+		It("should parse and normalize game versions", func() {
+			Expect(common.ParseGameVersion("ffx")).To(Equal(common.GameVersionFFX))
+			Expect(common.ParseGameVersion("FFX-2")).To(Equal(common.GameVersionFFX2))
+			Expect(common.ParseGameVersion("lastmiss")).To(Equal(common.GameVersionLastMiss))
+			Expect(common.GameVersion("bogus").Normalize()).To(Equal(common.GameVersionFFX))
 			fmt.Fprintf(GinkgoWriter, "version models OK\n")
 		})
 	})
 
 	Context("when charset file does not exist", func() {
 		It("should return an error", func() {
-			err := reader.PrepareCharset(models.FFX, "nonexistent")
+			err := reader.PrepareCharset(common.GameVersionFFX, "nonexistent")
 			Expect(err).To(HaveOccurred(), "PrepareCharset should fail for nonexistent charset")
 		})
 	})

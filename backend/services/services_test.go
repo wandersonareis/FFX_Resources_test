@@ -44,7 +44,7 @@ var _ = Describe("FFX Services", Ordered, func() {
 
 	BeforeAll(func() {
 		Expect(testcommon.SetBuildBinPath()).To(Succeed())
-		Expect(os.Setenv("FFX_GAME_VERSION", "2")).To(Succeed())
+		common.SetCurrentGameVersion(common.GameVersionFFX2)
 
 		rootDir = testcommon.GetTestDataRootDirectory()
 		Expect(rootDir).NotTo(BeEmpty(), "Project root directory should not be empty")
@@ -62,7 +62,7 @@ var _ = Describe("FFX Services", Ordered, func() {
 
 		config = interactions.NewAppConfig()
 		Expect(config).NotTo(BeNil())
-		config.SetGameVersion(2)
+		config.SetGameVersion(common.GameVersionFFX2)
 		config.SetLocation("GameFilesLocation", gameLocationPath)
 		config.SetLocation("ExtractLocation", extractTempPath)
 		config.SetLocation("TranslateLocation", translatePath)
@@ -245,9 +245,7 @@ var _ = Describe("FFX Services", Ordered, func() {
 			file := `ffx_ps2\ffx2\master\new_uspc\menu\tutorial.msb`
 			testFilePath := filepath.Join(testDataPath, file)
 
-			/* gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
-
-			rootDir := interactions.NewInteractionService().GameLocation.GetTargetDirectory() */
+			/* rootDir := interactions.NewInteractionService().GameLocation.GetTargetDirectory() */
 
 			rawMap := collectionService.CreateNodeDataStore(gameLocationPath, formatter)
 			Expect(rawMap).NotTo(BeNil())

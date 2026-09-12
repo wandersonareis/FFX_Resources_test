@@ -90,7 +90,7 @@ func ImportFromJson(
 	localizedObjects := extractLocalizedObjects(objectsList)
 
 	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	if err := updateLocalizedObjectEntries(jsonData, localizedObjects, common.ToInt(version)); err != nil {
+	if err := updateLocalizedObjectEntries(jsonData, localizedObjects, version); err != nil {
 		common.LogVerbose("Error processing JSON file: %v", err)
 		return err
 	}
@@ -133,7 +133,7 @@ func isValidID(id int, length int) bool {
 //   - obj: The localized object to update
 //
 // Returns: error if object type is not supported
-func updateObjectByType(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextObject, version int) error {
+func updateObjectByType(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextObject, version common.GameVersion) error {
 	switch localizedTextObj := obj.(type) {
 	case *CommandTextObject:
 		updateNameEntry(jsonEntry, localizedTextObj.Name, version)
@@ -180,7 +180,7 @@ func updateObjectByType(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextO
 //   - objects: Slice of ILocalizedTextObject instances to be updated
 //
 // Returns: error if any update operations fail
-func updateLocalizedObjectEntries(itemsData []JSONEntry, objects []datastore.IGlobalLocalizedTextObject, version int) error {
+func updateLocalizedObjectEntries(itemsData []JSONEntry, objects []datastore.IGlobalLocalizedTextObject, version common.GameVersion) error {
 	for _, jsonEntry := range itemsData {
 		id := jsonEntry.ID
 
@@ -210,7 +210,7 @@ func updateLocalizedObjectEntries(itemsData []JSONEntry, objects []datastore.IGl
 // Parameters:
 //   - sourceData: JSON data containing name translations
 //   - segment: The object to update
-func updateNameEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version int) {
+func updateNameEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version common.GameVersion) {
 	if len(sourceData.Name) == 0 || segment == nil {
 		common.LogVerbose("No name found for item %d, skipping...", sourceData.ID)
 		return
@@ -238,7 +238,7 @@ func updateNameEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKey
 // Parameters:
 //   - sourceData: JSON data containing description translations
 //   - segment: The object to update
-func updateDescriptionEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version int) {
+func updateDescriptionEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version common.GameVersion) {
 	if len(sourceData.Description) == 0 || segment == nil {
 		common.LogVerbose("No description found for item %d, skipping...", sourceData.ID)
 		return
@@ -266,7 +266,7 @@ func updateDescriptionEntry(sourceData JSONEntry, segment datastore.IGlobalLocal
 // Parameters:
 //   - sourceData: JSON data containing simplifiedName translations
 //   - segment: The object to update
-func updateSimplifiedNameEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version int) {
+func updateSimplifiedNameEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version common.GameVersion) {
 	if len(sourceData.SimplifiedName) == 0 || segment == nil {
 		return
 	}
@@ -291,7 +291,7 @@ func updateSimplifiedNameEntry(sourceData JSONEntry, segment datastore.IGlobalLo
 // Parameters:
 //   - sourceData: JSON data containing simplifiedDescription translations
 //   - segment: The object to update
-func updateSimplifiedDescriptionEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version int) {
+func updateSimplifiedDescriptionEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version common.GameVersion) {
 	if len(sourceData.SimplifiedDescription) == 0 || segment == nil {
 		return
 	}
@@ -311,7 +311,7 @@ func updateSimplifiedDescriptionEntry(sourceData JSONEntry, segment datastore.IG
 	}
 }
 
-func updateAbilitiesEntry(sourceData JSONEntry, segments []datastore.IGlobalLocalizedKeyedStringObject, version int) {
+func updateAbilitiesEntry(sourceData JSONEntry, segments []datastore.IGlobalLocalizedKeyedStringObject, version common.GameVersion) {
 	if len(sourceData.Abilities) == 0 {
 		common.LogVerbose("No abilities found for item %d, skipping...", sourceData.ID)
 		return
@@ -364,7 +364,7 @@ func updateAbilitiesEntry(sourceData JSONEntry, segments []datastore.IGlobalLoca
 // Parameters:
 //   - sourceData: JSON data containing sensor translations
 //   - targetObject: The MonsterTextObject object to update
-func updateSensorTextEntry(sourceData JSONEntry, targetObject *MonsterTextObject, version int) {
+func updateSensorTextEntry(sourceData JSONEntry, targetObject *MonsterTextObject, version common.GameVersion) {
 	if len(sourceData.SensorText) > 0 && targetObject.SensorText != nil {
 		for languageCode, newText := range sourceData.SensorText {
 			if newText == "" {
@@ -401,7 +401,7 @@ func updateSensorTextEntry(sourceData JSONEntry, targetObject *MonsterTextObject
 // Parameters:
 //   - sourceData: JSON data containing scan translations
 //   - targetObject: The MonsterTextObject object to update
-func updateScanTextEntry(sourceData JSONEntry, targetObject *MonsterTextObject, version int) {
+func updateScanTextEntry(sourceData JSONEntry, targetObject *MonsterTextObject, version common.GameVersion) {
 	if len(sourceData.ScanText) > 0 && targetObject.ScanText != nil {
 		for languageCode, newText := range sourceData.ScanText {
 			if newText == "" {
@@ -434,7 +434,7 @@ func updateScanTextEntry(sourceData JSONEntry, targetObject *MonsterTextObject, 
 }
 
 // updateEffectEntry applies effect updates to a JobTextObject.
-func updateEffectEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version int) {
+func updateEffectEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version common.GameVersion) {
 	if len(sourceData.Effect) == 0 || segment == nil {
 		common.LogVerbose("No effect found for item %d, skipping...", sourceData.ID)
 		return
@@ -467,14 +467,14 @@ func updateEffectEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedK
 //   - version: Game version as int (1 = FFX, 2 = FFX-2)
 //
 // Returns: A new KeyedString instance with default offset and key values
-func createNewKeyedString(text string, charset string, version int) *KeyedString {
+func createNewKeyedString(text string, charset string, version common.GameVersion) *KeyedString {
 	return &KeyedString{
 		Charset: charset,
 		Version: version,
 /* 		Offset:  0,
 	   		Key:     0, */
 		Segment: models.Segment{Offset: 0, Key: 0},
-		Bytes:   converter.StringToBytes(text, charset, common.GameVersion(version)),
+		Bytes:   converter.StringToBytes(text, charset, version),
 	}
 }
 
@@ -485,7 +485,7 @@ func createNewKeyedString(text string, charset string, version int) *KeyedString
 //   - segment: The keyed-string segment to update (Name/Description of either version)
 //   - text: The new text content
 //   - languageCode: Language code (e.g., "us", "sp")
-func updateOrCreateSegment(segment datastore.IGlobalLocalizedKeyedStringObject, newText, languageCode string, version int) {
+func updateOrCreateSegment(segment datastore.IGlobalLocalizedKeyedStringObject, newText, languageCode string, version common.GameVersion) {
 	existingContent := segment.GetLocalizedContent(languageCode)
 	charset := common.LanguageCodeToCharset(languageCode)
 
@@ -498,7 +498,7 @@ func updateOrCreateSegment(segment datastore.IGlobalLocalizedKeyedStringObject, 
 	common.LogVerbose("Segment updated (%s): %s", languageCode, newText)
 }
 
-func updateWeaponsEntry(sourceData JSONEntry, obj *WeaponsNameTextObject, version int) {
+func updateWeaponsEntry(sourceData JSONEntry, obj *WeaponsNameTextObject, version common.GameVersion) {
 	if len(sourceData.Weapons) == 0 {
 		common.LogVerbose("No weapons found, skipping...")
 		return
@@ -514,7 +514,7 @@ func updateWeaponsEntry(sourceData JSONEntry, obj *WeaponsNameTextObject, versio
 	}
 }
 
-func updateWeaponField(obj *WeaponsNameTextObject, key string, fieldTexts map[string]string, label string, version int) {
+func updateWeaponField(obj *WeaponsNameTextObject, key string, fieldTexts map[string]string, label string, version common.GameVersion) {
 	if len(fieldTexts) == 0 {
 		return
 	}

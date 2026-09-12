@@ -18,7 +18,7 @@ type JobTextObject struct {
 	Effect                datastore.IGlobalLocalizedKeyedStringObject
 	EffectSegmentPosition int64
 	HeaderLength          int
-	Version               int
+	Version               common.GameVersion
 }
 
 func NewJobTextObject(
@@ -27,10 +27,10 @@ func NewJobTextObject(
 	headerLength int,
 	effectSegmentPosition int64,
 	languageCode string,
-	version int,
+	version common.GameVersion,
 ) (*JobTextObject, error) {
-	if version != 2 {
-		return nil, fmt.Errorf("JobTextObject is only compatible with FFX-2 (game version 2), but got game version %d", version)
+	if version.Normalize() != common.GameVersionFFX2 && version.Normalize() != common.GameVersionLastMiss {
+		return nil, fmt.Errorf("JobTextObject is only compatible with FFX-2 (ffx2), but got game version %s", version)
 	}
 
 	if len(bytes) < headerLength {
@@ -57,7 +57,7 @@ func NewJobTextObject(
 func (p *JobTextObject) mapBytes(
 	stringBytes []byte,
 	languageCode string,
-	version int,
+	version common.GameVersion,
 ) error {
 	r := bytes.NewReader(p.Bytes)
 

@@ -12,7 +12,6 @@ import (
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/models"
 	testcommon "ffxresources/testData"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -51,7 +50,7 @@ var _ = Describe("LockitFile", Ordered, func() {
 
 	BeforeAll(func() {
 		Expect(testcommon.SetBuildBinPath()).To(Succeed())
-		Expect(os.Setenv("FFX_GAME_VERSION", "2")).To(Succeed())
+		common.SetCurrentGameVersion(common.GameVersionFFX2)
 
 		rootDir = testcommon.GetTestDataRootDirectory()
 		Expect(rootDir).NotTo(BeEmpty(), "Project root directory should not be empty")
@@ -69,7 +68,7 @@ var _ = Describe("LockitFile", Ordered, func() {
 
 		config = interactions.NewAppConfig()
 		Expect(config).NotTo(BeNil())
-		config.SetGameVersion(2)
+		config.SetGameVersion(common.GameVersionFFX2)
 		config.SetLocation("GameFilesLocation", gameLocationPath)
 		config.SetLocation("ExtractLocation", extractTempPath)
 		config.SetLocation("TranslateLocation", translatePath)
@@ -88,11 +87,11 @@ var _ = Describe("LockitFile", Ordered, func() {
 		interactionService = interactions.NewInteractionWithTextFormatter(formatter)
 		Expect(interactionService.TextFormatter()).NotTo(BeNil())
 
-		gameVersionNumber := interactions.NewInteractionService().FFXGameVersion().GetGameVersionNumber()
-		Expect(gameVersionNumber).To(Equal(config.GetGameVersion()))
+		gameVersion := interactions.CurrentGameVersion()
+		Expect(gameVersion).To(Equal(config.GetGameVersion()))
 
 		// Initialize file options
-		fileOptions = core.NewLockitFileOptions(gameVersionNumber)
+		fileOptions = core.NewLockitFileOptions(gameVersion)
 		Expect(fileOptions).NotTo(BeNil())
 
 		loggerHandler = testcommon.NewLogHandlerMock()

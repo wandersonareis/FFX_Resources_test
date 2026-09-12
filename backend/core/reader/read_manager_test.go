@@ -8,7 +8,6 @@ import (
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/interactions"
-	"ffxresources/backend/models"
 	testcommon "ffxresources/testData"
 	"os"
 	"path/filepath"
@@ -18,7 +17,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func interactionsVersion() int {
+func interactionsVersion() common.GameVersion {
 	return interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
 }
 
@@ -55,9 +54,9 @@ var _ = Describe("ReadManager", Ordered, func() {
 		ffxencoding.ClearAllCharMaps()
 		datastore.Instance.ClearAllMacros()
 	})
-	Context("when testing FFX (version 1)", func() {
+	Context("when testing FFX (ffx)", func() {
 		BeforeEach(func() {
-			common.SetGameVersion(1)
+			common.SetCurrentGameVersion(common.GameVersionFFX)
 			//common.SetGameFilesRoot(filepath.Join(rootDir, "FFX", "binary"))
 		})
 
@@ -67,11 +66,11 @@ var _ = Describe("ReadManager", Ordered, func() {
 
 				// Verify that character maps were created for each charset
 				for _, charset := range common.Charsets {
-					byteToChar := ffxencoding.GetByteToCharMap(models.FFX, charset)
+					byteToChar := ffxencoding.GetByteToCharMap(common.GameVersionFFX, charset)
 					Expect(byteToChar).ToNot(BeNil(), "ByteToChar map should exist for charset %s", charset)
 					Expect(byteToChar).ToNot(BeEmpty(), "ByteToChar map should be populated for charset %s", charset)
 
-					charToByte := ffxencoding.GetCharToByteMap(models.FFX, charset)
+					charToByte := ffxencoding.GetCharToByteMap(common.GameVersionFFX, charset)
 					Expect(charToByte).ToNot(BeNil(), "CharToByte map should exist for charset %s", charset)
 					Expect(charToByte).ToNot(BeEmpty(), "CharToByte map should be populated for charset %s", charset)
 				}
@@ -83,7 +82,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 				// Verify that macros were published into the datastore
 				// Since we can't access specific macros by localization directly,
 				// we'll check that the datastore macros were populated
-				Expect(datastore.GetMacros(models.FFX).Count()).To(BeNumerically(">", 0), "Datastore macros should be populated")
+				Expect(datastore.GetMacros(common.GameVersionFFX).Count()).To(BeNumerically(">", 0), "Datastore macros should be populated")
 			})
 			It("should handle Korean and Chinese localizations without output", func() {
 				// This test verifies that kr and ch localizations are processed
@@ -92,14 +91,14 @@ var _ = Describe("ReadManager", Ordered, func() {
 
 				// We can't directly test the printOutput behavior in unit tests,
 				// but we can verify the function completes without error
-				Expect(datastore.GetMacros(models.FFX)).ToNot(BeNil())
+				Expect(datastore.GetMacros(common.GameVersionFFX)).ToNot(BeNil())
 			})
 		})
 	})
 
-	Context("when testing FFX-2 (version 2)", func() {
+	Context("when testing FFX-2 (ffx2)", func() {
 		BeforeEach(func() {
-			common.SetGameVersion(2)
+			common.SetCurrentGameVersion(common.GameVersionFFX2)
 			//common.SetGameFilesRoot(filepath.Join(rootDir, "FFX-2", "binary"))
 		})
 
@@ -109,11 +108,11 @@ var _ = Describe("ReadManager", Ordered, func() {
 
 				// Verify that character maps were created for each charset
 				for _, charset := range common.Charsets {
-					byteToChar := ffxencoding.GetByteToCharMap(models.FFX2, charset)
+					byteToChar := ffxencoding.GetByteToCharMap(common.GameVersionFFX2, charset)
 					Expect(byteToChar).ToNot(BeNil(), "ByteToChar map should exist for charset %s", charset)
 					Expect(byteToChar).ToNot(BeEmpty(), "ByteToChar map should be populated for charset %s", charset)
 
-					charToByte := ffxencoding.GetCharToByteMap(models.FFX2, charset)
+					charToByte := ffxencoding.GetCharToByteMap(common.GameVersionFFX2, charset)
 					Expect(charToByte).ToNot(BeNil(), "CharToByte map should exist for charset %s", charset)
 					Expect(charToByte).ToNot(BeEmpty(), "CharToByte map should be populated for charset %s", charset)
 				}
@@ -125,7 +124,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 				// Verify that macros were published into the datastore
 				// Since we can't access specific macros by localization directly,
 				// we'll check that the datastore macros were populated
-				Expect(datastore.GetMacros(models.FFX2).Count()).To(BeNumerically(">", 0), "Datastore macros should be populated")
+				Expect(datastore.GetMacros(common.GameVersionFFX2).Count()).To(BeNumerically(">", 0), "Datastore macros should be populated")
 			})
 			It("should handle Korean and Chinese localizations without output", func() {
 				// This test verifies that kr and ch localizations are processed
@@ -134,7 +133,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 
 				// We can't directly test the printOutput behavior in unit tests,
 				// but we can verify the function completes without error
-				Expect(datastore.GetMacros(models.FFX2)).ToNot(BeNil())
+				Expect(datastore.GetMacros(common.GameVersionFFX2)).ToNot(BeNil())
 			})
 		})
 	})
@@ -186,7 +185,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 			Expect(err).ToNot(HaveOccurred(), "Reading all events should not return an error")
 
 			// Verify that EventFiles map is populated
-			Expect(event.HasEvents(models.GameVersion(interactionsVersion()))).To(BeTrue(), "Events should be populated in datastore")
+			Expect(event.HasEvents(interactionsVersion())).To(BeTrue(), "Events should be populated in datastore")
 			writer.ExportAllLocalizationsToJSON()
 			Expect(reader.EditAndSaveEventJSONFiles()).To(Succeed())
 		})

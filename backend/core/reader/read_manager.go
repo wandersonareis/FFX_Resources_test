@@ -11,7 +11,7 @@ import (
 // PrepareStringMacros reads one localization macro dictionary binary into a
 // container and publishes its strings into the datastore. Missing files are
 // skipped so unavailable localizations never break initialization.
-func PrepareStringMacros(filename, localization string, version int) error {
+func PrepareStringMacros(filename, localization string, version common.GameVersion) error {
 	c := macrodic.NewMacroDictionaryBinaryFile(localization, version)
 	if err := c.LoadFromBinary(); err != nil {
 		common.LogVerbose("Skipping missing macro dictionary file: %s (%v)", filename, err)
@@ -26,7 +26,6 @@ func PrepareStringMacros(filename, localization string, version int) error {
 
 func InitializeInternals() error {
 	gameVersion := interactions.CurrentGameVersion()
-	version := common.ToInt(gameVersion)
 	for _, cs := range common.Charsets {
 		if err := PrepareCharset(gameVersion, cs); err != nil {
 			return err
@@ -36,7 +35,7 @@ func InitializeInternals() error {
 	// Default localization first, then populate with the other available ones.
 	for _, loc := range macrodic.DefaultFirstLocalizations() {
 		path := filepath.Join(common.GetLocalizationRoot(loc), "menu", "macrodic.dcp")
-		if err := PrepareStringMacros(path, loc, version); err != nil {
+		if err := PrepareStringMacros(path, loc, gameVersion); err != nil {
 			return err
 		}
 	}

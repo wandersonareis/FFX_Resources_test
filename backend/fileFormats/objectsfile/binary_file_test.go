@@ -65,8 +65,8 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 		creator           func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error)
 	)
 
-	setupVersion := func(version int, srcTree string) string {
-		common.SetGameVersion(version)
+	setupVersion := func(version common.GameVersion, srcTree string) string {
+		common.SetCurrentGameVersion(version)
 
 		tmpRoot, err := os.MkdirTemp("", "binaryfile_integrity")
 		Expect(err).ToNot(HaveOccurred())
@@ -145,10 +145,10 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 		}
 	})
 
-	Context("FFX (v1) - examples/main.go runFFXExamples", func() {
+	Context("FFX (ffx) - examples/main.go runFFXExamples", func() {
 		BeforeAll(func() {
 			srcTree := filepath.Join(testcommon.GetTestDataRootDirectory(), "FFX", "binary")
-			tmpRootFFX = setupVersion(1, srcTree)
+			tmpRootFFX = setupVersion(common.GameVersionFFX, srcTree)
 		})
 
 		for _, tc := range ffxIntegrityCases {
@@ -159,10 +159,10 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 		}
 	})
 
-	Context("FFX-2 (v2) - examples/main.go runFFX2Examples", func() {
+	Context("FFX-2 (ffx2) - examples/main.go runFFX2Examples", func() {
 		BeforeAll(func() {
 			srcTree := filepath.Join(testcommon.GetTestDataRootDirectory(), "FFX-2", "binary")
-			tmpRootFFX2 = setupVersion(2, srcTree)
+			tmpRootFFX2 = setupVersion(common.GameVersionFFX2, srcTree)
 		})
 
 		// testData/FFX-2/binary contém apenas battle/kernel/a_ability.bin;

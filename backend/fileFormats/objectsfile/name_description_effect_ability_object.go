@@ -19,7 +19,7 @@ type NameDescriptionEffectAbilityTextObject struct {
 	Effect         datastore.IGlobalLocalizedKeyedStringObject
 	EffectPosition int64
 	HeaderLength   int
-	Version        int
+	Version        common.GameVersion
 }
 
 func NewNameDescriptionEffectAbilityTextObject(
@@ -29,10 +29,10 @@ func NewNameDescriptionEffectAbilityTextObject(
 	abilitiesCount int,
 	effectSegmentPosition int64,
 	languageCode string,
-	version int,
+	version common.GameVersion,
 ) (*NameDescriptionEffectAbilityTextObject, error) {
-	if version != 2 {
-		return nil, fmt.Errorf("NameDescriptionEffectAbilityTextObject is only compatible with FFX-2 (game version 2), but got game version %d", version)
+	if version.Normalize() != common.GameVersionFFX2 && version.Normalize() != common.GameVersionLastMiss {
+		return nil, fmt.Errorf("NameDescriptionEffectAbilityTextObject is only compatible with FFX-2 (ffx2), but got game version %s", version)
 	}
 
 	if len(bytes) < headerLength {
@@ -61,7 +61,7 @@ func NewNameDescriptionEffectAbilityTextObject(
 	return p, nil
 }
 
-func (p *NameDescriptionEffectAbilityTextObject) mapBytes(stringBytes []byte, languageCode string, version int) error {
+func (p *NameDescriptionEffectAbilityTextObject) mapBytes(stringBytes []byte, languageCode string, version common.GameVersion) error {
 	r := bytes.NewReader(p.Bytes)
 
 	sequentialSegments := make([]datastore.IGlobalLocalizedKeyedStringObject, 0, 2+len(p.Abilities))

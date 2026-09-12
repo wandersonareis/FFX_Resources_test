@@ -14,7 +14,6 @@ import (
 	"ffxresources/backend/models"
 	testcommon "ffxresources/testData"
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -52,7 +51,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 
 	BeforeAll(func() {
 		Expect(testcommon.SetBuildBinPath()).To(Succeed())
-		Expect(os.Setenv("FFX_GAME_VERSION", "2")).To(Succeed())
+		common.SetCurrentGameVersion(common.GameVersionFFX2)
 
 		rootDir = testcommon.GetTestDataRootDirectory()
 		Expect(rootDir).NotTo(BeEmpty(), "Project root directory should not be empty")
@@ -70,7 +69,7 @@ var _ = Describe("DlgFile", Ordered, func() {
 
 		config = interactions.NewAppConfig()
 		Expect(config).NotTo(BeNil())
-		config.SetGameVersion(2)
+		config.SetGameVersion(common.GameVersionFFX2)
 		config.SetLocation("GameFilesLocation", gameLocationPath)
 		config.SetLocation("ExtractLocation", extractTempPath)
 		config.SetLocation("TranslateLocation", translatePath)
@@ -366,8 +365,8 @@ var _ = Describe("DlgFile", Ordered, func() {
 			encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextDlgEncoding(source.GetType())
 			defer encoding.Dispose()
 
-			gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
-			Expect(gameVersion).To(Equal(models.FFX2))
+			gameVersion := interactions.CurrentGameVersion()
+			Expect(gameVersion).To(Equal(common.GameVersionFFX2))
 
 			count, err := lib.TextSegmentsCounter(sourceFile, source.GetType(), gameVersion)
 			Expect(err).To(BeNil())

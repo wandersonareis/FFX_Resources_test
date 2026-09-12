@@ -57,9 +57,9 @@ func getValidHeader(data []byte, max int) []byte {
 	return data[:end:end]
 }
 
-func NewNameOnlyTextObject(data []byte, stringBytes []byte, headerLength int, languageCode string, gameVersion int) (*NameOnlyTextObject, error) {
-	if gameVersion != 1 {
-		return nil, fmt.Errorf("NameOnlyTextObject is only compatible with FFX (game version 1), but got game version %d", gameVersion)
+func NewNameOnlyTextObject(data []byte, stringBytes []byte, headerLength int, languageCode string, gameVersion common.GameVersion) (*NameOnlyTextObject, error) {
+	if gameVersion.Normalize() != common.GameVersionFFX {
+		return nil, fmt.Errorf("NameOnlyTextObject is only compatible with FFX (ffx), but got game version %s", gameVersion)
 	}
 	if len(data) < headerLength {
 		return nil, fmt.Errorf("insufficient data to create NameOnlyTextObject: have %d bytes, need at least %d", len(data), headerLength)
@@ -77,7 +77,7 @@ func NewNameOnlyTextObject(data []byte, stringBytes []byte, headerLength int, la
 	return n, nil
 }
 
-func (n *NameOnlyTextObject) mapBytes(stringBytes []byte, languageCode string, version int) error {
+func (n *NameOnlyTextObject) mapBytes(stringBytes []byte, languageCode string, version common.GameVersion) error {
 	r := bytes.NewReader(getValidHeader(n.Bytes, NameOnlyTextObjectLength))
 	return readStringSegments(r, stringBytes, languageCode, version,
 		n.Name,
@@ -100,11 +100,10 @@ func (n *NameOnlyTextObject) ToBytes(languageCode string) ([]byte, error) {
 
 func (n *NameOnlyTextObject) ToList(filename string, languageCode string) components.IList[datastore.IGlobalLocalizedTextObject] {
 	gameVersion := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	version := common.ToInt(gameVersion)
 	creator := func(data []byte, stringBytes []byte, headerLength int, loc string) (datastore.IGlobalLocalizedTextObject, error) {
-		return NewNameOnlyTextObject(data, stringBytes, headerLength, loc, version)
+		return NewNameOnlyTextObject(data, stringBytes, headerLength, loc, gameVersion)
 	}
-	return ReadDataListWithIlist(filename, languageCode, creator, version)
+	return ReadDataListWithIlist(filename, languageCode, creator, gameVersion)
 }
 
 func (n *NameOnlyTextObject) GetTextObject() datastore.IGlobalLocalizedTextObject {
@@ -158,9 +157,9 @@ func (n *NameOnlyTextObject) String() string {
 	return n.ToString(common.DefaultLocalization)
 }
 
-func NewNameOnlyTextObjectV2(data []byte, stringBytes []byte, headerLength int, languageCode string, gameVersion int) (*NameOnlyTextObjectV2, error) {
-	if gameVersion != 1 && gameVersion != 2 {
-		return nil, fmt.Errorf("NameOnlyTextObjectV2 is only compatible with FFX (game version 1) or FFX-2 (game version 2), but got game version %d", gameVersion)
+func NewNameOnlyTextObjectV2(data []byte, stringBytes []byte, headerLength int, languageCode string, gameVersion common.GameVersion) (*NameOnlyTextObjectV2, error) {
+	if !gameVersion.Normalize().IsValid() {
+		return nil, fmt.Errorf("NameOnlyTextObjectV2 has unsupported game version %s", gameVersion)
 	}
 	if len(data) < headerLength {
 		return nil, fmt.Errorf("insufficient data to create NameOnlyTextObjectV2: have %d bytes, need at least 4", len(data))
@@ -176,7 +175,7 @@ func NewNameOnlyTextObjectV2(data []byte, stringBytes []byte, headerLength int, 
 	return n, nil
 }
 
-func (n *NameOnlyTextObjectV2) mapBytes(stringBytes []byte, languageCode string, version int) error {
+func (n *NameOnlyTextObjectV2) mapBytes(stringBytes []byte, languageCode string, version common.GameVersion) error {
 	r := bytes.NewReader(n.Bytes)
 
 	if err := readStringSegments(r, stringBytes, languageCode, version, n.Name); err != nil {

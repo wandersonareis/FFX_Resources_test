@@ -332,7 +332,7 @@ func EditAndSaveMacroDictJSONFiles() error {
 	}
 
 	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	containers, err := macrodic.ImportFromJson(imp, common.ToInt(version))
+	containers, err := macrodic.ImportFromJson(imp, version)
 	if err != nil {
 		common.LogVerbose("Error importing macro dictionary JSON: %v", err)
 		return err
@@ -363,7 +363,7 @@ func EditAndSaveSpecificMacroDictFromJSON(localization string) error {
 	}
 
 	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	containers, err := macrodic.ImportFromJson(imp, common.ToInt(version))
+	containers, err := macrodic.ImportFromJson(imp, version)
 	if err != nil {
 		common.LogVerbose("Error importing macro dictionary JSON: %v", err)
 		return err

@@ -38,13 +38,13 @@ type MacroDictionaryBinaryFile struct {
 	Bytes        []byte
 	ChunkOffsets []uint32
 	Localization string
-	Version      int
+	Version      common.GameVersion
 	patternPath  string
 }
 
 // NewMacroDictionaryBinaryFile creates an empty file handle for the given
 // localization; call LoadFromBinary to populate it from disk.
-func NewMacroDictionaryBinaryFile(localization string, version int) *MacroDictionaryBinaryFile {
+func NewMacroDictionaryBinaryFile(localization string, version common.GameVersion) *MacroDictionaryBinaryFile {
 	return &MacroDictionaryBinaryFile{
 		Localization: localization,
 		Version:      version,
@@ -54,7 +54,7 @@ func NewMacroDictionaryBinaryFile(localization string, version int) *MacroDictio
 
 // NewMacroDictionaryBinaryFileFromBytes creates a container from raw bytes,
 // parsing the chunk offset table via mapBytes.
-func NewMacroDictionaryBinaryFileFromBytes(data []byte, localization string, version int) (*MacroDictionaryBinaryFile, error) {
+func NewMacroDictionaryBinaryFileFromBytes(data []byte, localization string, version common.GameVersion) (*MacroDictionaryBinaryFile, error) {
 	if len(data) < macroDictionaryHeaderLength {
 		return nil, fmt.Errorf("insufficient data to create MacroDictionaryBinaryFile: have %d bytes, need at least %d", len(data), macroDictionaryHeaderLength)
 	}
@@ -99,7 +99,7 @@ func (c *MacroDictionaryBinaryFile) GetLocalization() string {
 
 // GetVersion returns this container game version.
 func (c *MacroDictionaryBinaryFile) GetVersion() common.GameVersion {
-	return common.GameVersion(c.Version)
+	return c.Version
 }
 
 // mapBytes parses the chunk offset table at the start of the container Bytes.
@@ -266,7 +266,7 @@ func (c *MacroDictionaryBinaryFile) GetObjects() components.IList[datastore.IGlo
 // MCR lookups in getStringAtLookupOffsetBinary resolve through
 // datastore.GetMacro(gameVersion, chunk*0x100 + index).
 func (c *MacroDictionaryBinaryFile) PublishStrings() error {
-	gameVersion := common.GameVersion(c.Version)
+		gameVersion := c.Version
 	macros := c.GetMapObjects()
 	var firstErr error
 	macros.ForEach(func(key int, macroO datastore.IGlobalLocalizedMacroStringObject) {

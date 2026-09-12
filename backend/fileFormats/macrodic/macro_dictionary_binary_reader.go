@@ -1,5 +1,7 @@
 ﻿package macrodic
 
+import "ffxresources/backend/common"
+
 // MapChunks returns the chunk offsets parsed from the container Bytes.
 // Returns a slice of uint32 offsets corresponding to each chunk in the binary data.
 // Each offset points to the start of the chunk data within the container Bytes.
@@ -37,7 +39,7 @@ func (c *MacroDictionaryBinaryFile) MapAllStrings() [][]*MacroString {
 // MapStringsWithLocalization maps all chunks with the given localization string.
 // This is the main entry point for reading a macro dictionary binary into
 // MacroString objects.
-func MapStringsWithLocalization(data []byte, localization string, version int) [][]*MacroString {
+func MapStringsWithLocalization(data []byte, localization string, version common.GameVersion) [][]*MacroString {
 	container, err := NewMacroDictionaryBinaryFileFromBytes(data, localization, version)
 	if err != nil {
 		return nil

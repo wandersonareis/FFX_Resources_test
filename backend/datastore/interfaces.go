@@ -2,6 +2,7 @@ package datastore
 
 import (
 	"bytes"
+	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/models"
 )
@@ -35,7 +36,7 @@ type IEventObject interface {
 // Não depende de tipos concretos do pacote objectsfile
 
 type IGlobalLocalizedKeyedStringObject interface {
-	ReadAndSetLocalizedContent(languageCode string, bytes []byte, offset models.Offset, key models.Key, version int)
+	ReadAndSetLocalizedContent(languageCode string, bytes []byte, offset models.Offset, key models.Key, version common.GameVersion)
 	SetLocalizedContent(languageCode string, content IGlobalKeyedString)
 	GetLocalizedContent(languageCode string) IGlobalKeyedString
 	GetLocalizedString(languageCode string) string

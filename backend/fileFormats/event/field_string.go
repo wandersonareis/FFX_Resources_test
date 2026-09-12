@@ -10,7 +10,7 @@ import (
 
 type FieldString struct {
 	Charset           string
-	Version           int
+	Version           common.GameVersion
 	RegularOffset     int
 	RegularFlags      int
 	RegularChoices    int
@@ -21,14 +21,14 @@ type FieldString struct {
 	SimplifiedBytes   []byte
 }
 
-func NewEmptyFieldString(charset string, version int) *FieldString {
+func NewEmptyFieldString(charset string, version common.GameVersion) *FieldString {
 	return &FieldString{
 		Charset: charset,
 		Version: version,
 	}
 }
 
-func NewFieldString(charset string, regularHeader, simplifiedHeader int, stringBytes []byte, version int) *FieldString {
+func NewFieldString(charset string, regularHeader, simplifiedHeader int, stringBytes []byte, version common.GameVersion) *FieldString {
 	fs := &FieldString{
 		Charset:           charset,
 		Version:           version,
@@ -51,7 +51,7 @@ func NewFieldString(charset string, regularHeader, simplifiedHeader int, stringB
 	return fs
 }
 
-func FromFieldStringData(bytes []byte, charset string, version int) ([]*FieldString, error) {
+func FromFieldStringData(bytes []byte, charset string, version common.GameVersion) ([]*FieldString, error) {
 	if len(bytes) == 0 {
 		return []*FieldString{}, nil
 	}
@@ -159,7 +159,7 @@ func (fs *FieldString) SetRegularString(str string, newCharset ...string) {
 	}
 
 	keepSimplifiedSynced := !fs.HasDistinctSimplified()
-	fs.RegularBytes = converter.StringToBytes(str, fs.Charset, common.GameVersion(fs.Version))
+	fs.RegularBytes = converter.StringToBytes(str, fs.Charset, fs.Version)
 
 	if keepSimplifiedSynced {
 		fs.SimplifiedBytes = fs.RegularBytes
@@ -171,7 +171,7 @@ func (fs *FieldString) SetSimplifiedString(str string, newCharset ...string) {
 		fs.SetCharset(newCharset[0])
 	}
 
-	fs.SimplifiedBytes = converter.StringToBytes(str, fs.Charset, common.GameVersion(fs.Version))
+	fs.SimplifiedBytes = converter.StringToBytes(str, fs.Charset, fs.Version)
 }
 
 func (fs *FieldString) SetCharset(newCharset string) {

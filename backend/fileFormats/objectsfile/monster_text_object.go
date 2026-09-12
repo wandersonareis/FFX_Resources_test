@@ -17,7 +17,7 @@ type MonsterTextObject struct {
 	ScanText              datastore.IGlobalLocalizedKeyedStringObject
 	SimplifiedScanText    datastore.IGlobalLocalizedKeyedStringObject
 	HeaderLength          int
-	Version               int
+	Version               common.GameVersion
 }
 
 func NewMonsterTextObject(
@@ -25,7 +25,7 @@ func NewMonsterTextObject(
 	stringBytes []byte,
 	headerLength int,
 	languageCode string,
-	version int,
+	version common.GameVersion,
 ) (*MonsterTextObject, error) {
 	if len(bytes) < headerLength {
 		return nil, fmt.Errorf("insufficient data to create MonsterTextObject: have %d bytes, need at least %d", len(bytes), headerLength)
@@ -52,7 +52,7 @@ func NewMonsterTextObject(
 func (p *MonsterTextObject) mapBytes(
 	stringBytes []byte,
 	languageCode string,
-	version int,
+	version common.GameVersion,
 ) error {
 	r := bytes.NewReader(p.Bytes)
 	return readStringSegments(r, stringBytes, languageCode, version,

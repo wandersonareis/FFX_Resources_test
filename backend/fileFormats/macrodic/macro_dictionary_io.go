@@ -30,7 +30,7 @@ func DefaultFirstLocalizations() []string {
 // ReadMacroDictionaryContainers reads the macro dictionary binary of the default
 // localization first, then populates with the other available localizations.
 // A missing default file is an error; other missing files are skipped.
-func ReadMacroDictionaryContainers(version int) (map[string]*MacroDictionaryBinaryFile, error) {
+func ReadMacroDictionaryContainers(version common.GameVersion) (map[string]*MacroDictionaryBinaryFile, error) {
 	result := make(map[string]*MacroDictionaryBinaryFile)
 	for _, loc := range DefaultFirstLocalizations() {
 		path := filepath.Join(common.GetLocalizationRoot(loc), "menu", "macrodic.dcp")

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"ffxresources/backend/common"
 	"os"
 	"testing"
 )
@@ -27,7 +28,7 @@ func hashHex(b []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func roundtripContainers(t *testing.T, raw []byte, loc string, version int) map[string]*MacroDictionaryBinaryFile {
+func roundtripContainers(t *testing.T, raw []byte, loc string, version common.GameVersion) map[string]*MacroDictionaryBinaryFile {
 	t.Helper()
 	c, err := NewMacroDictionaryBinaryFileFromBytes(raw, loc, version)
 	if err != nil {
@@ -54,7 +55,7 @@ func TestUSReimportHashMatch(t *testing.T) {
 	raw := mustLoadDcp(t, testFFXDcpPath)
 	want := hashHex(raw)
 
-	back := roundtripContainers(t, raw, "us", 1)
+	back := roundtripContainers(t, raw, "us", common.GameVersionFFX)
 	rc, ok := back["us"]
 	if !ok || len(rc.Bytes) == 0 {
 		t.Fatalf("import did not rebuild us container")
@@ -73,16 +74,16 @@ func TestUSReimportHashMatch(t *testing.T) {
 func TestFFX2ReimportTexts(t *testing.T) {
 	raw := mustLoadDcp(t, testFFX2DcpPath)
 
-	orig, err := NewMacroDictionaryBinaryFileFromBytes(raw, "us", 2)
+	orig, err := NewMacroDictionaryBinaryFileFromBytes(raw, "us", common.GameVersionFFX2)
 	if err != nil {
 		t.Fatalf("parse original: %v", err)
 	}
-	back := roundtripContainers(t, raw, "us", 2)
+	back := roundtripContainers(t, raw, "us", common.GameVersionFFX2)
 	rc, ok := back["us"]
 	if !ok || len(rc.Bytes) == 0 {
 		t.Fatalf("import did not rebuild us container")
 	}
-	if _, err := NewMacroDictionaryBinaryFileFromBytes(rc.Bytes, "us", 2); err != nil {
+	if _, err := NewMacroDictionaryBinaryFileFromBytes(rc.Bytes, "us", common.GameVersionFFX2); err != nil {
 		t.Fatalf("rebuilt binary does not reparse: %v", err)
 	}
 
@@ -132,7 +133,7 @@ func TestOtherLocalizationsReimport(t *testing.T) {
 	otherLocs := []string{"de", "fr", "it", "sp", "jp", "ch", "kr"}
 	containers := map[string]*MacroDictionaryBinaryFile{}
 	for _, loc := range append([]string{"us"}, otherLocs...) {
-		c, err := NewMacroDictionaryBinaryFileFromBytes(raw, loc, 1)
+		c, err := NewMacroDictionaryBinaryFileFromBytes(raw, loc, common.GameVersionFFX)
 		if err != nil {
 			t.Fatalf("parse as %s: %v", loc, err)
 		}
@@ -170,7 +171,7 @@ func TestOtherLocalizationsReimport(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unmarshal JSON: %v", err)
 	}
-	back, err := ImportFromJson(imp, 1)
+	back, err := ImportFromJson(imp, common.GameVersionFFX)
 	if err != nil {
 		t.Fatalf("import JSON: %v", err)
 	}
@@ -181,7 +182,7 @@ func TestOtherLocalizationsReimport(t *testing.T) {
 			t.Errorf("localization %s was not reimported", loc)
 			continue
 		}
-		if _, err := NewMacroDictionaryBinaryFileFromBytes(rc.Bytes, loc, 1); err != nil {
+		if _, err := NewMacroDictionaryBinaryFileFromBytes(rc.Bytes, loc, common.GameVersionFFX); err != nil {
 			t.Errorf("rebuilt %s does not reparse: %v", loc, err)
 		}
 	}

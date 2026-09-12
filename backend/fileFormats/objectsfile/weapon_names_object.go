@@ -47,9 +47,9 @@ var weaponRefs = []struct {
 	{"R", "Rikku"},
 }
 
-func NewWeaponsNameTextObject(bytes []byte, stringBytes []byte, headerLength int, languageCode string, gameVersion int) (*WeaponsNameTextObject, error) {
-	if gameVersion != 1 {
-		return nil, fmt.Errorf("WeaponsNameTextObject is only compatible with FFX (game version 1), but got game version %d", gameVersion)
+func NewWeaponsNameTextObject(bytes []byte, stringBytes []byte, headerLength int, languageCode string, gameVersion common.GameVersion) (*WeaponsNameTextObject, error) {
+	if gameVersion.Normalize() != common.GameVersionFFX {
+		return nil, fmt.Errorf("WeaponsNameTextObject is only compatible with FFX (ffx), but got game version %s", gameVersion)
 	}
 
 	if len(bytes) < headerLength {
@@ -68,7 +68,7 @@ func NewWeaponsNameTextObject(bytes []byte, stringBytes []byte, headerLength int
 	return w, nil
 }
 
-func (w *WeaponsNameTextObject) mapBytes(stringBytes []byte, languageCode string, version int) error {
+func (w *WeaponsNameTextObject) mapBytes(stringBytes []byte, languageCode string, version common.GameVersion) error {
 	r := bytes.NewReader(w.Bytes)
 	if err := readStringSegments(r, stringBytes, languageCode, version, w.Names[:]...); err != nil {
 		return fmt.Errorf("reading names: %w", err)

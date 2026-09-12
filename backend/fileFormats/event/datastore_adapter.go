@@ -27,7 +27,7 @@ func (ea *eventDatastoreAdapter) GetID() string {
 // adapterGameVersion resolve a versão a partir do EventFile quando disponível.
 func adapterGameVersion(eventFile *EventFile, fallback common.GameVersion) common.GameVersion {
 	if eventFile != nil {
-		return common.GameVersionFromInt(eventFile.Version)
+		return eventFile.Version
 	}
 	return fallback
 }

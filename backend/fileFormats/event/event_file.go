@@ -206,7 +206,7 @@ func (ef *EventFile) stringsToStringFileBytes(localization string) []byte {
 			}
 		}
 	}
-	return RebuildFieldStrings(fieldStrings, charset, common.GameVersion(ef.Version))
+	return RebuildFieldStrings(fieldStrings, charset, ef.Version)
 }
 
 func (ef *EventFile) chunksToBytes(chunks [][]byte) []byte {

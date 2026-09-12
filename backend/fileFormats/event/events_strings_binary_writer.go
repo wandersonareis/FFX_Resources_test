@@ -95,7 +95,7 @@ func ExportEventStringsToLocalizations(gameVersion common.GameVersion, eventID s
 //   - version: Game version as int (1 = FFX, 2 = FFX-2), used for empty placeholders
 //
 // Returns: error if directory creation or file writing fails
-func writeEventStringsToAllLocalizations(pathPattern string, localizedStrings []*LocalizedFieldStringObject, version int) error {
+func writeEventStringsToAllLocalizations(pathPattern string, localizedStrings []*LocalizedFieldStringObject, version common.GameVersion) error {
 	common.LogVerbose("Writing event strings to: %s", pathPattern)
 
 	if len(localizedStrings) == 0 {
@@ -147,7 +147,7 @@ func writeEventStringsToAllLocalizations(pathPattern string, localizedStrings []
 //   - version: Game version as int (1 = FFX, 2 = FFX-2)
 //
 // Returns: byte slice containing the binary data, or error if conversion fails
-func convertEventStringsToBytes(localizedStrings []*LocalizedFieldStringObject, languageCode string, version int) ([]byte, error) {
+func convertEventStringsToBytes(localizedStrings []*LocalizedFieldStringObject, languageCode string, version common.GameVersion) ([]byte, error) {
 	if len(localizedStrings) == 0 {
 		return []byte{}, nil
 	}
@@ -169,7 +169,7 @@ func convertEventStringsToBytes(localizedStrings []*LocalizedFieldStringObject, 
 //   - version: Game version as int (1 = FFX, 2 = FFX-2), used for empty placeholders
 //
 // Returns: slice of FieldString objects ready for binary conversion
-func extractFieldStringsForLanguage(localizedStrings []*LocalizedFieldStringObject, languageCode string, charset string, version int) []*FieldString {
+func extractFieldStringsForLanguage(localizedStrings []*LocalizedFieldStringObject, languageCode string, charset string, version common.GameVersion) []*FieldString {
 	fieldStrings := make([]*FieldString, 0, len(localizedStrings))
 
 	for _, localizedObj := range localizedStrings {
@@ -206,7 +206,7 @@ func buildEventStringsBinaryData(fieldStrings []*FieldString) ([]byte, error) {
 		return []byte{}, nil
 	}
 
-	version := common.GameVersion(fieldStrings[0].Version)
+	version := fieldStrings[0].Version
 	stringBytes := RebuildFieldStrings(fieldStrings, fieldStrings[0].Charset, version)
 
 	var buf bytes.Buffer

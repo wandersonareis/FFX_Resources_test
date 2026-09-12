@@ -1,6 +1,7 @@
 package macrodic
 
 import (
+	"ffxresources/backend/common"
 	"ffxresources/backend/core/converter"
 	"fmt"
 )
@@ -10,7 +11,7 @@ import (
 // are equal, both fields point to the same text (no distinct simplified text).
 type MacroString struct {
 	Charset          string
-	Version          int
+	Version          common.GameVersion
 	RegularOffset    int
 	SimplifiedOffset int
 	RegularBytes     []byte

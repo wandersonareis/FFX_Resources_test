@@ -35,6 +35,7 @@ export class AppComponent implements OnInit {
 
   versionFFX = signal<boolean>(false);
   versionFFX2 = signal<boolean>(false);
+  versionLastMiss = signal<boolean>(false);
 
   ngOnInit() {
     EventsOn('Notify', (data) => {
@@ -53,24 +54,41 @@ export class AppComponent implements OnInit {
 
     EventsOn('GameVersion', (data) => {
       console.log('GameVersion on init', data);
-      let version: number = parseInt(data);
+      let version: string = String(data);
 
-      this.versionFFX.set(version === 1);
-      this.versionFFX2.set(version === 2);
+      this.versionFFX.set(version === 'ffx');
+      this.versionFFX2.set(version === 'ffx2');
+      this.versionLastMiss.set(version === 'lastmiss');
     });
   }
 
-  versionFFXChange(event: ToggleButtonChangeEvent) {
+  private resetVersions() {
+    this.versionFFX.set(false);
     this.versionFFX2.set(false);
+    this.versionLastMiss.set(false);
+  }
+
+  versionFFXChange(event: ToggleButtonChangeEvent) {
+    this.resetVersions();
+    this.versionFFX.set(true);
     console.log('versionFFXChange', event);
-    EventsEmit('GameVersionChanged', 1);
+    EventsEmit('GameVersionChanged', 'ffx');
     EventsEmit('Refresh_Tree');
   }
 
   versionFFX2Change(event: ToggleButtonChangeEvent) {
-    this.versionFFX.set(false);
+    this.resetVersions();
+    this.versionFFX2.set(true);
     console.log('versionFFX2Change', event);
-    EventsEmit('GameVersionChanged', 2);
+    EventsEmit('GameVersionChanged', 'ffx2');
+    EventsEmit('Refresh_Tree');
+  }
+
+  versionLastMissChange(event: ToggleButtonChangeEvent) {
+    this.resetVersions();
+    this.versionLastMiss.set(true);
+    console.log('versionLastMissChange', event);
+    EventsEmit('GameVersionChanged', 'lastmiss');
     EventsEmit('Refresh_Tree');
   }
 }

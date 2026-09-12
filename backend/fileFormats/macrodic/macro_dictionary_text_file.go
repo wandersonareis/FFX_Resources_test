@@ -27,7 +27,7 @@ type MacroDictionaryTextFile struct {
 	Bytes    []byte
 	Segments []*MacroDictionaryTextSegment
 	Charset  string
-	Version  int
+	Version  common.GameVersion
 	// Index is the chunk index this file occupies in its container.
 	// It is set by container FileAt/Files; files built outside a container
 	// carry -1 until placed.
@@ -36,7 +36,7 @@ type MacroDictionaryTextFile struct {
 
 // NewMacroDictionaryTextFile creates a text file from raw file bytes, parsing the
 // segment offset table via mapBytes.
-func NewMacroDictionaryTextFile(data []byte, charset string, version int) (*MacroDictionaryTextFile, error) {
+func NewMacroDictionaryTextFile(data []byte, charset string, version common.GameVersion) (*MacroDictionaryTextFile, error) {
 	if len(data) < 2 {
 		return nil, fmt.Errorf("insufficient data to create MacroDictionaryTextFile: have %d bytes, need at least 2", len(data))
 	}

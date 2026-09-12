@@ -94,9 +94,7 @@ func emitimportLocation(ctx context.Context) {
 
 func eventOnSetGameVersion(ctx context.Context) {
 	updateGameVersion := func(version common.GameVersion) {
-		common.SetCurrentGameVersion(version)
-		
-		interactions.NewInteractionService().FFXAppConfig().ToJson()
+		interactions.NewInteractionService().FFXAppConfig().SetGameVersion(version)
 	}
 
 	runtime.EventsOn(ctx, "GameVersionChanged", func(data ...any) {

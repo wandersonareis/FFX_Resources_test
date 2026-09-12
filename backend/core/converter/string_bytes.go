@@ -15,7 +15,7 @@ func readOneByte(buf *bytes.Reader, out *byte) error {
 	return binary.Read(buf, binary.LittleEndian, out)
 }
 
-func getStringAtLookupOffsetBinary(table []byte, offset int, localization string, version int) string {
+func getStringAtLookupOffsetBinary(table []byte, offset int, localization string, version common.GameVersion) string {
     if offset < 0 || offset >= len(table) {
         return ""
     }
@@ -23,7 +23,7 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
     var (
         out               strings.Builder
         charset           = ffxencoding.GetCharsetForLanguage(localization)
-        gameVersion       = common.GameVersion(version)
+        gameVersion       = version.Normalize()
         extraFiveSections bool
         buf               = bytes.NewReader(table[offset:])
     )
@@ -231,6 +231,6 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
     return out.String()
 }
 
-func BytesToString(rawData []byte, localization string, version int) string {
+func BytesToString(rawData []byte, localization string, version common.GameVersion) string {
 	return getStringAtLookupOffsetBinary(rawData, 0, localization, version)
 }

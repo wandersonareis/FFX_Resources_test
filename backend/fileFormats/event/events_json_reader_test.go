@@ -4,7 +4,6 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/fileFormats/event"
-	"ffxresources/backend/models"
 	testcommon "ffxresources/testData"
 	"os"
 	"path/filepath"
@@ -28,7 +27,7 @@ var _ = Describe("Events JSON Readers", Ordered, func() {
 
 	BeforeAll(func() {
 		Expect(testcommon.SetBuildBinPath()).To(Succeed())
-		common.SetGameVersion(1)
+		common.SetCurrentGameVersion(common.GameVersionFFX)
 		common.SetVerboseMode(false)
 		Expect(reader.InitializeInternals()).To(Succeed())
 	})
@@ -57,7 +56,7 @@ var _ = Describe("Events JSON Readers", Ordered, func() {
 	Context("ProcessEventsJsonFile", func() {
 		It("should return error when JSON file does not exist", func() {
 			// Don't create the JSON file
-			err := event.ProcessEventsJsonFile(models.FFX)
+			err := event.ProcessEventsJsonFile(common.GameVersionFFX)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("JSON file not found"))
 		})
@@ -66,7 +65,7 @@ var _ = Describe("Events JSON Readers", Ordered, func() {
 	Context("ProcessEventJsonFile", func() {
 		It("should return error when JSON file does not exist", func() {
 			// Don't create the JSON file
-			err := event.ProcessEventJsonFile(models.FFX, "ev001")
+			err := event.ProcessEventJsonFile(common.GameVersionFFX, "ev001")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("JSON file not found"))
 		})

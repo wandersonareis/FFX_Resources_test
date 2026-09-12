@@ -43,7 +43,7 @@ func (l *LocalizedKeyedStringObject) SetLocalizedContent(languageCode string, co
 	}
 }
 
-func (l *LocalizedKeyedStringObject) ReadAndSetLocalizedContent(languageCode string, bytes []byte, offset models.Offset, key models.Key, version int) {
+func (l *LocalizedKeyedStringObject) ReadAndSetLocalizedContent(languageCode string, bytes []byte, offset models.Offset, key models.Key, version common.GameVersion) {
 	if bytes == nil {
 		return
 	}

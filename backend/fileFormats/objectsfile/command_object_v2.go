@@ -16,9 +16,9 @@ type CommandTextObjectV2 struct {
 	HeaderLength int
 }
 
-func NewCommandTextObjectV2(bytes []byte, stringBytes []byte, headerLength int, languageCode string, gameVersion int) (*CommandTextObjectV2, error) {
-	if gameVersion != 2 {
-		return nil, fmt.Errorf("CommandTextObjectV2 is only compatible with FFX-2 (game version 2), but got game version %d", gameVersion)
+func NewCommandTextObjectV2(bytes []byte, stringBytes []byte, headerLength int, languageCode string, gameVersion common.GameVersion) (*CommandTextObjectV2, error) {
+	if gameVersion.Normalize() != common.GameVersionFFX2 && gameVersion.Normalize() != common.GameVersionLastMiss {
+		return nil, fmt.Errorf("CommandTextObjectV2 is only compatible with FFX-2 (ffx2), but got game version %s", gameVersion)
 	}
 	
 	if len(bytes) < headerLength {
@@ -38,7 +38,7 @@ func NewCommandTextObjectV2(bytes []byte, stringBytes []byte, headerLength int, 
 	return n, nil
 }
 
-func (n *CommandTextObjectV2) mapBytes(stringBytes []byte, languageCode string, version int) error {
+func (n *CommandTextObjectV2) mapBytes(stringBytes []byte, languageCode string, version common.GameVersion) error {
 	r := bytes.NewReader(n.Bytes)
 
 	if err := readStringSegments(r, stringBytes, languageCode, version, n.Name, n.Description); err != nil {

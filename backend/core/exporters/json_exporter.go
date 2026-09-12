@@ -97,7 +97,7 @@ func processEventFromFile(eventID string, localizationKeys []string) *EventFileD
 	}
 
 	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	eventFileStrings, err := event.ReadLocalizedEventStrings(eventID, common.ToInt(version))
+	eventFileStrings, err := event.ReadLocalizedEventStrings(eventID, version)
 	if err != nil {
 		common.LogVerbose("Error loading localized strings: %v", err)
 		return nil
