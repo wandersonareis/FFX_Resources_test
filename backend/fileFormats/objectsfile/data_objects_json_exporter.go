@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strconv"
 
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
@@ -27,117 +28,63 @@ func fillLocalized(m map[string]string, seg datastore.IGlobalLocalizedKeyedStrin
 	return m
 }
 
-type textGroup interface {
-	exportTo(data *JSONEntry, locKey string)
+type binding struct {
+	seg    datastore.IGlobalLocalizedKeyedStringObject
+	target *map[string]string
 }
 
-type commandTexts struct {
-	name                  datastore.IGlobalLocalizedKeyedStringObject
-	simplifiedName        datastore.IGlobalLocalizedKeyedStringObject
-	description           datastore.IGlobalLocalizedKeyedStringObject
-	simplifiedDescription datastore.IGlobalLocalizedKeyedStringObject
+func bind(obj datastore.IGlobalLocalizedTextObject, key string, target *map[string]string) binding {
+	return binding{seg: obj.GetKeyedString(key), target: target}
 }
 
-func resolveCommandTexts(obj datastore.IGlobalLocalizedTextObject) (commandTexts, bool) {
-	c := commandTexts{
-		name:                  obj.GetKeyedString("name"),
-		simplifiedName:        obj.GetKeyedString("simplifiedName"),
-		description:           obj.GetKeyedString("description"),
-		simplifiedDescription: obj.GetKeyedString("simplifiedDescription"),
+func (b binding) export(locKey string) {
+	if b.seg == nil {
+		return
 	}
-	return c, c.name != nil || c.simplifiedName != nil ||
-		c.description != nil || c.simplifiedDescription != nil
+	if text := b.seg.GetLocalizedString(locKey); text != "" {
+		if *b.target == nil {
+			*b.target = make(map[string]string)
+		}
+		(*b.target)[locKey] = text
+	}
 }
 
-func (c commandTexts) exportTo(data *JSONEntry, locKey string) {
-	data.Name = fillLocalized(data.Name, c.name, locKey)
-	data.SimplifiedName = fillLocalized(data.SimplifiedName, c.simplifiedName, locKey)
-	data.Description = fillLocalized(data.Description, c.description, locKey)
-	data.SimplifiedDescription = fillLocalized(data.SimplifiedDescription, c.simplifiedDescription, locKey)
+func staticBindings(obj datastore.IGlobalLocalizedTextObject, data *JSONEntry) []binding {
+	return []binding{
+		bind(obj, "name", &data.Name),
+		bind(obj, "simplifiedName", &data.SimplifiedName),
+		bind(obj, "description", &data.Description),
+		bind(obj, "simplifiedDescription", &data.SimplifiedDescription),
+
+		bind(obj, "effect", &data.Effect),
+		bind(obj, "effectDescription", &data.EffectDescription),
+
+		bind(obj, "sensorText", &data.SensorText),
+		bind(obj, "simplifiedSensorText", &data.SimplifiedSensorText),
+		bind(obj, "scanText", &data.ScanText),
+		bind(obj, "simplifiedScanText", &data.SimplifiedScanText),
+	}
 }
 
-type effectTexts struct {
-	effect datastore.IGlobalLocalizedKeyedStringObject
-}
-
-func resolveEffectTexts(obj datastore.IGlobalLocalizedTextObject) (effectTexts, bool) {
-	e := effectTexts{effect: obj.GetKeyedString("effect")}
-	return e, e.effect != nil
-}
-
-func (e effectTexts) exportTo(data *JSONEntry, locKey string) {
-	data.Effect = fillLocalized(data.Effect, e.effect, locKey)
-}
-
-type abilityTexts struct {
-	abilities []datastore.IGlobalLocalizedKeyedStringObject
-}
-
-func resolveAbilityTexts(obj datastore.IGlobalLocalizedTextObject) (abilityTexts, bool) {
-	var a abilityTexts
-	for idx := 1; ; idx++ {
-		seg := obj.GetKeyedString(fmt.Sprintf("ability%d", idx))
+func abilityBindings(obj datastore.IGlobalLocalizedTextObject, data *JSONEntry) []binding {
+	var segs []datastore.IGlobalLocalizedKeyedStringObject
+	for i := 1; ; i++ {
+		seg := obj.GetKeyedString("ability" + strconv.Itoa(i))
 		if seg == nil {
 			break
 		}
-		a.abilities = append(a.abilities, seg)
+		segs = append(segs, seg)
 	}
-	return a, len(a.abilities) > 0
-}
-
-func (a abilityTexts) exportTo(data *JSONEntry, locKey string) {
-	if data.Abilities == nil {
-		data.Abilities = make([]map[string]string, len(a.abilities))
-		for i := range data.Abilities {
-			data.Abilities[i] = make(map[string]string)
-		}
+	if len(segs) == 0 {
+		return nil
 	}
-	for idx, seg := range a.abilities {
-		data.Abilities[idx] = fillLocalized(data.Abilities[idx], seg, locKey)
+	data.Abilities = make([]map[string]string, len(segs))
+	bs := make([]binding, len(segs))
+	for i, seg := range segs {
+		data.Abilities[i] = make(map[string]string)
+		bs[i] = binding{seg: seg, target: &data.Abilities[i]}
 	}
-}
-
-type monsterTexts struct {
-	sensor           datastore.IGlobalLocalizedKeyedStringObject
-	simplifiedSensor datastore.IGlobalLocalizedKeyedStringObject
-	scan             datastore.IGlobalLocalizedKeyedStringObject
-	simplifiedScan   datastore.IGlobalLocalizedKeyedStringObject
-}
-
-func resolveMonsterTexts(obj datastore.IGlobalLocalizedTextObject) (monsterTexts, bool) {
-	m := monsterTexts{
-		sensor:           obj.GetKeyedString("sensorText"),
-		simplifiedSensor: obj.GetKeyedString("simplifiedSensorText"),
-		scan:             obj.GetKeyedString("scanText"),
-		simplifiedScan:   obj.GetKeyedString("simplifiedScanText"),
-	}
-	return m, m.sensor != nil || m.simplifiedSensor != nil ||
-		m.scan != nil || m.simplifiedScan != nil
-}
-
-func (m monsterTexts) exportTo(data *JSONEntry, locKey string) {
-	data.SensorText = fillLocalized(data.SensorText, m.sensor, locKey)
-	data.SimplifiedSensorText = fillLocalized(data.SimplifiedSensorText, m.simplifiedSensor, locKey)
-	data.ScanText = fillLocalized(data.ScanText, m.scan, locKey)
-	data.SimplifiedScanText = fillLocalized(data.SimplifiedScanText, m.simplifiedScan, locKey)
-}
-
-type lastMissionTexts struct {
-	effect          datastore.IGlobalLocalizedKeyedStringObject
-	effectDescription datastore.IGlobalLocalizedKeyedStringObject
-}
-
-func resolveLastMissionTexts(obj datastore.IGlobalLocalizedTextObject) (lastMissionTexts, bool) {
-	l := lastMissionTexts{
-		effect:          obj.GetKeyedString("effect"),
-		effectDescription: obj.GetKeyedString("effectDescription"),
-	}
-	return l, l.effect != nil || l.effectDescription != nil
-}
-
-func (l lastMissionTexts) exportTo(data *JSONEntry, locKey string) {
-	data.Effect = fillLocalized(data.Effect, l.effect, locKey)
-	data.EffectDescription = fillLocalized(data.EffectDescription, l.effectDescription, locKey)
+	return bs
 }
 
 type weaponsTexts struct {
@@ -163,29 +110,6 @@ func (w weaponsTexts) exportTo(data *JSONEntry, locKey string) {
 		entry.SimplifiedName = fillLocalized(entry.SimplifiedName, w.weapon.SimplifiedNames[i], locKey)
 		data.Weapons[ref.name] = entry
 	}
-}
-
-func resolveTextGroups(obj datastore.IGlobalLocalizedTextObject) []textGroup {
-	var groups []textGroup
-	if g, ok := resolveCommandTexts(obj); ok {
-		groups = append(groups, g)
-	}
-	if g, ok := resolveEffectTexts(obj); ok {
-		groups = append(groups, g)
-	}
-	if g, ok := resolveAbilityTexts(obj); ok {
-		groups = append(groups, g)
-	}
-	if g, ok := resolveMonsterTexts(obj); ok {
-		groups = append(groups, g)
-	}
-	if g, ok := resolveLastMissionTexts(obj); ok {
-		groups = append(groups, g)
-	}
-	if g, ok := resolveWeaponsTexts(obj); ok {
-		groups = append(groups, g)
-	}
-	return groups
 }
 
 func (e *JSONEntry) hasContent() bool {
@@ -222,16 +146,23 @@ func ExportToJSON(objects components.IList[datastore.IGlobalLocalizedTextObject]
 			return
 		}
 
-		groups := resolveTextGroups(obj)
-		if len(groups) == 0 {
-			return
-		}
-
 		data := &JSONEntry{ID: i}
 
+		var bs []binding
+		bs = append(bs, staticBindings(obj, data)...)
+		if ab := abilityBindings(obj, data); ab != nil {
+			bs = append(bs, ab...)
+		}
+
+		if w, ok := resolveWeaponsTexts(obj); ok {
+			for locKey := range common.SupportedLanguages {
+				w.exportTo(data, locKey)
+			}
+		}
+
 		for locKey := range common.SupportedLanguages {
-			for _, g := range groups {
-				g.exportTo(data, locKey)
+			for _, b := range bs {
+				b.export(locKey)
 			}
 		}
 
@@ -242,7 +173,6 @@ func ExportToJSON(objects components.IList[datastore.IGlobalLocalizedTextObject]
 
 	return createJSON(jsonEntries, jsonFileName)
 }
-
 
 // EventFileDataJSON represents an event file with all its strings for JSON export
 type EventFileDataJSON struct {
