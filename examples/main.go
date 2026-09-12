@@ -35,7 +35,7 @@ func main() {
 		return
 	}
 	// Executa os exemplos para FFX v1
-	//runFFXExamples()
+	runFFXExamples()
 
 	// ===== FFX-2 (v2) =====
 	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(common.GameVersionFFX2)

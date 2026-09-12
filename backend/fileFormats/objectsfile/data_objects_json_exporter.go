@@ -49,22 +49,7 @@ func (b binding) export(locKey string) {
 	}
 }
 
-func staticBindings(obj datastore.IGlobalLocalizedTextObject, data *JSONEntry) []binding {
-	return []binding{
-		bind(obj, "name", &data.Name),
-		bind(obj, "simplifiedName", &data.SimplifiedName),
-		bind(obj, "description", &data.Description),
-		bind(obj, "simplifiedDescription", &data.SimplifiedDescription),
 
-		bind(obj, "effect", &data.Effect),
-		bind(obj, "effectDescription", &data.EffectDescription),
-
-		bind(obj, "sensorText", &data.SensorText),
-		bind(obj, "simplifiedSensorText", &data.SimplifiedSensorText),
-		bind(obj, "scanText", &data.ScanText),
-		bind(obj, "simplifiedScanText", &data.SimplifiedScanText),
-	}
-}
 
 func abilityBindings(obj datastore.IGlobalLocalizedTextObject, data *JSONEntry) []binding {
 	var segs []datastore.IGlobalLocalizedKeyedStringObject

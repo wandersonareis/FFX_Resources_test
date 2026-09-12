@@ -10,6 +10,7 @@ import (
 	"ffxresources/backend/models"
 	"fmt"
 	"path/filepath"
+	"strconv"
 )
 
 type (
@@ -126,52 +127,19 @@ func isValidID(id int, length int) bool {
 	return id >= 0 && id < length
 }
 
-// updateObjectByType updates a localized object based on its type.
-// Automatically detects the object type and applies appropriate updates.
-//
-// Parameters:
-//   - jsonEntry: JSON data containing the new values
-//   - obj: The localized object to update
-//
-// Returns: error if object type is not supported
-func updateObjectByType(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextObject, version common.GameVersion) error {
-	switch localizedTextObj := obj.(type) {
-	case *CommandTextObject:
-		updateNameEntry(jsonEntry, localizedTextObj.Name, version)
-		updateSimplifiedNameEntry(jsonEntry, localizedTextObj.SimplifiedName, version)
-		updateDescriptionEntry(jsonEntry, localizedTextObj.Description, version)
-		updateSimplifiedDescriptionEntry(jsonEntry, localizedTextObj.SimplifiedDescription, version)
-	case *CommandTextObjectV2:
-		updateNameEntry(jsonEntry, localizedTextObj.Name, version)
-		updateDescriptionEntry(jsonEntry, localizedTextObj.Description, version)
-	case *NameOnlyTextObject:
-		updateNameEntry(jsonEntry, localizedTextObj.Name, version)
-	case *NameOnlyTextObjectV2:
-		updateNameEntry(jsonEntry, localizedTextObj.Name, version)
-	case *JobTextObject:
-		updateNameEntry(jsonEntry, localizedTextObj.Name, version)
-		updateDescriptionEntry(jsonEntry, localizedTextObj.Description, version)
-		updateEffectEntry(jsonEntry, localizedTextObj.Effect, version)
-	case *NameDescriptionEffectAbilityTextObject:
-		updateNameEntry(jsonEntry, localizedTextObj.Name, version)
-		updateDescriptionEntry(jsonEntry, localizedTextObj.Description, version)
-		updateAbilitiesEntry(jsonEntry, localizedTextObj.Abilities, version)
-	case *MonsterTextObject:
-		updateNameEntry(jsonEntry, localizedTextObj.Name, version)
-		updateSensorTextEntry(jsonEntry, localizedTextObj, version)
-		updateScanTextEntry(jsonEntry, localizedTextObj, version)
-	case *LastMissionTextObject:
-		updateNameEntry(jsonEntry, localizedTextObj.Name, version)
-		updateDescriptionEntry(jsonEntry, localizedTextObj.Description, version)
-		updateEffectEntry(jsonEntry, localizedTextObj.Effect, version)
-		updateEffectDescriptionEntry(jsonEntry, localizedTextObj.EffectDescription, version)
-	case *WeaponsNameTextObject:
-		updateWeaponsEntry(jsonEntry, localizedTextObj, version)
-	default:
-		common.LogVerbose("Object type not recognized for ID %d", jsonEntry.ID)
-		return fmt.Errorf("unknown type for ID object %d", jsonEntry.ID)
+// updateObject applies JSON data to a localized object. Static keyed fields and
+// abilities are applied generically via GetKeyedString (absent keys no-op); weapons
+// remain a specific mapping due to their per-character nested JSON structure.
+func updateObject(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextObject, version common.GameVersion) {
+	for _, f := range staticFields {
+		applyLocalizedText(obj.GetKeyedString(f.key), *f.get(&jsonEntry), version, f.label)
 	}
-	return nil
+	for i, amap := range jsonEntry.Abilities {
+		applyLocalizedText(obj.GetKeyedString(fmt.Sprintf("ability%d", i+1)), amap, version, "ability "+strconv.Itoa(i+1))
+	}
+	if w, ok := obj.(*WeaponsNameTextObject); ok {
+		updateWeaponsEntry(jsonEntry, w, version)
+	}
 }
 
 // updateLocalizedObjectEntries processes JSON data entries and applies the localized
@@ -203,297 +171,12 @@ func updateLocalizedObjectEntries(itemsData []JSONEntry, objects []datastore.IGl
 
 		common.LogVerbose("Processing localized object %d", id)
 
-		if err := updateObjectByType(jsonEntry, localizedObj, version); err != nil {
-			common.LogVerbose("Error updating object %d: %v", id, err)
-			return err
-		}
+		updateObject(jsonEntry, localizedObj, version)
 	}
 	return nil
 }
 
-// updateNameEntry applies name updates to a CommandTextObject.
-//
-// Parameters:
-//   - sourceData: JSON data containing name translations
-//   - segment: The object to update
-func updateNameEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version common.GameVersion) {
-	if len(sourceData.Name) == 0 || segment == nil {
-		common.LogVerbose("No name found for item %d, skipping...", sourceData.ID)
-		return
-	}
 
-	for languageCode, newNameText := range sourceData.Name {
-		if newNameText == "" {
-			common.LogVerbose("Empty name for language %s, ignoring...", languageCode)
-			continue
-		}
-		if !common.IsSupportedLanguage(languageCode) {
-			common.LogVerbose("Not recognized location for name: %s", languageCode)
-			continue
-		}
-		if newNameText == segment.GetLocalizedString(languageCode) {
-			continue
-		}
-
-		updateOrCreateSegment(segment, newNameText, languageCode, version)
-	}
-}
-
-// updateDescriptionEntry applies description updates to a CommandTextObject.
-//
-// Parameters:
-//   - sourceData: JSON data containing description translations
-//   - segment: The object to update
-func updateDescriptionEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version common.GameVersion) {
-	if len(sourceData.Description) == 0 || segment == nil {
-		common.LogVerbose("No description found for item %d, skipping...", sourceData.ID)
-		return
-	}
-
-	for languageCode, newDescriptionText := range sourceData.Description {
-		if newDescriptionText == "" {
-			common.LogVerbose("Empty description for language %s, ignoring...", languageCode)
-			continue
-		}
-		if !common.IsSupportedLanguage(languageCode) {
-			common.LogVerbose("Not recognized location for description: %s", languageCode)
-			continue
-		}
-		if newDescriptionText == segment.GetLocalizedString(languageCode) {
-			continue
-		}
-
-		updateOrCreateSegment(segment, newDescriptionText, languageCode, version)
-	}
-}
-
-// updateSimplifiedNameEntry applies simplifiedName updates only if present in the JSON data.
-//
-// Parameters:
-//   - sourceData: JSON data containing simplifiedName translations
-//   - segment: The object to update
-func updateSimplifiedNameEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version common.GameVersion) {
-	if len(sourceData.SimplifiedName) == 0 || segment == nil {
-		return
-	}
-
-	for languageCode, newText := range sourceData.SimplifiedName {
-		if newText == "" {
-			continue
-		}
-		if !common.IsSupportedLanguage(languageCode) {
-			continue
-		}
-		if newText == segment.GetLocalizedString(languageCode) {
-			continue
-		}
-
-		updateOrCreateSegment(segment, newText, languageCode, version)
-	}
-}
-
-// updateSimplifiedDescriptionEntry applies simplifiedDescription updates only if present in the JSON data.
-//
-// Parameters:
-//   - sourceData: JSON data containing simplifiedDescription translations
-//   - segment: The object to update
-func updateSimplifiedDescriptionEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version common.GameVersion) {
-	if len(sourceData.SimplifiedDescription) == 0 || segment == nil {
-		return
-	}
-
-	for languageCode, newText := range sourceData.SimplifiedDescription {
-		if newText == "" {
-			continue
-		}
-		if !common.IsSupportedLanguage(languageCode) {
-			continue
-		}
-		if newText == segment.GetLocalizedString(languageCode) {
-			continue
-		}
-
-		updateOrCreateSegment(segment, newText, languageCode, version)
-	}
-}
-
-func updateAbilitiesEntry(sourceData JSONEntry, segments []datastore.IGlobalLocalizedKeyedStringObject, version common.GameVersion) {
-	if len(sourceData.Abilities) == 0 {
-		common.LogVerbose("No abilities found for item %d, skipping...", sourceData.ID)
-		return
-	}
-
-	// Limita o número de abilities para o que o objeto suporta
-	maxAbilities := len(segments)
-	if maxAbilities == 0 {
-		common.LogVerbose("Target object has no abilities slots for item %d", sourceData.ID)
-		return
-	}
-
-	for abilityIdx, abilityMap := range sourceData.Abilities {
-		// Pula se não houver dados ou se exceder o número de abilities do objeto
-		if len(abilityMap) == 0 {
-			continue
-		}
-		if abilityIdx >= maxAbilities {
-			common.LogVerbose("Ability %d exceeds target capacity (%d), skipping...",
-				abilityIdx+1, maxAbilities)
-			continue
-		}
-
-		segment := segments[abilityIdx]
-		if segment == nil {
-			common.LogVerbose("Ability %d segment is nil, skipping...", abilityIdx+1)
-			continue
-		}
-
-		for languageCode, newAbilityText := range abilityMap {
-			if newAbilityText == "" {
-				continue
-			}
-			if !common.IsSupportedLanguage(languageCode) {
-				continue
-			}
-			if newAbilityText == segment.GetLocalizedString(languageCode) {
-				continue
-			}
-
-			updateOrCreateSegment(segment, newAbilityText, languageCode, version)
-			common.LogVerbose("Updated ability %d for language %s: %s",
-				abilityIdx+1, languageCode, newAbilityText)
-		}
-	}
-}
-
-// updateSensorTextEntry applies sensor text updates to a MonsterTextObject.
-//
-// Parameters:
-//   - sourceData: JSON data containing sensor translations
-//   - targetObject: The MonsterTextObject object to update
-func updateSensorTextEntry(sourceData JSONEntry, targetObject *MonsterTextObject, version common.GameVersion) {
-	if len(sourceData.SensorText) > 0 && targetObject.SensorText != nil {
-		for languageCode, newText := range sourceData.SensorText {
-			if newText == "" {
-				continue
-			}
-			if !common.IsSupportedLanguage(languageCode) {
-				continue
-			}
-			if newText == targetObject.SensorText.GetLocalizedString(languageCode) {
-				continue
-			}
-			updateOrCreateSegment(targetObject.SensorText, newText, languageCode, version)
-		}
-	}
-
-	if len(sourceData.SimplifiedSensorText) > 0 && targetObject.SimplifiedSensorText != nil {
-		for languageCode, newText := range sourceData.SimplifiedSensorText {
-			if newText == "" {
-				continue
-			}
-			if !common.IsSupportedLanguage(languageCode) {
-				continue
-			}
-			if newText == targetObject.SimplifiedSensorText.GetLocalizedString(languageCode) {
-				continue
-			}
-			updateOrCreateSegment(targetObject.SimplifiedSensorText, newText, languageCode, version)
-		}
-	}
-}
-
-// updateScanTextEntry applies scan text updates to a MonsterTextObject.
-//
-// Parameters:
-//   - sourceData: JSON data containing scan translations
-//   - targetObject: The MonsterTextObject object to update
-func updateScanTextEntry(sourceData JSONEntry, targetObject *MonsterTextObject, version common.GameVersion) {
-	if len(sourceData.ScanText) > 0 && targetObject.ScanText != nil {
-		for languageCode, newText := range sourceData.ScanText {
-			if newText == "" {
-				continue
-			}
-			if !common.IsSupportedLanguage(languageCode) {
-				continue
-			}
-			if newText == targetObject.ScanText.GetLocalizedString(languageCode) {
-				continue
-			}
-			updateOrCreateSegment(targetObject.ScanText, newText, languageCode, version)
-		}
-	}
-
-	if len(sourceData.SimplifiedScanText) > 0 && targetObject.SimplifiedScanText != nil {
-		for languageCode, newText := range sourceData.SimplifiedScanText {
-			if newText == "" {
-				continue
-			}
-			if !common.IsSupportedLanguage(languageCode) {
-				continue
-			}
-			if newText == targetObject.SimplifiedScanText.GetLocalizedString(languageCode) {
-				continue
-			}
-			updateOrCreateSegment(targetObject.SimplifiedScanText, newText, languageCode, version)
-		}
-	}
-}
-
-// updateEffectEntry applies effect updates to a JobTextObject.
-func updateEffectEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version common.GameVersion) {
-	if len(sourceData.Effect) == 0 || segment == nil {
-		common.LogVerbose("No effect found for item %d, skipping...", sourceData.ID)
-		return
-	}
-
-	for languageCode, newEffectText := range sourceData.Effect {
-		if newEffectText == "" {
-			common.LogVerbose("Empty effect for language %s, ignoring...", languageCode)
-			continue
-		}
-
-		if !common.IsSupportedLanguage(languageCode) {
-			common.LogVerbose("Not recognized location for effect: %s", languageCode)
-			continue
-		}
-
-		if newEffectText == segment.GetLocalizedString(languageCode) {
-			continue
-		}
-
-		updateOrCreateSegment(segment, newEffectText, languageCode, version)
-	}
-}
-
-// updateEffectDescriptionEntry applies effectDescription updates to a LastMissionTextObject.
-//
-// Parameters:
-//   - sourceData: JSON data containing effectDescription translations
-//   - segment: The object to update
-func updateEffectDescriptionEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version common.GameVersion) {
-	if len(sourceData.EffectDescription) == 0 || segment == nil {
-		common.LogVerbose("No effectDescription found for item %d, skipping...", sourceData.ID)
-		return
-	}
-
-	for languageCode, newEffectDescriptionText := range sourceData.EffectDescription {
-		if newEffectDescriptionText == "" {
-			common.LogVerbose("Empty effectDescription for language %s, ignoring...", languageCode)
-			continue
-		}
-
-		if !common.IsSupportedLanguage(languageCode) {
-			common.LogVerbose("Not recognized location for effectDescription: %s", languageCode)
-			continue
-		}
-
-		if newEffectDescriptionText == segment.GetLocalizedString(languageCode) {
-			continue
-		}
-
-		updateOrCreateSegment(segment, newEffectDescriptionText, languageCode, version)
-	}
-}
 
 // createNewKeyedString creates a new KeyedString with the given text and charset.
 //
@@ -560,18 +243,5 @@ func updateWeaponField(obj *WeaponsNameTextObject, key string, fieldTexts map[st
 		return
 	}
 
-	for languageCode, newText := range fieldTexts {
-		if newText == "" {
-			continue
-		}
-		if !common.IsSupportedLanguage(languageCode) {
-			continue
-		}
-		if newText == segment.GetLocalizedString(languageCode) {
-			continue
-		}
-
-		updateOrCreateSegment(segment, newText, languageCode, version)
-		common.LogVerbose("Updated weapon %s for language %s: %s", label, languageCode, newText)
-	}
+	applyLocalizedText(segment, fieldTexts, version, label)
 }
