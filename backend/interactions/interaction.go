@@ -4,6 +4,7 @@ import (
 	"context"
 	"ffxresources/backend/common"
 	"ffxresources/backend/interfaces"
+	"path/filepath"
 	"sync"
 )
 
@@ -23,9 +24,10 @@ type InteractionService struct {
 var interactionInstance *InteractionService
 
 func resolveLocationPath(config IAppConfig, configKey, defaultDirName string) string {
-	path := config.GetLocation(configKey)
-	if path != "" {
-		return path
+	if config != nil {
+		if path := config.GetLocation(configKey); path != "" {
+			return path
+		}
 	}
 
 	fa, err := common.NewFileAccessor(defaultDirName)
@@ -35,9 +37,20 @@ func resolveLocationPath(config IAppConfig, configKey, defaultDirName string) st
 	return fa.ResolvedPath
 }
 
+func defaultAppConfig() *AppConfig {
+	return &AppConfig{
+		filePath:    filepath.Join(common.GetExecDir(), "config", "config.json"),
+		locations:   defaultLocations(),
+		gameVersion: common.GameVersionFFX,
+	}
+}
+
 func NewInteractionService() *InteractionService {
 	if interactionInstance == nil {
 		config := NewAppConfig()
+		if config == nil {
+			config = defaultAppConfig()
+		}
 
 		gameDir := resolveLocationPath(config, "GameFilesLocation", common.DirData)
 		extractDir := resolveLocationPath(config, "ExtractLocation", common.DirExtracted)

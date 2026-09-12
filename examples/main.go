@@ -23,8 +23,8 @@ func main() {
 	fmt.Println()
 
 	// ===== FFX (v1) =====
-	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(common.GameVersionFFX)
 	common.SetGameFilesRoot("/home/mestre/FFX_Resources/build/bin/data/") // Defina o caminho correto para os arquivos do jogo
+	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(common.GameVersionFFX)
 	common.SetVerboseMode(false)                                          // Ativa o modo verboso para depuração
 
 	// Inicialização obrigatória

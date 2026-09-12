@@ -7,6 +7,7 @@ import (
 	"ffxresources/backend/common"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type IGetAppConfig interface {
@@ -43,15 +44,34 @@ func NewAppConfig() *AppConfig {
 
 	c := &AppConfig{
 		filePath:    filePath,
-		locations:   make(map[string]string),
+		locations:   defaultLocations(),
 		gameVersion: common.GameVersionFFX,
 	}
 
+	// FromJson mescla o arquivo sobre os defaults; em qualquer falha
+	// mantemos o config padrão válido em vez de retornar nil.
 	if err := c.FromJson(); err != nil {
-		return nil
+		common.LogVerbose("Using default config (%v)", err)
+	}
+
+	if err := c.validateConfig(); err != nil {
+		common.LogVerbose("Could not persist default config (%v)", err)
 	}
 
 	return c
+}
+
+// defaultLocations monta os diretórios padrão a partir do diretório do
+// executável e dos nomes em common. Usado quando não há config.json
+// ou quando chaves estão ausentes no arquivo.
+func defaultLocations() map[string]string {
+	execDir := common.GetExecDir()
+	return map[string]string{
+		"GameFilesLocation": filepath.Join(execDir, common.DirData),
+		"ExtractLocation":   filepath.Join(execDir, common.DirExtracted),
+		"TranslateLocation": filepath.Join(execDir, common.DirTranslated),
+		"ImportLocation":    filepath.Join(execDir, common.DirReimported),
+	}
 }
 
 func (c *AppConfig) validateConfig() error {
@@ -63,8 +83,26 @@ func (c *AppConfig) validateConfig() error {
 	}
 
 	if c.locations == nil {
-		c.locations = make(map[string]string)
+		c.locations = defaultLocations()
 		changed = true
+	} else {
+		// Preenche chaves ausentes sem sobrescrever as definidas pelo usuário.
+		for key, defPath := range defaultLocations() {
+			if strings.TrimSpace(c.locations[key]) == "" {
+				c.locations[key] = defPath
+				changed = true
+			}
+		}
+	}
+
+	// Garante que os diretórios padrão existam.
+	for _, dir := range c.locations {
+		if strings.TrimSpace(dir) == "" {
+			continue
+		}
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			common.LogVerbose("Could not create directory %s (%v)", dir, err)
+		}
 	}
 
 	if changed {
@@ -86,7 +124,15 @@ func (c *AppConfig) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	c.locations = aux.Locations
+	// Mescla sobre os defaults: chaves ausentes/vazias no arquivo
+	// mantêm os diretórios padrão em vez de zerarem a config.
+	merged := defaultLocations()
+	for key, path := range aux.Locations {
+		if strings.TrimSpace(path) != "" {
+			merged[key] = path
+		}
+	}
+	c.locations = merged
 	c.gameVersion = aux.GameVersion.Normalize()
 	if !c.gameVersion.IsValid() {
 		c.gameVersion = common.GameVersionFFX
@@ -108,9 +154,8 @@ func (c *AppConfig) ToJson() error {
 		return err
 	}
 	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			panic(err)
+		if err := file.Close(); err != nil {
+			common.LogVerbose("Error closing config file: %v", err)
 		}
 	}(file)
 
@@ -138,9 +183,11 @@ func (c *AppConfig) FromJson() error {
 		return c.validateConfig()
 	}
 
-	err = json.Unmarshal(file, c)
+	if err := json.Unmarshal(file, c); err != nil {
+		return err
+	}
 
-	return err
+	return c.validateConfig()
 }
 
 func (c *AppConfig) GetGameVersion() common.GameVersion {
