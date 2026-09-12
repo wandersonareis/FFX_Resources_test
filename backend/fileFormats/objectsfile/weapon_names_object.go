@@ -140,7 +140,7 @@ func (w *WeaponsNameTextObject) GetLocalizedKeyedStrings(localization string) []
 }
 
 func (w *WeaponsNameTextObject) ToString(languageCode string) string {
-	return fmt.Sprintf("Weapons: %s", w.Names[Tidus].GetLocalizedString(languageCode))
+	return weaponLegacyFmt(w, languageCode)
 }
 
 func (w *WeaponsNameTextObject) String() string {

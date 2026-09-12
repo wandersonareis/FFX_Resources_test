@@ -175,7 +175,7 @@ func (p *NameDescriptionEffectAbilityTextObject) ToString(languageCode string) s
 	if descContent := p.Description.GetLocalizedContent(languageCode); descContent != nil {
 		descStr = descContent.GetString()
 	}
-	return fmt.Sprintf("%s - %s", nameStr, descStr)
+	return formatNameDescription(nameStr, descStr)
 }
 
 func (p *NameDescriptionEffectAbilityTextObject) String() string {

@@ -131,7 +131,7 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 
 		creator = func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
 			gameVersion := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-			return objectsfile.NewNameOnlyTextObject(data, stringBytes, headerLength, localization, gameVersion)
+			return objectsfile.NewKeyedStringFile(data, stringBytes, headerLength, localization, gameVersion, objectsfile.NameOnlyLayout, "NameOnlyTextObject")
 		}
 	})
 

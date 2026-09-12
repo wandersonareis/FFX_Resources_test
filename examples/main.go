@@ -19,8 +19,7 @@ Este arquivo contém o main() principal que organiza e executa todas as funçõe
 dos editores de eventos JSON.
 */
 func main() {
-	fmt.Println("=== EXEMPLOS DO SISTEMA DE EVENTOS FFX ===")
-	fmt.Println()
+	common.LogInfo("=== EXEMPLOS DO SISTEMA DE EVENTOS FFX ===")
 
 	// ===== FFX (v1) =====
 	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(common.GameVersionFFX)
@@ -28,34 +27,34 @@ func main() {
 	common.SetVerboseMode(false)                                          // Ativa o modo verboso para depuração
 
 	// Inicialização obrigatória
-	fmt.Println("=== FFX (v1) ===")
-	fmt.Println("Inicializando sistema (FFX v1)...")
+	common.LogInfo("=== FFX (v1) ===")
+	common.LogInfo("Inicializando sistema (FFX v1)...")
 	if err := reader.InitializeInternals(); err != nil {
-		fmt.Printf("Erro ao inicializar sistema: %v\n", err)
+		common.LogError("Erro ao inicializar sistema: %v\n", err)
 		return
 	}
 	// Executa os exemplos para FFX v1
-	runFFXExamples()
+	//runFFXExamples()
 
 	// ===== FFX-2 (v2) =====
 	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(common.GameVersionFFX2)
 	interactions.NewInteractionService().GameLocation.SetTargetDirectory("/home/mestre/FFX_Resources/build/bin/data/") // Defina o caminho correto para os arquivos do jogo
 
-	fmt.Println("\n=== FFX-2 (v2) ===")
-	fmt.Println("Reinicializando dicionários para FFX-2...")
+	common.LogInfo("\n=== FFX-2 (v2) ===")
+	common.LogInfo("Reinicializando dicionários para FFX-2...")
 	if err := reader.InitializeInternals(); err != nil {
-		fmt.Printf("Erro ao inicializar sistema: %v\n", err)
+		common.LogError("Erro ao inicializar sistema: %v\n", err)
 		return
 	}
-	runFFX2Examples()
+	//runFFX2Examples()
 
 	// ===== LastMiss (lastmiss) =====
 	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(common.GameVersionLastMiss)
 
-	fmt.Println("\n=== LastMiss (lastmiss) ===")
-	fmt.Println("Reinicializando dicionários para LastMiss...")
+	common.LogInfo("\n=== LastMiss (lastmiss) ===")
+	common.LogInfo("Reinicializando dicionários para LastMiss...")
 	if err := reader.InitializeInternals(); err != nil {
-		fmt.Printf("Erro ao inicializar sistema: %v\n", err)
+		common.LogError("Erro ao inicializar sistema: %v\n", err)
 		return
 	}
 	runLastMissExamples()
@@ -467,17 +466,17 @@ func runFFXExamples() {
 
 	// Carregar eventos primeiro
 	if err := readEvents(); err != nil {
-		fmt.Printf("Erro ao carregar eventos: %v\n", err)
+		common.LogError("Erro ao carregar eventos: %v\n", err)
 		return
 	}
 
 	//converter.ExportAllEventsToJSON()
-	fmt.Println("✓ Eventos exportados para JSON")
+	common.LogInfo("✓ Eventos exportados para JSON")
 	gameVersion := interactions.CurrentGameVersion()
 	event.ImportEventsDataFromJsonFile(gameVersion)
-	fmt.Println("✓ Eventos editados e salvos com sucesso")
+	common.LogInfo("✓ Eventos editados e salvos com sucesso")
 	event.ExportAllEventsForLocalizations(gameVersion)
-	fmt.Println("✓ Eventos salvos com sucesso")
+	common.LogInfo("✓ Eventos salvos com sucesso")
 
 	showMainMenu()
 }
@@ -739,7 +738,7 @@ func runFFX2Examples() {
 
 	// save_txt.bin
 	saveTextBinaryFile := objectsfile.ReadCommandLocalizations("battle/kernel/save_txt.bin")
-	fmt.Printf("[FFX-2] save text carregados: %d\n", saveTextBinaryFile.GetObjects().Len())
+	common.LogInfo("[FFX-2] save text carregados: %d\n", saveTextBinaryFile.GetObjects().Len())
 	if err := saveTextBinaryFile.ExportToJson("save_text_all_localizations.json"); err != nil {
 		common.LogError("[FFX-2] Error exporting save text to JSON: %v\n", err)
 	}
@@ -755,19 +754,17 @@ func runFFX2Examples() {
 
 	// Carregar eventos
 	if err := readEvents(); err != nil {
-		fmt.Printf("Erro ao carregar eventos: %v\n", err)
+		common.LogError("Erro ao carregar eventos: %v\n", err)
 		return
 	}
 
 	//converter.ExportAllEventsToJSON()
-	fmt.Println("✓ Eventos exportados para JSON")
+	common.LogInfo("✓ Eventos exportados para JSON")
 	gameVersion := interactions.CurrentGameVersion()
 	event.ImportEventsDataFromJsonFile(gameVersion)
-	fmt.Println("✓ Eventos editados e salvos com sucesso")
+	common.LogInfo("✓ Eventos editados e salvos com sucesso")
 	event.ExportAllEventsForLocalizations(gameVersion)
-	fmt.Println("✓ Eventos salvos com sucesso")
-
-	fmt.Println("✓ FFX-2 (v2) extraído para JSON (arquivos *_v2_*.json)")
+	common.LogInfo("✓ Eventos salvos com sucesso")
 
 	showMainMenu()
 }
@@ -878,21 +875,21 @@ func runLastMissExamples() {
 	common.LogInfo("✓ LastMiss (lastmiss) extraído para JSON (arquivos *_lastmiss_*.json)")
 }
 
-func readEvents() error {
-	fmt.Println("Carregando eventos...")
+ func readEvents() error {
+	common.LogInfo("Carregando eventos...")
 	eventsFolder, err := common.NewFileAccessor(common.GetPathOriginalsEvent())
 	if err != nil {
 		return fmt.Errorf("failed to resolve events directory: %w", err)
 	}
 	version := interactions.CurrentGameVersion()
 	if err := event.ReadAllEventFiles(eventsFolder, version); err != nil {
-		fmt.Printf("Erro ao carregar eventos: %v\n", err)
+		common.LogVerbose("Erro ao carregar eventos: %v\n", err)
 		return err
 	}
 
 	// Contar eventos carregados no datastore
 	eventIDs := event.GetAllEventIDs(version)
-	fmt.Printf("✓ Carregados %d eventos no datastore\n", len(eventIDs))
+	common.LogInfo("✓ Carregados %d eventos no datastore\n", len(eventIDs))
 	return nil
 }
 
