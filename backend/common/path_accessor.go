@@ -47,7 +47,7 @@ func GetPathRoot() string {
 // LastMiss vive sob a árvore ffx2.
 func GetPathRootForVersion(gv GameVersion) string {
 	switch gv.Normalize() {
-	case GameVersionLastMiss:
+	case GameVersionFFX2, GameVersionLastMiss:
 		return filepath.Join("ffx_ps2", string(GameVersionFFX2), "master")
 	default:
 		return filepath.Join("ffx_ps2", string(gv.Normalize()), "master")

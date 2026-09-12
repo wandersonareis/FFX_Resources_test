@@ -23,8 +23,8 @@ func main() {
 	fmt.Println()
 
 	// ===== FFX (v1) =====
-	common.SetGameFilesRoot("/home/mestre/FFX_Resources/build/bin/data/") // Defina o caminho correto para os arquivos do jogo
 	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(common.GameVersionFFX)
+	interactions.NewInteractionService().GameLocation.SetTargetDirectory("/home/mestre/FFX_Resources/build/bin/data/") // Defina o caminho correto para os arquivos do jogo
 	common.SetVerboseMode(false)                                          // Ativa o modo verboso para depuração
 
 	// Inicialização obrigatória
@@ -39,7 +39,7 @@ func main() {
 
 	// ===== FFX-2 (v2) =====
 	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(common.GameVersionFFX2)
-	common.SetGameFilesRoot("/home/mestre/FFX_Resources/build/bin/data/") // Defina o caminho correto para os arquivos do jogo
+	interactions.NewInteractionService().GameLocation.SetTargetDirectory("/home/mestre/FFX_Resources/build/bin/data/") // Defina o caminho correto para os arquivos do jogo
 
 	fmt.Println("\n=== FFX-2 (v2) ===")
 	fmt.Println("Reinicializando dicionários para FFX-2...")
