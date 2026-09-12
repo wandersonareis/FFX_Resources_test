@@ -145,3 +145,29 @@ func writeStringSegments(data []byte, start int, languageCode string, segments .
 	}
 	return nil
 }
+
+// writeStringSegmentsAt writes 4-byte string reference segments at the given
+// absolute offsets (usually produced by segmentOffsets), serializing each
+// IGlobalLocalizedKeyedStringObject's localized content. Mirror image of
+// readStringSegmentsAt.
+//
+// Parameters:
+//   - data: The pre-allocated byte slice to write into.
+//   - offsets: Absolute position of each segment within data; must match len(segments).
+//   - languageCode: The localization language code used to resolve localized content.
+//   - segments: One or more IGlobalLocalizedKeyedStringObject instances to serialize,
+//     in the same order as offsets.
+//
+// Segments with nil localized content are skipped (original bytes preserved).
+func writeStringSegmentsAt(data []byte, offsets []int, languageCode string, segments ...datastore.IGlobalLocalizedKeyedStringObject) error {
+	for i, seg := range segments {
+		content := seg.GetLocalizedContent(languageCode)
+		if content == nil {
+			continue
+		}
+		if err := models.WriteSegmentAt(data, offsets[i], getSegment(content)); err != nil {
+			return fmt.Errorf("writing segment %d: %w", i, err)
+		}
+	}
+	return nil
+}

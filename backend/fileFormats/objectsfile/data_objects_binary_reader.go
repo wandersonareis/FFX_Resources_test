@@ -359,3 +359,54 @@ func readStringSegments(r io.Reader, stringBytes []byte, languageCode string, ve
 	}
 	return nil
 }
+
+// readStringSegmentsAt reads 4-byte string reference segments located at the given
+// absolute offsets (usually produced by segmentOffsets), populating each
+// IGlobalLocalizedKeyedStringObject with its localized content.
+//
+// Each segment is exactly 4 bytes: 2 bytes for the string table offset (uint16 LE)
+// and 2 bytes for the string key (uint16 LE), read directly from data at offsets[i].
+// Using precomputed offsets, this works for both contiguous layouts (no gaps) and
+// layouts with gaps/skips between segments — the mirror image of
+// writeStringSegmentsAt.
+//
+// Parameters:
+//   - data: The chunk bytes holding the raw segments.
+//   - offsets: Absolute position of each segment within data; must match len(segments).
+//   - stringBytes: The complete raw string table blob, used to resolve offset+key
+//     into actual localized string content.
+//   - languageCode: The localization language code (e.g., "us", "jp", "de").
+//   - version: The game version used to interpret the raw bytes.
+//   - segments: One or more IGlobalLocalizedKeyedStringObject instances to populate,
+//     in the same order as offsets.
+//
+// Returns: nil on success, or a wrapped fmt.Errorf indicating which segment index
+// failed to read.
+func readStringSegmentsAt(data []byte, offsets []int, stringBytes []byte, languageCode string, version common.GameVersion, segments ...datastore.IGlobalLocalizedKeyedStringObject) error {
+	for i, seg := range segments {
+		s, err := models.ReadSegmentAt(data, offsets[i])
+		if err != nil {
+			return fmt.Errorf("reading segment %d: %w", i, err)
+		}
+		seg.ReadAndSetLocalizedContent(languageCode, stringBytes, s.Offset, s.Key, version)
+	}
+	return nil
+}
+
+// segmentOffsets calculates where each segment starts within data.
+// Each segment occupies 4 bytes; gaps[i] = bytes skipped AFTER segment i.
+// A nil/empty gaps yields contiguous segments (offset i = start + i*4).
+//
+// Example with start=0, gaps={4,4}, n=3 → {0, 8, 16}.
+func segmentOffsets(start int, gaps []int, n int) []int {
+	offsets := make([]int, n)
+	pos := start
+	for i := 0; i < n; i++ {
+		offsets[i] = pos
+		pos += 4
+		if i < len(gaps) {
+			pos += gaps[i]
+		}
+	}
+	return offsets
+}

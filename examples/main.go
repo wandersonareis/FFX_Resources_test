@@ -795,7 +795,87 @@ func runLastMissExamples() {
 	}
 	common.LogInfo("[LastMiss] ✓ Last mission accesary text salvos com sucesso")
 
-	fmt.Println("✓ LastMiss (lastmiss) extraído para JSON (arquivos *_lastmiss_*.json)")
+	// lm_command.bin (LastMiss: exige versão lastmiss ativa)
+	lmCommandTextBinaryFile := objectsfile.ReadLastMissionCommandLocalizations("lastmiss/kernel/lm_command.bin", 4)
+	if lmCommandTextBinaryFile == nil || lmCommandTextBinaryFile.GetObjects() == nil {
+		common.LogError("[LastMiss] Last mission binary not loaded (versão lastmiss ativa?)")
+		return
+	}
+	common.LogInfo("[LastMiss] Last mission command text carregados: %d\n", lmCommandTextBinaryFile.GetObjects().Len())
+	if err := lmCommandTextBinaryFile.ExportToJson("lm_command_text_all_localizations.json"); err != nil {
+		common.LogError("[LastMiss] Error exporting last mission command text to JSON: %v\n", err)
+	}
+	common.LogInfo("[LastMiss] ✓ Last mission command text exportados para JSON")
+	if err := lmCommandTextBinaryFile.ImportFromJson("lm_command_text_all_localizations.json"); err != nil {
+		common.LogError("[LastMiss] Error importing last mission command text from JSON: %v\n", err)
+	}
+	common.LogInfo("[LastMiss] ✓ Last mission command text editados e salvos com sucesso")
+	if err := lmCommandTextBinaryFile.SaveToBinary("lastmiss/kernel/lm_command.bin"); err != nil {
+		common.LogError("[LastMiss] Error saving last mission command text to binary: %v\n", err)
+	}
+	common.LogInfo("[LastMiss] ✓ Last mission command text salvos com sucesso")
+
+	// lm_dress.bin (LastMiss: exige versão lastmiss ativa)
+	lmDressTextBinaryFile := objectsfile.ReadLastMissionCommandLocalizations("lastmiss/kernel/lm_dress.bin", 0)
+	if lmDressTextBinaryFile == nil || lmDressTextBinaryFile.GetObjects() == nil {
+		common.LogError("[LastMiss] Last mission binary not loaded (versão lastmiss ativa?)")
+		return
+	}
+	common.LogInfo("[LastMiss] Last mission dress text carregados: %d\n", lmDressTextBinaryFile.GetObjects().Len())
+	if err := lmDressTextBinaryFile.ExportToJson("lm_dress_text_all_localizations.json"); err != nil {
+		common.LogError("[LastMiss] Error exporting last mission dress text to JSON: %v\n", err)
+	}
+	common.LogInfo("[LastMiss] ✓ Last mission dress text exportados para JSON")
+	if err := lmDressTextBinaryFile.ImportFromJson("lm_dress_text_all_localizations.json"); err != nil {
+		common.LogError("[LastMiss] Error importing last mission dress text from JSON: %v\n", err)
+	}
+	common.LogInfo("[LastMiss] ✓ Last mission dress text editados e salvos com sucesso")
+	if err := lmDressTextBinaryFile.SaveToBinary("lastmiss/kernel/lm_dress.bin"); err != nil {
+		common.LogError("[LastMiss] Error saving last mission dress text to binary: %v\n", err)
+	}
+	common.LogInfo("[LastMiss] ✓ Last mission dress text salvos com sucesso")
+
+	// lm_floorname.bin (LastMiss: exige versão lastmiss ativa)
+	lmFloornameTextBinaryFile := objectsfile.ReadNameOnlyV2Localizations("lastmiss/kernel/lm_floorname.bin")
+	if lmFloornameTextBinaryFile == nil || lmFloornameTextBinaryFile.GetObjects() == nil {
+		common.LogError("[LastMiss] Last mission binary not loaded (versão lastmiss ativa?)")
+		return
+	}
+	common.LogInfo("[LastMiss] Last mission floorname text carregados: %d\n", lmFloornameTextBinaryFile.GetObjects().Len())
+	if err := lmFloornameTextBinaryFile.ExportToJson("lm_floorname_text_all_localizations.json"); err != nil {
+		common.LogError("[LastMiss] Error exporting last mission floorname text to JSON: %v\n", err)
+	}
+	common.LogInfo("[LastMiss] ✓ Last mission floorname text exportados para JSON")
+	if err := lmFloornameTextBinaryFile.ImportFromJson("lm_floorname_text_all_localizations.json"); err != nil {
+		common.LogError("[LastMiss] Error importing last mission floorname text from JSON: %v\n", err)
+	}
+	common.LogInfo("[LastMiss] ✓ Last mission floorname text editados e salvos com sucesso")
+	if err := lmFloornameTextBinaryFile.SaveToBinary("lastmiss/kernel/lm_floorname.bin"); err != nil {
+		common.LogError("[LastMiss] Error saving last mission floorname text to binary: %v\n", err)
+	}
+	common.LogInfo("[LastMiss] ✓ Last mission floorname text salvos com sucesso")
+
+	// lm_item.bin (LastMiss: exige versão lastmiss ativa)
+	lmItemTextBinaryFile := objectsfile.ReadLastMissionCommandLocalizations("lastmiss/kernel/lm_item.bin", 4)
+	if lmItemTextBinaryFile == nil || lmItemTextBinaryFile.GetObjects() == nil {
+		common.LogError("[LastMiss] Last mission binary not loaded (versão lastmiss ativa?)")
+		return
+	}
+	common.LogInfo("[LastMiss] Last mission item text carregados: %d\n", lmItemTextBinaryFile.GetObjects().Len())
+	if err := lmItemTextBinaryFile.ExportToJson("lm_item_text_all_localizations.json"); err != nil {
+		common.LogError("[LastMiss] Error exporting last mission item text to JSON: %v\n", err)
+	}
+	common.LogInfo("[LastMiss] ✓ Last mission item text exportados para JSON")
+	if err := lmItemTextBinaryFile.ImportFromJson("lm_item_text_all_localizations.json"); err != nil {
+		common.LogError("[LastMiss] Error importing last mission item text from JSON: %v\n", err)
+	}
+	common.LogInfo("[LastMiss] ✓ Last mission item text editados e salvos com sucesso")
+	if err := lmItemTextBinaryFile.SaveToBinary("lastmiss/kernel/lm_item.bin"); err != nil {
+		common.LogError("[LastMiss] Error saving last mission item text to binary: %v\n", err)
+	}
+	common.LogInfo("[LastMiss] ✓ Last mission item text salvos com sucesso")
+
+	common.LogInfo("✓ LastMiss (lastmiss) extraído para JSON (arquivos *_lastmiss_*.json)")
 }
 
 func readEvents() error {

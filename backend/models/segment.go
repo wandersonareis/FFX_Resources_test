@@ -53,6 +53,16 @@ func WriteSegment(writer io.Writer, s Segment) error {
 	return binary.Write(writer, binary.LittleEndian, uint16(s.Key))
 }
 
+func ReadSegmentAt(data []byte, pos int) (Segment, error) {
+	if pos < 0 || pos+4 > len(data) {
+		return Segment{}, fmt.Errorf("invalid position %d for segment (slice length: %d)", pos, len(data))
+	}
+	return Segment{
+		Offset: Offset(binary.LittleEndian.Uint16(data[pos : pos+2])),
+		Key:    Key(binary.LittleEndian.Uint16(data[pos+2 : pos+4])),
+	}, nil
+}
+
 func WriteSegmentAt(data []byte, pos int, s Segment) error {
     if pos < 0 || pos+4 > len(data) {
         return fmt.Errorf("invalid position %d for segment (slice length: %d)", pos, len(data))

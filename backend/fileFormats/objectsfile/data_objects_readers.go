@@ -146,6 +146,35 @@ func ReadLastMissionLocalizations(patternPath string) datastore.IBinaryFile {
 	return binaryDataFile
 }
 
+func ReadLastMissionCommandLocalizations(patternPath string, skip int) datastore.IBinaryFile {
+	gameVersion := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+	if gameVersion.Normalize() != common.GameVersionLastMiss {
+		common.LogVerbose("ReadLastMissionCommandLocalizations is only compatible with LastMission (lastmiss), but got game version %s", gameVersion)
+		return nil
+	}
+
+	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
+		return NewLastMissionCommand(cBytes, sBytes, hLen, skip, lang, gameVersion)
+	}
+
+	binaryDataFile := NewObjectBinaryFile(
+		patternPath,
+		creatorFunc,
+		common.DefaultLocalization,
+		gameVersion,
+	)
+
+	if err := binaryDataFile.LoadFromBinary(); err != nil {
+		common.LogVerbose("Error loading last mission command binary data: %v", err)
+		return nil
+	}
+
+	if objects := binaryDataFile.GetObjects(); objects != nil && !objects.IsEmpty() {
+		common.LogVerbose("Loaded %d last mission command objects with all localizations", objects.Len())
+	}
+	return binaryDataFile
+}
+
 func ReadJobLocalizations(patternPath string, effectSegmentPosition int64) datastore.IBinaryFile {
 	gameVersion := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
 	if gameVersion.Normalize() != common.GameVersionFFX2 && gameVersion.Normalize() != common.GameVersionLastMiss {
