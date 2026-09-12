@@ -60,6 +60,7 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 	var (
 		tmpRootFFX        string
 		tmpRootFFX2       string
+		tmpRootLastMiss   string
 		originalGameFiles string
 		originalResources string
 		creator           func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error)
@@ -143,6 +144,9 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 		if tmpRootFFX2 != "" {
 			os.RemoveAll(tmpRootFFX2)
 		}
+		if tmpRootLastMiss != "" {
+			os.RemoveAll(tmpRootLastMiss)
+		}
 	})
 
 	Context("FFX (ffx) - examples/main.go runFFXExamples", func() {
@@ -169,6 +173,17 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 		// os demais arquivos do runFFX2Examples não existem nos dados de teste.
 		It("should complete integrity cycle with matching hash for battle/kernel/a_ability.bin", func() {
 			integrityCycle(tmpRootFFX2, integrityCase{pattern: "battle/kernel/a_ability.bin", read: objectsfile.ReadCommandLocalizations})
+		})
+	})
+
+	Context("LastMiss (lastmiss) - examples/main.go runLastMissExamples", func() {
+		BeforeAll(func() {
+			srcTree := filepath.Join(testcommon.GetTestDataRootDirectory(), "FFX-2", "binary")
+			tmpRootLastMiss = setupVersion(common.GameVersionLastMiss, srcTree)
+		})
+
+		It("should complete integrity cycle with matching hash for lastmiss/kernel/lm_accesary.bin", func() {
+			integrityCycle(tmpRootLastMiss, integrityCase{pattern: "lastmiss/kernel/lm_accesary.bin", read: objectsfile.ReadLastMissionLocalizations})
 		})
 	})
 

@@ -20,6 +20,7 @@ type (
 		Description           map[string]string      `json:"description,omitempty"`
 		SimplifiedDescription map[string]string      `json:"simplifiedDescription,omitempty"`
 		Effect                map[string]string      `json:"effect,omitempty"`
+		EffectDescription     map[string]string      `json:"effectDescription,omitempty"`
 		Abilities             []map[string]string    `json:"abilities,omitempty"`
 		SensorText            map[string]string      `json:"sensorText,omitempty"`
 		SimplifiedSensorText  map[string]string      `json:"simplifiedSensorText,omitempty"`
@@ -159,6 +160,11 @@ func updateObjectByType(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextO
 		updateNameEntry(jsonEntry, localizedTextObj.Name, version)
 		updateSensorTextEntry(jsonEntry, localizedTextObj, version)
 		updateScanTextEntry(jsonEntry, localizedTextObj, version)
+	case *LastMissionTextObject:
+		updateNameEntry(jsonEntry, localizedTextObj.Name, version)
+		updateDescriptionEntry(jsonEntry, localizedTextObj.Description, version)
+		updateEffectEntry(jsonEntry, localizedTextObj.Effect, version)
+		updateEffectDescriptionEntry(jsonEntry, localizedTextObj.EffectDescription, version)
 	case *WeaponsNameTextObject:
 		updateWeaponsEntry(jsonEntry, localizedTextObj, version)
 	default:
@@ -456,6 +462,36 @@ func updateEffectEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedK
 		}
 
 		updateOrCreateSegment(segment, newEffectText, languageCode, version)
+	}
+}
+
+// updateEffectDescriptionEntry applies effectDescription updates to a LastMissionTextObject.
+//
+// Parameters:
+//   - sourceData: JSON data containing effectDescription translations
+//   - segment: The object to update
+func updateEffectDescriptionEntry(sourceData JSONEntry, segment datastore.IGlobalLocalizedKeyedStringObject, version common.GameVersion) {
+	if len(sourceData.EffectDescription) == 0 || segment == nil {
+		common.LogVerbose("No effectDescription found for item %d, skipping...", sourceData.ID)
+		return
+	}
+
+	for languageCode, newEffectDescriptionText := range sourceData.EffectDescription {
+		if newEffectDescriptionText == "" {
+			common.LogVerbose("Empty effectDescription for language %s, ignoring...", languageCode)
+			continue
+		}
+
+		if !common.IsSupportedLanguage(languageCode) {
+			common.LogVerbose("Not recognized location for effectDescription: %s", languageCode)
+			continue
+		}
+
+		if newEffectDescriptionText == segment.GetLocalizedString(languageCode) {
+			continue
+		}
+
+		updateOrCreateSegment(segment, newEffectDescriptionText, languageCode, version)
 	}
 }
 

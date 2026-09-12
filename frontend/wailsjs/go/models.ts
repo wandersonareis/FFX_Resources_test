@@ -50,7 +50,7 @@ export namespace models {
 	    relative_path: string;
 	    size: number;
 	    type: number;
-	    version: number;
+	    version: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new SpiraFileInfo(source);

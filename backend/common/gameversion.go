@@ -26,7 +26,7 @@ func ParseGameVersion(s string) GameVersion {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "ffx2", "ffx-2", "ffx_2":
 		return GameVersionFFX2
-	case "lastmiss", "last_miss", "last-miss", "lastmission", "last_mission", "last-mission", "lm", "lm_accesary":
+	case "lastmiss", "last_miss", "last-miss", "lastmission", "last_mission", "last-mission":
 		return GameVersionLastMiss
 	default:
 		return GameVersionFFX

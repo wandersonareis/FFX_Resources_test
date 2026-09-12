@@ -48,6 +48,17 @@ func main() {
 		return
 	}
 	runFFX2Examples()
+
+	// ===== LastMiss (lastmiss) =====
+	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(common.GameVersionLastMiss)
+
+	fmt.Println("\n=== LastMiss (lastmiss) ===")
+	fmt.Println("Reinicializando dicionários para LastMiss...")
+	if err := reader.InitializeInternals(); err != nil {
+		fmt.Printf("Erro ao inicializar sistema: %v\n", err)
+		return
+	}
+	runLastMissExamples()
 }
 
 func runFFXExamples() {
@@ -742,22 +753,6 @@ func runFFX2Examples() {
 	}
 	common.LogInfo("[FFX-2] ✓ Save text salvos com sucesso")
 
-	// lm_accesary.bin
-	lmAccesaryTextBinaryFile := objectsfile.ReadCommandLocalizations("lastmiss/kernel/lm_accesary.bin")
-	common.LogInfo("[FFX-2] Last mission accesary text carregados: %d\n", lmAccesaryTextBinaryFile.GetObjects().Len())
-	if err := lmAccesaryTextBinaryFile.ExportToJson("lm_accesary_text_all_localizations.json"); err != nil {
-		common.LogError("[FFX-2] Error exporting last mission accesary text to JSON: %v\n", err)
-	}
-	common.LogInfo("[FFX-2] ✓ Last mission accesary text exportados para JSON")
-	if err := lmAccesaryTextBinaryFile.ImportFromJson("lm_accesary_text_all_localizations.json"); err != nil {
-		common.LogError("[FFX-2] Error importing last mission accesary text from JSON: %v\n", err)
-	}
-	common.LogInfo("[FFX-2] ✓ Last mission accesary text editados e salvos com sucesso")
-	if err := lmAccesaryTextBinaryFile.SaveToBinary("lastmiss/kernel/lm_accesary.bin"); err != nil {
-		common.LogError("[FFX-2] Error saving last mission accesary text to binary: %v\n", err)
-	}
-	common.LogInfo("[FFX-2] ✓ Last mission accesary text salvos com sucesso")
-
 	// Carregar eventos
 	if err := readEvents(); err != nil {
 		fmt.Printf("Erro ao carregar eventos: %v\n", err)
@@ -775,6 +770,32 @@ func runFFX2Examples() {
 	fmt.Println("✓ FFX-2 (v2) extraído para JSON (arquivos *_v2_*.json)")
 
 	showMainMenu()
+}
+
+func runLastMissExamples() {
+	common.LogInfo("Extraindo arquivos lastmiss do LastMiss para JSON...")
+
+	// lm_accesary.bin (LastMiss: exige versão lastmiss ativa)
+	lmAccesaryTextBinaryFile := objectsfile.ReadLastMissionLocalizations("lastmiss/kernel/lm_accesary.bin")
+	if lmAccesaryTextBinaryFile == nil || lmAccesaryTextBinaryFile.GetObjects() == nil {
+		common.LogError("[LastMiss] Last mission binary not loaded (versão lastmiss ativa?)")
+		return
+	}
+	common.LogInfo("[LastMiss] Last mission accesary text carregados: %d\n", lmAccesaryTextBinaryFile.GetObjects().Len())
+	if err := lmAccesaryTextBinaryFile.ExportToJson("lm_accesary_text_all_localizations.json"); err != nil {
+		common.LogError("[LastMiss] Error exporting last mission accesary text to JSON: %v\n", err)
+	}
+	common.LogInfo("[LastMiss] ✓ Last mission accesary text exportados para JSON")
+	if err := lmAccesaryTextBinaryFile.ImportFromJson("lm_accesary_text_all_localizations.json"); err != nil {
+		common.LogError("[LastMiss] Error importing last mission accesary text from JSON: %v\n", err)
+	}
+	common.LogInfo("[LastMiss] ✓ Last mission accesary text editados e salvos com sucesso")
+	if err := lmAccesaryTextBinaryFile.SaveToBinary("lastmiss/kernel/lm_accesary.bin"); err != nil {
+		common.LogError("[LastMiss] Error saving last mission accesary text to binary: %v\n", err)
+	}
+	common.LogInfo("[LastMiss] ✓ Last mission accesary text salvos com sucesso")
+
+	fmt.Println("✓ LastMiss (lastmiss) extraído para JSON (arquivos *_lastmiss_*.json)")
 }
 
 func readEvents() error {

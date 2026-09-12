@@ -122,6 +122,24 @@ func (m monsterTexts) exportTo(data *JSONEntry, locKey string) {
 	data.SimplifiedScanText = fillLocalized(data.SimplifiedScanText, m.simplifiedScan, locKey)
 }
 
+type lastMissionTexts struct {
+	effect          datastore.IGlobalLocalizedKeyedStringObject
+	effectDescription datastore.IGlobalLocalizedKeyedStringObject
+}
+
+func resolveLastMissionTexts(obj datastore.IGlobalLocalizedTextObject) (lastMissionTexts, bool) {
+	l := lastMissionTexts{
+		effect:          obj.GetKeyedString("effect"),
+		effectDescription: obj.GetKeyedString("effectDescription"),
+	}
+	return l, l.effect != nil || l.effectDescription != nil
+}
+
+func (l lastMissionTexts) exportTo(data *JSONEntry, locKey string) {
+	data.Effect = fillLocalized(data.Effect, l.effect, locKey)
+	data.EffectDescription = fillLocalized(data.EffectDescription, l.effectDescription, locKey)
+}
+
 type weaponsTexts struct {
 	weapon *WeaponsNameTextObject
 }
@@ -161,6 +179,9 @@ func resolveTextGroups(obj datastore.IGlobalLocalizedTextObject) []textGroup {
 	if g, ok := resolveMonsterTexts(obj); ok {
 		groups = append(groups, g)
 	}
+	if g, ok := resolveLastMissionTexts(obj); ok {
+		groups = append(groups, g)
+	}
 	if g, ok := resolveWeaponsTexts(obj); ok {
 		groups = append(groups, g)
 	}
@@ -170,7 +191,7 @@ func resolveTextGroups(obj datastore.IGlobalLocalizedTextObject) []textGroup {
 func (e *JSONEntry) hasContent() bool {
 	if len(e.Name) > 0 || len(e.SimplifiedName) > 0 ||
 		len(e.Description) > 0 || len(e.SimplifiedDescription) > 0 ||
-		len(e.Effect) > 0 ||
+		len(e.Effect) > 0 || len(e.EffectDescription) > 0 ||
 		len(e.SensorText) > 0 || len(e.SimplifiedSensorText) > 0 ||
 		len(e.ScanText) > 0 || len(e.SimplifiedScanText) > 0 {
 		return true

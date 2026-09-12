@@ -247,8 +247,20 @@ func ParseDataListWithIlistV2(data []byte, languageCode string, creator func([]b
 
 	expectedTotalLength := (maxIndex - minIndex + 1) * individualLength
 	if totalLength != expectedTotalLength {
-		common.LogVerbose("TotalLength divergente, aplicando fallback calculado")
-		totalLength = expectedTotalLength
+		// Alguns arquivos (ex: lastmiss/kernel/lm_accesary.bin) trazem no
+		// cabeçalho o tamanho exato da seção de dados (totalLength/individualLength
+		// objetos, com maxIndex valendo a contagem). Se o valor do cabeçalho é
+		// autoconsistente (múltiplo do tamanho individual e cabe no arquivo),
+		// ele é autoritativo e o fallback não deve deslocar a string table.
+		headerConsistent := individualLength > 0 &&
+			totalLength%individualLength == 0 &&
+			32+totalLength <= len(data)
+		if headerConsistent && totalLength < expectedTotalLength {
+			common.LogVerbose("TotalLength do cabeçalho confere com o arquivo, mantendo valor original")
+		} else {
+			common.LogVerbose("TotalLength divergente, aplicando fallback calculado")
+			totalLength = expectedTotalLength
+		}
 	}
 
 	offset = 32
