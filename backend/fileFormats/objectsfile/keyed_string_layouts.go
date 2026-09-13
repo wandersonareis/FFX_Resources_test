@@ -80,6 +80,14 @@ var (
 		},
 	}
 
+	// LastMissionMesLayout: name + description contíguos, sem skip.
+	LastMissionMesLayout = LayoutSet{
+		common.GameVersionLastMiss: {
+			{"name", 0},
+			{"description", 0},
+		},
+	}
+
 	LastMissionDressLayout = LayoutSet{
 		common.GameVersionLastMiss: {
 			{"name", 0},
@@ -93,6 +101,44 @@ var (
 			{"name", 0},
 			{"description", 0},
 			{"effect", 0},
+		},
+	}
+
+	// LastMissionMonmagicLayout: name/description com skip 4, effect sem skip.
+	LastMissionMonmagicLayout = LayoutSet{
+		common.GameVersionLastMiss: {
+			{"name", 4},
+			{"description", 4},
+			{"effect", 0},
+		},
+	}
+
+	LastMissionMonsterLayout = LayoutSet{
+		common.GameVersionLastMiss: {
+			{"name", 0},
+			{"description", 0},
+		},
+	}
+
+	LastMissionPlayerLayout = LayoutSet{
+		common.GameVersionLastMiss: {
+			{"name", 0},
+			{"description", 0},
+		},
+	}
+
+	LastMissionTrapLayout = LayoutSet{
+		common.GameVersionLastMiss: {
+			{"name", 0},
+			{"description", 0},
+			{"effect", 0},
+		},
+	}
+
+	LastMissionWarehouseLayout = LayoutSet{
+		common.GameVersionLastMiss: {
+			{"name", 0},
+			{"description", 0},
 		},
 	}
 )

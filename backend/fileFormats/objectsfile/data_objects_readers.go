@@ -83,10 +83,40 @@ func ReadLastMissionLocalizations(patternPath string) datastore.IBinaryFile {
 	return readWithLayout(patternPath, LastMissionLayout, "LastMissionTextObject", nil)
 }
 
+// ReadLastMissionMesLocalizations lê lm_mes.bin: name + description contíguos, sem skip.
+func ReadLastMissionMesLocalizations(patternPath string) datastore.IBinaryFile {
+	return readWithLayout(patternPath, LastMissionMesLayout, "LastMissionMesTextObject", nil)
+}
+
 // ReadLastMissionCommandLocalizations lê lastmiss com skip posicional.
 func ReadLastMissionCommandLocalizations(patternPath string, skip int) datastore.IBinaryFile {
 	layout := skipLayout(skip)
 	return readWithLayout(patternPath, layout, "LastMissionCommand", threePartLegacyFmt)
+}
+
+// ReadLastMissionMonmagicLocalizations lê lm_monmagic.bin: name/description skip 4, effect sem skip.
+func ReadLastMissionMonmagicLocalizations(patternPath string) datastore.IBinaryFile {
+	return readWithLayout(patternPath, LastMissionMonmagicLayout, "LastMissionMonmagicTextObject", threePartLegacyFmt)
+}
+
+// ReadLastMissionMonsterLocalizations lê lm_monster.bin: name + description, sem skip.
+func ReadLastMissionMonsterLocalizations(patternPath string) datastore.IBinaryFile {
+	return readWithLayout(patternPath, LastMissionMonsterLayout, "LastMissionMonsterTextObject", nil)
+}
+
+// ReadLastMissionPlayerLocalizations lê lm_player.bin: name + description, sem skip.
+func ReadLastMissionPlayerLocalizations(patternPath string) datastore.IBinaryFile {
+	return readWithLayout(patternPath, LastMissionPlayerLayout, "LastMissionPlayerTextObject", nil)
+}
+
+// ReadLastMissionTrapLocalizations lê lm_trap.bin: name + description + effect, sem skip.
+func ReadLastMissionTrapLocalizations(patternPath string) datastore.IBinaryFile {
+	return readWithLayout(patternPath, LastMissionTrapLayout, "LastMissionTrapTextObject", threePartLegacyFmt)
+}
+
+// ReadLastMissionWarehouseLocalizations lê lm_warehouse.bin: name + description, sem skip.
+func ReadLastMissionWarehouseLocalizations(patternPath string) datastore.IBinaryFile {
+	return readWithLayout(patternPath, LastMissionWarehouseLayout, "LastMissionWarehouseTextObject", nil)
 }
 
 // ReadLastMissionDressLocalizations lê lastmiss dress com skip posicional.
