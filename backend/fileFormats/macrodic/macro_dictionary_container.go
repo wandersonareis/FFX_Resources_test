@@ -79,7 +79,10 @@ func (c *MacroDictionaryBinaryFile) LoadFromBinary() error {
 	if err != nil {
 		return err
 	}
-	data := accessor.ReadBytes()
+	data, err := accessor.ReadBytes()
+	if err != nil {
+		return err
+	}
 	if len(data) == 0 {
 		return fmt.Errorf("missing macro dictionary file: %s", path)
 	}

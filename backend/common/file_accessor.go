@@ -129,12 +129,12 @@ func NewFileAccessor(path string) (FileAccessor, error) {
 	}, nil
 }
 
-func (f *FileAccessor) ReadBytes() []byte {
+func (f *FileAccessor) ReadBytes() ([]byte, error) {
 	data, err := os.ReadFile(f.ResolvedPath)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return data
+	return data, nil
 }
 
 func resolvePath(path string) (string, error) {

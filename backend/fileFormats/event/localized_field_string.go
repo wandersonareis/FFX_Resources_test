@@ -105,7 +105,11 @@ func ReadStringFile(filename string, languageCode string, version common.GameVer
 		return nil
 	}
 
-	bytes := resolvedPath.ReadBytes()
+	bytes, err := resolvedPath.ReadBytes()
+	if err != nil {
+		common.LogError("Failed to read bytes from file %s: %v", resolvedPath.ResolvedPath, err)
+		return nil
+	}
 	if bytes == nil {
 		if common.IsVerboseMode() {
 			fmt.Printf("Failed to read bytes from file %s\n", resolvedPath.ResolvedPath)

@@ -97,7 +97,10 @@ func PrepareCharset(version common.GameVersion, charset string) error {
     if err != nil {
         return err
     }
-    data := filePath.ReadBytes()
+    data, err := filePath.ReadBytes()
+    if err != nil {
+        return fmt.Errorf("failed to read charset file: %w", err)
+    }
     if data == nil {
         return fmt.Errorf("charset %q: arquivo vazio ou ilegível: %s", charset, path)
     }

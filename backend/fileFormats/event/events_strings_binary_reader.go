@@ -252,7 +252,10 @@ func ReadEventBinaryFile(eventID string, pathAccessor common.FileAccessor, versi
 		return nil, fmt.Errorf("event file not found: %s", pathAccessor.ResolvedPath)
 	}
 
-	data := pathAccessor.ReadBytes()
+	data, err := pathAccessor.ReadBytes()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read event file: %w", err)
+	}
 	if data == nil {
 		return nil, fmt.Errorf("failed to read event file: %v", pathAccessor)
 	}

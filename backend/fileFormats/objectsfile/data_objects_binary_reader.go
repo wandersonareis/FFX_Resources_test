@@ -79,7 +79,7 @@ func ReadDataListWithIlist(filename string, languageCode string, creator func([]
 		return components.NewList[datastore.IGlobalLocalizedTextObject](0)
 	}
 
-	data, err := os.ReadFile(fileAccessor.ResolvedPath)
+	data, err := fileAccessor.ReadBytes()
 	if err != nil {
 		common.LogVerbose("Error reading file: %v", err)
 		return components.NewList[datastore.IGlobalLocalizedTextObject](0)
