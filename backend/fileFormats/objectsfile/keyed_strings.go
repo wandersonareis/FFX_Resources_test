@@ -12,8 +12,8 @@ import (
 type KeyedString struct {
 	Charset string
 	Version common.GameVersion
-/* 	Offset  uint16
-	Key     uint16 */
+	/* 	Offset  uint16
+	   	Key     uint16 */
 	Segment models.Segment
 	Bytes   []byte
 }
@@ -105,7 +105,7 @@ func (ks *KeyedString) SetString(str, newCharset string) {
 	if newCharset != "" && newCharset != ks.Charset {
 		ks.Charset = newCharset
 	}
-		ks.Bytes = converter.StringToBytes(str, ks.Charset, ks.Version)
+	ks.Bytes = converter.StringToBytes(str, ks.Charset, ks.Version)
 }
 
 func RebuildKeyedStrings(strings []datastore.IGlobalKeyedString, charset string, version common.GameVersion) []byte {

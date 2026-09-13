@@ -22,6 +22,10 @@ type (
 		SimplifiedDescription map[string]string      `json:"simplifiedDescription,omitempty"`
 		Effect                map[string]string      `json:"effect,omitempty"`
 		EffectDescription     map[string]string      `json:"effectDescription,omitempty"`
+		Bonus                 map[string]string      `json:"bonus,omitempty"`
+		BonusIconA            map[string]string      `json:"bonusIconA,omitempty"`
+		BonusIconB            map[string]string      `json:"bonusIconB,omitempty"`
+		BonusReserve          map[string]string      `json:"bonusReserve,omitempty"`
 		Abilities             []map[string]string    `json:"abilities,omitempty"`
 		SensorText            map[string]string      `json:"sensorText,omitempty"`
 		SimplifiedSensorText  map[string]string      `json:"simplifiedSensorText,omitempty"`
@@ -176,8 +180,6 @@ func updateLocalizedObjectEntries(itemsData []JSONEntry, objects []datastore.IGl
 	return nil
 }
 
-
-
 // createNewKeyedString creates a new KeyedString with the given text and charset.
 //
 // Parameters:
@@ -190,8 +192,8 @@ func createNewKeyedString(text string, charset string, version common.GameVersio
 	return &KeyedString{
 		Charset: charset,
 		Version: version,
-/* 		Offset:  0,
-	   		Key:     0, */
+		/* 		Offset:  0,
+		   		Key:     0, */
 		Segment: models.Segment{Offset: 0, Key: 0},
 		Bytes:   converter.StringToBytes(text, charset, version),
 	}

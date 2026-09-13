@@ -6,8 +6,8 @@ import (
 )
 
 var staticFields = []struct {
-	key  string
-	get  func(*JSONEntry) *map[string]string
+	key   string
+	get   func(*JSONEntry) *map[string]string
 	label string
 }{
 	{"name", func(e *JSONEntry) *map[string]string { return &e.Name }, "name"},
@@ -16,6 +16,10 @@ var staticFields = []struct {
 	{"simplifiedDescription", func(e *JSONEntry) *map[string]string { return &e.SimplifiedDescription }, "simplified description"},
 	{"effect", func(e *JSONEntry) *map[string]string { return &e.Effect }, "effect"},
 	{"effectDescription", func(e *JSONEntry) *map[string]string { return &e.EffectDescription }, "effect description"},
+	{"bonus", func(e *JSONEntry) *map[string]string { return &e.Bonus }, "bonus"},
+	{"BonusIconA", func(e *JSONEntry) *map[string]string { return &e.BonusIconA }, "bonus icon A"},
+	{"BonusIconB", func(e *JSONEntry) *map[string]string { return &e.BonusIconB }, "bonus icon B"},
+	{"BonusReserve", func(e *JSONEntry) *map[string]string { return &e.BonusReserve }, "bonus reserve"},
 	{"sensorText", func(e *JSONEntry) *map[string]string { return &e.SensorText }, "sensor text"},
 	{"simplifiedSensorText", func(e *JSONEntry) *map[string]string { return &e.SimplifiedSensorText }, "simplified sensor text"},
 	{"scanText", func(e *JSONEntry) *map[string]string { return &e.ScanText }, "scan text"},

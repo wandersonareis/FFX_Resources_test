@@ -49,8 +49,6 @@ func (b binding) export(locKey string) {
 	}
 }
 
-
-
 func abilityBindings(obj datastore.IGlobalLocalizedTextObject, data *JSONEntry) []binding {
 	var segs []datastore.IGlobalLocalizedKeyedStringObject
 	for i := 1; ; i++ {
@@ -101,6 +99,8 @@ func (e *JSONEntry) hasContent() bool {
 	if len(e.Name) > 0 || len(e.SimplifiedName) > 0 ||
 		len(e.Description) > 0 || len(e.SimplifiedDescription) > 0 ||
 		len(e.Effect) > 0 || len(e.EffectDescription) > 0 ||
+		len(e.Bonus) > 0 || len(e.BonusIconA) > 0 ||
+		len(e.BonusIconB) > 0 || len(e.BonusReserve) > 0 ||
 		len(e.SensorText) > 0 || len(e.SimplifiedSensorText) > 0 ||
 		len(e.ScanText) > 0 || len(e.SimplifiedScanText) > 0 {
 		return true

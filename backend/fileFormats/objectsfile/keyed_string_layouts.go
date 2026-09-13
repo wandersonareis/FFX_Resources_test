@@ -48,15 +48,30 @@ var (
 		},
 	}
 
+	AccessoryLayout = LayoutSet{
+		common.GameVersionFFX2: {
+			{"name", 0},
+			{"description", 0x1C},
+			{"effect", 0},
+		},
+	}
+
 	JobLayout = LayoutSet{
 		common.GameVersionFFX2: {
 			{"name", 0},
-			{"description", 0},
+			{"description", 0xA4},
 			{"effect", 0},
 		},
-		common.GameVersionLastMiss: {
+	}
+
+	PlateLayout = LayoutSet{
+		common.GameVersionFFX2: {
 			{"name", 0},
 			{"description", 0},
+			{"bonus", 0},
+			{"BonusIconA", 0},
+			{"BonusIconB", 0},
+			{"BonusReserve", 0x30},
 			{"effect", 0},
 		},
 	}

@@ -119,15 +119,24 @@ func ReadLastMissionWarehouseLocalizations(patternPath string) datastore.IBinary
 	return readWithLayout(patternPath, LastMissionWarehouseLayout, "LastMissionWarehouseTextObject", nil)
 }
 
-// ReadLastMissionDressLocalizations lê lastmiss dress com skip posicional.
-func ReadLastMissionDressLocalizations(patternPath string, skip int) datastore.IBinaryFile {
-	layout := skipLayout(skip)
-	return readWithLayout(patternPath, layout, "LastMissionDress", threePartLegacyFmt)
+// ReadLastMissionDressLocalizations lê lastmiss dress sem skip.
+func ReadLastMissionDressLocalizations(patternPath string) datastore.IBinaryFile {
+	return readWithLayout(patternPath, LastMissionDressLayout, "LastMissionDress", threePartLegacyFmt)
+}
+
+// ReadAcessoryLocalizations lê acessórios (ffx2) com Effect em posição absoluta.
+func ReadAccessoryLocalizations(patternPath string) datastore.IBinaryFile {
+	return readWithLayout(patternPath, AccessoryLayout, "AccessoryTextObject", threePartLegacyFmt)
 }
 
 // ReadJobLocalizations lê job (ffx2) com Effect em posição absoluta.
-func ReadJobLocalizations(patternPath string, effectSegmentPosition int64) datastore.IBinaryFile {
-	return readWithLayout(patternPath, JobLayoutAt(effectSegmentPosition), "JobTextObject", threePartLegacyFmt)
+func ReadJobLocalizations(patternPath string) datastore.IBinaryFile {
+	return readWithLayout(patternPath, JobLayout, "JobTextObject", threePartLegacyFmt)
+}
+
+// ReadPlateLocalizations lê plate (ffx2) com Effect.
+func ReadPlateLocalizations(patternPath string) datastore.IBinaryFile {
+	return readWithLayout(patternPath, PlateLayout, "PlateTextObject", threePartLegacyFmt)
 }
 
 // ReadNameDescriptionEffectAbilitiesLocalizations lê plate (ffx2) com Effect posicional.
