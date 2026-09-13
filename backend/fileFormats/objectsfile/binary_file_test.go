@@ -24,7 +24,7 @@ func TestBinaryFile(t *testing.T) {
 
 type integrityCase struct {
 	pattern string
-	read    func(string) datastore.IBinaryFile
+	read    func(string, common.GameVersion) datastore.IBinaryFile
 }
 
 // Arquivos exercitados por examples/main.go (runFFXExamples).
@@ -95,7 +95,7 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 	// Ciclo de integridade espelhando examples/main.go:
 	// Read -> ExportToJson -> ImportFromJson -> SaveToBinary -> hash.
 	integrityCycle := func(tmpRoot string, tc integrityCase) {
-		binFile := tc.read(tc.pattern)
+		binFile := tc.read(tc.pattern, interactions.NewInteractionService().FFXAppConfig().GetGameVersion())
 		Expect(binFile).NotTo(BeNil())
 		Expect(binFile.GetObjects()).NotTo(BeNil())
 		Expect(binFile.GetObjects().Len()).To(BeNumerically(">", 0))

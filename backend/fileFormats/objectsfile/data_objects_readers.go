@@ -3,13 +3,11 @@ package objectsfile
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/datastore"
-	"ffxresources/backend/interactions"
 )
 
 // readWithLayout constrói um ObjectBinaryFile cujo creator instancia o
 // KeyedStringFile genérico a partir do layout e formatter fornecidos.
-func readWithLayout(patternPath string, layouts LayoutSet, typeName string, formatter StringFormatter) datastore.IBinaryFile {
-	gameVersion := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+func readWithLayout(patternPath string, gameVersion common.GameVersion, layouts LayoutSet, typeName string, formatter StringFormatter) datastore.IBinaryFile {
 	if _, ok := layouts[gameVersion.Normalize()]; !ok {
 		common.LogVerbose("%s is not compatible with game version %s", typeName, gameVersion)
 		return nil
@@ -55,23 +53,22 @@ func newObjectBinaryFile(patternPath string, creatorFunc CreatorFunc, gameVersio
 }
 
 // ReadNameOnlyLocalizations lê arquivos ffx com Name + SimplifiedName contíguos.
-func ReadNameOnlyLocalizations(patternPath string) datastore.IBinaryFile {
-	return readWithLayout(patternPath, NameOnlyLayout, "NameOnlyTextObject", nameOnlyLegacyFmt)
+func ReadNameOnlyLocalizations(patternPath string, gameVersion common.GameVersion) datastore.IBinaryFile {
+	return readWithLayout(patternPath, gameVersion, NameOnlyLayout, "NameOnlyTextObject", nameOnlyLegacyFmt)
 }
 
 // ReadNameOnlyV2Localizations lê arquivos com apenas um campo Name.
-func ReadNameOnlyV2Localizations(patternPath string) datastore.IBinaryFile {
-	return readWithLayout(patternPath, NameOnlyV2Layout, "NameOnlyTextObjectV2", nil)
+func ReadNameOnlyV2Localizations(patternPath string, gameVersion common.GameVersion) datastore.IBinaryFile {
+	return readWithLayout(patternPath, gameVersion, NameOnlyV2Layout, "NameOnlyTextObjectV2", nil)
 }
 
 // ReadCommandLocalizations lê arquivos de comando (CommandTextObject v1/v2).
-func ReadCommandLocalizations(patternPath string) datastore.IBinaryFile {
-	gameVersion := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+func ReadCommandLocalizations(patternPath string, gameVersion common.GameVersion) datastore.IBinaryFile {
 	switch gameVersion.Normalize() {
 	case common.GameVersionFFX:
-		return readWithLayout(patternPath, CommandLayout, "CommandTextObject", commandLegacyFmt)
+		return readWithLayout(patternPath, gameVersion, CommandLayout, "CommandTextObject", commandLegacyFmt)
 	case common.GameVersionFFX2, common.GameVersionLastMiss:
-		return readWithLayout(patternPath, CommandV2Layout, "CommandTextObjectV2", nil)
+		return readWithLayout(patternPath, gameVersion, CommandV2Layout, "CommandTextObjectV2", nil)
 	default:
 		common.LogVerbose("CommandTextObject has unsupported game version %s", gameVersion)
 		return nil
@@ -79,80 +76,79 @@ func ReadCommandLocalizations(patternPath string) datastore.IBinaryFile {
 }
 
 // ReadLastMissionLocalizations lê lastmiss com Name/Description/Effect/EffectDescription.
-func ReadLastMissionLocalizations(patternPath string) datastore.IBinaryFile {
-	return readWithLayout(patternPath, LastMissionLayout, "LastMissionTextObject", nil)
+func ReadLastMissionLocalizations(patternPath string, gameVersion common.GameVersion) datastore.IBinaryFile {
+	return readWithLayout(patternPath, gameVersion, LastMissionLayout, "LastMissionTextObject", nil)
 }
 
 // ReadLastMissionMesLocalizations lê lm_mes.bin: name + description contíguos, sem skip.
-func ReadLastMissionMesLocalizations(patternPath string) datastore.IBinaryFile {
-	return readWithLayout(patternPath, LastMissionMesLayout, "LastMissionMesTextObject", nil)
+func ReadLastMissionMesLocalizations(patternPath string, gameVersion common.GameVersion) datastore.IBinaryFile {
+	return readWithLayout(patternPath, gameVersion, LastMissionMesLayout, "LastMissionMesTextObject", nil)
 }
 
 // ReadLastMissionCommandLocalizations lê lastmiss com skip posicional.
-func ReadLastMissionCommandLocalizations(patternPath string, skip int) datastore.IBinaryFile {
+func ReadLastMissionCommandLocalizations(patternPath string, gameVersion common.GameVersion, skip int) datastore.IBinaryFile {
 	layout := skipLayout(skip)
-	return readWithLayout(patternPath, layout, "LastMissionCommand", threePartLegacyFmt)
+	return readWithLayout(patternPath, gameVersion, layout, "LastMissionCommand", threePartLegacyFmt)
 }
 
 // ReadLastMissionMonmagicLocalizations lê lm_monmagic.bin: name/description skip 4, effect sem skip.
-func ReadLastMissionMonmagicLocalizations(patternPath string) datastore.IBinaryFile {
-	return readWithLayout(patternPath, LastMissionMonmagicLayout, "LastMissionMonmagicTextObject", threePartLegacyFmt)
+func ReadLastMissionMonmagicLocalizations(patternPath string, gameVersion common.GameVersion) datastore.IBinaryFile {
+	return readWithLayout(patternPath, gameVersion, LastMissionMonmagicLayout, "LastMissionMonmagicTextObject", threePartLegacyFmt)
 }
 
 // ReadLastMissionMonsterLocalizations lê lm_monster.bin: name + description, sem skip.
-func ReadLastMissionMonsterLocalizations(patternPath string) datastore.IBinaryFile {
-	return readWithLayout(patternPath, LastMissionMonsterLayout, "LastMissionMonsterTextObject", nil)
+func ReadLastMissionMonsterLocalizations(patternPath string, gameVersion common.GameVersion) datastore.IBinaryFile {
+	return readWithLayout(patternPath, gameVersion, LastMissionMonsterLayout, "LastMissionMonsterTextObject", nil)
 }
 
 // ReadLastMissionPlayerLocalizations lê lm_player.bin: name + description, sem skip.
-func ReadLastMissionPlayerLocalizations(patternPath string) datastore.IBinaryFile {
-	return readWithLayout(patternPath, LastMissionPlayerLayout, "LastMissionPlayerTextObject", nil)
+func ReadLastMissionPlayerLocalizations(patternPath string, gameVersion common.GameVersion) datastore.IBinaryFile {
+	return readWithLayout(patternPath, gameVersion, LastMissionPlayerLayout, "LastMissionPlayerTextObject", nil)
 }
 
 // ReadLastMissionTrapLocalizations lê lm_trap.bin: name + description + effect, sem skip.
-func ReadLastMissionTrapLocalizations(patternPath string) datastore.IBinaryFile {
-	return readWithLayout(patternPath, LastMissionTrapLayout, "LastMissionTrapTextObject", threePartLegacyFmt)
+func ReadLastMissionTrapLocalizations(patternPath string, gameVersion common.GameVersion) datastore.IBinaryFile {
+	return readWithLayout(patternPath, gameVersion, LastMissionTrapLayout, "LastMissionTrapTextObject", threePartLegacyFmt)
 }
 
 // ReadLastMissionWarehouseLocalizations lê lm_warehouse.bin: name + description, sem skip.
-func ReadLastMissionWarehouseLocalizations(patternPath string) datastore.IBinaryFile {
-	return readWithLayout(patternPath, LastMissionWarehouseLayout, "LastMissionWarehouseTextObject", nil)
+func ReadLastMissionWarehouseLocalizations(patternPath string, gameVersion common.GameVersion) datastore.IBinaryFile {
+	return readWithLayout(patternPath, gameVersion, LastMissionWarehouseLayout, "LastMissionWarehouseTextObject", nil)
 }
 
 // ReadLastMissionDressLocalizations lê lastmiss dress sem skip.
-func ReadLastMissionDressLocalizations(patternPath string) datastore.IBinaryFile {
-	return readWithLayout(patternPath, LastMissionDressLayout, "LastMissionDress", threePartLegacyFmt)
+func ReadLastMissionDressLocalizations(patternPath string, gameVersion common.GameVersion) datastore.IBinaryFile {
+	return readWithLayout(patternPath, gameVersion, LastMissionDressLayout, "LastMissionDress", threePartLegacyFmt)
 }
 
 // ReadAcessoryLocalizations lê acessórios (ffx2) com Effect em posição absoluta.
-func ReadAccessoryLocalizations(patternPath string) datastore.IBinaryFile {
-	return readWithLayout(patternPath, AccessoryLayout, "AccessoryTextObject", threePartLegacyFmt)
+func ReadAccessoryLocalizations(patternPath string, gameVersion common.GameVersion) datastore.IBinaryFile {
+	return readWithLayout(patternPath, gameVersion, AccessoryLayout, "AccessoryTextObject", threePartLegacyFmt)
 }
 
 // ReadJobLocalizations lê job (ffx2) com Effect em posição absoluta.
-func ReadJobLocalizations(patternPath string) datastore.IBinaryFile {
-	return readWithLayout(patternPath, JobLayout, "JobTextObject", threePartLegacyFmt)
+func ReadJobLocalizations(patternPath string, gameVersion common.GameVersion) datastore.IBinaryFile {
+	return readWithLayout(patternPath, gameVersion, JobLayout, "JobTextObject", threePartLegacyFmt)
 }
 
 // ReadPlateLocalizations lê plate (ffx2) com Effect.
-func ReadPlateLocalizations(patternPath string) datastore.IBinaryFile {
-	return readWithLayout(patternPath, PlateLayout, "PlateTextObject", threePartLegacyFmt)
+func ReadPlateLocalizations(patternPath string, gameVersion common.GameVersion) datastore.IBinaryFile {
+	return readWithLayout(patternPath, gameVersion, PlateLayout, "PlateTextObject", threePartLegacyFmt)
 }
 
 // ReadNameDescriptionEffectAbilitiesLocalizations lê plate (ffx2) com Effect posicional.
-func ReadNameDescriptionEffectAbilitiesLocalizations(patternPath string, abilitiesCount int,
+func ReadNameDescriptionEffectAbilitiesLocalizations(patternPath string, gameVersion common.GameVersion, abilitiesCount int,
 	effectSegmentPosition int64) datastore.IBinaryFile {
-	return readWithLayout(patternPath, JobLayoutAt(effectSegmentPosition), "NameDescriptionEffectAbilityTextObject", threePartLegacyFmt)
+	return readWithLayout(patternPath, gameVersion, JobLayoutAt(effectSegmentPosition), "NameDescriptionEffectAbilityTextObject", threePartLegacyFmt)
 }
 
 // ReadMonsterLocalizations lê monster (ffx) com sensor/scan.
-func ReadMonsterLocalizations(patternPath string) datastore.IBinaryFile {
-	return readWithLayout(patternPath, MonsterLayout, "MonsterTextObject", nil)
+func ReadMonsterLocalizations(patternPath string, gameVersion common.GameVersion) datastore.IBinaryFile {
+	return readWithLayout(patternPath, gameVersion, MonsterLayout, "MonsterTextObject", nil)
 }
 
 // ReadWeaponNamesLocalizations mantém o tipo específico de armas.
-func ReadWeaponNamesLocalizations(patternPath string) datastore.IBinaryFile {
-	gameVersion := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+func ReadWeaponNamesLocalizations(patternPath string, gameVersion common.GameVersion) datastore.IBinaryFile {
 	if gameVersion.Normalize() != common.GameVersionFFX {
 		common.LogVerbose("ReadWeaponNamesLocalizations is only compatible with FFX (ffx), but got game version %s", gameVersion)
 		return nil
