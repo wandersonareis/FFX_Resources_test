@@ -102,13 +102,24 @@ var _ = Describe("PrepareCharset", Ordered, func() {
 	})
 
 	Context("version identity mapping", func() {
-		It("should parse and normalize game versions", func() {
-			Expect(common.ParseGameVersion("ffx")).To(Equal(common.GameVersionFFX))
-			Expect(common.ParseGameVersion("FFX-2")).To(Equal(common.GameVersionFFX2))
-			Expect(common.ParseGameVersion("lastmiss")).To(Equal(common.GameVersionLastMiss))
-			Expect(common.GameVersion("bogus").Normalize()).To(Equal(common.GameVersionFFX))
-			fmt.Fprintf(GinkgoWriter, "version models OK\n")
-		})
+	It("should parse and validate game versions", func() {
+		gv, err := common.ParseGameVersionStrict("ffx")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(gv).To(Equal(common.GameVersionFFX))
+
+		gv, err = common.ParseGameVersionStrict("FFX-2")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(gv).To(Equal(common.GameVersionFFX2))
+
+		gv, err = common.ParseGameVersionStrict("lastmiss")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(gv).To(Equal(common.GameVersionLastMiss))
+
+		_, err = common.ParseGameVersionStrict("bogus")
+		Expect(err).To(HaveOccurred())
+
+		fmt.Fprintf(GinkgoWriter, "version models OK\n")
+	})
 	})
 
 	Context("when charset file does not exist", func() {

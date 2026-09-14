@@ -79,7 +79,7 @@ func (h *BinaryHeaderV2) GetDataLength() int {
 }
 
 func NewBinaryHeader(version common.GameVersion) IBinaryHeader {
-	if version.Normalize() == common.GameVersionFFX {
+	if version == common.GameVersionFFX {
 		return &BinaryHeaderV1{}
 	}
 	return &BinaryHeaderV2{}

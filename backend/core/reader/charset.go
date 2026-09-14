@@ -87,8 +87,7 @@ func applySlotFixes(runes []rune, fixes []slotFix, charset string) {
 const maxSingleByteSlots = 0xFF - 0x30 + 1
 
 func PrepareCharset(version common.GameVersion, charset string) error {
-    version = version.Normalize()
-    path := filepath.Join(
+	path := filepath.Join(
         common.GetPathRootForVersion(version),
         common.OriginalsFolder,
         common.GetEncodingPathForVersion(version, charset),

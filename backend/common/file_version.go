@@ -23,7 +23,7 @@ func WithVersionSuffix(fileName string) string {
 
 // WithVersionSuffixFor é a variante explícita, sem ler o estado global.
 func WithVersionSuffixFor(fileName string, gv GameVersion) string {
-	suffix := gv.Normalize().Suffix()
+	suffix := gv.Suffix()
 	ext := filepath.Ext(fileName)
 	base := strings.TrimSuffix(fileName, ext)
 	return base + suffix + ext

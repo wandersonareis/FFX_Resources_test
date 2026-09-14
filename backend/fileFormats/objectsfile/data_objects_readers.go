@@ -8,11 +8,6 @@ import (
 // readWithLayout constrói um ObjectBinaryFile cujo creator instancia o
 // KeyedStringFile genérico a partir do layout e formatter fornecidos.
 func readWithLayout(patternPath string, gameVersion common.GameVersion, layouts LayoutSet, typeName string, formatter StringFormatter) datastore.IBinaryFile {
-	if _, ok := layouts[gameVersion.Normalize()]; !ok {
-		common.LogVerbose("%s is not compatible with game version %s", typeName, gameVersion)
-		return nil
-	}
-
 	creatorFunc := func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
 		return NewKeyedStringFile(cBytes, sBytes, hLen, lang, gameVersion, layouts, typeName)
 	}
@@ -64,7 +59,7 @@ func ReadNameOnlyV2Localizations(patternPath string, gameVersion common.GameVers
 
 // ReadCommandLocalizations lê arquivos de comando (CommandTextObject v1/v2).
 func ReadCommandLocalizations(patternPath string, gameVersion common.GameVersion) datastore.IBinaryFile {
-	switch gameVersion.Normalize() {
+	switch gameVersion {
 	case common.GameVersionFFX:
 		return readWithLayout(patternPath, gameVersion, CommandLayout, "CommandTextObject", commandLegacyFmt)
 	case common.GameVersionFFX2, common.GameVersionLastMiss:
@@ -149,7 +144,7 @@ func ReadMonsterLocalizations(patternPath string, gameVersion common.GameVersion
 
 // ReadWeaponNamesLocalizations mantém o tipo específico de armas.
 func ReadWeaponNamesLocalizations(patternPath string, gameVersion common.GameVersion) datastore.IBinaryFile {
-	if gameVersion.Normalize() != common.GameVersionFFX {
+	if gameVersion != common.GameVersionFFX {
 		common.LogVerbose("ReadWeaponNamesLocalizations is only compatible with FFX (ffx), but got game version %s", gameVersion)
 		return nil
 	}

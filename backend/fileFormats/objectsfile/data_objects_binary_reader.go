@@ -34,7 +34,7 @@ func PopulateDataObjectLocalizationsWithIlist(path string, objects components.IL
 		fullPath := filepath.Join(common.GetLocalizationRoot(locKey), path)
 
 		var localizationData components.IList[datastore.IGlobalLocalizedTextObject]
-		if version.Normalize() == common.GameVersionFFX {
+		if version == common.GameVersionFFX {
 			localizationData = ReadDataListWithIlist(fullPath, locKey, creator, version)
 		} else {
 			localizationData = ReadDataListWithIlistV2(fullPath, locKey, creator)
@@ -112,10 +112,7 @@ func ReadDataListWithIlist(filename string, languageCode string, creator func([]
 //
 // Returns: IList[ILocalizedTextObject] containing localized text entries, or nil if parsing fails
 func ParseDataListWithIlist(data []byte, languageCode string, creator func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error), version common.GameVersion) components.IList[datastore.IGlobalLocalizedTextObject] {
-	// No FFX-2 (v2) o cabeçalho é de 0x20 bytes e usa campos uint32 a partir do
-	// offset 16. Quando a versão do jogo é FFX-2, delegamos ao parser V2 (que lê
-	// offset := 16 e uint32), idêntico a ParseDataListWithIlistV2.
-	if version.Normalize() != common.GameVersionFFX {
+	if version != common.GameVersionFFX {
 		return ParseDataListWithIlistV2(data, languageCode, creator)
 	}
 

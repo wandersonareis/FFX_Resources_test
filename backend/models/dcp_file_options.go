@@ -19,7 +19,7 @@ type (
 )
 
 func NewDcpFileOptions(gameVersion common.GameVersion) IDcpFileProperties {
-	switch gameVersion.Normalize() {
+	switch gameVersion {
 	case common.GameVersionFFX2, common.GameVersionLastMiss:
 		return NewFFX2DcpFile()
 	default:

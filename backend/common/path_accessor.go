@@ -10,7 +10,7 @@ func GetEncodingDir() string {
 // de estado global ("ffx" -> ffx_encoding, "ffx2" -> ffx2_encoding,
 // "lastmiss" reaproveita ffx2_encoding).
 func GetEncodingDirForVersion(gv GameVersion) string {
-	switch gv.Normalize() {
+	switch gv {
 	case GameVersionFFX2, GameVersionLastMiss:
 		return "ffx2_encoding"
 	default:
@@ -20,7 +20,11 @@ func GetEncodingDirForVersion(gv GameVersion) string {
 
 // GetEncodingDirForVersionString mantém compatibilidade com chamadores legados.
 func GetEncodingDirForVersionString(gameVersionString string) string {
-	return GetEncodingDirForVersion(ParseGameVersion(gameVersionString))
+	gv, err := ParseGameVersionStrict(gameVersionString)
+	if err != nil {
+		gv = GameVersionFFX
+	}
+	return GetEncodingDirForVersion(gv)
 }
 
 func GetEncodingPath(charset string) string {
@@ -31,9 +35,9 @@ func GetEncodingPath(charset string) string {
 // explícita, sem ler o estado global.
 func GetEncodingPathForVersion(gv GameVersion, charset string) string {
 	encodingDir := GetEncodingDirForVersion(gv)
-	base := string(gv.Normalize())
-	if gv.Normalize() == GameVersionLastMiss {
-		base = string(GameVersionFFX2)
+	base := gv.String()
+	if gv == GameVersionLastMiss {
+		base = GameVersionFFX2.String()
 	}
 	return filepath.Join(encodingDir, base+"sjistbl_"+charset+".bin")
 }
@@ -46,17 +50,21 @@ func GetPathRoot() string {
 // GetPathRootForVersion monta ffx_ps2/<versão>/master para uma versão explícita.
 // LastMiss vive sob a árvore ffx2.
 func GetPathRootForVersion(gv GameVersion) string {
-	switch gv.Normalize() {
+	switch gv {
 	case GameVersionFFX2, GameVersionLastMiss:
-		return filepath.Join("ffx_ps2", string(GameVersionFFX2), "master")
+		return filepath.Join("ffx_ps2", GameVersionFFX2.String(), "master")
 	default:
-		return filepath.Join("ffx_ps2", string(gv.Normalize()), "master")
+		return filepath.Join("ffx_ps2", gv.String(), "master")
 	}
 }
 
 // GetPathRootForVersionString mantém compatibilidade com chamadores legados.
 func GetPathRootForVersionString(gameVersionString string) string {
-	return GetPathRootForVersion(ParseGameVersion(gameVersionString))
+	gv, err := ParseGameVersionStrict(gameVersionString)
+	if err != nil {
+		gv = GameVersionFFX
+	}
+	return GetPathRootForVersion(gv)
 }
 
 func GetPathOriginalsRoot() string {

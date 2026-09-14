@@ -77,11 +77,6 @@ func defaultLocations() map[string]string {
 func (c *AppConfig) validateConfig() error {
 	changed := false
 
-	if !c.gameVersion.Normalize().IsValid() {
-		c.gameVersion = common.GameVersionFFX
-		changed = true
-	}
-
 	if c.locations == nil {
 		c.locations = defaultLocations()
 		changed = true
@@ -115,7 +110,7 @@ func (c *AppConfig) validateConfig() error {
 func (c *AppConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(appConfigJSON{
 		Locations:   c.locations,
-		GameVersion: c.gameVersion.Normalize(),
+		GameVersion: c.gameVersion,
 	})
 }
 
@@ -133,10 +128,7 @@ func (c *AppConfig) UnmarshalJSON(data []byte) error {
 		}
 	}
 	c.locations = merged
-	c.gameVersion = aux.GameVersion.Normalize()
-	if !c.gameVersion.IsValid() {
-		c.gameVersion = common.GameVersionFFX
-	}
+	c.gameVersion = aux.GameVersion
 	return nil
 }
 
@@ -191,12 +183,13 @@ func (c *AppConfig) FromJson() error {
 }
 
 func (c *AppConfig) GetGameVersion() common.GameVersion {
-	return c.gameVersion.Normalize()
+	return c.gameVersion
 }
 
 func (c *AppConfig) SetGameVersion(version common.GameVersion) {
-	c.gameVersion = version.Normalize()
+	c.gameVersion = version
 	common.SetCurrentGameVersion(c.gameVersion)
+	
 	_ = c.ToJson()
 }
 

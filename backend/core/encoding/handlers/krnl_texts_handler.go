@@ -26,7 +26,7 @@ func NewKrnlTextsHandler() IKernelTextHandler {
 }
 
 func (kth *kernelTextHandler) GetKernelTextHandler(gameVersion common.GameVersion) (string, error) {
-	switch gameVersion.Normalize() {
+	switch gameVersion {
 	case common.GameVersionFFX:
 		return kth.ffxKernelTextHandler()
 	case common.GameVersionFFX2, common.GameVersionLastMiss:

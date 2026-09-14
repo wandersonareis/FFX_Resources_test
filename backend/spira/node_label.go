@@ -16,9 +16,9 @@ func getTreeRootLabel(gameVersion common.GameVersion) string {
 	var rootNodeLabel string
 
 	switch gameVersion {
-	case common.FFX:
+	case common.GameVersionFFX:
 		rootNodeLabel = "Final Fantasy X"
-	case common.FFX2:
+	case common.GameVersionFFX2:
 		rootNodeLabel = "Final Fantasy X-2"
 	default:
 		rootNodeLabel = "Unknown version"

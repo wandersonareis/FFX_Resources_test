@@ -71,6 +71,7 @@ func NewInteractionService() *InteractionService {
 		}
 
 		common.SetCurrentGameVersion(config.GetGameVersion())
+		
 	}
 	return interactionInstance
 }

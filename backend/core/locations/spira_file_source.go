@@ -87,7 +87,7 @@ func (g *Source) IsDir() bool {
 }
 
 func (g *Source) PopulateDuplicatesFiles() {
-	switch g.FileInfo.Version.Normalize() {
+	switch g.FileInfo.Version {
 	case common.GameVersionFFX:
 		//TODO: return NewFfxDuplicate().AddFfxTextDuplicate()
 		fallthrough

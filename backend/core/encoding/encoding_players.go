@@ -90,8 +90,7 @@ var (
 )
 
 func GetPlayerChar(pc byte, version common.GameVersion) string {
-	v := version.Normalize()
-	if v == common.GameVersionFFX2 || v == common.GameVersionLastMiss {
+	if version == common.GameVersionFFX2 || version == common.GameVersionLastMiss {
 		if name, ok := playerCharMapV2[pc]; ok {
 			return name
 		}

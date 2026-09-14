@@ -100,7 +100,11 @@ func eventOnSetGameVersion(ctx context.Context) {
 	runtime.EventsOn(ctx, "GameVersionChanged", func(data ...any) {
 		fmt.Println("GameVersionChanged", data[0])
 		
-		gameVer := common.ParseGameVersion(data[0].(string))
+		gameVer, err := common.ParseGameVersionStrict(data[0].(string))
+		if err != nil {
+			fmt.Println("ParseGameVersion error:", err)
+			return
+		}
 		updateGameVersion(gameVer)
 
 		emitGameVersion(ctx)

@@ -23,7 +23,7 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
     var (
         out               strings.Builder
         charset           = ffxencoding.GetCharsetForLanguage(localization)
-        gameVersion       = version.Normalize()
+        gameVersion       = version
         extraFiveSections bool
         buf               = bytes.NewReader(table[offset:])
     )

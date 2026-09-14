@@ -3,7 +3,6 @@ package interactions
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/interfaces"
-	"fmt"
 )
 
 type IGameLocation interface {
@@ -35,14 +34,10 @@ func (g *GameLocation) WithTargetDirectory(path string) IGameLocation {
 }
 
 func (g *GameLocation) IsSpira() error {
-	version, err := common.CheckFFXPath(g.GetTargetDirectory())
+	_, err := common.CheckFFXPath(g.GetTargetDirectory())
 	if err != nil {
 		return err
 	}
 
-	if version.IsValid() {
-		return nil
-	}
-
-	return fmt.Errorf("path does not contain a valid spira file: %s", g.GetTargetDirectory())
+	return nil
 }

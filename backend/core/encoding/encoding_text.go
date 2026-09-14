@@ -14,31 +14,25 @@ var (
 	CharToByteMaps = make(map[common.GameVersion]map[string]map[rune]uint)
 )
 
-func normalizeVersion(version common.GameVersion) common.GameVersion {
-	return version.Normalize()
-}
-
 func ensureVersionBucket(version common.GameVersion) common.GameVersion {
-	v := normalizeVersion(version)
 	if ByteToCharMaps == nil {
 		ByteToCharMaps = make(map[common.GameVersion]map[string]map[uint]rune)
 	}
 	if CharToByteMaps == nil {
 		CharToByteMaps = make(map[common.GameVersion]map[string]map[rune]uint)
 	}
-	if ByteToCharMaps[v] == nil {
-		ByteToCharMaps[v] = make(map[string]map[uint]rune)
+	if ByteToCharMaps[version] == nil {
+		ByteToCharMaps[version] = make(map[string]map[uint]rune)
 	}
-	if CharToByteMaps[v] == nil {
-		CharToByteMaps[v] = make(map[string]map[rune]uint)
+	if CharToByteMaps[version] == nil {
+		CharToByteMaps[version] = make(map[string]map[rune]uint)
 	}
-	return v
+	return version
 }
 
 // ByteToChar resolve um byte para rune no charset da versão indicada.
 func ByteToChar(hex uint, charset string, version common.GameVersion) (rune, bool) {
-	v := normalizeVersion(version)
-	byCharset, exists := ByteToCharMaps[v]
+	byCharset, exists := ByteToCharMaps[version]
 	if !exists {
 		return 0, false
 	}
@@ -53,8 +47,7 @@ func ByteToChar(hex uint, charset string, version common.GameVersion) (rune, boo
 
 // CharToByte resolve uma rune para byte no charset da versão indicada.
 func CharToByte(chr rune, charset string, version common.GameVersion) (uint, bool) {
-	v := normalizeVersion(version)
-	byCharset, exists := CharToByteMaps[v]
+	byCharset, exists := CharToByteMaps[version]
 	if !exists {
 		return 0, false
 	}
@@ -76,8 +69,7 @@ func SetCharMap(version common.GameVersion, charset string, byteToCharMap map[ui
 
 // GetByteToCharMap retorna o mapa byte->rune do charset na versão indicada (pode ser nil).
 func GetByteToCharMap(version common.GameVersion, charset string) map[uint]rune {
-	v := normalizeVersion(version)
-	if byCharset, ok := ByteToCharMaps[v]; ok {
+	if byCharset, ok := ByteToCharMaps[version]; ok {
 		return byCharset[charset]
 	}
 	return nil
@@ -85,8 +77,7 @@ func GetByteToCharMap(version common.GameVersion, charset string) map[uint]rune 
 
 // GetCharToByteMap retorna o mapa rune->byte do charset na versão indicada (pode ser nil).
 func GetCharToByteMap(version common.GameVersion, charset string) map[rune]uint {
-	v := normalizeVersion(version)
-	if byCharset, ok := CharToByteMaps[v]; ok {
+	if byCharset, ok := CharToByteMaps[version]; ok {
 		return byCharset[charset]
 	}
 	return nil
@@ -94,9 +85,8 @@ func GetCharToByteMap(version common.GameVersion, charset string) map[rune]uint 
 
 // ClearCharMaps limpa os charsets da versão indicada.
 func ClearCharMaps(version common.GameVersion) {
-	v := normalizeVersion(version)
-	delete(ByteToCharMaps, v)
-	delete(CharToByteMaps, v)
+	delete(ByteToCharMaps, version)
+	delete(CharToByteMaps, version)
 }
 
 // ClearAllCharMaps limpa todas as versões (útil em testes).

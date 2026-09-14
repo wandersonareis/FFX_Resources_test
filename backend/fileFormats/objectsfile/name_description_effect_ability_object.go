@@ -31,7 +31,7 @@ func NewNameDescriptionEffectAbilityTextObject(
 	languageCode string,
 	version common.GameVersion,
 ) (*NameDescriptionEffectAbilityTextObject, error) {
-	if version.Normalize() != common.GameVersionFFX2 && version.Normalize() != common.GameVersionLastMiss {
+	if version != common.GameVersionFFX && version != common.GameVersionFFX2 && version != common.GameVersionLastMiss {
 		return nil, fmt.Errorf("NameDescriptionEffectAbilityTextObject is only compatible with FFX-2 (ffx2), but got game version %s", version)
 	}
 

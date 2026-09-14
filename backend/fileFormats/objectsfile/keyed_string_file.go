@@ -64,10 +64,9 @@ func NewKeyedStringFileAt(
 	typeName string,
 	start int,
 ) (*KeyedStringFile, error) {
-	v := version.Normalize()
-	fields, ok := layouts[v]
+	fields, ok := layouts[version]
 	if !ok {
-		return nil, fmt.Errorf("%s is not compatible with game version %s", typeName, v)
+		return nil, fmt.Errorf("%s is not compatible with game version %s", typeName, version)
 	}
 	if len(bytes) < headerLength {
 		return nil, fmt.Errorf("insufficient data to create %s: have %d bytes, need at least %d", typeName, len(bytes), headerLength)

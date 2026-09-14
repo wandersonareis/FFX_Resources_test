@@ -48,7 +48,7 @@ var weaponRefs = []struct {
 }
 
 func NewWeaponsNameTextObject(bytes []byte, stringBytes []byte, headerLength int, languageCode string, gameVersion common.GameVersion) (*WeaponsNameTextObject, error) {
-	if gameVersion.Normalize() != common.GameVersionFFX {
+	if gameVersion != common.GameVersionFFX {
 		return nil, fmt.Errorf("WeaponsNameTextObject is only compatible with FFX (ffx), but got game version %s", gameVersion)
 	}
 

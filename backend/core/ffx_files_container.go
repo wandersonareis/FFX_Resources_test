@@ -67,7 +67,7 @@ func (ffx2 *FFX2LockitFile) GetPartsSizes() []int {
 }
 
 func NewLockitFileOptions(gameVersion common.GameVersion) ILockitFileOptions {
-	switch gameVersion.Normalize() {
+	switch gameVersion {
 	case common.GameVersionFFX:
 		return &FFXLockitFile{}
 	case common.GameVersionFFX2:

@@ -76,7 +76,7 @@ func (lfi *lockitFileCompressorIntegrity) verifyDataIntegrity(file string, locki
 		return fmt.Errorf("error when checking lockit file integrity:: %w", err)
 	}
 
-		gameVersion := interactions.CurrentGameVersion()
+	gameVersion := interactions.CurrentGameVersion()
 	if err := lfi.temporaryPartsDecoder(tempExtractedBinaryPartsList, lockitEncoding, gameVersion); err != nil {
 		return err
 	}

@@ -91,7 +91,7 @@ func getFileInfo(aPath string) (os.FileInfo, error) {
 
 func determineVersion(aPath string) (common.GameVersion, error) {
 	v := getVersionFromPrefix(aPath)
-	if !v.IsValid() {
+	if v.String() == "" {
 		return common.GameVersionFFX, fmt.Errorf("invalid path: %s", aPath)
 	}
 	return v, nil
@@ -148,12 +148,12 @@ func getVersionFromPrefix(path string) common.GameVersion {
 	case rxFFX.MatchString(path):
 		return common.GameVersionFFX
 	default:
-		return ""
+		return common.GameVersion{}
 	}
 }
 
 func getRelativePath(path string, version common.GameVersion) string {
-	switch version.Normalize() {
+	switch version {
 	case common.GameVersionFFX:
 		idx := strings.Index(path, "FFX"+string(os.PathSeparator))
 		if idx < 0 {

@@ -161,7 +161,7 @@ func checkPS2Version1(path string) (GameVersion, string, bool) {
 	if hasExactComponent(path, p1) && hasExactComponent(path, p2) && hasExactComponent(path, p3) {
 		return GameVersionFFX, p1, true
 	}
-	return "", "", false
+	return GameVersion{}, "", false
 }
 
 func checkPS2Version2(path string) (GameVersion, string, bool) {
@@ -171,7 +171,7 @@ func checkPS2Version2(path string) (GameVersion, string, bool) {
 	if hasExactComponent(path, p1) && hasExactComponent(path, p2) && hasExactComponent(path, p3) {
 		return GameVersionFFX2, p1, true
 	}
-	return "", "", false
+	return GameVersion{}, "", false
 }
 
 func checkDataVersion1(path string) (GameVersion, string, bool) {
@@ -181,7 +181,7 @@ func checkDataVersion1(path string) (GameVersion, string, bool) {
 	if hasExactComponent(path, p1) && hasExactComponent(path, p2) && hasExactComponent(path, p3) {
 		return GameVersionFFX, p1, true
 	}
-	return "", "", false
+	return GameVersion{}, "", false
 }
 
 func checkDataVersion2(path string) (GameVersion, string, bool) {
@@ -191,7 +191,7 @@ func checkDataVersion2(path string) (GameVersion, string, bool) {
 	if hasExactComponent(path, p1) && hasExactComponent(path, p2) && hasExactComponent(path, p3) {
 		return GameVersionFFX2, p1, true
 	}
-	return "", "", false
+	return GameVersion{}, "", false
 }
 
 // CheckFFXPath resolves the given path to its absolute form and then validates it
