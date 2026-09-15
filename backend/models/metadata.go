@@ -10,8 +10,15 @@ import (
 
 // FileMetadata wraps the SpiraFileInfo of an ORIGINAL game binary so an exported
 // artifact can be mapped back to the file it came from (for binary reconstruction).
+// The Version/DirPattern/FileName/IndexCount fields are the new layout metadata:
+// they are omitempty so legacy exports (file_info only) keep parsing, and the
+// legacy payload ignores them when reading new exports.
 type FileMetadata struct {
-	FileInfo SpiraFileInfo `json:"file_info"`
+	FileInfo   SpiraFileInfo       `json:"file_info"`
+	Version    *common.GameVersion `json:"version,omitempty"`
+	DirPattern string              `json:"dir_pattern,omitempty"`
+	FileName   string              `json:"file_name,omitempty"`
+	IndexCount int                 `json:"index_count,omitempty"`
 }
 
 // NewFileMetadata creates a FileMetadata from a SpiraFileInfo (nil-safe).
@@ -21,6 +28,21 @@ func NewFileMetadata(info *SpiraFileInfo) *FileMetadata {
 	}
 	cp := *info
 	return &FileMetadata{FileInfo: cp}
+}
+
+// NewObjectFileMetadata creates a FileMetadata for an objectsfile-type binary
+// carrying the new layout metadata (version, dir pattern, file name, index count).
+func NewObjectFileMetadata(version common.GameVersion, dirPattern string, fileName string, indexCount int) *FileMetadata {
+	meta := NewFileMetadata(NewFileInfoFromPath(ObjectFileBinaryPath(filepath.Join(dirPattern, fileName))))
+	if meta == nil {
+		meta = &FileMetadata{}
+	}
+	ver := version
+	meta.Version = &ver
+	meta.DirPattern = dirPattern
+	meta.FileName = fileName
+	meta.IndexCount = indexCount
+	return meta
 }
 
 // ---- source binary path helpers -------------------------------------------------
