@@ -10,7 +10,7 @@ import (
 
 // FileMetadata wraps the SpiraFileInfo of an ORIGINAL game binary so an exported
 // artifact can be mapped back to the file it came from (for binary reconstruction).
-// The Version/DirPattern/FileName/IndexCount fields are the new layout metadata:
+// The Version/DirPattern/FileName fields are the layout metadata:
 // they are omitempty so legacy exports (file_info only) keep parsing, and the
 // legacy payload ignores them when reading new exports.
 type FileMetadata struct {
@@ -18,7 +18,7 @@ type FileMetadata struct {
 	Version    *common.GameVersion `json:"version,omitempty"`
 	DirPattern string              `json:"dir_pattern,omitempty"`
 	FileName   string              `json:"file_name,omitempty"`
-	IndexCount int                 `json:"index_count,omitempty"`
+	Key        string              `json:"key,omitempty"`
 }
 
 // NewFileMetadata creates a FileMetadata from a SpiraFileInfo (nil-safe).
@@ -31,8 +31,8 @@ func NewFileMetadata(info *SpiraFileInfo) *FileMetadata {
 }
 
 // NewObjectFileMetadata creates a FileMetadata for an objectsfile-type binary
-// carrying the new layout metadata (version, dir pattern, file name, index count).
-func NewObjectFileMetadata(version common.GameVersion, dirPattern string, fileName string, indexCount int) *FileMetadata {
+// carrying the layout metadata (version, dir pattern, file name).
+func NewObjectFileMetadata(version common.GameVersion, dirPattern string, fileName string) *FileMetadata {
 	meta := NewFileMetadata(NewFileInfoFromPath(ObjectFileBinaryPath(filepath.Join(dirPattern, fileName))))
 	if meta == nil {
 		meta = &FileMetadata{}
@@ -41,7 +41,17 @@ func NewObjectFileMetadata(version common.GameVersion, dirPattern string, fileNa
 	meta.Version = &ver
 	meta.DirPattern = dirPattern
 	meta.FileName = fileName
-	meta.IndexCount = indexCount
+	return meta
+}
+
+// NewObjectFileMetadataKeyed is like NewObjectFileMetadata but also carries the
+// canonical store key (version/patternPath), so the JSON file name is irrelevant
+// and the import can look up the layout directly from the metadata.
+func NewObjectFileMetadataKeyed(version common.GameVersion, dirPattern string, fileName string, key string) *FileMetadata {
+	meta := NewObjectFileMetadata(version, dirPattern, fileName)
+	if meta != nil {
+		meta.Key = key
+	}
 	return meta
 }
 

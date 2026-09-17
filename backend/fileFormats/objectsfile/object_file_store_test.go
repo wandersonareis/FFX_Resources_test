@@ -7,7 +7,10 @@ import (
 	"strings"
 
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/reader"
 	"ffxresources/backend/fileFormats/objectsfile"
+	"ffxresources/backend/interactions"
+	"ffxresources/backend/models"
 	testcommon "ffxresources/testData"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -22,10 +25,17 @@ var _ = Describe("FileLayout Registry", Ordered, func() {
 		Expect(layout.DirPattern).To(Equal("battle/kernel"))
 	})
 
-	It("should look up lastmiss lm_trap layout with Start offset", func() {
+	It("should look up lastmiss lm_trap layout", func() {
 		layout, ok := objectsfile.FileLayoutFor(common.GameVersionLastMiss, "lastmiss/kernel/lm_trap.bin")
 		Expect(ok).To(BeTrue())
-		Expect(layout.Start).To(Equal(0))
+		Expect(layout.FileName).To(Equal("lm_trap.bin"))
+		Expect(layout.DirPattern).To(Equal("lastmiss/kernel"))
+	})
+	It("should look up lastmiss lm_warehouse layout", func() {
+		layout, ok := objectsfile.FileLayoutFor(common.GameVersionLastMiss, "lastmiss/kernel/lm_warehouse.bin")
+		Expect(ok).To(BeTrue())
+		Expect(layout.FileName).To(Equal("lm_warehouse.bin"))
+		Expect(layout.DirPattern).To(Equal("lastmiss/kernel"))
 	})
 })
 
@@ -42,7 +52,7 @@ var _ = Describe("ObjectFileStore", Ordered, func() {
 		// but we can test register/get/Len with a real layout struct.
 		key := objectsfile.FileLayoutKey(layout.Version, layout.PatternPath())
 		Expect(objectsfile.FileLayoutKey(common.GameVersionLastMiss, "lastmiss/kernel/lm_command.bin")).
-			To(Equal("lastmiss/lastmiss/kernel/lm_command.bin"))
+			To(Equal("lastmiss/kernel/lm_command.bin"))
 
 		// The shared global store should exist
 		Expect(objectsfile.ObjectFileDataStore).NotTo(BeNil())
@@ -75,31 +85,67 @@ var _ = Describe("Export/Import roundtrip with FileMetadata", Ordered, func() {
 		common.SetVerboseMode(false)
 	})
 
-	It("should produce FileMetadata with version/dir/filename/index_count from a layout", func() {
+	It("should produce FileMetadata with version/dir/filename from a layout", func() {
 		layout, ok := objectsfile.FileLayoutFor(common.GameVersionFFX, "battle/kernel/command.bin")
 		Expect(ok).To(BeTrue())
 
-		meta := common.NewObjectFileMetadata(layout.Version, layout.DirPattern, layout.FileName, layout.IndexCount)
-		Expect(meta).NotTo(BeNil())
+		meta := models.NewObjectFileMetadata(layout.Version, layout.DirPattern, layout.FileName)
 		Expect(meta.DirPattern).To(Equal("battle/kernel"))
 		Expect(meta.FileName).To(Equal("command.bin"))
 	})
 
 	It("should write/omit new fields as expected", func() {
 		layout, _ := objectsfile.FileLayoutFor(common.GameVersionFFX, "battle/kernel/command.bin")
-		meta := common.NewObjectFileMetadata(layout.Version, layout.DirPattern, layout.FileName, layout.IndexCount)
+		meta := models.NewObjectFileMetadata(layout.Version, layout.DirPattern, layout.FileName)
 
-		// Verify omitempty behavior: Version/DirPattern/FileName present, IndexCount 0 omitted
-		ver := layout.Version
-		Expect(meta.Version).NotTo(BeNil())
-		Expect((*meta.Version).String()).To(Equal("ffx"))
+		Expect(*meta.Version).To(Equal(layout.Version))
+		Expect(meta.Version.String()).To(Equal("ffx"))
 	})
 })
 
 var _ = Describe("Integration: integrity cycle via LoadObjectFileFromStore + FileLayout", Ordered, func() {
+	var (
+		tmpRoot           string
+		gameDir           string
+		originalGameFiles string
+		originalResources string
+	)
+
 	BeforeAll(func() {
 		Expect(testcommon.SetBuildBinPath()).To(Succeed())
 		common.SetVerboseMode(false)
+
+		originalGameFiles = common.GameFilesRoot
+		originalResources = common.ResourcesRoot
+
+		srcTree := filepath.Join(testcommon.GetTestDataRootDirectory(), "FFX", "binary")
+		common.SetCurrentGameVersion(common.GameVersionFFX)
+
+		var err error
+		tmpRoot, err = os.MkdirTemp("", "objectstore-roundtrip-*")
+		Expect(err).To(BeNil())
+
+		gameDir = filepath.Join(tmpRoot, "game")
+		Expect(os.CopyFS(gameDir, os.DirFS(srcTree))).To(Succeed())
+
+		config := interactions.NewAppConfig()
+		Expect(config).NotTo(BeNil())
+		config.SetGameVersion(common.GameVersionFFX)
+		config.SetLocation("GameFilesLocation", gameDir)
+		config.SetLocation("ExtractLocation", filepath.Join(tmpRoot, "extracted"))
+		config.SetLocation("TranslateLocation", filepath.Join(tmpRoot, "translated"))
+		config.SetLocation("ImportLocation", filepath.Join(tmpRoot, "reimported"))
+
+		interactions.NewInteractionServiceWithConfig(config)
+		Expect(reader.InitializeInternals()).To(Succeed())
+	})
+
+	AfterAll(func() {
+		common.GameFilesRoot = originalGameFiles
+		common.ResourcesRoot = originalResources
+		if tmpRoot != "" {
+			os.RemoveAll(tmpRoot)
+		}
 	})
 
 	It("should round-trip key_items and command binaries through export/import + SHA-256", func() {
@@ -110,10 +156,6 @@ var _ = Describe("Integration: integrity cycle via LoadObjectFileFromStore + Fil
 			{"battle/kernel/important.bin", common.GameVersionFFX},
 			{"battle/kernel/command.bin", common.GameVersionFFX},
 		}
-		tmpRoot, err := os.MkdirTemp("", "objectstore-roundtrip-*")
-		Expect(err).To(BeNil())
-		defer os.RemoveAll(tmpRoot)
-
 		for _, tc := range cases {
 			binFile, err := objectsfile.LoadObjectFileFromStore(tc.version, tc.pattern)
 			Expect(err).To(BeNil())
@@ -121,8 +163,7 @@ var _ = Describe("Integration: integrity cycle via LoadObjectFileFromStore + Fil
 			Expect(binFile.GetObjects()).NotTo(BeNil())
 			Expect(binFile.GetObjects().Len()).To(BeNumerically(">", 0))
 
-			jsonName := filepath.Join(tmpRoot,
-				strings.ReplaceAll(strings.ReplaceAll(tc.pattern, "/", "_"), ".bin", ".json"))
+			jsonName := strings.ReplaceAll(strings.ReplaceAll(tc.pattern, "/", "_"), ".bin", "_store.json")
 			Expect(binFile.ExportToJson(jsonName)).To(BeNil())
 
 			reimported, err := os.CreateTemp(tmpRoot, "reimported-*.bin")
@@ -131,7 +172,7 @@ var _ = Describe("Integration: integrity cycle via LoadObjectFileFromStore + Fil
 			Expect(binFile.SaveToBinary(reimported.Name())).To(BeNil())
 
 			origRel := filepath.Join(common.GetLocalizationRoot(common.DefaultLocalization), tc.pattern)
-			origBytes, err := os.ReadFile(filepath.Join(common.GameFilesRoot, origRel))
+			origBytes, err := os.ReadFile(filepath.Join(gameDir, origRel))
 			Expect(err).To(BeNil())
 			outBytes, err := os.ReadFile(reimported.Name())
 			Expect(err).To(BeNil())
@@ -139,11 +180,11 @@ var _ = Describe("Integration: integrity cycle via LoadObjectFileFromStore + Fil
 		}
 	})
 
-	It("should validate index_count against loaded objects", func() {
+	It("should load objects without index_count validation", func() {
 		layout, ok := objectsfile.FileLayoutFor(common.GameVersionFFX, "battle/kernel/command.bin")
 		Expect(ok).To(BeTrue())
 		binFile, err := objectsfile.LoadObjectFileFromStore(common.GameVersionFFX, layout.PatternPath())
 		Expect(err).To(BeNil())
-		Expect(binFile.GetObjects().Len()).To(Equal(layout.IndexCount))
+		Expect(binFile.GetObjects().Len()).To(BeNumerically(">", 0))
 	})
 })

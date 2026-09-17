@@ -56,6 +56,8 @@ func main() {
 		return
 	}
 	runLastMissExamples()
+
+	runObjectFileStore()
 }
 
 func readEvents() error {

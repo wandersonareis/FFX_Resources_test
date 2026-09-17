@@ -49,6 +49,24 @@ type (
 	}
 )
 
+// resolveObjectsJsonPath normaliza o nome para a convenção com sufixo de
+// versão (a mesma usada no export) e mantém compatibilidade com arquivos
+// legados sem sufixo: prefere o caminho versionado, cai para o legado se
+// ele existir em disco.
+func resolveObjectsJsonPath(jsonFileName string) string {
+	editsDir := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits")
+	versioned := common.WithVersionSuffix(jsonFileName)
+	versionedPath := filepath.Join(editsDir, versioned)
+	if common.IsPathExists(versionedPath) {
+		return versionedPath
+	}
+	legacyPath := filepath.Join(editsDir, common.StripVersionSuffix(jsonFileName))
+	if common.IsPathExists(legacyPath) {
+		return legacyPath
+	}
+	return versionedPath
+}
+
 // ImportFromJson imports localized text data from a JSON file
 // and applies the translations to the corresponding LocalizedTextObject entries.
 //
@@ -72,7 +90,7 @@ func ImportFromJson(
 	jsonFileName string,
 	objectsList components.IList[datastore.IGlobalLocalizedTextObject],
 ) error {
-	jsonFilePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", common.WithVersionSuffix(jsonFileName))
+	jsonFilePath := resolveObjectsJsonPath(jsonFileName)
 	if !common.IsPathExists(jsonFilePath) {
 		return fmt.Errorf("JSON file not found: %s", jsonFilePath)
 	}
@@ -97,6 +115,66 @@ func ImportFromJson(
 
 	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
 	if err := updateLocalizedObjectEntries(jsonData, localizedObjects, version); err != nil {
+		common.LogVerbose("Error processing JSON file: %v", err)
+		return err
+	}
+
+	common.LogVerbose("Localized objects updated successfully from JSON file: %s", jsonFileName)
+	return nil
+}
+
+// ImportFromJsonForLayout imports localized text data applying the layout-driven
+// metadata validation: the JSON filename is irrelevant, the metadata Key must
+// match a registered FileLayout (`version/patternPath`).
+func ImportFromJsonForLayout(
+	jsonFileName string,
+	objectsList components.IList[datastore.IGlobalLocalizedTextObject],
+	layout FileLayout,
+) error {
+	jsonFilePath := resolveObjectsJsonPath(jsonFileName)
+	if !common.IsPathExists(jsonFilePath) {
+		return fmt.Errorf("JSON file not found: %s", jsonFilePath)
+	}
+
+	common.LogVerbose("Processing JSON file: %s", jsonFilePath)
+
+	loaded, err := models.LoadDataFile[models.ObjectsFileExport](jsonFilePath)
+	if err != nil {
+		common.LogError("Error loading JSON file %s: %v", jsonFilePath, err)
+		return err
+	}
+
+	if loaded.Metadata == nil || loaded.Metadata.Key == "" {
+		common.LogError("Missing metadata Key in JSON %s (dirPattern %s)", jsonFilePath, layout.DirPattern)
+		return fmt.Errorf("missing metadata Key in JSON %s", jsonFilePath)
+	}
+
+	storedLayout, ok := FileLayouts[loaded.Metadata.Key]
+	if !ok {
+		common.LogError("Key without registered layout: %s (dirPattern %s)", loaded.Metadata.Key, layout.DirPattern)
+		return fmt.Errorf("key without registered layout: %s", loaded.Metadata.Key)
+	}
+
+	if storedLayout.Version != layout.Version {
+		common.LogError("Version mismatch for dirPattern %s: layout %s vs metadata %s", layout.DirPattern, layout.Version, storedLayout.Version)
+		return fmt.Errorf("version mismatch for %s", layout.DirPattern)
+	}
+	if storedLayout.FileName != layout.FileName || storedLayout.DirPattern != layout.DirPattern {
+		common.LogError("File mismatch for dirPattern %s", layout.DirPattern)
+		return fmt.Errorf("file mismatch for %s", layout.DirPattern)
+	}
+
+	var jsonData []JSONEntry
+	if err := json.Unmarshal(loaded.Strings, &jsonData); err != nil {
+		common.LogError("Error parsing strings in JSON file %s: %v", jsonFilePath, err)
+		return err
+	}
+
+	common.LogVerbose("Found %d objects in JSON file", len(jsonData))
+
+	localizedObjects := extractLocalizedObjects(objectsList)
+
+	if err := updateLocalizedObjectEntries(jsonData, localizedObjects, layout.Version); err != nil {
 		common.LogVerbose("Error processing JSON file: %v", err)
 		return err
 	}

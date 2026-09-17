@@ -5,8 +5,6 @@ import (
 	"ffxresources/backend/datastore"
 )
 
-// ObjectFileStore mantém instâncias de arquivos binários de objetos carregadas
-// por key (versão + patternPath), espelhando o NodeDataStore.
 type ObjectFileStore struct {
 	files map[string]datastore.IBinaryFile
 }
@@ -36,6 +34,12 @@ func (s *ObjectFileStore) GetByVersion(version common.GameVersion, patternPath s
 	return s.Get(FileLayoutKey(version, patternPath))
 }
 
+// GetByLayout busca pelo layout (versão + dir + arquivo) em vez das
+// primitivas separadas.
+func (s *ObjectFileStore) GetByLayout(l FileLayout) (datastore.IBinaryFile, bool) {
+	return s.Get(FileLayoutKey(l.Version, l.PatternPath()))
+}
+
 func (s *ObjectFileStore) All() map[string]datastore.IBinaryFile {
 	if s == nil {
 		return nil
@@ -61,4 +65,15 @@ func (s *ObjectFileStore) Len() int {
 		return 0
 	}
 	return len(s.files)
+}
+
+func (s *ObjectFileStore) IsEmpty() bool {
+	return s.Len() == 0
+}
+
+func (s *ObjectFileStore) Clear() {
+	if s == nil {
+		return
+	}
+	clear(s.files)
 }
