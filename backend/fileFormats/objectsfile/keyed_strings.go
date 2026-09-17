@@ -12,10 +12,9 @@ import (
 type KeyedString struct {
 	Charset string
 	Version common.GameVersion
-	/* 	Offset  uint16
-	   	Key     uint16 */
 	Segment models.Segment
 	Bytes   []byte
+	Text   string
 }
 
 func NewKeyedString(charset string, segment models.Segment, data []byte, version common.GameVersion) datastore.IGlobalKeyedString {
@@ -26,11 +25,10 @@ func NewKeyedString(charset string, segment models.Segment, data []byte, version
 	ks := &KeyedString{
 		Charset: charset,
 		Version: version,
-		/* Offset:  segment.Offset,
-		Key:     segment.Key, */
 		Segment: segment,
 	}
 	ks.Bytes = converter.GetStringBytesAtLookupOffset(data, int(segment.Offset))
+	ks.Text = converter.BytesToString(converter.GetStringBytesAtLookupOffset(data, int(segment.Offset)), charset, version)
 	return ks
 }
 
