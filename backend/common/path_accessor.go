@@ -98,3 +98,19 @@ func GetAbmapPath() string {
 func GetLocalizationRoot(localization string) string {
 	return filepath.Join(GetPathRoot(), "new_"+localization+"pc")
 }
+
+// VersionPathName retorna o nome do diretório de versão usado em caminhos de
+// arquivo: "ffx" ou "ffx2". LastMiss divide a árvore com FFX2 (expansão),
+// então normaliza para "ffx2". Só existem esses dois nomes, sem variação.
+func VersionPathName(version GameVersion) string {
+	if version == GameVersionFFX {
+		return GameVersionFFX.String()
+	}
+	return GameVersionFFX2.String()
+}
+
+// GetLocalizationRootForVersion monta a raiz de localização para uma versão
+// explícita, sem ler a versão global. LastMiss resolve sob a árvore ffx2.
+func GetLocalizationRootForVersion(version GameVersion, localization string) string {
+	return filepath.Join(GetPathRootForVersion(version), "new_"+localization+"pc")
+}

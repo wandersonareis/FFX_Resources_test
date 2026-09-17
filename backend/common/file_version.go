@@ -11,20 +11,45 @@ func FileVersionSuffix() string {
 	return CurrentGameVersion().Suffix()
 }
 
-// WithVersionSuffix insere o sufixo da versão ativa no nome do arquivo,
-// antes da extensão (ex: events_all_localizations.json ->
-// events_all_localizations_ffx2.json).
-func WithVersionSuffix(fileName string) string {
-	suffix := FileVersionSuffix()
+// HasVersionSuffix informa se o nome já contém um sufixo de versão
+// (_ffx, _ffx2 ou _lastmiss) antes da extensão.
+func HasVersionSuffix(fileName string) bool {
 	ext := filepath.Ext(fileName)
 	base := strings.TrimSuffix(fileName, ext)
-	return base + suffix + ext
+	return strings.HasSuffix(base, "_ffx") ||
+		strings.HasSuffix(base, "_ffx2") ||
+		strings.HasSuffix(base, "_lastmiss")
+}
+
+// StripVersionSuffix remove o sufixo de versão do nome, se presente.
+func StripVersionSuffix(fileName string) string {
+	ext := filepath.Ext(fileName)
+	base := strings.TrimSuffix(fileName, ext)
+	for _, s := range []string{"_lastmiss", "_ffx2", "_ffx"} {
+		if strings.HasSuffix(base, s) {
+			base = strings.TrimSuffix(base, s)
+			break
+		}
+	}
+	return base + ext
+}
+
+// WithVersionSuffix insere o sufixo da versão ativa no nome do arquivo,
+// antes da extensão (ex: events_all_localizations.json ->
+// events_all_localizations_ffx2.json). Idempotente: se o nome já possui
+// um sufixo de versão, ele é normalizado para a versão ativa.
+func WithVersionSuffix(fileName string) string {
+	base := StripVersionSuffix(fileName)
+	suffix := FileVersionSuffix()
+	ext := filepath.Ext(base)
+	return strings.TrimSuffix(base, ext) + suffix + ext
 }
 
 // WithVersionSuffixFor é a variante explícita, sem ler o estado global.
+// Idempotente: normaliza qualquer sufixo existente para gv.
 func WithVersionSuffixFor(fileName string, gv GameVersion) string {
+	base := StripVersionSuffix(fileName)
 	suffix := gv.Suffix()
-	ext := filepath.Ext(fileName)
-	base := strings.TrimSuffix(fileName, ext)
-	return base + suffix + ext
+	ext := filepath.Ext(base)
+	return strings.TrimSuffix(base, ext) + suffix + ext
 }
