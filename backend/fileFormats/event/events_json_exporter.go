@@ -1,8 +1,7 @@
-package exporters
+package event
 
 import (
 	"ffxresources/backend/common"
-	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
 	"fmt"
@@ -61,7 +60,7 @@ func currentGameVersion() common.GameVersion {
 }
 
 func processEventFromMemory(eventID string, localizationKeys []string) *EventFileData {
-	eventFile := event.GetEvent(currentGameVersion(), eventID)
+	eventFile := GetEvent(currentGameVersion(), eventID)
 	if eventFile == nil || eventFile.Strings == nil || len(eventFile.Strings) == 0 {
 		return nil
 	}
@@ -97,7 +96,7 @@ func processEventFromFile(eventID string, localizationKeys []string) *EventFileD
 	}
 
 	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	eventFileStrings, err := event.ReadLocalizedEventStrings(eventID, version)
+	eventFileStrings, err := ReadLocalizedEventStrings(eventID, version)
 	if err != nil {
 		common.LogVerbose("Error loading localized strings: %v", err)
 		return nil
@@ -172,7 +171,7 @@ func writeEventJSONFile(events []EventFileData, fileName string) error {
 func ExportAllEventsToJSON() error {
 	fileName := "events_all_localizations.json"
 	localizationKeys := getSortedLocalizationKeys()
-	eventIDs := event.GetAllEventIDs(currentGameVersion())
+	eventIDs := GetAllEventIDs(currentGameVersion())
 
 	var allEvents []EventFileData
 	var count int
@@ -202,7 +201,7 @@ func ExportAllEventsToJSON() error {
 //
 // Returns: error if export fails or data is not loaded
 func ExportEventsForLocalizationToJSON(languageCode string) error {
-	eventIDs := event.GetAllEventIDs(currentGameVersion())
+	eventIDs := GetAllEventIDs(currentGameVersion())
 	localizationKeys := []string{languageCode}
 
 	var allEvents []EventFileData

@@ -61,7 +61,7 @@ func FromFieldStringData(bytes []byte, charset string, version common.GameVersio
 
 	strings := make([]*FieldString, 0, count)
 
-	for i := 0; i < count; i++ {
+	for i := range count {
 		regularHeader := Read4Bytes(bytes, i*0x08)
 		simplifiedHeader := Read4Bytes(bytes, i*0x08+0x04)
 		fieldString := NewFieldString(charset, regularHeader, simplifiedHeader, bytes, version)
