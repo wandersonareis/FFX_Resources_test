@@ -2,7 +2,6 @@ package reader
 
 import (
 	"bytes"
-	"encoding/json"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/fileFormats/event"
@@ -11,6 +10,7 @@ import (
 	"ffxresources/backend/models"
 	"fmt"
 	"path/filepath"
+	"sort"
 )
 
 func currentGameVersion() common.GameVersion {
@@ -100,7 +100,7 @@ func EditAndSaveEventJSONFiles() error {
 		return fmt.Errorf("directory not found: %s", jsonPath)
 	}
 
-	jsonFilePath := filepath.Join(jsonPath, common.WithVersionSuffix("events_all_localizations.json"))
+	jsonFilePath := filepath.Join(jsonPath, common.WithVersionSuffixFor("events_all_localizations.json", currentGameVersion()))
 
 	if !common.IsPathExists(jsonFilePath) {
 		return fmt.Errorf("JSON file not found: %s", jsonFilePath)
@@ -117,21 +117,11 @@ func EditAndSaveEventJSONFiles() error {
 }
 
 func editAndSaveEventFromJSON(jsonPath string) error {
-	loaded, loadErr := models.LoadDataFile[[]models.EventFileExport](jsonPath)
-	var allEvents []EventFileData
-	if loadErr != nil {
-		raw, rawErr := common.ReadFile(jsonPath)
-		if rawErr != nil {
-			fmt.Printf("Erro ao ler arquivo JSON %s: %v\n", jsonPath, rawErr)
-			return rawErr
-		}
-		if uErr := json.Unmarshal(raw, &allEvents); uErr != nil {
-			fmt.Printf("Erro ao ler arquivo JSON %s: %v\n", jsonPath, uErr)
-			return uErr
-		}
-	} else {
-		allEvents = convertEventExports(loaded)
+	loaded, err := models.LoadDataFile[models.EventsFileExport](jsonPath)
+	if err != nil {
+		return fmt.Errorf("failed to load events JSON file: %w", err)
 	}
+	allEvents := convertEventExports(loaded)
 
 	processedEventIDs := make(map[string]bool)
 
@@ -191,7 +181,7 @@ func editAndSaveEventFromJSON(jsonPath string) error {
 //   - error: nil if successful, error if the event is not found or processing fails
 func EditAndSaveSpecificEventFromJSON(eventID string) error {
 	jsonPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits")
-	jsonFilePath := filepath.Join(jsonPath, common.WithVersionSuffix("events_all_localizations.json"))
+	jsonFilePath := filepath.Join(jsonPath, common.WithVersionSuffixFor("events_all_localizations.json", currentGameVersion()))
 
 	if !common.IsPathExists(jsonFilePath) {
 		return fmt.Errorf("JSON file not found: %s", jsonFilePath)
@@ -200,22 +190,11 @@ func EditAndSaveSpecificEventFromJSON(eventID string) error {
 	common.LogVerbose("Loading JSON file: %s", jsonFilePath)
 	common.LogVerbose("Looking for event: %s", eventID)
 
-	loaded, loadErr := models.LoadDataFile[[]models.EventFileExport](jsonFilePath)
-	var allJsonEvents []EventFileData
-	if loadErr != nil {
-		raw, rawErr := common.ReadFile(jsonFilePath)
-		if rawErr != nil {
-			common.LogVerbose("Error opening JSON file %s: %v", jsonFilePath, rawErr)
-			return rawErr
-		}
-		// Parse JSON content - expecting array of EventFileDataJSON
-		if uErr := json.Unmarshal(raw, &allJsonEvents); uErr != nil {
-			common.LogVerbose("Error decoding JSON %s: %v", jsonFilePath, uErr)
-			return uErr
-		}
-	} else {
-		allJsonEvents = convertEventExports(loaded)
+	loaded, err := models.LoadDataFile[models.EventsFileExport](jsonFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to load events JSON file: %w", err)
 	}
+	allJsonEvents := convertEventExports(loaded)
 
 	// Find the specific event in the JSON
 	var targetEventData *EventFileDataJSON
@@ -285,14 +264,20 @@ type EventFileDataJSON = EventFileData
 
 // convertEventExports maps the wrapped export payload back into the reader-internal
 // EventFileData representation used by the JSON editors.
-func convertEventExports(loaded []models.EventFileExport) []EventFileData {
-	events := make([]EventFileData, 0, len(loaded))
-	for _, e := range loaded {
+func convertEventExports(loaded models.EventsFileExport) []EventFileData {
+	events := make([]EventFileData, 0, len(loaded.Strings))
+	keys := make([]string, 0, len(loaded.Strings))
+	for id := range loaded.Strings {
+		keys = append(keys, id)
+	}
+	sort.Strings(keys)
+	for _, id := range keys {
+		e := loaded.Strings[id]
 		strings := make([]EventStringData, 0, len(e.Strings))
 		for _, s := range e.Strings {
 			strings = append(strings, EventStringData{Index: s.Index, Text: s.Text})
 		}
-		events = append(events, EventFileData{ID: e.ID, Strings: strings})
+		events = append(events, EventFileData{ID: id, Strings: strings})
 	}
 	return events
 }
@@ -382,4 +367,3 @@ func EditAndSaveSpecificMacroDictFromJSON(localization string) error {
 	common.LogVerbose("Localization %s processed and saved successfully", localization)
 	return nil
 }
-

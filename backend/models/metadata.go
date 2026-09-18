@@ -137,9 +137,10 @@ type EventStringDataExport struct {
 	Text  map[string]string `json:"text"`
 }
 
-// EventFileExport is one event in the events export, carrying its binary metadata.
+// EventFileExport is one event in the events export, carrying its event-specific
+// metadata (relative path, localization pattern, layout key).
 type EventFileExport struct {
-	Metadata *FileMetadata           `json:"metadata"`
+	Metadata *EventFileInfo          `json:"metadata"`
 	ID       string                  `json:"id"`
 	Strings  []EventStringDataExport `json:"strings"`
 }
@@ -149,6 +150,13 @@ type EventFileExport struct {
 type ObjectsFileExport struct {
 	Metadata *FileMetadata   `json:"metadata"`
 	Strings  json.RawMessage `json:"strings"`
+}
+
+// EventsFileExport is a bulk event export where each event is an entry
+// in the "strings" map, keyed by event ID. Each entry carries its own
+// metadata and strings.
+type EventsFileExport struct {
+	Strings map[string]EventFileExport `json:"strings"`
 }
 
 // NewFileInfoFromPath builds a SpiraFileInfo for an arbitrary file (such as a game binary)

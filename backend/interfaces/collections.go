@@ -14,6 +14,10 @@ type IList[T any] interface {
 	Len() int
 	IsEmpty() bool
 	Clear()
+	// TryAdd insere apenas se nenhum item existente for considerado igual.
+	// A igualdade usa reflect.DeepEqual. Não é atômico: o chamador é responsável
+	// pela sincronização quando necessário.
+	TryAdd(item T) bool
 	Range(f func(item T))
 	RangeIndex(f func(index int, item T))
 	RangeParallel(f func(item T))

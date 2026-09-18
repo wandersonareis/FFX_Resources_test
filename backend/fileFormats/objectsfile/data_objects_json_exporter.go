@@ -423,7 +423,7 @@ func writeEventJSONFile(events []EventFileDataJSON, fileName string) error {
 			strings = append(strings, models.EventStringDataExport{Index: s.Index, Text: s.Text})
 		}
 		export = append(export, models.EventFileExport{
-			Metadata: models.NewFileMetadata(models.NewFileInfoFromPath(models.EventBinaryPath(e.ID))),
+			Metadata: models.NewEventFileInfo(e.ID, currentGameVersion()),
 			ID:       e.ID,
 			Strings:  strings,
 		})

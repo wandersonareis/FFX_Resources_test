@@ -94,21 +94,22 @@ func writeJSONFile(events []EventFileData, fileName, outputPath string) error {
 		return nil
 	}
 
-	filePath := filepath.Join(outputPath, common.WithVersionSuffix(fileName))
+	filePath := filepath.Join(outputPath, common.WithVersionSuffixFor(fileName, currentGameVersion()))
 
-	export := make([]models.EventFileExport, 0, len(events))
+	stringsMap := make(map[string]models.EventFileExport, len(events))
 	for _, e := range events {
 		strings := make([]models.EventStringDataExport, 0, len(e.Strings))
 		for _, s := range e.Strings {
 			strings = append(strings, models.EventStringDataExport{Index: s.Index, Text: s.Text})
 		}
-		export = append(export, models.EventFileExport{
-			Metadata: models.NewFileMetadata(models.NewFileInfoFromPath(models.EventBinaryPath(e.ID))),
+		stringsMap[e.ID] = models.EventFileExport{
+			Metadata: models.NewEventFileInfo(e.ID, currentGameVersion()),
 			ID:       e.ID,
 			Strings:  strings,
-		})
+		}
 	}
 
+	export := models.EventsFileExport{Strings: stringsMap}
 	if err := models.SaveDataFile(export, filePath); err != nil {
 		return fmt.Errorf("error writing JSON file %s: %w", filePath, err)
 	}
@@ -125,7 +126,8 @@ func writeJSONFile(events []EventFileData, fileName, outputPath string) error {
 // Creates JSON files with event strings for each language in the edits/ directory
 //
 // JSON Format:
-//   - Array of event objects, each containing ID and strings array
+//   - Map of event entries under "strings", keyed by event ID
+//   - Each event contains metadata and a strings array
 //   - Each string object has index and localized text for each language
 //   - Only exports events that have string data (skips empty events)
 //

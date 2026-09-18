@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/encoding"
+	"ffxresources/backend/models"
 	"fmt"
 	"path/filepath"
 )
@@ -76,9 +77,8 @@ func ExportEventStringsToLocalizations(gameVersion common.GameVersion, eventID s
 		return fmt.Errorf("no strings to write for event: %s", eventID)
 	}
 
-	pathPattern := filepath.Join("event/obj_ps3/", eventID[:2], eventID, eventID+".bin")
-
-	return writeEventStringsToAllLocalizations(pathPattern, eventFile.Strings, eventFile.Version)
+	info := models.NewEventFileInfo(eventID, eventFile.Version)
+	return writeEventStringsToAllLocalizations(info.LocalizationPattern, eventFile.Strings, eventFile.Version)
 }
 
 // writeEventStringsToAllLocalizations writes event string data to binary files for all

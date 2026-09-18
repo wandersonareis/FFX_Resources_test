@@ -6,6 +6,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/converter"
+	"fmt"
 )
 
 type FieldString struct {
@@ -19,6 +20,8 @@ type FieldString struct {
 	SimplifiedChoices int
 	RegularBytes      []byte
 	SimplifiedBytes   []byte
+	RegularString     string
+	SimplifiedString  string
 }
 
 func NewEmptyFieldString(charset string, version common.GameVersion) *FieldString {
@@ -28,43 +31,77 @@ func NewEmptyFieldString(charset string, version common.GameVersion) *FieldStrin
 	}
 }
 
-func NewFieldString(charset string, regularHeader, simplifiedHeader int, stringBytes []byte, version common.GameVersion) *FieldString {
+func NewFieldStringFromParts(charset string, textOffset uint16, textFlags uint8, textChoices uint8, simplifiedTextOffset uint16, simplifiedTextFlags uint8, simplifiedTextChoices uint8, stringBytes []byte, version common.GameVersion) *FieldString {
 	fs := &FieldString{
 		Charset:           charset,
 		Version:           version,
-		RegularOffset:     regularHeader & 0x0000FFFF,
-		RegularFlags:      (regularHeader & 0x00FF0000) >> 16,
-		RegularChoices:    (regularHeader & 0xFF000000) >> 24,
-		SimplifiedOffset:  simplifiedHeader & 0x0000FFFF,
-		SimplifiedFlags:   (simplifiedHeader & 0x00FF0000) >> 16,
-		SimplifiedChoices: (simplifiedHeader & 0xFF000000) >> 24,
+		RegularOffset:     int(textOffset),
+		RegularFlags:      int(textFlags),
+		RegularChoices:    int(textChoices),
+		SimplifiedOffset:  int(simplifiedTextOffset),
+		SimplifiedFlags:   int(simplifiedTextFlags),
+		SimplifiedChoices: int(simplifiedTextChoices),
 	}
 
 	fs.RegularBytes = converter.GetStringBytesAtLookupOffset(stringBytes, fs.RegularOffset)
+	fs.RegularString = converter.BytesToString(fs.RegularBytes, fs.Charset, fs.Version)
 
 	if fs.RegularOffset == fs.SimplifiedOffset {
 		fs.SimplifiedBytes = fs.RegularBytes
 	} else {
 		fs.SimplifiedBytes = converter.GetStringBytesAtLookupOffset(stringBytes, fs.SimplifiedOffset)
+		fs.SimplifiedString = converter.BytesToString(fs.SimplifiedBytes, fs.Charset, fs.Version)
 	}
 
 	return fs
+}
+
+func NewFieldString(charset string, regularHeader, simplifiedHeader int, stringBytes []byte, version common.GameVersion) *FieldString {
+	return NewFieldStringFromParts(
+		charset,
+		uint16(regularHeader&0x0000FFFF),
+		uint8((regularHeader & 0x00FF0000) >> 16),
+		uint8((regularHeader & 0xFF000000) >> 24),
+		uint16(simplifiedHeader&0x0000FFFF),
+		uint8((simplifiedHeader & 0x00FF0000) >> 16),
+		uint8((simplifiedHeader & 0xFF000000) >> 24),
+		stringBytes,
+		version,
+	)
 }
 
 func FromFieldStringData(bytes []byte, charset string, version common.GameVersion) ([]*FieldString, error) {
 	if len(bytes) == 0 {
 		return []*FieldString{}, nil
 	}
+	if len(bytes) < 2 {
+		return nil, fmt.Errorf("event string buffer too short")
+	}
 
-	first := int(bytes[0x00]) + int(bytes[0x01])*0x100
-	count := first / 0x08
+	first := binary.LittleEndian.Uint16(bytes)
+	if first%8 != 0 || first < 8 {
+		return nil, fmt.Errorf("first=%d invalid event string header", first)
+	}
+	if int(first) > len(bytes) {
+		return nil, fmt.Errorf("event string header size %d exceeds buffer length %d", first, len(bytes))
+	}
 
+	count := int(first / 8)
 	strings := make([]*FieldString, 0, count)
 
 	for i := range count {
-		regularHeader := Read4Bytes(bytes, i*0x08)
-		simplifiedHeader := Read4Bytes(bytes, i*0x08+0x04)
-		fieldString := NewFieldString(charset, regularHeader, simplifiedHeader, bytes, version)
+		offset := i * 8
+		fieldString := NewFieldStringFromParts(
+			charset,
+			binary.LittleEndian.Uint16(bytes[offset:offset+2]),
+			bytes[offset+2],
+			bytes[offset+3],
+			binary.LittleEndian.Uint16(bytes[offset+4:offset+6]),
+			bytes[offset+6],
+			bytes[offset+7],
+			bytes,
+			version,
+		)
 		strings = append(strings, fieldString)
 	}
 

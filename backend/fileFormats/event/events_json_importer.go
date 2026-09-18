@@ -1,11 +1,11 @@
 package event
 
 import (
-	"encoding/json"
 	"ffxresources/backend/common"
 	"ffxresources/backend/models"
 	"fmt"
 	"path/filepath"
+	"sort"
 )
 
 type (
@@ -14,87 +14,45 @@ type (
 		Strings []EventStringData `json:"strings"`
 	}
 
-	// EventStringData represents a single event string with its localizations for JSON processing
 	EventStringData struct {
 		Index int               `json:"index"`
 		Text  map[string]string `json:"text"`
 	}
 )
 
-// ImportEventsDataFromJsonFile imports event data from a JSON file and applies
-// the translations to all events found in the JSON file.
-//
-// This function reads JSON files containing event string information for all
-// supported languages and applies the translations directly to the global EVENTS
-// variable. Each event contains multiple strings with localized text content.
-//
-// File format: JSON array with event id and strings array containing localizations
-// JSON structure: [{"id": "ev001", "strings": [{"index": 0, "text": {"us": "...", "sp": "..."}}]}]
-//
-// JSON file: events_all_localizations.json
-// Target: EVENTS (multiple entries)
-//
-// Returns: error if import fails or file cannot be read
 func ImportEventsDataFromJsonFile(gameVersion common.GameVersion) error {
 	return importEventJsonFile(gameVersion, "", false)
 }
 
-// ImportEventDataFromJsonFile imports event data from a JSON file and applies
-// the translations to a single specified event.
-//
-// This function reads JSON files containing event string information and applies
-// the translations to a specific event in the EVENTS variable. The event
-// is identified by its ID and must exist in the JSON file.
-//
-// JSON file: events_all_localizations.json
-// Target: EVENTS (single entry specified by eventID)
-//
-// Parameters:
-//   - eventID: The ID of the specific event to process (e.g., "ev001", "btl_001")
-//
-// Returns: error if import fails, file cannot be read, or event is not found
 func ImportEventDataFromJsonFile(gameVersion common.GameVersion, eventID string) error {
 	return importEventJsonFile(gameVersion, eventID, true)
 }
 
-// importEventJsonFile is the core function that handles both single and multiple event processing.
-// This function centralizes the common logic between ImportEventsDataFromJsonFile and ImportEventDataFromJsonFile
-// to avoid code duplication while providing flexibility for different processing modes.
-//
-// Parameters:
-//   - eventID: The specific event ID to process (empty string for all events)
-//   - singleEvent: Whether to process only a single event (true) or all events (false)
-//
-// Returns: error if processing fails
 func importEventJsonFile(gameVersion common.GameVersion, eventID string, singleEvent bool) error {
-	jsonFilePath, err := getEventsJsonFilePath()
+	jsonFilePath, err := getEventsJsonFilePath(gameVersion)
 	if err != nil {
 		return err
 	}
 
-	eventDataList, err := loadEventJsonData(jsonFilePath)
+	eventDataMap, err := loadEventJsonData(jsonFilePath)
 	if err != nil {
 		return err
 	}
 
 	if singleEvent {
-		return processSingleEventData(gameVersion, eventDataList, eventID)
+		return processSingleEventData(gameVersion, eventDataMap, eventID)
 	}
 
-	return processAllEventData(gameVersion, eventDataList)
+	return processAllEventData(gameVersion, eventDataMap)
 }
 
-// getEventsJsonFilePath constructs and validates the path to the events JSON file.
-// This function handles the standard path construction and existence validation.
-//
-// Returns: validated file path string, or error if file doesn't exist
-func getEventsJsonFilePath() (string, error) {
+func getEventsJsonFilePath(gameVersion common.GameVersion) (string, error) {
 	jsonPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits")
 	if !common.IsPathExists(jsonPath) {
 		return "", fmt.Errorf("edits directory not found: %s", jsonPath)
 	}
 
-	jsonFilePath := filepath.Join(jsonPath, common.WithVersionSuffix("events_all_localizations.json"))
+	jsonFilePath := filepath.Join(jsonPath, common.WithVersionSuffixFor("events_all_localizations.json", gameVersion))
 	if !common.IsPathExists(jsonFilePath) {
 		return "", fmt.Errorf("events JSON file not found: %s", jsonFilePath)
 	}
@@ -102,70 +60,38 @@ func getEventsJsonFilePath() (string, error) {
 	return jsonFilePath, nil
 }
 
-// loadEventJsonData loads and parses the events JSON file into EventFileData structures.
-// This function handles file reading, JSON parsing, and basic validation.
-//
-// Parameters:
-//   - jsonFilePath: Path to the events JSON file
-//
-// Returns: slice of EventFileData structures, or error if loading/parsing fails
-func loadEventJsonData(jsonFilePath string) ([]EventFileData, error) {
+func loadEventJsonData(jsonFilePath string) (map[string]EventFileData, error) {
 	common.LogVerbose("Loading events JSON file: %s", jsonFilePath)
 
-	loaded, loadErr := models.LoadDataFile[[]models.EventFileExport](jsonFilePath)
-	var eventDataList []EventFileData
-	if loadErr != nil {
-		// Fallback to a raw JSON array (legacy format without wrapper).
-		raw, rawErr := common.ReadFile(jsonFilePath)
-		if rawErr != nil {
-			common.LogVerbose("Error reading events JSON file %s: %v", jsonFilePath, rawErr)
-			return nil, fmt.Errorf("failed to read events JSON file: %w", rawErr)
-		}
-		if err := json.Unmarshal(raw, &eventDataList); err != nil {
-			common.LogVerbose("Error parsing events JSON file %s: %v", jsonFilePath, err)
-			return nil, fmt.Errorf("failed to parse events JSON file: %w", err)
-		}
-	} else {
-		eventDataList = make([]EventFileData, 0, len(loaded))
-		for _, e := range loaded {
-			strings := make([]EventStringData, 0, len(e.Strings))
-			for _, s := range e.Strings {
-				strings = append(strings, EventStringData{Index: s.Index, Text: s.Text})
-			}
-			eventDataList = append(eventDataList, EventFileData{ID: e.ID, Strings: strings})
-		}
+	loaded, err := models.LoadDataFile[models.EventsFileExport](jsonFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load events JSON file: %w", err)
 	}
 
-	common.LogVerbose("Successfully loaded %d events from JSON", len(eventDataList))
-	return eventDataList, nil
+	eventDataMap := make(map[string]EventFileData, len(loaded.Strings))
+	for eventID, export := range loaded.Strings {
+		strings := make([]EventStringData, 0, len(export.Strings))
+		for _, s := range export.Strings {
+			strings = append(strings, EventStringData{Index: s.Index, Text: s.Text})
+		}
+		eventDataMap[eventID] = EventFileData{ID: eventID, Strings: strings}
+	}
+
+	common.LogVerbose("Successfully loaded %d events from JSON", len(eventDataMap))
+	return eventDataMap, nil
 }
 
-// processSingleEventData processes a single event from the JSON data.
-// This function finds the specified event in the data and applies its changes.
-//
-// Parameters:
-//   - eventDataList: List of all event data from JSON
-//   - eventID: The specific event ID to process
-//
-// Returns: error if event is not found or processing fails
-func processSingleEventData(gameVersion common.GameVersion, eventDataList []EventFileData, eventID string) error {
+func processSingleEventData(gameVersion common.GameVersion, eventDataMap map[string]EventFileData, eventID string) error {
 	common.LogVerbose("Looking for specific event: %s", eventID)
 
-	var targetEventData *EventFileData
-	for i := range eventDataList {
-		if eventDataList[i].ID == eventID {
-			targetEventData = &eventDataList[i]
-			break
-		}
-	}
-
-	if targetEventData == nil {
+	eventData, ok := eventDataMap[eventID]
+	if !ok {
 		return fmt.Errorf("event %s not found in JSON file", eventID)
 	}
 
-	common.LogVerbose("Event %s found in JSON with %d strings", eventID, len(targetEventData.Strings))
+	common.LogVerbose("Event %s found in JSON with %d strings", eventID, len(eventData.Strings))
 
-	if err := updateEventFromJsonData(gameVersion, *targetEventData); err != nil {
+	if err := updateEventFromJsonData(gameVersion, eventData); err != nil {
 		return fmt.Errorf("failed to update event %s: %w", eventID, err)
 	}
 
@@ -178,19 +104,19 @@ func processSingleEventData(gameVersion common.GameVersion, eventDataList []Even
 	return nil
 }
 
-// processAllEventData processes all events from the JSON data.
-// This function iterates through all events and applies their changes.
-//
-// Parameters:
-//   - eventDataList: List of all event data from JSON
-//
-// Returns: error if any critical processing fails
-func processAllEventData(gameVersion common.GameVersion, eventDataList []EventFileData) error {
-	common.LogVerbose("Processing all events from JSON (%d total)", len(eventDataList))
+func processAllEventData(gameVersion common.GameVersion, eventDataMap map[string]EventFileData) error {
+	common.LogVerbose("Processing all events from JSON (%d total)", len(eventDataMap))
 
 	processedEventIDs := make(map[string]bool)
 
-	for _, eventData := range eventDataList {
+	keys := make([]string, 0, len(eventDataMap))
+	for k := range eventDataMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, id := range keys {
+		eventData := eventDataMap[id]
 		if err := updateEventFromJsonData(gameVersion, eventData); err != nil {
 			common.LogVerbose("failed to update event %s: %v", eventData.ID, err)
 			continue
@@ -202,14 +128,6 @@ func processAllEventData(gameVersion common.GameVersion, eventDataList []EventFi
 	return nil
 }
 
-// updateEventFromJsonData updates a single event's data based on JSON input.
-// This function handles the core logic of applying JSON changes to event strings.
-// Uses datastore as the single source of truth for event data.
-//
-// Parameters:
-//   - eventData: The event data from JSON containing updates to apply
-//
-// Returns: error if the event is not found in memory or updating fails
 func updateEventFromJsonData(gameVersion common.GameVersion, eventData EventFileData) error {
 	eventFile := GetEvent(gameVersion, eventData.ID)
 	if eventFile == nil {
@@ -225,21 +143,10 @@ func updateEventFromJsonData(gameVersion common.GameVersion, eventData EventFile
 		}
 	}
 
-	// Atualizar o evento no datastore após modificações
 	SetEvent(gameVersion, eventData.ID, eventFile)
-
 	return nil
 }
 
-// updateEventStringFromJson updates a single string within an event based on JSON data.
-// This function handles the string-level updates including localization processing.
-//
-// Parameters:
-//   - eventFile: The event file object to update
-//   - eventString: The string data from JSON
-//   - eventID: The event ID (for logging purposes)
-//
-// Returns: error if string index is invalid or update fails
 func updateEventStringFromJson(eventFile *EventFile, eventString EventStringData, eventID string) error {
 	stringIndex := eventString.Index
 
@@ -264,15 +171,6 @@ func updateEventStringFromJson(eventFile *EventFile, eventString EventStringData
 	return nil
 }
 
-// updateEventStringLocalization updates a single localization for an event string object.
-// This function handles the low-level localization update logic for event strings.
-//
-// Parameters:
-//   - objToEdit: The string object to update
-//   - localization: The localization code (e.g., "us", "jp")
-//   - newString: The new string content
-//
-// Returns: error if localization is not supported or update fails
 func updateEventStringLocalization(objToEdit *LocalizedFieldStringObject, localization, newString string) error {
 	if newString == "" {
 		return nil

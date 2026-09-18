@@ -98,7 +98,7 @@ func (obj *LocalizedFieldStringObject) String() string {
 //   - For files: Resolves path, reads bytes, and parses as string data using appropriate charset
 func ReadStringFile(filename string, languageCode string, version common.GameVersion) []*FieldString {
 	resolvedPath, err := common.NewFileAccessor(filename)
-	if err != nil {
+	if err != nil || !resolvedPath.Exists {
 		if common.IsVerboseMode() {
 			fmt.Printf("Error resolving file %s: %v\n", filename, err)
 		}
@@ -146,8 +146,8 @@ func ReadStringFile(filename string, languageCode string, version common.GameVer
 func ReadLocalizedStringFiles(path string, version common.GameVersion) []*LocalizedFieldStringObject {
 	localized := make([]*LocalizedFieldStringObject, 0)
 
-	for key := range common.SupportedLanguages {
-		fullPath := filepath.Join(common.GetLocalizationRoot(key), path)
+	for _, key := range SortedSupportedLocalizations() {
+		fullPath := filepath.Join(common.GetLocalizationRootForVersion(version, key), path)
 		localizedStrings := ReadStringFile(fullPath, key, version)
 
 		for i, fieldString := range localizedStrings {
