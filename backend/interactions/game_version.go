@@ -20,5 +20,5 @@ func (i *InteractionService) GameVersion() common.GameVersion {
 
 // CurrentGameVersion é um atalho de pacote para a versão ativa.
 func CurrentGameVersion() common.GameVersion {
-	return NewInteractionService().GameVersion()
+	return NewInteractionService().ffxAppConfig.GetGameVersion()
 }
