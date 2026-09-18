@@ -45,7 +45,7 @@
 //
 // // Agora (sem dependência circular):
 // if event := datastore.GetEvent(eventID); event != nil {
-//     name := event.GetName()
+//     name := event.GetID()
 // }
 
 package event

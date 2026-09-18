@@ -28,7 +28,6 @@ type IMacroObject interface {
 
 // IEventObject interface para manter compatibilidade
 type IEventObject interface {
-	GetName() string
 	GetID() string
 }
 

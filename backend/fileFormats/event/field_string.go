@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"ffxresources/backend/common"
-	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/converter"
 	"fmt"
 )
@@ -215,11 +214,4 @@ func (fs *FieldString) SetCharset(newCharset string) {
 	if newCharset != "" && newCharset != fs.Charset {
 		fs.Charset = newCharset
 	}
-}
-
-func Read4Bytes(bytes []byte, offset int) int {
-	if offset+3 >= len(bytes) {
-		return 0
-	}
-	return int(components.Read4BytesLE(bytes, offset))
 }

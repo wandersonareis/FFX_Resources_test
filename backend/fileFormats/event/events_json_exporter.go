@@ -111,34 +111,6 @@ func processEventFromMemoryForVersion(version common.GameVersion, eventID string
 	return &eventData
 }
 
-func processEventFromMemory(eventID string, localizationKeys []string) *EventFileData {
-	return processEventFromMemoryForVersion(currentGameVersion(), eventID, localizationKeys)
-}
-
-func processEventFromFile(eventID string, localizationKeys []string) *EventFileData {
-	if common.IsVerboseMode() {
-		common.LogVerbose("Exporting event file to JSON: %s", eventID)
-	}
-	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	eventFileStrings, err := ReadLocalizedEventStrings(eventID, version)
-	if err != nil {
-		common.LogVerbose("Error loading localized strings: %v", err)
-		return nil
-	}
-	if len(eventFileStrings) == 0 {
-		return nil
-	}
-	eventData := EventFileData{
-		ID:      eventID,
-		Strings: make([]EventStringData, 0, len(eventFileStrings)),
-	}
-	for i, str := range eventFileStrings {
-		stringData := buildEventStringData(i, str, localizationKeys)
-		eventData.Strings = append(eventData.Strings, stringData)
-	}
-	return &eventData
-}
-
 func exportSingleEventToJSON(version common.GameVersion, eventID string) error {
 	eventIDs := GetAllEventIDs(version)
 	if len(eventIDs) == 0 {
@@ -151,10 +123,6 @@ func exportSingleEventToJSON(version common.GameVersion, eventID string) error {
 	}
 	fileName := "event_" + eventID + "_all_localizations.json"
 	return writeSingleEventJSONFile(*eventData, fileName, version)
-}
-
-func ExportSingleEventToJSON(eventId string) error {
-	return exportSingleEventToJSON(currentGameVersion(), eventId)
 }
 
 func exportEventsToJSON(version common.GameVersion, fileName string, eventIDs []string, localizationKeys []string) error {
@@ -180,15 +148,4 @@ func ExportAllEventsToJSONForVersion(version common.GameVersion) error {
 	eventIDs := GetAllEventIDs(version)
 	localizationKeys := getSortedLocalizationKeys()
 	return exportEventsToJSON(version, "events_all_localizations.json", eventIDs, localizationKeys)
-}
-
-func ExportEventsForLocalizationToJSON(languageCode string) error {
-	return ExportEventsForLocalizationToJSONForVersion(currentGameVersion(), languageCode)
-}
-
-func ExportEventsForLocalizationToJSONForVersion(version common.GameVersion, languageCode string) error {
-	eventIDs := GetAllEventIDs(version)
-	localizationKeys := []string{languageCode}
-	fileName := fmt.Sprintf("events_%s.json", languageCode)
-	return exportEventsToJSON(version, fileName, eventIDs, localizationKeys)
 }

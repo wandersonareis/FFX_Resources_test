@@ -5,38 +5,12 @@ import (
 	"ffxresources/backend/datastore"
 )
 
-// Adapter para converter EventFile para datastore.EventObject
-type eventDatastoreAdapter struct {
-	obj *EventFile
-}
-
-func (ea *eventDatastoreAdapter) GetName() string {
-	if ea.obj != nil {
-		return ea.obj.GetName()
-	}
-	return ""
-}
-
-func (ea *eventDatastoreAdapter) GetID() string {
-	if ea.obj != nil {
-		return ea.obj.ID
-	}
-	return ""
-}
-
-// adapterGameVersion resolve a versão a partir do EventFile quando disponível.
-func adapterGameVersion(eventFile *EventFile, fallback common.GameVersion) common.GameVersion {
-	if eventFile != nil {
-		return eventFile.Version
-	}
-	return fallback
-}
+var _ datastore.IEventObject = (*EventFile)(nil)
 
 // SetEvent registra um evento diretamente no datastore (fonte única da verdade)
 func SetEvent(gameVersion common.GameVersion, eventID string, eventFile *EventFile) {
 	if eventFile != nil {
-		adapter := &eventDatastoreAdapter{obj: eventFile}
-		datastore.SetEvent(adapterGameVersion(eventFile, gameVersion), eventID, adapter)
+		datastore.SetEvent(resolveEventVersion(eventFile, gameVersion), eventID, eventFile)
 	}
 }
 
@@ -44,9 +18,8 @@ func SetEvent(gameVersion common.GameVersion, eventID string, eventFile *EventFi
 func GetEvent(gameVersion common.GameVersion, eventID string) *EventFile {
 	eventObj := datastore.GetEvent(gameVersion, eventID)
 	if eventObj != nil {
-		// Type assertion segura para recuperar o EventFile original
-		if adapter, ok := eventObj.(*eventDatastoreAdapter); ok {
-			return adapter.obj
+		if eventFile, ok := eventObj.(*EventFile); ok {
+			return eventFile
 		}
 	}
 	return nil
@@ -78,4 +51,12 @@ func GetAllEventIDs(gameVersion common.GameVersion) []string {
 func HasEvents(gameVersion common.GameVersion) bool {
 	eventIDs := GetAllEventIDs(gameVersion)
 	return len(eventIDs) > 0
+}
+
+// resolveEventVersion usa a versão do EventFile quando disponível, senão o fallback.
+func resolveEventVersion(eventFile *EventFile, fallback common.GameVersion) common.GameVersion {
+	if eventFile != nil && eventFile.Version.String() != "" {
+		return eventFile.Version
+	}
+	return fallback
 }

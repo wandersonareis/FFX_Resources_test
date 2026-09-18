@@ -39,12 +39,12 @@ func (ef *EventFile) AddLocalizations(strings []*LocalizedFieldStringObject) {
 
 func (ef *EventFile) String() string {
 	var builder strings.Builder
-	builder.WriteString(ef.GetName())
+	builder.WriteString(ef.ID)
 	builder.WriteString("\n")
 	return builder.String()
 }
 
-func (ef *EventFile) GetName() string {
+func (ef *EventFile) GetID() string {
 	return ef.ID
 }
 
