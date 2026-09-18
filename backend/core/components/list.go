@@ -1,6 +1,7 @@
 package components
 
 import (
+	"reflect"
 	"slices"
 	"sync"
 )
@@ -24,6 +25,16 @@ func (l *List[T]) Items() []T {
 
 func (l *List[T]) Add(item T) {
 	l.content = append(l.content, item)
+}
+
+func (l *List[T]) TryAdd(item T) bool {
+	for _, existing := range l.content {
+		if reflect.DeepEqual(existing, item) {
+			return false
+		}
+	}
+	l.content = append(l.content, item)
+	return true
 }
 
 func (l *List[T]) AddAll(items []T) {
