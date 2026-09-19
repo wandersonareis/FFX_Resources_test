@@ -1,11 +1,14 @@
 package event
 
 import (
-	"ffxresources/backend/common"
-	"ffxresources/backend/models"
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strings"
+	"sync"
+
+	"ffxresources/backend/common"
+	"ffxresources/backend/models"
 )
 
 type (
@@ -21,14 +24,14 @@ type (
 )
 
 func ImportEventsDataFromJsonFile(gameVersion common.GameVersion) error {
-	return importEventJsonFile(gameVersion, "", false)
+	return importEventJsonFile(gameVersion, "")
 }
 
 func ImportEventDataFromJsonFile(gameVersion common.GameVersion, eventID string) error {
-	return importEventJsonFile(gameVersion, eventID, false)
+	return importEventJsonFile(gameVersion, eventID)
 }
 
-func importEventJsonFile(gameVersion common.GameVersion, eventID string, singleEvent bool) error {
+func importEventJsonFile(gameVersion common.GameVersion, eventID string) error {
 	jsonFilePath, err := getEventsJsonFilePath(gameVersion)
 	if err != nil {
 		return err
@@ -39,11 +42,17 @@ func importEventJsonFile(gameVersion common.GameVersion, eventID string, singleE
 		return err
 	}
 
-	if singleEvent {
-		return processSingleEventData(gameVersion, eventDataMap, eventID)
+	eventID = strings.TrimSpace(eventID)
+	if eventID == "" {
+		return processAllEventData(gameVersion, eventDataMap)
 	}
 
-	return processAllEventData(gameVersion, eventDataMap)
+	eventData, ok := eventDataMap[eventID]
+	if !ok {
+		return fmt.Errorf("event %s not found in JSON file", eventID)
+	}
+
+	return processSingleEventData(gameVersion, eventData)
 }
 
 func getEventsJsonFilePath(gameVersion common.GameVersion) (string, error) {
@@ -81,50 +90,68 @@ func loadEventJsonData(jsonFilePath string) (map[string]EventFileData, error) {
 	return eventDataMap, nil
 }
 
-func processSingleEventData(gameVersion common.GameVersion, eventDataMap map[string]EventFileData, eventID string) error {
-	common.LogVerbose("Looking for specific event: %s", eventID)
+func processSingleEventData(gameVersion common.GameVersion, eventData EventFileData) error {
+	common.LogVerbose("Looking for specific event: %s", eventData.ID)
 
-	eventData, ok := eventDataMap[eventID]
-	if !ok {
-		return fmt.Errorf("event %s not found in JSON file", eventID)
-	}
-
-	common.LogVerbose("Event %s found in JSON with %d strings", eventID, len(eventData.Strings))
+	common.LogVerbose("Event %s found in JSON with %d strings", eventData.ID, len(eventData.Strings))
 
 	if err := updateEventFromJsonData(gameVersion, eventData); err != nil {
-		return fmt.Errorf("failed to update event %s: %w", eventID, err)
+		return fmt.Errorf("failed to update event %s: %w", eventData.ID, err)
 	}
 
-	if err := ExportEventStringsToLocalizations(gameVersion, eventID); err != nil {
-		common.LogVerbose("Error saving event %s: %v", eventID, err)
-		return fmt.Errorf("failed to save event %s: %w", eventID, err)
+	if err := ExportEventStringsToLocalizations(gameVersion, eventData.ID); err != nil {
+		common.LogVerbose("Error saving event %s: %v", eventData.ID, err)
+		return fmt.Errorf("failed to save event %s: %w", eventData.ID, err)
 	}
 
-	common.LogVerbose("Event %s processed and saved successfully", eventID)
+	common.LogVerbose("Event %s processed and saved successfully", eventData.ID)
 	return nil
 }
 
 func processAllEventData(gameVersion common.GameVersion, eventDataMap map[string]EventFileData) error {
 	common.LogVerbose("Processing all events from JSON (%d total)", len(eventDataMap))
 
-	processedEventIDs := make(map[string]bool)
-
-	keys := make([]string, 0, len(eventDataMap))
-	for k := range eventDataMap {
-		keys = append(keys, k)
+	type eventResult struct {
+		eventID string
+		err     error
 	}
-	sort.Strings(keys)
 
-	for _, id := range keys {
-		eventData := eventDataMap[id]
-		if err := updateEventFromJsonData(gameVersion, eventData); err != nil {
-			common.LogVerbose("failed to update event %s: %v", eventData.ID, err)
-			continue
+	results := make(chan eventResult, len(eventDataMap))
+	sem := make(chan struct{}, common.GetNumCpu())
+	var wg sync.WaitGroup
+
+	for eventID, eventData := range eventDataMap {
+		wg.Add(1)
+		go func(id string, data EventFileData) {
+			defer wg.Done()
+
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			err := updateEventFromJsonData(gameVersion, data)
+			results <- eventResult{eventID: id, err: err}
+		}(eventID, eventData)
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	var failed []string
+	for result := range results {
+		if result.err != nil {
+			common.LogError("failed to update event %s: %v", result.eventID, result.err)
+			failed = append(failed, result.eventID)
 		}
-		processedEventIDs[eventData.ID] = true
 	}
 
-	common.LogVerbose("Events processed successfully! (%d events)", len(processedEventIDs))
+	if len(failed) > 0 {
+		sort.Strings(failed)
+		return fmt.Errorf("failed to update %d event(s): %v", len(failed), failed)
+	}
+
+	common.LogVerbose("Events processed successfully! (%d events)", len(eventDataMap))
 	return nil
 }
 
@@ -184,7 +211,7 @@ func updateEventStringLocalization(objToEdit *LocalizedFieldStringObject, locali
 	if fieldString == nil {
 		return fmt.Errorf("failed to get localized content for %s", localization)
 	}
-	
+
 	if fieldString.GetRegularString() == newString {
 		return nil
 	}

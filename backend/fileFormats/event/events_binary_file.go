@@ -142,12 +142,13 @@ func (b *EventsBinaryFile) ImportFromJson(filePath string) error {
 	if err != nil {
 		return err
 	}
-	for _, eventID := range eventIDs {
-		if err := ImportEventDataFromJsonFile(b.Version, eventID); err != nil {
-			return err
-		}
+	if len(eventIDs) == 0 {
+		return fmt.Errorf("no events loaded")
 	}
-	return nil
+	if len(eventIDs) == 1 {
+		return ImportEventDataFromJsonFile(b.Version, eventIDs[0])
+	}
+	return ImportEventsDataFromJsonFile(b.Version)
 }
 
 func (b *EventsBinaryFile) SaveToBinary(filePath string) error {
