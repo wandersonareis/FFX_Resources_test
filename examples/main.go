@@ -19,7 +19,11 @@ func main() {
 
 	// ===== FFX (v1) =====
 	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(common.GameVersionFFX)
-	interactions.NewInteractionService().GameLocation.SetTargetDirectory("/home/mestre/FFX_Resources/build/bin/data/") // Defina o caminho correto para os arquivos do jogo
+	if err := interactions.NewInteractionService().GameLocation.SetTargetDirectory("/home/mestre/FFX_Resources/build/bin/data/"); err != nil {
+		// Defina o caminho correto para os arquivos do jogo
+		common.LogError("Erro ao definir diretório de destino: %v\n", err)
+		return
+	}
 	common.SetVerboseMode(false)                                                                                    // Ativa o modo verboso para depuração
 
 	// Inicialização obrigatória
@@ -35,7 +39,10 @@ func main() {
 
 	// ===== FFX-2 (v2) =====
 	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(common.GameVersionFFX2)
-	interactions.NewInteractionService().GameLocation.SetTargetDirectory("/home/mestre/FFX_Resources/build/bin/data/") // Defina o caminho correto para os arquivos do jogo
+	if err := interactions.NewInteractionService().GameLocation.SetTargetDirectory("/home/mestre/FFX_Resources/build/bin/data/"); err != nil {
+		common.LogError("Erro ao definir diretório de destino: %v\n", err)
+		return
+	}
 
 	common.LogInfo("\n=== FFX-2 (v2) ===")
 	common.LogInfo("Reinicializando dicionários para FFX-2...")
