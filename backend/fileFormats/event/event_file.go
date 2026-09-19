@@ -11,14 +11,6 @@ type EventFile struct {
 	Strings []*LocalizedFieldStringObject
 }
 
-func NewEventFile(id string, version common.GameVersion, strings []*LocalizedFieldStringObject) *EventFile {
-	return &EventFile{
-		ID:      id,
-		Version: version,
-		Strings: strings,
-	}
-}
-
 func (ef *EventFile) AddLocalizations(strings []*LocalizedFieldStringObject) {
 	if ef.Strings == nil {
 		ef.Strings = strings

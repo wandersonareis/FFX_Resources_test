@@ -52,10 +52,7 @@ var _ = Describe("FieldString", func() {
 	Describe("NewFieldString", func() {
 		Context("when creating a new FieldString", func() {
 			It("should correctly parse header data", func() {
-				regularHeader := 0x02010014    // offset=20, flags=1, choices=2
-				simplifiedHeader := 0x03020018 // offset=24, flags=2, choices=3
-
-				fs := event.NewFieldString(charset, regularHeader, simplifiedHeader, testBytes, common.GameVersionFFX)
+				fs := event.NewFieldString(charset, 0x0014, 0x01, 0x02, 0x0018, 0x02, 0x03, testBytes, common.GameVersionFFX)
 
 				Expect(fs.Charset).To(Equal(charset))
 				Expect(fs.RegularOffset).To(Equal(20))
@@ -67,10 +64,7 @@ var _ = Describe("FieldString", func() {
 			})
 
 			It("should extract correct byte sequences", func() {
-				regularHeader := 0x00000014    // offset=20
-				simplifiedHeader := 0x00000018 // offset=24
-
-				fs := event.NewFieldString(charset, regularHeader, simplifiedHeader, testBytes, common.GameVersionFFX)
+				fs := event.NewFieldString(charset, 0x0014, 0x00, 0x00, 0x0018, 0x00, 0x00, testBytes, common.GameVersionFFX)
 
 				// Should extract "ABC" and "DE"
 				Expect(fs.RegularBytes).To(Equal([]byte{0x50, 0x51, 0x52}))
@@ -78,10 +72,7 @@ var _ = Describe("FieldString", func() {
 			})
 
 			It("should handle same offset for regular and simplified", func() {
-				regularHeader := 0x00000014    // offset=20
-				simplifiedHeader := 0x00000014 // same offset=20
-
-				fs := event.NewFieldString(charset, regularHeader, simplifiedHeader, testBytes, common.GameVersionFFX)
+				fs := event.NewFieldString(charset, 0x0014, 0x00, 0x00, 0x0014, 0x00, 0x00, testBytes, common.GameVersionFFX)
 
 				// Both should point to same byte sequence
 				Expect(fs.RegularBytes).To(Equal(fs.SimplifiedBytes))
@@ -156,7 +147,7 @@ var _ = Describe("FieldString", func() {
 		var fs *event.FieldString
 
 		BeforeEach(func() {
-			fs = event.NewFieldString(charset, 0x00000014, 0x00000018, testBytes, common.GameVersionFFX)
+			fs = event.NewFieldString(charset, 0x0014, 0x00, 0x00, 0x0018, 0x00, 0x00, testBytes, common.GameVersionFFX)
 		})
 
 		It("should return regular string", func() {
@@ -174,7 +165,7 @@ var _ = Describe("FieldString", func() {
 		})
 
 		It("should detect same simplified strings", func() {
-			sameFs := event.NewFieldString(charset, 0x00000014, 0x00000014, testBytes, common.GameVersionFFX)
+			sameFs := event.NewFieldString(charset, 0x0014, 0x00, 0x00, 0x0014, 0x00, 0x00, testBytes, common.GameVersionFFX)
 			Expect(sameFs.HasDistinctSimplified()).To(BeFalse())
 		})
 
@@ -184,13 +175,13 @@ var _ = Describe("FieldString", func() {
 		})
 
 		It("should format string representation without simplified when same", func() {
-			sameFs := event.NewFieldString(charset, 0x00000014, 0x00000014, testBytes, common.GameVersionFFX)
+			sameFs := event.NewFieldString(charset, 0x0014, 0x00, 0x00, 0x0014, 0x00, 0x00, testBytes, common.GameVersionFFX)
 			result := sameFs.String()
 			Expect(result).To(Equal("ABC"))
 		})
 
 		It("should detect empty strings", func() {
-			emptyFs := event.NewFieldString(charset, 0x0000001E, 0x0000001E, testBytes, common.GameVersionFFX)
+			emptyFs := event.NewFieldString(charset, 0x001E, 0x00, 0x00, 0x001E, 0x00, 0x00, testBytes, common.GameVersionFFX)
 			Expect(emptyFs.IsEmpty()).To(BeTrue())
 		})
 	})
@@ -199,7 +190,7 @@ var _ = Describe("FieldString", func() {
 		var fs *event.FieldString
 
 		BeforeEach(func() {
-			fs = event.NewFieldString(charset, 0x00000014, 0x00000018, testBytes, common.GameVersionFFX)
+			fs = event.NewFieldString(charset, 0x0014, 0x00, 0x00, 0x0018, 0x00, 0x00, testBytes, common.GameVersionFFX)
 		})
 
 		It("should set regular string", func() {
@@ -214,7 +205,7 @@ var _ = Describe("FieldString", func() {
 
 		It("should sync simplified when setting regular on synced strings", func() {
 			// Create a synced field string
-			syncedFs := event.NewFieldString(charset, 0x00000014, 0x00000014, testBytes, common.GameVersionFFX)
+			syncedFs := event.NewFieldString(charset, 0x0014, 0x00, 0x00, 0x0014, 0x00, 0x00, testBytes, common.GameVersionFFX)
 			Expect(syncedFs.HasDistinctSimplified()).To(BeFalse())
 
 			syncedFs.SetRegularString("SYNCED")
@@ -349,10 +340,8 @@ var _ = Describe("FieldString", func() {
 				testBytes := []byte{
 					0x41, 0x42, 0x43, 0x00, // "ABC" + null
 				}
-				regularHeader := 0x00000000
-				simplifiedHeader := 0x00000000
 
-				localizedObj.ReadAndSetLocalizedContent("us", testBytes, regularHeader, simplifiedHeader, common.GameVersionFFX)
+				localizedObj.ReadAndSetLocalizedContent("us", testBytes, 0x0000, 0x00, 0x00, 0x0000, 0x00, 0x00, common.GameVersionFFX)
 
 				content := localizedObj.GetLocalizedContent("us")
 				Expect(content).ToNot(BeNil())
@@ -360,7 +349,7 @@ var _ = Describe("FieldString", func() {
 			})
 
 			It("should handle nil bytes gracefully", func() {
-				localizedObj.ReadAndSetLocalizedContent("us", nil, 0, 0, common.GameVersionFFX)
+				localizedObj.ReadAndSetLocalizedContent("us", nil, 0x0000, 0x00, 0x00, 0x0000, 0x00, 0x00, common.GameVersionFFX)
 				Expect(localizedObj.GetLocalizedContent("us")).To(BeNil())
 			})
 		})

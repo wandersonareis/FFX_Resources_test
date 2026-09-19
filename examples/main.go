@@ -4,9 +4,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/core/writer"
-	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/interactions"
-	"fmt"
 )
 
 /*
@@ -46,6 +44,7 @@ func main() {
 		return
 	}
 	runFFX2Examples()
+	runEventsExamples(common.GameVersionFFX2)
 
 	// ===== LastMiss (lastmiss) =====
 	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(common.GameVersionLastMiss)
@@ -59,24 +58,6 @@ func main() {
 	runLastMissExamples()
 
 	runObjectFileStore()
-}
-
-func readEvents() error {
-	common.LogInfo("Carregando eventos...")
-	eventsFolder, err := common.NewFileAccessor(common.GetPathOriginalsEvent())
-	if err != nil {
-		return fmt.Errorf("failed to resolve events directory: %w", err)
-	}
-	version := interactions.CurrentGameVersion()
-	if err := event.ReadAllEventFiles(eventsFolder, version); err != nil {
-		common.LogVerbose("Erro ao carregar eventos: %v\n", err)
-		return err
-	}
-
-	// Contar eventos carregados no datastore
-	eventIDs := event.GetAllEventIDs(version)
-	common.LogInfo("✓ Carregados %d eventos no datastore\n", len(eventIDs))
-	return nil
 }
 
 func showMainMenu() {

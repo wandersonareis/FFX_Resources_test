@@ -32,13 +32,13 @@ func (obj *LocalizedFieldStringObject) SetLocalizedContent(localization string, 
 	obj.Contents[localization] = content
 }
 
-func (obj *LocalizedFieldStringObject) ReadAndSetLocalizedContent(localization string, bytes []byte, regularHeader, simplifiedHeader int, version common.GameVersion) {
+func (obj *LocalizedFieldStringObject) ReadAndSetLocalizedContent(localization string, bytes []byte, regularOffset uint16, regularFlags uint8, regularChoices uint8, simplifiedOffset uint16, simplifiedFlags uint8, simplifiedChoices uint8, version common.GameVersion) {
 	if bytes == nil {
 		return
 	}
 
 	charset := ffxencoding.GetCharsetForLanguage(localization)
-	fieldString := NewFieldString(charset, regularHeader, simplifiedHeader, bytes, version)
+	fieldString := NewFieldString(charset, regularOffset, regularFlags, regularChoices, simplifiedOffset, simplifiedFlags, simplifiedChoices, bytes, version)
 	obj.SetLocalizedContent(localization, fieldString)
 }
 

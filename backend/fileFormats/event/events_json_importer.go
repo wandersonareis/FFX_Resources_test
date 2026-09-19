@@ -25,7 +25,7 @@ func ImportEventsDataFromJsonFile(gameVersion common.GameVersion) error {
 }
 
 func ImportEventDataFromJsonFile(gameVersion common.GameVersion, eventID string) error {
-	return importEventJsonFile(gameVersion, eventID, true)
+	return importEventJsonFile(gameVersion, eventID, false)
 }
 
 func importEventJsonFile(gameVersion common.GameVersion, eventID string, singleEvent bool) error {
@@ -183,6 +183,10 @@ func updateEventStringLocalization(objToEdit *LocalizedFieldStringObject, locali
 	fieldString := objToEdit.GetLocalizedContent(localization)
 	if fieldString == nil {
 		return fmt.Errorf("failed to get localized content for %s", localization)
+	}
+	
+	if fieldString.GetRegularString() == newString {
+		return nil
 	}
 
 	fieldString.SetRegularString(newString)

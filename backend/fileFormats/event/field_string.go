@@ -30,7 +30,7 @@ func NewEmptyFieldString(charset string, version common.GameVersion) *FieldStrin
 	}
 }
 
-func NewFieldStringFromParts(charset string, textOffset uint16, textFlags uint8, textChoices uint8, simplifiedTextOffset uint16, simplifiedTextFlags uint8, simplifiedTextChoices uint8, stringBytes []byte, version common.GameVersion) *FieldString {
+func NewFieldString(charset string, textOffset uint16, textFlags uint8, textChoices uint8, simplifiedTextOffset uint16, simplifiedTextFlags uint8, simplifiedTextChoices uint8, stringBytes []byte, version common.GameVersion) *FieldString {
 	fs := &FieldString{
 		Charset:           charset,
 		Version:           version,
@@ -55,20 +55,6 @@ func NewFieldStringFromParts(charset string, textOffset uint16, textFlags uint8,
 	return fs
 }
 
-func NewFieldString(charset string, regularHeader, simplifiedHeader int, stringBytes []byte, version common.GameVersion) *FieldString {
-	return NewFieldStringFromParts(
-		charset,
-		uint16(regularHeader&0x0000FFFF),
-		uint8((regularHeader & 0x00FF0000) >> 16),
-		uint8((regularHeader & 0xFF000000) >> 24),
-		uint16(simplifiedHeader&0x0000FFFF),
-		uint8((simplifiedHeader & 0x00FF0000) >> 16),
-		uint8((simplifiedHeader & 0xFF000000) >> 24),
-		stringBytes,
-		version,
-	)
-}
-
 func FromFieldStringData(bytes []byte, charset string, version common.GameVersion) ([]*FieldString, error) {
 	if len(bytes) == 0 {
 		return []*FieldString{}, nil
@@ -90,7 +76,7 @@ func FromFieldStringData(bytes []byte, charset string, version common.GameVersio
 
 	for i := range count {
 		offset := i * 8
-		fieldString := NewFieldStringFromParts(
+		fieldString := NewFieldString(
 			charset,
 			binary.LittleEndian.Uint16(bytes[offset:offset+2]),
 			bytes[offset+2],
