@@ -3,8 +3,8 @@ package writer
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/formats"
 	"ffxresources/backend/interactions"
-	"ffxresources/backend/models"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -12,16 +12,6 @@ import (
 
 func currentGameVersion() common.GameVersion {
 	return interactions.CurrentGameVersion()
-}
-
-type EventStringData struct {
-	Index int               `json:"index"`
-	Text  map[string]string `json:"text"`
-}
-
-type EventFileData struct {
-	ID      string            `json:"id"`
-	Strings []EventStringData `json:"strings"`
 }
 
 func prepareOutputDirectory() (string, error) {
@@ -44,8 +34,8 @@ func getSortedLocalizationKeys() []string {
 	return localizationKeys
 }
 
-func buildEventStringData(index int, str interface{ GetLocalizedString(string) string }, localizationKeys []string) EventStringData {
-	stringData := EventStringData{
+func buildEventStringData(index int, str interface{ GetLocalizedString(string) string }, localizationKeys []string) event.EventStringData {
+	stringData := event.EventStringData{
 		Index: index,
 		Text:  make(map[string]string),
 	}
@@ -58,7 +48,7 @@ func buildEventStringData(index int, str interface{ GetLocalizedString(string) s
 	return stringData
 }
 
-func processEventFromMemory(eventID string, localizationKeys []string) *EventFileData {
+func processEventFromMemory(eventID string, localizationKeys []string) *event.EventFileData {
 	eventFile := event.GetEvent(currentGameVersion(), eventID)
 	if eventFile == nil || eventFile.Strings == nil || len(eventFile.Strings) == 0 {
 		return nil
@@ -68,9 +58,9 @@ func processEventFromMemory(eventID string, localizationKeys []string) *EventFil
 		fmt.Printf("Processing event file: %s\n", eventFile.ID)
 	}
 
-	eventData := EventFileData{
+	eventData := event.EventFileData{
 		ID:      eventFile.ID,
-		Strings: make([]EventStringData, 0, len(eventFile.Strings)),
+		Strings: make([]event.EventStringData, 0, len(eventFile.Strings)),
 	}
 
 	for i, str := range eventFile.Strings {
@@ -88,7 +78,7 @@ func processEventFromMemory(eventID string, localizationKeys []string) *EventFil
 	return &eventData
 }
 
-func writeJSONFile(events []EventFileData, fileName, outputPath string) error {
+func writeJSONFile(events []event.EventFileData, fileName, outputPath string) error {
 	if len(events) == 0 {
 		fmt.Println("No events with string data found to export to JSON")
 		return nil
@@ -96,21 +86,11 @@ func writeJSONFile(events []EventFileData, fileName, outputPath string) error {
 
 	filePath := filepath.Join(outputPath, common.WithVersionSuffixFor(fileName, currentGameVersion()))
 
-	stringsMap := make(map[string]models.EventFileExport, len(events))
-	for _, e := range events {
-		strings := make([]models.EventStringDataExport, 0, len(e.Strings))
-		for _, s := range e.Strings {
-			strings = append(strings, models.EventStringDataExport{Index: s.Index, Text: s.Text})
-		}
-		stringsMap[e.ID] = models.EventFileExport{
-			Metadata: models.NewEventFileInfo(e.ID, currentGameVersion()),
-			ID:       e.ID,
-			Strings:  strings,
-		}
+	raw, err := formats.NewJSONEventsFormatter().Marshal(events, currentGameVersion())
+	if err != nil {
+		return fmt.Errorf("error marshaling data for %s: %w", filePath, err)
 	}
-
-	export := models.EventsFileExport{Strings: stringsMap}
-	if err := models.SaveDataFile(export, filePath); err != nil {
+	if err := common.WriteBytesToFile(filePath, raw); err != nil {
 		return fmt.Errorf("error writing JSON file %s: %w", filePath, err)
 	}
 
@@ -157,7 +137,7 @@ func ExportAllLocalizationsToJSON() {
 	localizationKeys := getSortedLocalizationKeys()
 	eventIDs := getSortedEventIDs()
 
-	var allEvents []EventFileData
+	var allEvents []event.EventFileData
 	var count int
 
 	for _, eventID := range eventIDs {

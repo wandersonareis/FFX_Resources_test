@@ -7,7 +7,6 @@ import (
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/interactions"
-	"ffxresources/backend/interfaces"
 	"fmt"
 	"io"
 	"os"
@@ -33,7 +32,7 @@ type ObjectBinaryFileStore struct {
 }
 
 // NewObjectBinaryFileStore constrói um ObjectBinaryFileStore.
-func NewObjectBinaryFileStore(patternPath string, creator CreatorFunc, languageCode string, version common.GameVersion) interfaces.IBinaryFile[datastore.IGlobalLocalizedTextObject] {
+func NewObjectBinaryFileStore(patternPath string, creator CreatorFunc, languageCode string, version common.GameVersion) *ObjectBinaryFileStore {
 	return &ObjectBinaryFileStore{
 		Header:       NewBinaryHeader(version),
 		patternPath:  patternPath,
@@ -234,18 +233,18 @@ func newObjectBinaryFileStore(patternPath string, creatorFunc CreatorFunc, gameV
 	return binaryDataFile
 }
 
-func (b *ObjectBinaryFileStore) ExportToJson(filePath string) error {
+func (b *ObjectBinaryFileStore) ExportToJson(filePath string, formatter datastore.IObjectsFormatter) error {
 	if filePath == "" {
 		return fmt.Errorf("json file not configured")
 	}
-	return ExportToJSON(b.Objects, filePath)
+	return ExportToJSON(b.Objects, filePath, formatter)
 }
 
-func (b *ObjectBinaryFileStore) ImportFromJson(filePath string) error {
+func (b *ObjectBinaryFileStore) ImportFromJson(filePath string, formatter datastore.IObjectsFormatter) error {
 	if filePath == "" {
 		return fmt.Errorf("json file not configured")
 	}
-	return ImportFromJson(filePath, b.Objects)
+	return ImportFromJson(filePath, b.Objects, formatter)
 }
 
 func (b *ObjectBinaryFileStore) SaveToBinary(filePath string) error {

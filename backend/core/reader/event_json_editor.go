@@ -6,11 +6,10 @@ import (
 	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/fileFormats/macrodic"
+	"ffxresources/backend/formats"
 	"ffxresources/backend/interactions"
-	"ffxresources/backend/models"
 	"fmt"
 	"path/filepath"
-	"sort"
 )
 
 func currentGameVersion() common.GameVersion {
@@ -117,11 +116,15 @@ func EditAndSaveEventJSONFiles() error {
 }
 
 func editAndSaveEventFromJSON(jsonPath string) error {
-	loaded, err := models.LoadDataFile[models.EventsFileExport](jsonPath)
+	raw, err := common.ReadFile(jsonPath)
 	if err != nil {
 		return fmt.Errorf("failed to load events JSON file: %w", err)
 	}
-	allEvents := convertEventExports(loaded)
+	loaded, err := formats.NewJSONEventsFormatter().Unmarshal(raw)
+	if err != nil {
+		return fmt.Errorf("failed to load events JSON file: %w", err)
+	}
+	allEvents := loaded
 
 	processedEventIDs := make(map[string]bool)
 
@@ -190,14 +193,18 @@ func EditAndSaveSpecificEventFromJSON(eventID string) error {
 	common.LogVerbose("Loading JSON file: %s", jsonFilePath)
 	common.LogVerbose("Looking for event: %s", eventID)
 
-	loaded, err := models.LoadDataFile[models.EventsFileExport](jsonFilePath)
+	raw, err := common.ReadFile(jsonFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to load events JSON file: %w", err)
 	}
-	allJsonEvents := convertEventExports(loaded)
+	loaded, err := formats.NewJSONEventsFormatter().Unmarshal(raw)
+	if err != nil {
+		return fmt.Errorf("failed to load events JSON file: %w", err)
+	}
+	allJsonEvents := loaded
 
 	// Find the specific event in the JSON
-	var targetEventData *EventFileDataJSON
+	var targetEventData *event.EventFileData
 	for i := range allJsonEvents {
 		if allJsonEvents[i].ID == eventID {
 			targetEventData = &allJsonEvents[i]
@@ -258,46 +265,6 @@ func EditAndSaveSpecificEventFromJSON(eventID string) error {
 	return nil
 }
 
-// EventFileDataJSON represents the JSON structure for a single event file
-// This matches the format exported by WriteEventFileForAllLocalizationsJSON
-type EventFileDataJSON = EventFileData
-
-// convertEventExports maps the wrapped export payload back into the reader-internal
-// EventFileData representation used by the JSON editors.
-func convertEventExports(loaded models.EventsFileExport) []EventFileData {
-	events := make([]EventFileData, 0, len(loaded.Strings))
-	keys := make([]string, 0, len(loaded.Strings))
-	for id := range loaded.Strings {
-		keys = append(keys, id)
-	}
-	sort.Strings(keys)
-	for _, id := range keys {
-		e := loaded.Strings[id]
-		strings := make([]EventStringData, 0, len(e.Strings))
-		for _, s := range e.Strings {
-			strings = append(strings, EventStringData{Index: s.Index, Text: s.Text})
-		}
-		events = append(events, EventFileData{ID: id, Strings: strings})
-	}
-	return events
-}
-
-// EventStringDataJSON represents a single event string with its localizations
-// This matches the format exported by WriteEventFileForAllLocalizationsJSON
-//type EventStringDataJSON = EventStringData
-
-// EventFileData represents an event file with all its strings (same as writer package)
-type EventFileData struct {
-	ID      string            `json:"id"`
-	Strings []EventStringData `json:"strings"`
-}
-
-// EventStringData represents a single event string with its localizations (same as writer package)
-type EventStringData struct {
-	Index int               `json:"index"`
-	Text  map[string]string `json:"text"`
-}
-
 /*
 JSON MACRO DICTIONARY EDITOR FUNCTIONS (container-based)
 =========================================================
@@ -310,7 +277,7 @@ binaries back to the game files.
 // EditAndSaveMacroDictJSONFiles imports every localization in the merged macro
 // dictionary JSON file and saves all rebuilt binaries.
 func EditAndSaveMacroDictJSONFiles() error {
-	imp, err := macrodic.LoadMacroDictionaryJson(macrodic.MacroDictionaryJSONFileName)
+	imp, err := macrodic.LoadMacroDictionaryJson(macrodic.MacroDictionaryJSONFileName, formats.NewJSONMacroFormatter())
 	if err != nil {
 		common.LogVerbose("Error loading macro dictionary JSON file: %v", err)
 		return err
@@ -341,7 +308,7 @@ func EditAndSaveMacroDictJSONFiles() error {
 // Returns:
 //   - error: nil if successful, error if the localization is not found or processing fails
 func EditAndSaveSpecificMacroDictFromJSON(localization string) error {
-	imp, err := macrodic.LoadMacroDictionaryJson(macrodic.MacroDictionaryJSONFileName)
+	imp, err := macrodic.LoadMacroDictionaryJson(macrodic.MacroDictionaryJSONFileName, formats.NewJSONMacroFormatter())
 	if err != nil {
 		common.LogVerbose("Error loading macro dictionary JSON file: %v", err)
 		return err

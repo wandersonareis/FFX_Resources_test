@@ -1,10 +1,12 @@
-package macrodic
+package macrodic_test
 
 import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"ffxresources/backend/common"
+	"ffxresources/backend/fileFormats/macrodic"
+	"ffxresources/backend/formats"
 	"os"
 	"testing"
 )
@@ -28,21 +30,22 @@ func hashHex(b []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func roundtripContainers(t *testing.T, raw []byte, loc string, version common.GameVersion) map[string]*MacroDictionaryBinaryFile {
+func roundtripContainers(t *testing.T, raw []byte, loc string, version common.GameVersion) map[string]*macrodic.MacroDictionaryBinaryFile {
 	t.Helper()
-	c, err := NewMacroDictionaryBinaryFileFromBytes(raw, loc, version)
+	c, err := macrodic.NewMacroDictionaryBinaryFileFromBytes(raw, loc, version)
 	if err != nil {
 		t.Fatalf("parse original: %v", err)
 	}
-	js, err := MarshalToJson(ExportToJson(map[string]*MacroDictionaryBinaryFile{loc: c}))
+	formatter := formats.NewJSONMacroFormatter()
+	js, err := formatter.Marshal(map[string]*macrodic.MacroDictionaryBinaryFile{loc: c})
 	if err != nil {
 		t.Fatalf("marshal JSON: %v", err)
 	}
-	imp, err := UnmarshalJson(js)
+	imp, err := formatter.Unmarshal(js)
 	if err != nil {
 		t.Fatalf("unmarshal JSON: %v", err)
 	}
-	back, err := ImportFromJson(imp, version)
+	back, err := macrodic.ImportFromJson(imp, version)
 	if err != nil {
 		t.Fatalf("import JSON: %v", err)
 	}
@@ -74,7 +77,7 @@ func TestUSReimportHashMatch(t *testing.T) {
 func TestFFX2ReimportTexts(t *testing.T) {
 	raw := mustLoadDcp(t, testFFX2DcpPath)
 
-	orig, err := NewMacroDictionaryBinaryFileFromBytes(raw, "us", common.GameVersionFFX2)
+	orig, err := macrodic.NewMacroDictionaryBinaryFileFromBytes(raw, "us", common.GameVersionFFX2)
 	if err != nil {
 		t.Fatalf("parse original: %v", err)
 	}
@@ -83,7 +86,7 @@ func TestFFX2ReimportTexts(t *testing.T) {
 	if !ok || len(rc.Bytes) == 0 {
 		t.Fatalf("import did not rebuild us container")
 	}
-	if _, err := NewMacroDictionaryBinaryFileFromBytes(rc.Bytes, "us", common.GameVersionFFX2); err != nil {
+	if _, err := macrodic.NewMacroDictionaryBinaryFileFromBytes(rc.Bytes, "us", common.GameVersionFFX2); err != nil {
 		t.Fatalf("rebuilt binary does not reparse: %v", err)
 	}
 
@@ -131,16 +134,16 @@ func TestOtherLocalizationsReimport(t *testing.T) {
 	raw := mustLoadDcp(t, testFFXDcpPath)
 
 	otherLocs := []string{"de", "fr", "it", "sp", "jp", "ch", "kr"}
-	containers := map[string]*MacroDictionaryBinaryFile{}
+	containers := map[string]*macrodic.MacroDictionaryBinaryFile{}
 	for _, loc := range append([]string{"us"}, otherLocs...) {
-		c, err := NewMacroDictionaryBinaryFileFromBytes(raw, loc, common.GameVersionFFX)
+		c, err := macrodic.NewMacroDictionaryBinaryFileFromBytes(raw, loc, common.GameVersionFFX)
 		if err != nil {
 			t.Fatalf("parse as %s: %v", loc, err)
 		}
 		containers[loc] = c
 	}
 
-	exp := ExportToJson(containers)
+	exp := macrodic.ExportToJson(containers)
 	if len(exp.Chunks) == 0 {
 		t.Fatalf("empty merged export")
 	}
@@ -163,15 +166,16 @@ func TestOtherLocalizationsReimport(t *testing.T) {
 		}
 	}
 
-	js, err := MarshalToJson(exp)
+	formatter := formats.NewJSONMacroFormatter()
+	js, err := formatter.Marshal(containers)
 	if err != nil {
 		t.Fatalf("marshal JSON: %v", err)
 	}
-	imp, err := UnmarshalJson(js)
+	imp, err := formatter.Unmarshal(js)
 	if err != nil {
 		t.Fatalf("unmarshal JSON: %v", err)
 	}
-	back, err := ImportFromJson(imp, common.GameVersionFFX)
+	back, err := macrodic.ImportFromJson(imp, common.GameVersionFFX)
 	if err != nil {
 		t.Fatalf("import JSON: %v", err)
 	}
@@ -182,7 +186,7 @@ func TestOtherLocalizationsReimport(t *testing.T) {
 			t.Errorf("localization %s was not reimported", loc)
 			continue
 		}
-		if _, err := NewMacroDictionaryBinaryFileFromBytes(rc.Bytes, loc, common.GameVersionFFX); err != nil {
+		if _, err := macrodic.NewMacroDictionaryBinaryFileFromBytes(rc.Bytes, loc, common.GameVersionFFX); err != nil {
 			t.Errorf("rebuilt %s does not reparse: %v", loc, err)
 		}
 	}

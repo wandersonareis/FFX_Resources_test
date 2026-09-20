@@ -9,6 +9,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/fileFormats/objectsfile"
+	"ffxresources/backend/formats"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
 	testcommon "ffxresources/testData"
@@ -164,7 +165,7 @@ var _ = Describe("Integration: integrity cycle via LoadObjectFileFromStore + Fil
 			Expect(binFile.GetObjects().Len()).To(BeNumerically(">", 0))
 
 			jsonName := strings.ReplaceAll(strings.ReplaceAll(tc.pattern, "/", "_"), ".bin", "_store.json")
-			Expect(binFile.ExportToJson(jsonName)).To(BeNil())
+			Expect(binFile.ExportToJson(jsonName, formats.NewJSONObjectFormatter())).To(BeNil())
 
 			reimported, err := os.CreateTemp(tmpRoot, "reimported-*.bin")
 			Expect(err).To(BeNil())

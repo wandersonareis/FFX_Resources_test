@@ -1,7 +1,6 @@
 package models
 
 import (
-	"bytes"
 	"encoding/json"
 	"ffxresources/backend/common"
 	"os"
@@ -85,48 +84,6 @@ func MacroBinaryPath(localization string) string {
 // DataWrapper wraps any payload under a "data" key as the exported file format.
 type DataWrapper[T any] struct {
 	Data T `json:"data"`
-}
-
-// SaveDataFile writes payload wrapped as {"data": payload} WITHOUT HTML escaping,
-// so paths containing &, <, > stay human-readable.
-func SaveDataFile[T any](payload T, filePath string) error {
-	return saveNoEscape(DataWrapper[T]{Data: payload}, filePath)
-}
-
-// LoadDataFile reads a {"data": payload} file, falling back to a bare payload when
-// the file is in the legacy (pre-metadata) format.
-func LoadDataFile[T any](filePath string) (T, error) {
-	var zero T
-	raw, err := os.ReadFile(filePath)
-	if err != nil {
-		return zero, err
-	}
-
-	var probe map[string]json.RawMessage
-	if json.Unmarshal(raw, &probe) == nil {
-		if _, ok := probe["data"]; ok {
-			var wrapped DataWrapper[T]
-			if err := json.Unmarshal(raw, &wrapped); err == nil {
-				return wrapped.Data, nil
-			}
-		}
-	}
-
-	if err := json.Unmarshal(raw, &zero); err != nil {
-		return zero, err
-	}
-	return zero, nil
-}
-
-func saveNoEscape(v any, filePath string) error {
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.SetEscapeHTML(false)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(v); err != nil {
-		return err
-	}
-	return os.WriteFile(filePath, buf.Bytes(), 0644)
 }
 
 // ---- export payload types ------------------------------------------------------

@@ -48,7 +48,13 @@ type (
 	}
 
 	// IBinaryFile orquestra o ciclo de vida de um arquivo binário de localização:
-	// carregar do binário, exportar/importar JSON e salvar de volta no binário.
+	// carregar do binário e salvar de volta no binário.
+	//
+	// Exportação/importação de texto não fazem parte deste contrato
+	// compartilhado: cada domínio usa um formatter tipado recebido diretamente
+	// nos métodos ExportToJson/ImportFromJson dos tipos concretos
+	// (datastore.IObjectsFormatter, event.IEventsFormatter,
+	// macrodic.IMacroFormatter), sem `any` e sem reflexão.
 	//
 	// É genérica no tipo do objeto de texto (T) de propósito: referenciar aqui
 	// core/components ou datastore formaria um import cíclico, pois
@@ -56,8 +62,6 @@ type (
 	// concreta usada pelos readers continua em datastore.IBinaryFile.
 	IBinaryFile[T any] interface {
 		LoadFromBinary() error
-		ExportToJson(filePath string) error
-		ImportFromJson(filePath string) error
 		SaveToBinary(filePath string) error
 		GetObjects() IList[T]
 	}

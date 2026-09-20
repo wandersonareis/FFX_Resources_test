@@ -86,10 +86,11 @@ func SaveMacroDictionaryBinaries(containers map[string]*MacroDictionaryBinaryFil
 	return nil
 }
 
-// SaveMacroDictionaryJson exports all given containers into a single merged JSON
-// file holding every available localization, like objectfile exports do.
-func SaveMacroDictionaryJson(containers map[string]*MacroDictionaryBinaryFile, fileName string) error {
-	raw, err := MarshalToJson(ExportToJson(containers))
+// SaveMacroDictionaryJson exports all given containers into a single merged
+// text file holding every available localization, like objectfile exports do.
+// Serialization goes through the given formatter.
+func SaveMacroDictionaryJson(containers map[string]*MacroDictionaryBinaryFile, fileName string, formatter IMacroFormatter) error {
+	raw, err := formatter.Marshal(containers)
 	if err != nil {
 		return fmt.Errorf("failed to marshal macro dictionary JSON: %w", err)
 	}
@@ -101,8 +102,9 @@ func SaveMacroDictionaryJson(containers map[string]*MacroDictionaryBinaryFile, f
 	return nil
 }
 
-// LoadMacroDictionaryJson reads a merged macro dictionary JSON file.
-func LoadMacroDictionaryJson(fileName string) (*MacroDictionaryJsonImport, error) {
+// LoadMacroDictionaryJson reads a merged macro dictionary text file,
+// deserializing through the given formatter.
+func LoadMacroDictionaryJson(fileName string, formatter IMacroFormatter) (*MacroDictionaryJsonImport, error) {
 	path := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "macrodic", common.WithVersionSuffix(fileName))
 	if !common.IsPathExists(path) {
 		return nil, fmt.Errorf("macro dictionary JSON file not found: %s", path)
@@ -111,5 +113,5 @@ func LoadMacroDictionaryJson(fileName string) (*MacroDictionaryJsonImport, error
 	if err != nil {
 		return nil, fmt.Errorf("failed to read macro dictionary JSON file %s: %w", path, err)
 	}
-	return UnmarshalJson(raw)
+	return formatter.Unmarshal(raw)
 }

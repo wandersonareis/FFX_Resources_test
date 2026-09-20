@@ -3,6 +3,7 @@
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/macrodic"
+	"ffxresources/backend/formats"
 	"ffxresources/backend/interactions"
 	"fmt"
 	"path/filepath"
@@ -40,7 +41,7 @@ func ExportMacroDictionaryToJSON() {
 		}
 	}
 
-	if err := macrodic.SaveMacroDictionaryJson(containers, macrodic.MacroDictionaryJSONFileName); err != nil {
+	if err := macrodic.SaveMacroDictionaryJson(containers, macrodic.MacroDictionaryJSONFileName, formats.NewJSONMacroFormatter()); err != nil {
 		common.LogError("Error writing macro dictionary JSON: %v\n", err)
 		return
 	}
@@ -67,7 +68,7 @@ func WriteMacroDictionaryForLocalizationJSON(localization string) {
 	}
 
 	fileName := fmt.Sprintf("macro_dictionary_%s.json", localization)
-	if err := macrodic.SaveMacroDictionaryJson(map[string]*macrodic.MacroDictionaryBinaryFile{localization: c}, fileName); err != nil {
+	if err := macrodic.SaveMacroDictionaryJson(map[string]*macrodic.MacroDictionaryBinaryFile{localization: c}, fileName, formats.NewJSONMacroFormatter()); err != nil {
 		common.LogError("Error writing macro dictionary JSON: %v\n", err)
 		return
 	}
@@ -95,7 +96,7 @@ func EditAndSaveMacrodicFromJson(jsonFilePath string) error {
 	if err != nil {
 		return fmt.Errorf("erro ao ler arquivo JSON: %v", err)
 	}
-	imp, err := macrodic.UnmarshalJson(raw)
+	imp, err := formats.NewJSONMacroFormatter().Unmarshal(raw)
 	if err != nil {
 		return fmt.Errorf("erro ao fazer parse do JSON: %v", err)
 	}

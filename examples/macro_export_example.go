@@ -5,6 +5,7 @@ import (
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/core/writer"
 	"ffxresources/backend/fileFormats/macrodic"
+	"ffxresources/backend/formats"
 	"ffxresources/backend/interactions"
 	"fmt"
 	"log"
@@ -146,12 +147,13 @@ func BinaryReconstructionExample() {
 		common.LogError("Erro ao ler containers: %v\n", err)
 		return
 	}
-	js, err := macrodic.MarshalToJson(macrodic.ExportToJson(containers))
+	formatter := formats.NewJSONMacroFormatter()
+	js, err := formatter.Marshal(containers)
 	if err != nil {
 		common.LogError("Erro ao exportar JSON: %v\n", err)
 		return
 	}
-	imp, err := macrodic.UnmarshalJson(js)
+	imp, err := formatter.Unmarshal(js)
 	if err != nil {
 		common.LogError("Erro ao ler JSON: %v\n", err)
 		return

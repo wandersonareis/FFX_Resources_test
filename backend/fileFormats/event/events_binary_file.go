@@ -13,7 +13,8 @@ import (
 )
 
 // EventsBinaryFile carrega/exporta/importa/salva os eventos de localization.
-// Implementa datastore.IBinaryFile. Em ExportToJson, ImportFromJson e
+// A exportação/importação de texto recebe o formatter do formato
+// (event.IEventsFormatter). Em ExportToJson, ImportFromJson e
 // SaveToBinary o parâmetro string é usado como: "" = tudo, ou EventID.
 type EventsBinaryFile struct {
 	Version common.GameVersion
@@ -123,7 +124,7 @@ func eventIDFromParam(filePath string) string {
 	return ""
 }
 
-func (b *EventsBinaryFile) ExportToJson(filePath string) error {
+func (b *EventsBinaryFile) ExportToJson(filePath string, formatter IEventsFormatter) error {
 	eventIDs, err := b.eventIDs(filePath)
 	if err != nil {
 		return err
@@ -132,12 +133,12 @@ func (b *EventsBinaryFile) ExportToJson(filePath string) error {
 		return fmt.Errorf("no events loaded")
 	}
 	if len(eventIDs) == 1 {
-		return exportSingleEventToJSON(b.Version, eventIDs[0])
+		return exportSingleEventToJSON(b.Version, eventIDs[0], formatter)
 	}
-	return ExportAllEventsToJSONForVersion(b.Version)
+	return ExportAllEventsToJSONForVersion(b.Version, formatter)
 }
 
-func (b *EventsBinaryFile) ImportFromJson(filePath string) error {
+func (b *EventsBinaryFile) ImportFromJson(filePath string, formatter IEventsFormatter) error {
 	eventIDs, err := b.eventIDs(filePath)
 	if err != nil {
 		return err
@@ -146,9 +147,9 @@ func (b *EventsBinaryFile) ImportFromJson(filePath string) error {
 		return fmt.Errorf("no events loaded")
 	}
 	if len(eventIDs) == 1 {
-		return ImportEventDataFromJsonFile(b.Version, eventIDs[0])
+		return ImportEventDataFromJsonFile(b.Version, eventIDs[0], formatter)
 	}
-	return ImportEventsDataFromJsonFile(b.Version)
+	return ImportEventsDataFromJsonFile(b.Version, formatter)
 }
 
 func (b *EventsBinaryFile) SaveToBinary(filePath string) error {

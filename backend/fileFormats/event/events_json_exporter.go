@@ -3,7 +3,6 @@ package event
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/interactions"
-	"ffxresources/backend/models"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -39,18 +38,6 @@ func buildEventStringData(index int, str interface{ GetLocalizedString(string) s
 	return stringData
 }
 
-func eventFileExport(eventData EventFileData, version common.GameVersion) models.EventFileExport {
-	strings := make([]models.EventStringDataExport, 0, len(eventData.Strings))
-	for _, s := range eventData.Strings {
-		strings = append(strings, models.EventStringDataExport{Index: s.Index, Text: s.Text})
-	}
-	return models.EventFileExport{
-		Metadata: models.NewEventFileInfo(eventData.ID, version),
-		ID:       eventData.ID,
-		Strings:  strings,
-	}
-}
-
 func eventJSONPath(fileName string, version common.GameVersion) (string, error) {
 	editsPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits")
 	if err := common.EnsurePathExists(editsPath); err != nil {
@@ -59,13 +46,17 @@ func eventJSONPath(fileName string, version common.GameVersion) (string, error) 
 	return filepath.Join(editsPath, common.WithVersionSuffixFor(fileName, version)), nil
 }
 
-func writeSingleEventJSONFile(event EventFileData, fileName string, version common.GameVersion) error {
+func writeSingleEventJSONFile(event EventFileData, fileName string, version common.GameVersion, formatter IEventsFormatter) error {
 	filePath, err := eventJSONPath(fileName, version)
 	if err != nil {
 		return err
 	}
-	export := []models.EventFileExport{eventFileExport(event, version)}
-	if err := models.SaveDataFile(export, filePath); err != nil {
+	export := []EventFileData{event}
+	raw, err := formatter.Marshal(export, version)
+	if err != nil {
+		return fmt.Errorf("error marshaling data for %s: %w", filePath, err)
+	}
+	if err := common.WriteBytesToFile(filePath, raw); err != nil {
 		return fmt.Errorf("error writing JSON file %s: %w", filePath, err)
 	}
 	common.LogVerbose("Exported event JSON file: %s", filePath)
@@ -73,17 +64,16 @@ func writeSingleEventJSONFile(event EventFileData, fileName string, version comm
 	return nil
 }
 
-func writeEventsJSONFile(events []EventFileData, fileName string, version common.GameVersion) error {
+func writeEventsJSONFile(events []EventFileData, fileName string, version common.GameVersion, formatter IEventsFormatter) error {
 	filePath, err := eventJSONPath(fileName, version)
 	if err != nil {
 		return err
 	}
-	stringsMap := make(map[string]models.EventFileExport, len(events))
-	for _, e := range events {
-		stringsMap[e.ID] = eventFileExport(e, version)
+	raw, err := formatter.Marshal(events, version)
+	if err != nil {
+		return fmt.Errorf("error marshaling data for %s: %w", filePath, err)
 	}
-	export := models.EventsFileExport{Strings: stringsMap}
-	if err := models.SaveDataFile(export, filePath); err != nil {
+	if err := common.WriteBytesToFile(filePath, raw); err != nil {
 		return fmt.Errorf("error writing JSON file %s: %w", filePath, err)
 	}
 	common.LogVerbose("Exported event JSON file: %s", filePath)
@@ -111,7 +101,7 @@ func processEventFromMemoryForVersion(version common.GameVersion, eventID string
 	return &eventData
 }
 
-func exportSingleEventToJSON(version common.GameVersion, eventID string) error {
+func exportSingleEventToJSON(version common.GameVersion, eventID string, formatter IEventsFormatter) error {
 	eventIDs := GetAllEventIDs(version)
 	if len(eventIDs) == 0 {
 		return fmt.Errorf("no events loaded for version %s", version)
@@ -122,10 +112,10 @@ func exportSingleEventToJSON(version common.GameVersion, eventID string) error {
 		return fmt.Errorf("no data found for event %s", eventID)
 	}
 	fileName := "event_" + eventID + "_all_localizations.json"
-	return writeSingleEventJSONFile(*eventData, fileName, version)
+	return writeSingleEventJSONFile(*eventData, fileName, version, formatter)
 }
 
-func exportEventsToJSON(version common.GameVersion, fileName string, eventIDs []string, localizationKeys []string) error {
+func exportEventsToJSON(version common.GameVersion, fileName string, eventIDs []string, localizationKeys []string, formatter IEventsFormatter) error {
 	var allEvents []EventFileData
 	for _, eventID := range eventIDs {
 		eventData := processEventFromMemoryForVersion(version, eventID, localizationKeys)
@@ -137,15 +127,18 @@ func exportEventsToJSON(version common.GameVersion, fileName string, eventIDs []
 	if len(allEvents) == 0 {
 		return fmt.Errorf("no events with string data found for localization")
 	}
-	return writeEventsJSONFile(allEvents, fileName, version)
+	return writeEventsJSONFile(allEvents, fileName, version, formatter)
 }
 
-func ExportAllEventsToJSON() error {
-	return ExportAllEventsToJSONForVersion(currentGameVersion())
+func ExportAllEventsToJSON(formatter IEventsFormatter) error {
+	return ExportAllEventsToJSONForVersion(currentGameVersion(), formatter)
 }
 
-func ExportAllEventsToJSONForVersion(version common.GameVersion) error {
+func ExportAllEventsToJSONForVersion(version common.GameVersion, formatter IEventsFormatter) error {
 	eventIDs := GetAllEventIDs(version)
+	sortedIDs := make([]string, len(eventIDs))
+	copy(sortedIDs, eventIDs)
+	sort.Strings(sortedIDs)
 	localizationKeys := getSortedLocalizationKeys()
-	return exportEventsToJSON(version, "events_all_localizations.json", eventIDs, localizationKeys)
+	return exportEventsToJSON(version, "events_all_localizations.json", sortedIDs, localizationKeys, formatter)
 }

@@ -1,7 +1,6 @@
 package macrodic
 
 import (
-	"encoding/json"
 	"sort"
 )
 
@@ -109,11 +108,6 @@ func ExportToJson(containers map[string]*MacroDictionaryBinaryFile) *MacroDictio
 	}
 
 	return &MacroDictionaryJsonExport{Chunks: chunks}
-}
-
-// MarshalToJson serializes the merged export to JSON bytes with proper indentation.
-func MarshalToJson(export *MacroDictionaryJsonExport) ([]byte, error) {
-	return json.MarshalIndent(export, "", "  ")
 }
 
 // SortedLocalizationKeys returns the sorted localization keys of the given

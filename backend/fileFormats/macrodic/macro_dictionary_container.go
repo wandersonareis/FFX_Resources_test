@@ -296,13 +296,14 @@ func (c *MacroDictionaryBinaryFile) PublishStrings() error {
 	return firstErr
 }
 
-// ExportToJson exports this container localization to a merged-shape JSON
-// file (objectfile ExportToJson pattern).
-func (c *MacroDictionaryBinaryFile) ExportToJson(filePath string) error {
+// ExportToJson exports this container localization to a merged-shape text
+// file (objectfile ExportToJson pattern), serializing through the given
+// formatter.
+func (c *MacroDictionaryBinaryFile) ExportToJson(filePath string, formatter IMacroFormatter) error {
 	if filePath == "" {
 		return fmt.Errorf("json file not configured")
 	}
-	raw, err := MarshalToJson(ExportToJson(map[string]*MacroDictionaryBinaryFile{c.Localization: c}))
+	raw, err := formatter.Marshal(map[string]*MacroDictionaryBinaryFile{c.Localization: c})
 	if err != nil {
 		return fmt.Errorf("failed to marshal macro dictionary JSON: %w", err)
 	}
@@ -312,9 +313,10 @@ func (c *MacroDictionaryBinaryFile) ExportToJson(filePath string) error {
 	return nil
 }
 
-// ImportFromJson imports a merged JSON file, rebuilding every localization
+// ImportFromJson imports a merged text file, rebuilding every localization
 // container found in it, and adopts this container localization entry.
-func (c *MacroDictionaryBinaryFile) ImportFromJson(filePath string) error {
+// Deserialization goes through the given formatter.
+func (c *MacroDictionaryBinaryFile) ImportFromJson(filePath string, formatter IMacroFormatter) error {
 	if filePath == "" {
 		return fmt.Errorf("json file not configured")
 	}
@@ -322,7 +324,7 @@ func (c *MacroDictionaryBinaryFile) ImportFromJson(filePath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to read macro dictionary JSON file %s: %w", filePath, err)
 	}
-	data, err := UnmarshalJson(raw)
+	data, err := formatter.Unmarshal(raw)
 	if err != nil {
 		return err
 	}

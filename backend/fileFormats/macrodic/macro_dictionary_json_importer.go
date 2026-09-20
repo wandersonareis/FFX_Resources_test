@@ -1,7 +1,6 @@
 ﻿package macrodic
 
 import (
-	"encoding/json"
 	"sort"
 
 	"ffxresources/backend/common"
@@ -113,13 +112,4 @@ func ImportFromJson(data *MacroDictionaryJsonImport, version common.GameVersion)
 		result[loc] = c
 	}
 	return result, nil
-}
-
-// UnmarshalJson parses merged macro dictionary JSON bytes.
-func UnmarshalJson(jsonData []byte) (*MacroDictionaryJsonImport, error) {
-	var imp MacroDictionaryJsonImport
-	if err := json.Unmarshal(jsonData, &imp); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal macro dictionary JSON: %w", err)
-	}
-	return &imp, nil
 }

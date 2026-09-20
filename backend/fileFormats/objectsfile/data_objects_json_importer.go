@@ -1,7 +1,6 @@
 package objectsfile
 
 import (
-	"encoding/json"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	"ffxresources/backend/core/converter"
@@ -11,42 +10,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
-)
-
-type (
-	JSONEntry struct {
-		ID                    int                    `json:"id"`
-		Name                  map[string]string      `json:"name,omitempty"`
-		SimplifiedName        map[string]string      `json:"simplifiedName,omitempty"`
-		Description           map[string]string      `json:"description,omitempty"`
-		SimplifiedDescription map[string]string      `json:"simplifiedDescription,omitempty"`
-		Effect                map[string]string      `json:"effect,omitempty"`
-		EffectDescription     map[string]string      `json:"effectDescription,omitempty"`
-		Bonus                 map[string]string      `json:"bonus,omitempty"`
-		BonusIconA            map[string]string      `json:"bonusIconA,omitempty"`
-		BonusIconB            map[string]string      `json:"bonusIconB,omitempty"`
-		BonusReserve          map[string]string      `json:"bonusReserve,omitempty"`
-		Abilities             []map[string]string    `json:"abilities,omitempty"`
-		SensorText            map[string]string      `json:"sensorText,omitempty"`
-		SimplifiedSensorText  map[string]string      `json:"simplifiedSensorText,omitempty"`
-		ScanText              map[string]string      `json:"scanText,omitempty"`
-		SimplifiedScanText    map[string]string      `json:"simplifiedScanText,omitempty"`
-		Weapons               map[string]WeaponTexts `json:"weapons,omitempty"`
-	}
-
-	WeaponTexts struct {
-		Name           map[string]string `json:"name"`
-		SimplifiedName map[string]string `json:"simplifiedName"`
-	}
-	NameOnlyData struct {
-		ID   int               `json:"id"`
-		Name map[string]string `json:"name"`
-	}
-
-	NameDescriptionData struct {
-		NameOnlyData
-		Description map[string]string `json:"description"`
-	}
 )
 
 // resolveObjectsJsonPath normaliza o nome para a convenção com sufixo de
@@ -89,6 +52,7 @@ func resolveObjectsJsonPath(jsonFileName string) string {
 func ImportFromJson(
 	jsonFileName string,
 	objectsList components.IList[datastore.IGlobalLocalizedTextObject],
+	formatter datastore.IObjectsFormatter,
 ) error {
 	jsonFilePath := resolveObjectsJsonPath(jsonFileName)
 	if !common.IsPathExists(jsonFilePath) {
@@ -97,24 +61,23 @@ func ImportFromJson(
 
 	common.LogVerbose("Processing JSON file: %s", jsonFilePath)
 
-	loaded, err := models.LoadDataFile[models.ObjectsFileExport](jsonFilePath)
+	raw, err := common.ReadFile(jsonFilePath)
+	if err != nil {
+		common.LogError("Error loading JSON file %s: %v", jsonFilePath, err)
+		return err
+	}
+	loaded, err := formatter.Unmarshal(raw)
 	if err != nil {
 		common.LogError("Error loading JSON file %s: %v", jsonFilePath, err)
 		return err
 	}
 
-	var jsonData []JSONEntry
-	if err := json.Unmarshal(loaded.Strings, &jsonData); err != nil {
-		common.LogError("Error parsing strings in JSON file %s: %v", jsonFilePath, err)
-		return err
-	}
-
-	common.LogVerbose("Found %d objects in JSON file", len(jsonData))
+	common.LogVerbose("Found %d objects in JSON file", len(loaded.Entries))
 
 	localizedObjects := extractLocalizedObjects(objectsList)
 
 	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	if err := updateLocalizedObjectEntries(jsonData, localizedObjects, version); err != nil {
+	if err := updateLocalizedObjectEntries(loaded.Entries, localizedObjects, version); err != nil {
 		common.LogVerbose("Error processing JSON file: %v", err)
 		return err
 	}
@@ -130,6 +93,7 @@ func ImportFromJsonForLayout(
 	jsonFileName string,
 	objectsList components.IList[datastore.IGlobalLocalizedTextObject],
 	layout FileLayout,
+	formatter datastore.IObjectsFormatter,
 ) error {
 	jsonFilePath := resolveObjectsJsonPath(jsonFileName)
 	if !common.IsPathExists(jsonFilePath) {
@@ -138,7 +102,12 @@ func ImportFromJsonForLayout(
 
 	common.LogVerbose("Processing JSON file: %s", jsonFilePath)
 
-	loaded, err := models.LoadDataFile[models.ObjectsFileExport](jsonFilePath)
+	raw, err := common.ReadFile(jsonFilePath)
+	if err != nil {
+		common.LogError("Error loading JSON file %s: %v", jsonFilePath, err)
+		return err
+	}
+	loaded, err := formatter.Unmarshal(raw)
 	if err != nil {
 		common.LogError("Error loading JSON file %s: %v", jsonFilePath, err)
 		return err
@@ -164,17 +133,11 @@ func ImportFromJsonForLayout(
 		return fmt.Errorf("file mismatch for %s", layout.DirPattern)
 	}
 
-	var jsonData []JSONEntry
-	if err := json.Unmarshal(loaded.Strings, &jsonData); err != nil {
-		common.LogError("Error parsing strings in JSON file %s: %v", jsonFilePath, err)
-		return err
-	}
-
-	common.LogVerbose("Found %d objects in JSON file", len(jsonData))
+	common.LogVerbose("Found %d objects in JSON file", len(loaded.Entries))
 
 	localizedObjects := extractLocalizedObjects(objectsList)
 
-	if err := updateLocalizedObjectEntries(jsonData, localizedObjects, layout.Version); err != nil {
+	if err := updateLocalizedObjectEntries(loaded.Entries, localizedObjects, layout.Version); err != nil {
 		common.LogVerbose("Error processing JSON file: %v", err)
 		return err
 	}
@@ -209,12 +172,12 @@ func isValidID(id int, length int) bool {
 	return id >= 0 && id < length
 }
 
-// updateObject applies JSON data to a localized object. Static keyed fields and
+// updateObject applies entry data to a localized object. Static keyed fields and
 // abilities are applied generically via GetKeyedString (absent keys no-op); weapons
-// remain a specific mapping due to their per-character nested JSON structure.
-func updateObject(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextObject, version common.GameVersion) {
+// remain a specific mapping due to their per-character nested structure.
+func updateObject(jsonEntry *datastore.ObjectTextEntry, obj datastore.IGlobalLocalizedTextObject, version common.GameVersion) {
 	for _, f := range staticFields {
-		applyLocalizedText(obj.GetKeyedString(f.key), *f.get(&jsonEntry), version, f.label)
+		applyLocalizedText(obj.GetKeyedString(f.key), *f.get(jsonEntry), version, f.label)
 	}
 	for i, amap := range jsonEntry.Abilities {
 		applyLocalizedText(obj.GetKeyedString(fmt.Sprintf("ability%d", i+1)), amap, version, "ability "+strconv.Itoa(i+1))
@@ -224,7 +187,7 @@ func updateObject(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextObject,
 	}
 }
 
-// updateLocalizedObjectEntries processes JSON data entries and applies the localized
+// updateLocalizedObjectEntries processes data entries and applies the localized
 // text content to the corresponding ILocalizedTextObject instances.
 //
 // This function handles type detection automatically, supporting both CommandTextObject
@@ -232,11 +195,11 @@ func updateObject(jsonEntry JSONEntry, obj datastore.IGlobalLocalizedTextObject,
 // updates the appropriate text fields based on the object type.
 //
 // Parameters:
-//   - itemsData: Slice of JSONEntry from JSON file
+//   - itemsData: Slice of ObjectTextEntry from the text file
 //   - objects: Slice of ILocalizedTextObject instances to be updated
 //
 // Returns: error if any update operations fail
-func updateLocalizedObjectEntries(itemsData []JSONEntry, objects []datastore.IGlobalLocalizedTextObject, version common.GameVersion) error {
+func updateLocalizedObjectEntries(itemsData []*datastore.ObjectTextEntry, objects []datastore.IGlobalLocalizedTextObject, version common.GameVersion) error {
 	for _, jsonEntry := range itemsData {
 		id := jsonEntry.ID
 
@@ -297,7 +260,7 @@ func updateOrCreateSegment(segment datastore.IGlobalLocalizedKeyedStringObject, 
 	common.LogVerbose("Segment updated (%s): %s", languageCode, newText)
 }
 
-func updateWeaponsEntry(sourceData JSONEntry, obj *WeaponsNameTextObject, version common.GameVersion) {
+func updateWeaponsEntry(sourceData *datastore.ObjectTextEntry, obj *WeaponsNameTextObject, version common.GameVersion) {
 	if len(sourceData.Weapons) == 0 {
 		common.LogVerbose("No weapons found, skipping...")
 		return
