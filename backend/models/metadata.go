@@ -1,7 +1,6 @@
 package models
 
 import (
-	"encoding/json"
 	"ffxresources/backend/common"
 	"os"
 	"path/filepath"
@@ -77,43 +76,6 @@ func EventBinaryPath(id string) string {
 func MacroBinaryPath(localization string) string {
 	rel := filepath.Join("menu", "macrodic.dcp")
 	return filepath.Join(common.GameFilesRoot, common.ModsFolder, common.GetLocalizationRoot(localization), rel)
-}
-
-// ---- export file wrapper -------------------------------------------------------
-
-// DataWrapper wraps any payload under a "data" key as the exported file format.
-type DataWrapper[T any] struct {
-	Data T `json:"data"`
-}
-
-// ---- export payload types ------------------------------------------------------
-
-// EventStringDataExport is the JSON form of a single event string.
-type EventStringDataExport struct {
-	Index int               `json:"index"`
-	Text  map[string]string `json:"text"`
-}
-
-// EventFileExport is one event in the events export, carrying its event-specific
-// metadata (relative path, localization pattern, layout key).
-type EventFileExport struct {
-	Metadata *EventFileInfo          `json:"metadata"`
-	ID       string                  `json:"id"`
-	Strings  []EventStringDataExport `json:"strings"`
-}
-
-// ObjectsFileExport is an objectsfile export: binary metadata + the text strings.
-// Strings is kept as raw JSON so the objectsfile package can (un)marshal its own types.
-type ObjectsFileExport struct {
-	Metadata *FileMetadata   `json:"metadata"`
-	Strings  json.RawMessage `json:"strings"`
-}
-
-// EventsFileExport is a bulk event export where each event is an entry
-// in the "strings" map, keyed by event ID. Each entry carries its own
-// metadata and strings.
-type EventsFileExport struct {
-	Strings map[string]EventFileExport `json:"strings"`
 }
 
 // NewFileInfoFromPath builds a SpiraFileInfo for an arbitrary file (such as a game binary)

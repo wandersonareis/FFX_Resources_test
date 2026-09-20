@@ -2,11 +2,12 @@ package reader
 
 import (
 	"bytes"
+	"ffxresources/backend/builders"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/fileFormats/macrodic"
-	"ffxresources/backend/formats"
+	"ffxresources/backend/formatters/json"
 	"ffxresources/backend/interactions"
 	"fmt"
 	"path/filepath"
@@ -116,56 +117,14 @@ func EditAndSaveEventJSONFiles() error {
 }
 
 func editAndSaveEventFromJSON(jsonPath string) error {
-	raw, err := common.ReadFile(jsonPath)
+	collection, err := json.NewJSONEventsFormatter().ReadEvents(jsonPath)
 	if err != nil {
-		return fmt.Errorf("failed to load events JSON file: %w", err)
+		return err
 	}
-	loaded, err := formats.NewJSONEventsFormatter().Unmarshal(raw)
-	if err != nil {
-		return fmt.Errorf("failed to load events JSON file: %w", err)
+	if err := builders.ApplyEventsDTO(currentGameVersion(), collection, nil); err != nil {
+		return err
 	}
-	allEvents := loaded
-
-	processedEventIDs := make(map[string]bool)
-
-	for _, eventData := range allEvents {
-		eventFile := event.GetEvent(currentGameVersion(), eventData.ID)
-		if eventFile == nil {
-			common.LogVerbose("Event not found: %s", eventData.ID)
-			continue
-		}
-
-		processedEventIDs[eventData.ID] = true
-		common.LogVerbose("Processing event %s with %d strings", eventData.ID, len(eventData.Strings))
-
-		for _, eventString := range eventData.Strings {
-			stringIndex := eventString.Index
-			common.LogVerbose("Processing string %d for event %s", stringIndex, eventData.ID)
-
-			if stringIndex < 0 || stringIndex >= len(eventFile.Strings) {
-				common.LogVerbose("String index out of range for event %s: %d", eventData.ID, stringIndex)
-				continue
-			}
-
-			objToEdit := eventFile.Strings[stringIndex]
-
-			common.LogVerbose("Updating event %s[%d] with %d localizations",
-				eventData.ID, stringIndex, len(eventString.Text))
-
-			for localization, newString := range eventString.Text {
-				if newString != "" {
-					if _, exists := common.SupportedLanguages[localization]; exists {
-						fieldString := objToEdit.GetLocalizedContent(localization)
-						if fieldString != nil {
-							fieldString.SetRegularString(newString)
-						}
-					}
-				}
-			}
-		}
-	}
-
-	for eventID := range processedEventIDs {
+	for eventID := range collection {
 		if err := ExportEventStringsToLocalizations(eventID); err != nil {
 			return fmt.Errorf("error saving event %s: %w", eventID, err)
 		}
@@ -193,66 +152,21 @@ func EditAndSaveSpecificEventFromJSON(eventID string) error {
 	common.LogVerbose("Loading JSON file: %s", jsonFilePath)
 	common.LogVerbose("Looking for event: %s", eventID)
 
-	raw, err := common.ReadFile(jsonFilePath)
+	collection, err := json.NewJSONEventsFormatter().ReadEvents(jsonFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to load events JSON file: %w", err)
-	}
-	loaded, err := formats.NewJSONEventsFormatter().Unmarshal(raw)
-	if err != nil {
-		return fmt.Errorf("failed to load events JSON file: %w", err)
-	}
-	allJsonEvents := loaded
-
-	// Find the specific event in the JSON
-	var targetEventData *event.EventFileData
-	for i := range allJsonEvents {
-		if allJsonEvents[i].ID == eventID {
-			targetEventData = &allJsonEvents[i]
-			break
-		}
+		return err
 	}
 
-	// Check if event was found in JSON
-	if targetEventData == nil {
+	// O applier valida a existência no store; aqui só garantimos que o
+	// evento pedido existe no DTO antes de aplicar.
+	if _, ok := collection[eventID]; !ok {
 		return fmt.Errorf("event %s not found in JSON file", eventID)
 	}
 
-	common.LogVerbose("Event %s found in JSON with %d strings", eventID, len(targetEventData.Strings))
+	common.LogVerbose("Event %s found in JSON with %d strings", eventID, len(collection[eventID].Rows))
 
-	// Validate event exists in memory
-	eventFile := event.GetEvent(currentGameVersion(), eventID)
-	if eventFile == nil {
-		return fmt.Errorf("event not found in memory: %s", eventID)
-	}
-
-	common.LogVerbose("Processing event %s with %d strings", eventID, len(targetEventData.Strings))
-
-	// Process each event string
-	for _, eventString := range targetEventData.Strings {
-		stringIndex := eventString.Index
-
-		common.LogVerbose("Processing string %d for event %s", stringIndex, eventID)
-
-		if stringIndex < 0 || stringIndex >= len(eventFile.Strings) {
-			common.LogVerbose("String index out of range for event %s: %d", eventID, stringIndex)
-			continue
-		}
-
-		objToEdit := eventFile.Strings[stringIndex]
-
-		common.LogVerbose("Updating event %s[%d] with %d localizations",
-			eventID, stringIndex, len(eventString.Text))
-
-		for localization, newString := range eventString.Text {
-			if newString != "" {
-				if _, exists := common.SupportedLanguages[localization]; exists {
-					fieldString := objToEdit.GetLocalizedContent(localization)
-					if fieldString != nil {
-						fieldString.SetRegularString(newString)
-					}
-				}
-			}
-		}
+	if err := builders.ApplyEventsDTO(currentGameVersion(), collection, []string{eventID}); err != nil {
+		return err
 	}
 
 	// Write updated event back to files
@@ -266,32 +180,31 @@ func EditAndSaveSpecificEventFromJSON(eventID string) error {
 }
 
 /*
-JSON MACRO DICTIONARY EDITOR FUNCTIONS (container-based)
-=========================================================
+JSON MACRO DICTIONARY EDITOR FUNCTIONS (DTO-based)
+==================================================
 
-This section imports the merged JSON file created by WriteMacroDictionaryJSON
-(one entry per chunk/string holding every localization) and saves the rebuilt
-binaries back to the game files.
+This section imports the DTO-based JSON file created by ExportMacroDictionaryToJSON
+(chunks chaveados por "chunk_NN" com rows de name/simplifiedName + hash) and
+saves the rebuilt binaries back to the game files via builders.ApplyMacroDTO.
 */
 
-// EditAndSaveMacroDictJSONFiles imports every localization in the merged macro
+// EditAndSaveMacroDictJSONFiles imports every localization in the macro
 // dictionary JSON file and saves all rebuilt binaries.
 func EditAndSaveMacroDictJSONFiles() error {
-	imp, err := macrodic.LoadMacroDictionaryJson(macrodic.MacroDictionaryJSONFileName, formats.NewJSONMacroFormatter())
+	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+	jsonPath, err := json.DefaultMacroJSONPath(version)
+	if err != nil {
+		common.LogVerbose("Error resolving macro dictionary JSON file: %v", err)
+		return err
+	}
+	collection, err := json.NewJSONMacroFormatter().ReadMacro(jsonPath)
 	if err != nil {
 		common.LogVerbose("Error loading macro dictionary JSON file: %v", err)
 		return err
 	}
 
-	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	containers, err := macrodic.ImportFromJson(imp, version)
-	if err != nil {
+	if err := builders.ApplyMacroDTO(version, collection); err != nil {
 		common.LogVerbose("Error importing macro dictionary JSON: %v", err)
-		return err
-	}
-
-	if err := macrodic.SaveMacroDictionaryBinaries(containers); err != nil {
-		common.LogVerbose("Error saving macro dictionary binaries: %v", err)
 		return err
 	}
 
@@ -300,7 +213,7 @@ func EditAndSaveMacroDictJSONFiles() error {
 }
 
 // EditAndSaveSpecificMacroDictFromJSON imports only the requested localization
-// from the merged macro dictionary JSON file and saves its rebuilt binary.
+// from the macro dictionary JSON file and saves its rebuilt binary.
 //
 // Parameters:
 //   - localization: The localization code to process (e.g., "us", "jp", "de", etc.)
@@ -308,14 +221,19 @@ func EditAndSaveMacroDictJSONFiles() error {
 // Returns:
 //   - error: nil if successful, error if the localization is not found or processing fails
 func EditAndSaveSpecificMacroDictFromJSON(localization string) error {
-	imp, err := macrodic.LoadMacroDictionaryJson(macrodic.MacroDictionaryJSONFileName, formats.NewJSONMacroFormatter())
+	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+	jsonPath, err := json.DefaultMacroJSONPath(version)
+	if err != nil {
+		common.LogVerbose("Error resolving macro dictionary JSON file: %v", err)
+		return err
+	}
+	collection, err := json.NewJSONMacroFormatter().ReadMacro(jsonPath)
 	if err != nil {
 		common.LogVerbose("Error loading macro dictionary JSON file: %v", err)
 		return err
 	}
 
-	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	containers, err := macrodic.ImportFromJson(imp, version)
+	containers, err := builders.RebuildMacroContainers(version, collection)
 	if err != nil {
 		common.LogVerbose("Error importing macro dictionary JSON: %v", err)
 		return err

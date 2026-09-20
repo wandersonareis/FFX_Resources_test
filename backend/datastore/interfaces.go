@@ -93,15 +93,16 @@ type IGlobalMacroString interface {
 	String() string
 }
 
-// IBinaryFile orquestra todo o ciclo de vida de um arquivo binário de localização.
-// A exportação/importação de texto recebe o formatter do formato
-// (datastore.IObjectsFormatter), implementado por uma struct por formato
-// (ex: formats.JSONObjectFormatter). Um formato novo é uma struct nova,
-// sem mudar este contrato.
+// IBinaryFile orquestra o ciclo de vida binário de um arquivo de localização:
+// carregar do binário e salvar de volta no binário.
+//
+// Exportação/importação de texto não fazem parte deste contrato: o texto
+// flui como DTO (backend/dto), montado por backend/builders a partir dos
+// dados brutos e serializado por backend/formatters/json. Os pacotes de
+// domínio desconhecem o formato; um formato novo é uma struct nova em
+// backend/formatters, sem mudar este contrato.
 type IBinaryFile interface {
 	LoadFromBinary() error
-	ExportToJson(filePath string, formatter IObjectsFormatter) error
-	ImportFromJson(filePath string, formatter IObjectsFormatter) error
 	SaveToBinary(filePath string) error
 	GetObjects() components.IList[IGlobalLocalizedTextObject]
 }

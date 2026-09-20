@@ -5,25 +5,26 @@ import (
 	"ffxresources/backend/datastore"
 )
 
+// staticFields lista as chaves de segmento estáticas conhecidas, na ordem
+// determinística de extração. Usado por ExportFieldTexts (dto_bridge.go).
 var staticFields = []struct {
 	key   string
-	get   func(*datastore.ObjectTextEntry) *map[string]string
 	label string
 }{
-	{"name", func(e *datastore.ObjectTextEntry) *map[string]string { return &e.Name }, "name"},
-	{"simplifiedName", func(e *datastore.ObjectTextEntry) *map[string]string { return &e.SimplifiedName }, "simplified name"},
-	{"description", func(e *datastore.ObjectTextEntry) *map[string]string { return &e.Description }, "description"},
-	{"simplifiedDescription", func(e *datastore.ObjectTextEntry) *map[string]string { return &e.SimplifiedDescription }, "simplified description"},
-	{"effect", func(e *datastore.ObjectTextEntry) *map[string]string { return &e.Effect }, "effect"},
-	{"effectDescription", func(e *datastore.ObjectTextEntry) *map[string]string { return &e.EffectDescription }, "effect description"},
-	{"bonus", func(e *datastore.ObjectTextEntry) *map[string]string { return &e.Bonus }, "bonus"},
-	{"BonusIconA", func(e *datastore.ObjectTextEntry) *map[string]string { return &e.BonusIconA }, "bonus icon A"},
-	{"BonusIconB", func(e *datastore.ObjectTextEntry) *map[string]string { return &e.BonusIconB }, "bonus icon B"},
-	{"BonusReserve", func(e *datastore.ObjectTextEntry) *map[string]string { return &e.BonusReserve }, "bonus reserve"},
-	{"sensorText", func(e *datastore.ObjectTextEntry) *map[string]string { return &e.SensorText }, "sensor text"},
-	{"simplifiedSensorText", func(e *datastore.ObjectTextEntry) *map[string]string { return &e.SimplifiedSensorText }, "simplified sensor text"},
-	{"scanText", func(e *datastore.ObjectTextEntry) *map[string]string { return &e.ScanText }, "scan text"},
-	{"simplifiedScanText", func(e *datastore.ObjectTextEntry) *map[string]string { return &e.SimplifiedScanText }, "simplified scan text"},
+	{"name", "name"},
+	{"simplifiedName", "simplified name"},
+	{"description", "description"},
+	{"simplifiedDescription", "simplified description"},
+	{"effect", "effect"},
+	{"effectDescription", "effect description"},
+	{"bonus", "bonus"},
+	{"BonusIconA", "bonus icon A"},
+	{"BonusIconB", "bonus icon B"},
+	{"BonusReserve", "bonus reserve"},
+	{"sensorText", "sensor text"},
+	{"simplifiedSensorText", "simplified sensor text"},
+	{"scanText", "scan text"},
+	{"simplifiedScanText", "simplified scan text"},
 }
 
 func applyLocalizedText(seg datastore.IGlobalLocalizedKeyedStringObject, texts map[string]string, version common.GameVersion, label string) {
@@ -44,12 +45,4 @@ func applyLocalizedText(seg datastore.IGlobalLocalizedKeyedStringObject, texts m
 		}
 		updateOrCreateSegment(seg, newText, languageCode, version)
 	}
-}
-
-func staticBindings(obj datastore.IGlobalLocalizedTextObject, data *datastore.ObjectTextEntry) []binding {
-	bs := make([]binding, 0, len(staticFields))
-	for _, f := range staticFields {
-		bs = append(bs, bind(obj, f.key, f.get(data)))
-	}
-	return bs
 }

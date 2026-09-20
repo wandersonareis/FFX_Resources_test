@@ -296,51 +296,6 @@ func (c *MacroDictionaryBinaryFile) PublishStrings() error {
 	return firstErr
 }
 
-// ExportToJson exports this container localization to a merged-shape text
-// file (objectfile ExportToJson pattern), serializing through the given
-// formatter.
-func (c *MacroDictionaryBinaryFile) ExportToJson(filePath string, formatter IMacroFormatter) error {
-	if filePath == "" {
-		return fmt.Errorf("json file not configured")
-	}
-	raw, err := formatter.Marshal(map[string]*MacroDictionaryBinaryFile{c.Localization: c})
-	if err != nil {
-		return fmt.Errorf("failed to marshal macro dictionary JSON: %w", err)
-	}
-	if err := common.WriteBytesToFile(filePath, raw); err != nil {
-		return fmt.Errorf("failed to write macro dictionary JSON file %s: %w", filePath, err)
-	}
-	return nil
-}
-
-// ImportFromJson imports a merged text file, rebuilding every localization
-// container found in it, and adopts this container localization entry.
-// Deserialization goes through the given formatter.
-func (c *MacroDictionaryBinaryFile) ImportFromJson(filePath string, formatter IMacroFormatter) error {
-	if filePath == "" {
-		return fmt.Errorf("json file not configured")
-	}
-	raw, err := common.ReadFile(filePath)
-	if err != nil {
-		return fmt.Errorf("failed to read macro dictionary JSON file %s: %w", filePath, err)
-	}
-	data, err := formatter.Unmarshal(raw)
-	if err != nil {
-		return err
-	}
-	containers, err := ImportFromJson(data, c.Version)
-	if err != nil {
-		return err
-	}
-	rebuilt, ok := containers[c.Localization]
-	if !ok || rebuilt == nil {
-		return fmt.Errorf("localization %s not found in the JSON file", c.Localization)
-	}
-	c.Bytes = rebuilt.Bytes
-	c.ChunkOffsets = rebuilt.ChunkOffsets
-	return nil
-}
-
 // SaveToBinary rebuilds this container binary from zero (pointers
 // recalculated from the text bytes, first pointer = count*4) and writes it
 // to filePath, defaulting to this localization game file.

@@ -12,10 +12,11 @@ import (
 	"ffxresources/backend/models"
 )
 
-// EventsBinaryFile carrega/exporta/importa/salva os eventos de localization.
-// A exportação/importação de texto recebe o formatter do formato
-// (event.IEventsFormatter). Em ExportToJson, ImportFromJson e
-// SaveToBinary o parâmetro string é usado como: "" = tudo, ou EventID.
+// EventsBinaryFile carrega/salva os eventos de localization no binário.
+// Este pacote desconhece JSON/DTO: exportação de texto vive em
+// backend/builders (monta dto.Collection) + backend/formatters/json
+// (serializa e escreve o arquivo). Em SaveToBinary o parâmetro string
+// é usado como: "" = tudo, ou EventID.
 type EventsBinaryFile struct {
 	Version common.GameVersion
 	Infos   components.IList[*models.EventFileInfo]
@@ -122,34 +123,6 @@ func eventIDFromParam(filePath string) string {
 		return base
 	}
 	return ""
-}
-
-func (b *EventsBinaryFile) ExportToJson(filePath string, formatter IEventsFormatter) error {
-	eventIDs, err := b.eventIDs(filePath)
-	if err != nil {
-		return err
-	}
-	if len(eventIDs) == 0 {
-		return fmt.Errorf("no events loaded")
-	}
-	if len(eventIDs) == 1 {
-		return exportSingleEventToJSON(b.Version, eventIDs[0], formatter)
-	}
-	return ExportAllEventsToJSONForVersion(b.Version, formatter)
-}
-
-func (b *EventsBinaryFile) ImportFromJson(filePath string, formatter IEventsFormatter) error {
-	eventIDs, err := b.eventIDs(filePath)
-	if err != nil {
-		return err
-	}
-	if len(eventIDs) == 0 {
-		return fmt.Errorf("no events loaded")
-	}
-	if len(eventIDs) == 1 {
-		return ImportEventDataFromJsonFile(b.Version, eventIDs[0], formatter)
-	}
-	return ImportEventsDataFromJsonFile(b.Version, formatter)
 }
 
 func (b *EventsBinaryFile) SaveToBinary(filePath string) error {

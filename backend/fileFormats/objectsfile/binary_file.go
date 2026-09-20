@@ -258,20 +258,6 @@ func (b *ObjectBinaryFile) buildObjects(dataBytes []byte) {
 	}
 }
 
-func (b *ObjectBinaryFile) ExportToJson(filePath string, formatter datastore.IObjectsFormatter) error {
-	if filePath == "" {
-		return fmt.Errorf("json file not configured")
-	}
-	return ExportToJSON(b.Objects, filePath, formatter)
-}
-
-func (b *ObjectBinaryFile) ImportFromJson(filePath string, formatter datastore.IObjectsFormatter) error {
-	if filePath == "" {
-		return fmt.Errorf("json file not configured")
-	}
-	return ImportFromJson(filePath, b.Objects, formatter)
-}
-
 func (b *ObjectBinaryFile) SaveToBinary(filePath string) error {
 	return SaveBinaryFile(b, filePath)
 }

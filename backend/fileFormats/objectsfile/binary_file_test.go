@@ -2,11 +2,12 @@ package objectsfile_test
 
 import (
 	"crypto/sha256"
+	"ffxresources/backend/builders"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/fileFormats/objectsfile"
-	"ffxresources/backend/formats"
+	"ffxresources/backend/formatters/json"
 	"ffxresources/backend/interactions"
 	testcommon "ffxresources/testData"
 	"os"
@@ -94,16 +95,38 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 	}
 
 	// Ciclo de integridade espelhando examples/main.go:
-	// Read -> ExportToJson -> ImportFromJson -> SaveToBinary -> hash.
+	// Read -> BuildDTO -> Write JSON -> Read JSON -> Apply DTO -> SaveToBinary -> hash.
 	integrityCycle := func(tmpRoot string, tc integrityCase) {
-		binFile := tc.read(tc.pattern, interactions.NewInteractionService().FFXAppConfig().GetGameVersion())
+		version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+		binFile := tc.read(tc.pattern, version)
 		Expect(binFile).NotTo(BeNil())
 		Expect(binFile.GetObjects()).NotTo(BeNil())
 		Expect(binFile.GetObjects().Len()).To(BeNumerically(">", 0))
 
-		jsonName := strings.ReplaceAll(strings.ReplaceAll(tc.pattern, "/", "_"), ".bin", "_integrity.json")
-		Expect(binFile.ExportToJson(jsonName, formats.NewJSONObjectFormatter())).To(Succeed())
-		Expect(binFile.ImportFromJson(jsonName, formats.NewJSONObjectFormatter())).To(Succeed())
+		layout, ok := objectsfile.FileLayoutFor(version, tc.pattern)
+		if !ok {
+			// w_name.bin não tem layout registrado (gap pré-existente):
+			// deriva layout ad hoc só com o necessário para a metadata.
+			layout = objectsfile.FileLayout{
+				Version:    version,
+				DirPattern: filepath.Dir(tc.pattern),
+				FileName:   filepath.Base(tc.pattern),
+			}
+		}
+		key := objectsfile.FileLayoutKey(version, tc.pattern)
+
+		collection, err := builders.BuildObjectsDTO(binFile.GetObjects(), layout, key)
+		Expect(err).ToNot(HaveOccurred())
+		paths, err := json.NewJSONObjectFormatter().WriteObjects(collection, version)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(paths).To(HaveLen(1))
+
+		readBack, err := json.NewJSONObjectFormatter().ReadObjects(paths[0])
+		Expect(err).ToNot(HaveOccurred())
+		entryKey := builders.ObjectsCollectionKey(layout)
+		entry, ok := readBack[entryKey]
+		Expect(ok).To(BeTrue())
+		Expect(builders.ApplyObjectsEntry(binFile.GetObjects(), version, key, entry)).To(Succeed())
 
 		outPath := filepath.Join(tmpRoot, "reimported", strings.ReplaceAll(tc.pattern, "/", "_"))
 		Expect(binFile.SaveToBinary(outPath)).To(Succeed())
@@ -208,25 +231,26 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 			Expect(err.Error()).To(ContainSubstring("failed to read file"))
 		})
 
-		It("should fail ExportToJson when file path is empty", func() {
-			binFile := objectsfile.NewObjectBinaryFile("battle/kernel/command.bin", creator, common.DefaultLocalization, interactions.NewInteractionService().FFXAppConfig().GetGameVersion())
-			err := binFile.ExportToJson("", formats.NewJSONObjectFormatter())
+		It("should fail BuildObjectsDTO when no objects are loaded", func() {
+			version := common.GameVersionFFX
+			layout, ok := objectsfile.FileLayoutFor(version, "battle/kernel/command.bin")
+			Expect(ok).To(BeTrue())
+			binFile := objectsfile.NewObjectBinaryFile("battle/kernel/command.bin", creator, common.DefaultLocalization, version)
+			_, err := builders.BuildObjectsDTO(binFile.GetObjects(), layout, objectsfile.FileLayoutKey(version, "battle/kernel/command.bin"))
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("json file not configured"))
+			Expect(err.Error()).To(ContainSubstring("no objects loaded"))
 		})
 
-		It("should fail ImportFromJson when file path is empty", func() {
-			binFile := objectsfile.NewObjectBinaryFile("battle/kernel/command.bin", creator, common.DefaultLocalization, interactions.NewInteractionService().FFXAppConfig().GetGameVersion())
-			err := binFile.ImportFromJson("", formats.NewJSONObjectFormatter())
+		It("should fail WriteObjects when collection is empty", func() {
+			_, err := json.NewJSONObjectFormatter().WriteObjects(nil, common.GameVersionFFX)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("json file not configured"))
+			Expect(err.Error()).To(ContainSubstring("no objects with text data"))
 		})
 
-		It("should fail ImportFromJson when json file does not exist", func() {
-			binFile := objectsfile.NewObjectBinaryFile("battle/kernel/command.bin", creator, common.DefaultLocalization, interactions.NewInteractionService().FFXAppConfig().GetGameVersion())
-			err := binFile.ImportFromJson("binary_integrity_missing.json", formats.NewJSONObjectFormatter())
+		It("should fail ReadObjects when json file does not exist", func() {
+			_, err := json.NewJSONObjectFormatter().ReadObjects("binary_integrity_missing.json")
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("JSON file not found"))
+			Expect(err.Error()).To(ContainSubstring("failed to load"))
 		})
 	})
 })

@@ -1,11 +1,12 @@
 package main
 
 import (
+	"ffxresources/backend/builders"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/core/writer"
 	"ffxresources/backend/fileFormats/macrodic"
-	"ffxresources/backend/formats"
+	"ffxresources/backend/formatters/json"
 	"ffxresources/backend/interactions"
 	"fmt"
 	"log"
@@ -147,18 +148,23 @@ func BinaryReconstructionExample() {
 		common.LogError("Erro ao ler containers: %v\n", err)
 		return
 	}
-	formatter := formats.NewJSONMacroFormatter()
-	js, err := formatter.Marshal(containers)
+	formatter := json.NewJSONMacroFormatter()
+	collection, err := builders.BuildMacroDTOFromContainers(version, containers)
+	if err != nil {
+		common.LogError("Erro ao montar DTO: %v\n", err)
+		return
+	}
+	js, err := formatter.Marshal(collection)
 	if err != nil {
 		common.LogError("Erro ao exportar JSON: %v\n", err)
 		return
 	}
-	imp, err := formatter.Unmarshal(js)
+	backCollection, err := formatter.Unmarshal(js)
 	if err != nil {
 		common.LogError("Erro ao ler JSON: %v\n", err)
 		return
 	}
-	back, err := macrodic.ImportFromJson(imp, version)
+	back, err := builders.RebuildMacroContainers(version, backCollection)
 	if err != nil {
 		common.LogError("Erro ao importar JSON: %v\n", err)
 		return

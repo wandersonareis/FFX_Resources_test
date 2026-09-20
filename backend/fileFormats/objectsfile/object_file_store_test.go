@@ -4,12 +4,12 @@ import (
 	"crypto/sha256"
 	"os"
 	"path/filepath"
-	"strings"
 
+	"ffxresources/backend/builders"
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/fileFormats/objectsfile"
-	"ffxresources/backend/formats"
+	"ffxresources/backend/formatters/json"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
 	testcommon "ffxresources/testData"
@@ -149,7 +149,7 @@ var _ = Describe("Integration: integrity cycle via LoadObjectFileFromStore + Fil
 		}
 	})
 
-	It("should round-trip key_items and command binaries through export/import + SHA-256", func() {
+	It("should round-trip key_items and command binaries through DTO export/import + SHA-256", func() {
 		cases := []struct {
 			pattern string
 			version common.GameVersion
@@ -164,8 +164,19 @@ var _ = Describe("Integration: integrity cycle via LoadObjectFileFromStore + Fil
 			Expect(binFile.GetObjects()).NotTo(BeNil())
 			Expect(binFile.GetObjects().Len()).To(BeNumerically(">", 0))
 
-			jsonName := strings.ReplaceAll(strings.ReplaceAll(tc.pattern, "/", "_"), ".bin", "_store.json")
-			Expect(binFile.ExportToJson(jsonName, formats.NewJSONObjectFormatter())).To(BeNil())
+			layout, ok := objectsfile.FileLayoutFor(tc.version, tc.pattern)
+			Expect(ok).To(BeTrue())
+			key := objectsfile.FileLayoutKey(tc.version, tc.pattern)
+			collection, err := builders.BuildObjectsDTO(binFile.GetObjects(), layout, key)
+			Expect(err).To(BeNil())
+			paths, err := json.NewJSONObjectFormatter().WriteObjects(collection, tc.version)
+			Expect(err).To(BeNil())
+			Expect(paths).To(HaveLen(1))
+			readBack, err := json.NewJSONObjectFormatter().ReadObjects(paths[0])
+			Expect(err).To(BeNil())
+			entry, ok := readBack[builders.ObjectsCollectionKey(layout)]
+			Expect(ok).To(BeTrue())
+			Expect(builders.ApplyObjectsEntry(binFile.GetObjects(), tc.version, key, entry)).To(BeNil())
 
 			reimported, err := os.CreateTemp(tmpRoot, "reimported-*.bin")
 			Expect(err).To(BeNil())

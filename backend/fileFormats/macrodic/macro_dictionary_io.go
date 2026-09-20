@@ -8,10 +8,6 @@ import (
 	"fmt"
 )
 
-// MacroDictionaryJSONFileName is the merged macro dictionary JSON file name,
-// holding the texts of every available localization in one document.
-const MacroDictionaryJSONFileName = "macro_dictionary_all_localizations.json"
-
 // DefaultFirstLocalizations returns the default localization followed by the
 // remaining supported localizations in sorted order, so the default is always
 // read first and the others populate afterwards.
@@ -58,6 +54,17 @@ func ReadMacroDictionaryContainers(version common.GameVersion) (map[string]*Macr
 	return result, nil
 }
 
+// SortedLocalizationKeys returns the sorted localization keys of the given
+// containers for deterministic export output.
+func SortedLocalizationKeys(containers map[string]*MacroDictionaryBinaryFile) []string {
+	keys := make([]string, 0, len(containers))
+	for loc := range containers {
+		keys = append(keys, loc)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
 // PublishMacroDictionaryContainers publishes every given container into the
 // datastore, default localization first, so MCR lookups resolve for all
 // available languages.
@@ -84,34 +91,4 @@ func SaveMacroDictionaryBinaries(containers map[string]*MacroDictionaryBinaryFil
 		common.LogVerbose("Wrote macro dictionary binary: %s (%d bytes)", path, len(c.Bytes))
 	}
 	return nil
-}
-
-// SaveMacroDictionaryJson exports all given containers into a single merged
-// text file holding every available localization, like objectfile exports do.
-// Serialization goes through the given formatter.
-func SaveMacroDictionaryJson(containers map[string]*MacroDictionaryBinaryFile, fileName string, formatter IMacroFormatter) error {
-	raw, err := formatter.Marshal(containers)
-	if err != nil {
-		return fmt.Errorf("failed to marshal macro dictionary JSON: %w", err)
-	}
-	path := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "macrodic", common.WithVersionSuffix(fileName))
-	if err := common.WriteBytesToFile(path, raw); err != nil {
-		return fmt.Errorf("failed to write macro dictionary JSON file %s: %w", path, err)
-	}
-	common.LogVerbose("Exported macro dictionary JSON file: %s", path)
-	return nil
-}
-
-// LoadMacroDictionaryJson reads a merged macro dictionary text file,
-// deserializing through the given formatter.
-func LoadMacroDictionaryJson(fileName string, formatter IMacroFormatter) (*MacroDictionaryJsonImport, error) {
-	path := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "macrodic", common.WithVersionSuffix(fileName))
-	if !common.IsPathExists(path) {
-		return nil, fmt.Errorf("macro dictionary JSON file not found: %s", path)
-	}
-	raw, err := common.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read macro dictionary JSON file %s: %w", path, err)
-	}
-	return formatter.Unmarshal(raw)
 }

@@ -233,20 +233,6 @@ func newObjectBinaryFileStore(patternPath string, creatorFunc CreatorFunc, gameV
 	return binaryDataFile
 }
 
-func (b *ObjectBinaryFileStore) ExportToJson(filePath string, formatter datastore.IObjectsFormatter) error {
-	if filePath == "" {
-		return fmt.Errorf("json file not configured")
-	}
-	return ExportToJSON(b.Objects, filePath, formatter)
-}
-
-func (b *ObjectBinaryFileStore) ImportFromJson(filePath string, formatter datastore.IObjectsFormatter) error {
-	if filePath == "" {
-		return fmt.Errorf("json file not configured")
-	}
-	return ImportFromJson(filePath, b.Objects, formatter)
-}
-
 func (b *ObjectBinaryFileStore) SaveToBinary(filePath string) error {
 	return SaveBinaryFileStore(b, filePath)
 }

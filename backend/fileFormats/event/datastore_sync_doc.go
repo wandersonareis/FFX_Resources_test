@@ -9,20 +9,15 @@
 //        ├── ReadCompleteEventFile() - lê arquivo .ebp + localizações
 //        └── SetEvent(eventID, eventFile) - registra diretamente no datastore
 //
-// 2. MODIFICAÇÃO VIA JSON (Individual ou Bulk):
-//    ProcessEventsFromJson()
-//    ├── processSingleEventData() - modifica um evento específico
-//    │   ├── updateEventFromJsonData()
-//    │   │   ├── GetEvent(eventID) - obtém do datastore
-//    │   │   ├── modifica strings
-//    │   │   └── SetEvent(eventID, eventFile) - atualiza datastore
-//    │   └── ExportEventStringsToLocalizations() - salva arquivos
-//    │
-//    └── EditAndSaveEventFromJSON() - modifica múltiplos eventos
-//        ├── GetEvent(eventID) - obtém do datastore
-//        ├── modifica strings
-//        ├── SetEvent(eventID, eventFile) - atualiza datastore
-//        └── ExportEventStringsToLocalizations() - salva arquivos
+// 2. MODIFICAÇÃO VIA DTO (Individual ou Bulk, fora deste pacote):
+//    backend/builders.ApplyEventsDTO()
+//    ├── event.GetEvent(eventID) - obtém do datastore
+//    ├── modifica strings
+//    ├── event.SetEvent(eventID, eventFile) - atualiza datastore
+//    └── event.ExportEventStringsToLocalizations() - salva arquivos
+//    O pacote event desconhece JSON/DTO: só expõe binário e acesso ao store.
+//    O JSON vive em backend/formatters/json e o DTO em backend/dto,
+//    montado por backend/builders a partir dos dados brutos.
 //
 // 3. EXPORTAÇÃO:
 //    ExportEventStringsToLocalizations()

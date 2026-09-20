@@ -15,13 +15,16 @@ type MacroObjects = components.IMap[int, IGlobalLocalizedMacroStringObject]
 type VersionedMacros = components.IMap[common.GameVersion, MacroObjects]
 
 // GlobalDataStore mantém o estado global de todos os dados,
-// segregado por versão do jogo (FFX / FFX-2) para macros e events.
+// segregado por versão do jogo (FFX / FFX-2) para macros, events e objects.
 type GlobalDataStore struct {
 	mu sync.RWMutex
 	//KeyItems components.IList[IGlobalLocalizedTextObject]
 	macros map[common.GameVersion]MacroObjects
 	events map[common.GameVersion]map[string]IEventObject
-	lists  map[string]interface{} // Para armazenar IList[T] genéricos
+	// objects guarda os object files por versão e chave canônica
+	// (version/patternPath, ex: FileLayout.Key), igual a macros/events.
+	objects map[common.GameVersion]map[string]components.IList[IGlobalLocalizedTextObject]
+	lists   map[string]interface{} // Para armazenar IList[T] genéricos
 }
 
 func newGlobalDataStore() *GlobalDataStore {
@@ -34,6 +37,10 @@ func newGlobalDataStore() *GlobalDataStore {
 		events: map[common.GameVersion]map[string]IEventObject{
 			common.GameVersionFFX:  make(map[string]IEventObject),
 			common.GameVersionFFX2: make(map[string]IEventObject),
+		},
+		objects: map[common.GameVersion]map[string]components.IList[IGlobalLocalizedTextObject]{
+			common.GameVersionFFX:  make(map[string]components.IList[IGlobalLocalizedTextObject]),
+			common.GameVersionFFX2: make(map[string]components.IList[IGlobalLocalizedTextObject]),
 		},
 		lists: make(map[string]any),
 	}
@@ -275,6 +282,73 @@ func (ds *GlobalDataStore) GetAllEventIDs(gameVersion common.GameVersion) []stri
 	}
 	sort.Strings(eventIDs)
 	return eventIDs
+}
+
+// ============= OBJECTS (por versão e chave, igual a macros/events) =============
+
+// objectsFor retorna o mapa de objects da versão indicada.
+// Deve ser chamado com o lock (R ou W) já adquirido.
+// Inicializa sob demanda caso a versão ainda não exista.
+func (ds *GlobalDataStore) objectsFor(gameVersion common.GameVersion) map[string]components.IList[IGlobalLocalizedTextObject] {
+	v := normalizeGameVersion(gameVersion)
+	o, ok := ds.objects[v]
+	if !ok || o == nil {
+		o = make(map[string]components.IList[IGlobalLocalizedTextObject])
+		if ds.objects == nil {
+			ds.objects = make(map[common.GameVersion]map[string]components.IList[IGlobalLocalizedTextObject])
+		}
+		ds.objects[v] = o
+	}
+	return o
+}
+
+// GetObjectStore recupera a lista de objetos da versão/chave indicadas.
+func (ds *GlobalDataStore) GetObjectStore(gameVersion common.GameVersion, key string) components.IList[IGlobalLocalizedTextObject] {
+	ds.mu.RLock()
+	defer ds.mu.RUnlock()
+
+	return ds.objectsFor(gameVersion)[key]
+}
+
+// SetObjectStore registra a lista de objetos da versão/chave indicadas.
+func (ds *GlobalDataStore) SetObjectStore(gameVersion common.GameVersion, key string, list components.IList[IGlobalLocalizedTextObject]) {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+
+	if list != nil {
+		ds.objectsFor(gameVersion)[key] = list
+	}
+}
+
+// GetAllObjectKeys retorna todas as chaves de objects da versão indicada, ordenadas.
+func (ds *GlobalDataStore) GetAllObjectKeys(gameVersion common.GameVersion) []string {
+	ds.mu.RLock()
+	defer ds.mu.RUnlock()
+
+	var keys []string
+	for k := range ds.objectsFor(gameVersion) {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// ClearObjects limpa os objects da versão indicada.
+func (ds *GlobalDataStore) ClearObjects(gameVersion common.GameVersion) {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+
+	ds.objects[normalizeGameVersion(gameVersion)] = make(map[string]components.IList[IGlobalLocalizedTextObject])
+}
+
+// ClearAllObjects limpa os objects de todas as versões.
+func (ds *GlobalDataStore) ClearAllObjects() {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+
+	for v := range ds.objects {
+		ds.objects[v] = make(map[string]components.IList[IGlobalLocalizedTextObject])
+	}
 }
 
 // ============= LISTS GENÉRICAS =============

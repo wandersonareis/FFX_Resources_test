@@ -1,9 +1,10 @@
 ﻿package writer
 
 import (
+	"ffxresources/backend/builders"
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/macrodic"
-	"ffxresources/backend/formats"
+	"ffxresources/backend/formatters/json"
 	"ffxresources/backend/interactions"
 	"fmt"
 	"path/filepath"
@@ -20,39 +21,33 @@ func getLocalizationKeys() []string {
 }
 
 // ExportMacroDictionaryToJSON reads every available localization container and
-// exports them into a single merged JSON file holding all languages, like
-// objectfile exports do.
+// exports them into a single DTO-based JSON file holding all languages.
 func ExportMacroDictionaryToJSON() {
 	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	containers, err := macrodic.ReadMacroDictionaryContainers(version)
+	collection, err := builders.BuildMacroDTO(version)
 	if err != nil {
-		common.LogError("Error reading macro dictionary containers: %v\n", err)
-		return
-	}
-
-	if len(containers) == 0 {
-		common.LogError("No macro dictionary data found to export to JSON")
+		common.LogError("Error building macro dictionary DTO: %v\n", err)
 		return
 	}
 
 	if common.IsVerboseMode() {
-		for _, loc := range macrodic.SortedLocalizationKeys(containers) {
-			common.LogVerbose("Processing macro dictionary for localization: %s\n", loc)
+		for _, key := range collection.SortedKeys() {
+			common.LogVerbose("Processing macro dictionary chunk: %s\n", key)
 		}
 	}
 
-	if err := macrodic.SaveMacroDictionaryJson(containers, macrodic.MacroDictionaryJSONFileName, formats.NewJSONMacroFormatter()); err != nil {
+	if _, err := json.NewJSONMacroFormatter().WriteMacro(collection, version); err != nil {
 		common.LogError("Error writing macro dictionary JSON: %v\n", err)
 		return
 	}
 
 	if common.IsVerboseMode() {
-		common.LogVerbose("Arquivo JSON de dicionário de macros exportado (%d localizações)\n", len(containers))
+		common.LogVerbose("Arquivo JSON de dicionário de macros exportado (%d chunks)\n", len(collection))
 	}
 }
 
 // WriteMacroDictionaryForLocalizationJSON exports a single localization into
-// its own merged-shape JSON file.
+// its own DTO-based JSON file.
 func WriteMacroDictionaryForLocalizationJSON(localization string) {
 	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
 	containers, err := macrodic.ReadMacroDictionaryContainers(version)
@@ -67,8 +62,19 @@ func WriteMacroDictionaryForLocalizationJSON(localization string) {
 		return
 	}
 
+	collection, err := builders.BuildMacroDTOFromContainers(version, map[string]*macrodic.MacroDictionaryBinaryFile{localization: c})
+	if err != nil {
+		common.LogError("Error building macro dictionary DTO: %v\n", err)
+		return
+	}
+
 	fileName := fmt.Sprintf("macro_dictionary_%s.json", localization)
-	if err := macrodic.SaveMacroDictionaryJson(map[string]*macrodic.MacroDictionaryBinaryFile{localization: c}, fileName, formats.NewJSONMacroFormatter()); err != nil {
+	dir := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "macrodic")
+	if err := common.EnsurePathExists(dir); err != nil {
+		common.LogError("Error creating macro edits directory: %v\n", err)
+		return
+	}
+	if _, err := json.NewJSONMacroFormatter().WriteMacroFile(collection, filepath.Join(dir, common.WithVersionSuffix(fileName))); err != nil {
 		common.LogError("Error writing macro dictionary JSON: %v\n", err)
 		return
 	}
@@ -78,12 +84,12 @@ func WriteMacroDictionaryForLocalizationJSON(localization string) {
 	}
 }
 
-// EditAndSaveMacrodicFromJson reads a merged macro dictionary JSON file,
+// EditAndSaveMacrodicFromJson reads a DTO-based macro dictionary JSON file,
 // rebuilds one binary container per localization found in it and saves every
-// rebuilt binary back to its game file, like objectfile save flows do.
+// rebuilt binary back to its game file.
 //
 // Parameters:
-//   - jsonFilePath: Path to the merged JSON file to read
+//   - jsonFilePath: Path to the JSON file to read
 func EditAndSaveMacrodicFromJson(jsonFilePath string) error {
 	if common.IsVerboseMode() {
 		common.LogVerbose("Carregando dados do dicionário de macros do arquivo: %s\n", jsonFilePath)
@@ -92,23 +98,14 @@ func EditAndSaveMacrodicFromJson(jsonFilePath string) error {
 	if err != nil {
 		return fmt.Errorf("erro ao resolver caminho do arquivo JSON: %v", err)
 	}
-	raw, err := common.ReadFile(resolvedFile.ResolvedPath)
+	collection, err := json.NewJSONMacroFormatter().ReadMacro(resolvedFile.ResolvedPath)
 	if err != nil {
 		return fmt.Errorf("erro ao ler arquivo JSON: %v", err)
 	}
-	imp, err := formats.NewJSONMacroFormatter().Unmarshal(raw)
-	if err != nil {
-		return fmt.Errorf("erro ao fazer parse do JSON: %v", err)
-	}
 
 	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	containers, err := macrodic.ImportFromJson(imp, version)
-	if err != nil {
+	if err := builders.ApplyMacroDTO(version, collection); err != nil {
 		return fmt.Errorf("erro ao importar dados do JSON: %v", err)
-	}
-
-	if err := macrodic.SaveMacroDictionaryBinaries(containers); err != nil {
-		return fmt.Errorf("erro ao salvar binários: %v", err)
 	}
 
 	if common.IsVerboseMode() {

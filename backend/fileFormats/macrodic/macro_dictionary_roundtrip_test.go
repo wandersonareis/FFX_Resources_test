@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"ffxresources/backend/builders"
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/macrodic"
-	"ffxresources/backend/formats"
+	"ffxresources/backend/formatters/json"
 	"os"
 	"testing"
 )
@@ -36,18 +37,22 @@ func roundtripContainers(t *testing.T, raw []byte, loc string, version common.Ga
 	if err != nil {
 		t.Fatalf("parse original: %v", err)
 	}
-	formatter := formats.NewJSONMacroFormatter()
-	js, err := formatter.Marshal(map[string]*macrodic.MacroDictionaryBinaryFile{loc: c})
+	collection, err := builders.BuildMacroDTOFromContainers(version, map[string]*macrodic.MacroDictionaryBinaryFile{loc: c})
+	if err != nil {
+		t.Fatalf("build DTO: %v", err)
+	}
+	formatter := json.NewJSONMacroFormatter()
+	js, err := formatter.Marshal(collection)
 	if err != nil {
 		t.Fatalf("marshal JSON: %v", err)
 	}
-	imp, err := formatter.Unmarshal(js)
+	backCollection, err := formatter.Unmarshal(js)
 	if err != nil {
 		t.Fatalf("unmarshal JSON: %v", err)
 	}
-	back, err := macrodic.ImportFromJson(imp, version)
+	back, err := builders.RebuildMacroContainers(version, backCollection)
 	if err != nil {
-		t.Fatalf("import JSON: %v", err)
+		t.Fatalf("rebuild containers: %v", err)
 	}
 	return back
 }
@@ -143,19 +148,19 @@ func TestOtherLocalizationsReimport(t *testing.T) {
 		containers[loc] = c
 	}
 
-	exp := macrodic.ExportToJson(containers)
-	if len(exp.Chunks) == 0 {
+	exp, err := builders.BuildMacroDTOFromContainers(common.GameVersionFFX, containers)
+	if err != nil {
+		t.Fatalf("build DTO: %v", err)
+	}
+	if len(exp) == 0 {
 		t.Fatalf("empty merged export")
 	}
 
 	// every localization must show up in at least one entry
 	seen := make(map[string]bool)
-	for _, ch := range exp.Chunks {
-		for _, s := range ch.Strings {
-			for loc := range s.Name {
-				seen[loc] = true
-			}
-			for loc := range s.SimplifiedName {
+	for _, entry := range exp {
+		for _, row := range entry.Rows {
+			for loc := range row.Text {
 				seen[loc] = true
 			}
 		}
@@ -166,18 +171,18 @@ func TestOtherLocalizationsReimport(t *testing.T) {
 		}
 	}
 
-	formatter := formats.NewJSONMacroFormatter()
-	js, err := formatter.Marshal(containers)
+	formatter := json.NewJSONMacroFormatter()
+	js, err := formatter.Marshal(exp)
 	if err != nil {
 		t.Fatalf("marshal JSON: %v", err)
 	}
-	imp, err := formatter.Unmarshal(js)
+	backCollection, err := formatter.Unmarshal(js)
 	if err != nil {
 		t.Fatalf("unmarshal JSON: %v", err)
 	}
-	back, err := macrodic.ImportFromJson(imp, common.GameVersionFFX)
+	back, err := builders.RebuildMacroContainers(common.GameVersionFFX, backCollection)
 	if err != nil {
-		t.Fatalf("import JSON: %v", err)
+		t.Fatalf("rebuild containers: %v", err)
 	}
 
 	for _, loc := range append([]string{"us"}, otherLocs...) {

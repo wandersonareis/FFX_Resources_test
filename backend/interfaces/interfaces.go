@@ -51,10 +51,10 @@ type (
 	// carregar do binário e salvar de volta no binário.
 	//
 	// Exportação/importação de texto não fazem parte deste contrato
-	// compartilhado: cada domínio usa um formatter tipado recebido diretamente
-	// nos métodos ExportToJson/ImportFromJson dos tipos concretos
-	// (datastore.IObjectsFormatter, event.IEventsFormatter,
-	// macrodic.IMacroFormatter), sem `any` e sem reflexão.
+	// compartilhado: o texto flui como DTO (backend/dto), montado por
+	// backend/builders a partir dos dados brutos e serializado por
+	// backend/formatters/json, sem `any` e sem reflexão. O pacote event
+	// desconhece JSON; objectsfile/macrodic seguem o mesmo caminho.
 	//
 	// É genérica no tipo do objeto de texto (T) de propósito: referenciar aqui
 	// core/components ou datastore formaria um import cíclico, pois
