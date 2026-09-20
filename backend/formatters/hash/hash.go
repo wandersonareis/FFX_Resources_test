@@ -8,9 +8,14 @@ package hash
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	xxhash "github.com/bouine-cache/xxhash/v3"
 )
+
+// RefPrefix marca hashes e referências de dedup no JSON. O DTO em memória
+// carrega hex puro; o `$` nasce e morre dentro de formatters/json.
+const RefPrefix = "$"
 
 // Sum64Hex calcula o XXH64 (seed zero) da frase e devolve hex "%016x".
 // A frase hashed é o texto raw, incluindo tags de controle.
@@ -45,4 +50,20 @@ func SortedLangs(m map[string]string) []string {
 	}
 	sort.Strings(langs)
 	return langs
+}
+
+// Prefix garante o prefixo de referência no hash (idempotente).
+func Prefix(h string) string {
+	if h == "" || strings.HasPrefix(h, RefPrefix) {
+		return h
+	}
+	return RefPrefix + h
+}
+
+// Strip remove o prefixo de referência, informando se ele existia.
+func Strip(s string) (string, bool) {
+	if strings.HasPrefix(s, RefPrefix) {
+		return strings.TrimPrefix(s, RefPrefix), true
+	}
+	return s, false
 }

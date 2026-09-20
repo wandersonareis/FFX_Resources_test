@@ -1,6 +1,7 @@
 package json_test
 
 import (
+	encodingjson "encoding/json"
 	"strings"
 	"testing"
 
@@ -233,6 +234,186 @@ func TestMetadataOmitsEmptyFields(t *testing.T) {
 	}
 	if !strings.Contains(macroOut, `"chunk_index"`) {
 		t.Fatalf("expected chunk_index in macro output:\n%s", macroOut)
+	}
+}
+
+func TestHashPrefixStrip(t *testing.T) {
+	if got := hash.Prefix("abc"); got != "$abc" {
+		t.Fatalf("prefix mismatch: %q", got)
+	}
+	if got := hash.Prefix("$abc"); got != "$abc" {
+		t.Fatalf("prefix must be idempotent: %q", got)
+	}
+	if bare, isRef := hash.Strip("$abc"); !isRef || bare != "abc" {
+		t.Fatalf("strip mismatch: %q %v", bare, isRef)
+	}
+	if bare, isRef := hash.Strip("abc"); isRef || bare != "abc" {
+		t.Fatalf("strip must pass through: %q %v", bare, isRef)
+	}
+}
+
+func dedupCollection() dto.Collection {
+	long := "{PC:04:WAKKA}{\n}{PC:01:YUNA}! Onde você está?!"
+	return dto.Collection{
+		"boss_fight": {
+			Metadata: dto.NewEventMetadata("boss_fight", common.GameVersionFFX),
+			Rows: []dto.TextRow{
+				{Index: 0, Hash: hash.Texts(map[string]string{"us": long}), Text: map[string]string{"us": long}},
+				{Index: 7, Hash: hash.Texts(map[string]string{"us": long}), Text: map[string]string{"us": long}},
+				{Index: 8, Hash: hash.Texts(map[string]string{"us": "ok", "sp": long}), Text: map[string]string{"us": "ok", "sp": long}},
+			},
+		},
+	}
+}
+
+func TestMarshalDedupsDefaultLangRepeats(t *testing.T) {
+	f := json.NewJSONEventsFormatter()
+	raw, err := f.Marshal(dedupCollection())
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	// Inspeciona o JSON bruto estruturalmente: primeira ocorrência integral,
+	// repetição como ref, hashes com $ em todos os idiomas.
+	var doc map[string]dto.FileEntry
+	if err := encodingjson.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("reparse: %v", err)
+	}
+	long := "{PC:04:WAKKA}{\n}{PC:01:YUNA}! Onde você está?!"
+	h := hash.Sum64Hex(long)
+	rows := doc["boss_fight"].Rows
+	if len(rows) != 3 {
+		t.Fatalf("expected 3 rows, got %+v", rows)
+	}
+	if rows[0].Text["us"] != long {
+		t.Fatalf("first occurrence must stay literal: %q", rows[0].Text["us"])
+	}
+	if rows[0].Hash["us"] != "$"+h || rows[1].Hash["us"] != "$"+h {
+		t.Fatalf("hashes must gain $ prefix: %+v", rows)
+	}
+	if rows[1].Text["us"] != "$"+h {
+		t.Fatalf("repeat must become ref: %q", rows[1].Text["us"])
+	}
+	if rows[2].Hash["sp"] != "$"+h {
+		t.Fatalf("non-default hash must gain $ too: %q", rows[2].Hash["sp"])
+	}
+	if rows[2].Text["sp"] != long {
+		t.Fatalf("non-default text must stay literal: %q", rows[2].Text["sp"])
+	}
+	back, err := f.Unmarshal(raw)
+	if err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	brows := back["boss_fight"].Rows
+	if brows[1].Text["us"] != long {
+		t.Fatalf("ref not resolved: %q", brows[1].Text["us"])
+	}
+	if brows[1].Hash["us"] != h {
+		t.Fatalf("hash must come back bare: %q", brows[1].Hash["us"])
+	}
+	// "ok" (< 5 runes) fica literal mesmo repetido.
+	if brows[2].Text["us"] != "ok" {
+		t.Fatalf("short text must stay literal: %q", brows[2].Text["us"])
+	}
+}
+
+func TestMarshalSkipsShortCJKTexts(t *testing.T) {
+	// "你好" tem 2 runes mas 6 bytes: conta como curta, fica literal.
+	text := "你好"
+	if got := len([]rune(text)); got != 2 {
+		t.Fatalf("fixture assumption broken: %d runes", got)
+	}
+	c := dto.Collection{
+		"ev001": {
+			Metadata: dto.NewEventMetadata("ev001", common.GameVersionFFX),
+			Rows: []dto.TextRow{
+				{Index: 0, Hash: hash.Texts(map[string]string{"us": text}), Text: map[string]string{"us": text}},
+				{Index: 1, Hash: hash.Texts(map[string]string{"us": text}), Text: map[string]string{"us": text}},
+			},
+		},
+	}
+	raw, err := json.NewJSONEventsFormatter().Marshal(c)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	back, err := json.NewJSONEventsFormatter().Unmarshal(raw)
+	if err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	for _, row := range back["ev001"].Rows {
+		if row.Text["us"] != text {
+			t.Fatalf("short CJK text must stay literal: %q", row.Text["us"])
+		}
+	}
+}
+
+func TestUnmarshalExpandsEditedValue(t *testing.T) {
+	// Cenário do usuário: texto da row 0 editado sob hash antigo; a ref da
+	// row 7 deve explodir para o NOVO valor usando o hash existente.
+	h := hash.Sum64Hex("{PC:04:WAKKA} original")
+	raw := []byte(`{"boss_fight": {"metadata": {}, "rows": [
+		{"index": 0, "hash": {"us": "$` + h + `"}, "text": {"us": "Texto alterado"}},
+		{"index": 7, "hash": {"us": "$` + h + `"}, "text": {"us": "$` + h + `"}}
+	]}}`)
+	back, err := json.NewJSONEventsFormatter().Unmarshal(raw)
+	if err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	rows := back["boss_fight"].Rows
+	if rows[0].Text["us"] != "Texto alterado" {
+		t.Fatalf("edited literal not kept: %q", rows[0].Text["us"])
+	}
+	if rows[1].Text["us"] != "Texto alterado" {
+		t.Fatalf("ref not expanded to edited value: %q", rows[1].Text["us"])
+	}
+	if rows[0].Hash["us"] != h || rows[1].Hash["us"] != h {
+		t.Fatalf("hashes must come back bare: %+v", rows)
+	}
+}
+
+func TestUnmarshalKeepsOrphanAndLiteralDollar(t *testing.T) {
+	h := hash.Sum64Hex("algum texto longo aqui")
+	raw := []byte(`{"ev001": {"metadata": {}, "rows": [
+		{"index": 0, "hash": {"us": "$deadbeefdeadbeef"}, "text": {"us": "$deadbeefdeadbeef"}},
+		{"index": 1, "hash": {"us": "$` + h + `"}, "text": {"us": "$nao-eh-ref"}}
+	]}}`)
+	back, err := json.NewJSONEventsFormatter().Unmarshal(raw)
+	if err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	rows := back["ev001"].Rows
+	if rows[0].Text["us"] != "$deadbeefdeadbeef" {
+		t.Fatalf("orphan ref must be kept: %q", rows[0].Text["us"])
+	}
+	if rows[0].Hash["us"] != "deadbeefdeadbeef" {
+		t.Fatalf("orphan hash must be stripped: %q", rows[0].Hash["us"])
+	}
+	if rows[1].Text["us"] != "$nao-eh-ref" {
+		t.Fatalf("literal dollar text must be kept: %q", rows[1].Text["us"])
+	}
+}
+
+func TestMarshalUnmarshalIdentity(t *testing.T) {
+	in := dedupCollection()
+	raw, err := json.NewJSONEventsFormatter().Marshal(in)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	back, err := json.NewJSONEventsFormatter().Unmarshal(raw)
+	if err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	inRows := in["boss_fight"].Rows
+	backRows := back["boss_fight"].Rows
+	if len(inRows) != len(backRows) {
+		t.Fatalf("row count mismatch: %d vs %d", len(inRows), len(backRows))
+	}
+	for i := range inRows {
+		if inRows[i].Text["us"] != backRows[i].Text["us"] {
+			t.Fatalf("row %d text mismatch: %q vs %q", i, inRows[i].Text["us"], backRows[i].Text["us"])
+		}
+		if inRows[i].Hash["us"] != backRows[i].Hash["us"] {
+			t.Fatalf("row %d hash mismatch: %q vs %q", i, inRows[i].Hash["us"], backRows[i].Hash["us"])
+		}
 	}
 }
 
