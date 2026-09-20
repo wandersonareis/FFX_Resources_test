@@ -17,6 +17,7 @@ require (
 require (
 	git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3 // indirect
 	github.com/bep/debounce v1.2.1 // indirect
+	github.com/bouine-cache/xxhash/v3 v3.0.0 // indirect
 	github.com/go-extras/errors v0.11.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
@@ -51,5 +52,3 @@ require (
 	golang.org/x/tools v0.49.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-// replace github.com/wailsapp/wails/v2 v2.9.1 => C:\Users\wande\go\pkg\mod

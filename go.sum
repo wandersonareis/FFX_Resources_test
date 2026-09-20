@@ -2,6 +2,8 @@ git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3 h1:N3IGoHHp9pb6mj1cbXbuaSXV/UMKwmbKLf
 git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3/go.mod h1:QtOLZGz8olr4qH2vWK0QH0w0O4T9fEIjMuWpKUsH7nc=
 github.com/bep/debounce v1.2.1 h1:v67fRdBA9UQu2NhLFXrSg0Brw7CexQekrBwDMM8bzeY=
 github.com/bep/debounce v1.2.1/go.mod h1:H8yggRPQKLUhUoqrJC1bO2xNya7vanpDl7xR3ISbCJ0=
+github.com/bouine-cache/xxhash/v3 v3.0.0 h1:TlQU/qbuBkjTpV0rUfrBUaG3iboa5pKpg9UiMyzkn20=
+github.com/bouine-cache/xxhash/v3 v3.0.0/go.mod h1:hUXxcDErtZ9VMnsQ12vTVjzc4G9hzNnA5+TbOnIsaTw=
 github.com/denisvmedia/asar v0.0.0-20220910114414-6afbb52dd143 h1:+McG1nw9AqIC462UIqpn4USCticN/GXInqmG1MheV3s=
 github.com/denisvmedia/asar v0.0.0-20220910114414-6afbb52dd143/go.mod h1:iuqQnAnRhwIHsUWtdshsZsm5a9MW++NC3rPiYUYiAbM=
 github.com/go-extras/errors v0.11.0 h1:6GQ3NlaG2JpoxQ3pzOt9DIXbnAKW98o8F632DRIQ5gM=
