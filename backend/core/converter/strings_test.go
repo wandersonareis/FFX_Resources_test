@@ -1,4 +1,4 @@
-package components_test
+package converter_test
 
 import (
 	"ffxresources/backend/common"
@@ -49,6 +49,21 @@ var _ = Describe("String Conversion Functions", func() {
 			It("should convert line break command", func() {
 				result := converter.StringToBytes("{\\n}", "us", common.GameVersionFFX)
 				Expect(result).To(Equal([]byte{0x03}))
+			})
+
+			It("should convert TEXT_NEWLINE alias", func() {
+				result := converter.StringToBytes("{TEXT_NEWLINE}", "us", common.GameVersionFFX)
+				Expect(result).To(Equal([]byte{0x03}))
+			})
+
+			It("should convert TEXT_ITALIC command", func() {
+				result := converter.StringToBytes("{TEXT_ITALIC}", "us", common.GameVersionFFX)
+				Expect(result).To(Equal([]byte{0x0E, 0x40}))
+			})
+
+			It("should convert TEXT_NORMAL command", func() {
+				result := converter.StringToBytes("{TEXT_NORMAL}", "us", common.GameVersionFFX)
+				Expect(result).To(Equal([]byte{0x0E, 0x41}))
 			})
 
 			It("should convert color commands", func() {
@@ -111,7 +126,17 @@ var _ = Describe("String Conversion Functions", func() {
 				// Assuming WriteLinebreaksAsCommands is true
 				converter.WriteLinebreaksAsCommands = true
 				result := converter.BytesToString([]byte{0x03}, "us", common.GameVersionFFX)
-				Expect(result).To(Equal("{\\n}"))
+				Expect(result).To(Equal("{TEXT_NEWLINE}"))
+			})
+
+			It("should convert italic command bytes", func() {
+				result := converter.BytesToString([]byte{0x0E, 0x40}, "us", common.GameVersionFFX)
+				Expect(result).To(Equal("{TEXT_ITALIC}"))
+			})
+
+			It("should convert normal command bytes", func() {
+				result := converter.BytesToString([]byte{0x0E, 0x41}, "us", common.GameVersionFFX)
+				Expect(result).To(Equal("{TEXT_NORMAL}"))
 			})
 
 			It("should convert color command bytes", func() {

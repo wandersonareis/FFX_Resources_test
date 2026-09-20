@@ -56,12 +56,7 @@ func main() {
 	// ===== LastMiss (lastmiss) =====
 	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(common.GameVersionLastMiss)
 
-	common.LogInfo("\n=== LastMiss (lastmiss) ===")
-	common.LogInfo("Reinicializando dicionários para LastMiss...")
-	if err := reader.InitializeInternals(); err != nil {
-		common.LogError("Erro ao inicializar sistema: %v\n", err)
-		return
-	}
+	common.LogInfo("\n=== LastMiss (lastmiss) ===")	
 	runLastMissExamples()
 
 	runObjectFileStore()

@@ -177,8 +177,12 @@ func ParseCommand(runes []rune, startIndex int) []uint {
 		return []uint{0x01}
 	case cmd == "BREAK":
 		return []uint{0x02}
-	case cmd == "\\n":
+	case cmd == "\\n" || cmd == "TEXT_NEWLINE":
 		return []uint{0x03}
+	case cmd == "TEXT_ITALIC":
+		return []uint{0x0E, 0x40}
+	case cmd == "TEXT_NORMAL":
+		return []uint{0x0E, 0x41}
 	case cmd == "BLANK05":
 		return []uint{0x05}
 	case cmd == "BLANK0C":

@@ -104,7 +104,7 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
             out.WriteString("{BREAK}")
         case idx == 0x03:
             if WriteLinebreaksAsCommands {
-                out.WriteString("{\\n}")
+                out.WriteString("{TEXT_NEWLINE}")
             } else {
                 out.WriteByte('\n')
             }
@@ -146,6 +146,20 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
             out.WriteString("{BLANK0C}")
         case idx == 0x0F:
             out.WriteString("{BLANK0F}")
+        case idx == 0x0E:
+            var style uint8
+            if err := readOneByte(buf, &style); err != nil {
+                out.WriteString("{CMD:0E:??}")
+                break
+            }
+            switch style {
+            case 0x40:
+                out.WriteString("{TEXT_ITALIC}")
+            case 0x41:
+                out.WriteString("{TEXT_NORMAL}")
+            default:
+                out.WriteString(fmt.Sprintf("{CMD:0E:%02X}", style-0x30))
+            }
         case idx == 0x10:
             var rawValue uint8
             if err := readOneByte(buf, &rawValue); err != nil {
