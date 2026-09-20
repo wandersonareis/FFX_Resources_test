@@ -9,10 +9,6 @@ import (
 )
 
 type (
-	IFileComparer interface {
-		CompareFiles() error
-	}
-
 	FileComparisonEntry struct {
 		FromFile string
 		ToFile   string

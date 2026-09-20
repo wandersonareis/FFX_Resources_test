@@ -9,7 +9,7 @@ import (
 
 type (
 	ISegmentCounter interface {
-		CompareTextSegmentsCount(binaryFile, textFile string, binaryType models.NodeType, gameVersion models.GameVersion) error
+		CompareTextSegmentsCount(binaryFile, textFile string, binaryType models.NodeType, gameVersion common.GameVersion) error
 	}
 
 	segmentCounter struct{}
@@ -19,7 +19,7 @@ func newSegmentCounter() ISegmentCounter {
 	return &segmentCounter{}
 }
 
-func (sc *segmentCounter) CompareTextSegmentsCount(binaryFile, textFile string, binaryType models.NodeType, gameVersion models.GameVersion) error {
+func (sc *segmentCounter) CompareTextSegmentsCount(binaryFile, textFile string, binaryType models.NodeType, gameVersion common.GameVersion) error {
 	binarySegmentCount, err := lib.TextSegmentsCounter(binaryFile, binaryType, gameVersion)
 	if err != nil {
 		return err

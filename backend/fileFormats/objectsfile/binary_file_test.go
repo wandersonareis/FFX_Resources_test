@@ -1,0 +1,256 @@
+package objectsfile_test
+
+import (
+	"crypto/sha256"
+	"ffxresources/backend/builders"
+	"ffxresources/backend/common"
+	"ffxresources/backend/core/reader"
+	"ffxresources/backend/datastore"
+	"ffxresources/backend/fileFormats/objectsfile"
+	"ffxresources/backend/formatters/json"
+	"ffxresources/backend/interactions"
+	testcommon "ffxresources/testData"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+)
+
+func TestBinaryFile(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "BinaryFile Integrity Suite")
+}
+
+type integrityCase struct {
+	pattern string
+	read    func(string, common.GameVersion) datastore.IBinaryFile
+}
+
+// Arquivos exercitados por examples/main.go (runFFXExamples).
+var ffxIntegrityCases = []integrityCase{
+	{pattern: "battle/kernel/important.bin", read: objectsfile.ReadCommandLocalizations},
+	{pattern: "battle/kernel/command.bin", read: objectsfile.ReadCommandLocalizations},
+	{pattern: "battle/kernel/a_ability.bin", read: objectsfile.ReadCommandLocalizations},
+	{pattern: "battle/kernel/item.bin", read: objectsfile.ReadCommandLocalizations},
+	{pattern: "battle/kernel/arms_txt.bin", read: objectsfile.ReadCommandLocalizations},
+	{pattern: "battle/kernel/config_txt.bin", read: objectsfile.ReadCommandLocalizations},
+	{pattern: "battle/kernel/item_txt.bin", read: objectsfile.ReadCommandLocalizations},
+	{pattern: "battle/kernel/mmain_txt.bin", read: objectsfile.ReadCommandLocalizations},
+	{pattern: "battle/kernel/panel.bin", read: objectsfile.ReadCommandLocalizations},
+	{pattern: "battle/kernel/status_txt.bin", read: objectsfile.ReadCommandLocalizations},
+	{pattern: "battle/kernel/summon_txt.bin", read: objectsfile.ReadCommandLocalizations},
+	{pattern: "battle/kernel/btl_txt.bin", read: objectsfile.ReadNameOnlyLocalizations},
+	{pattern: "battle/kernel/btlend_txt.bin", read: objectsfile.ReadNameOnlyLocalizations},
+	{pattern: "battle/kernel/monmagic1.bin", read: objectsfile.ReadNameOnlyLocalizations},
+	{pattern: "battle/kernel/monmagic2.bin", read: objectsfile.ReadNameOnlyLocalizations},
+	{pattern: "battle/kernel/build_txt.bin", read: objectsfile.ReadNameOnlyLocalizations},
+	{pattern: "battle/kernel/ply_rom.bin", read: objectsfile.ReadCommandLocalizations},
+	{pattern: "battle/kernel/ply_save.bin", read: objectsfile.ReadNameOnlyV2Localizations},
+	{pattern: "battle/kernel/sphere.bin", read: objectsfile.ReadNameOnlyLocalizations},
+	{pattern: "battle/kernel/save_txt.bin", read: objectsfile.ReadNameOnlyLocalizations},
+	{pattern: "battle/kernel/name_txt.bin", read: objectsfile.ReadNameOnlyLocalizations},
+	{pattern: "battle/kernel/monster1.bin", read: objectsfile.ReadMonsterLocalizations},
+	{pattern: "battle/kernel/monster2.bin", read: objectsfile.ReadMonsterLocalizations},
+	{pattern: "battle/kernel/monster3.bin", read: objectsfile.ReadMonsterLocalizations},
+	{pattern: "battle/kernel/w_name.bin", read: objectsfile.ReadWeaponNamesLocalizations},
+}
+
+var _ = Describe("BinaryFile Integrity", Ordered, func() {
+	var (
+		tmpRootFFX        string
+		tmpRootFFX2       string
+		tmpRootLastMiss   string
+		originalGameFiles string
+		originalResources string
+		creator           func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error)
+	)
+
+	setupVersion := func(version common.GameVersion, srcTree string) string {
+		common.SetCurrentGameVersion(version)
+
+		tmpRoot, err := os.MkdirTemp("", "binaryfile_integrity")
+		Expect(err).ToNot(HaveOccurred())
+
+		gameDir := filepath.Join(tmpRoot, "game")
+		Expect(os.CopyFS(gameDir, os.DirFS(srcTree))).To(Succeed())
+
+		// Directories are swapped exclusively through interactions.
+		config := interactions.NewAppConfig()
+		Expect(config).NotTo(BeNil())
+		config.SetGameVersion(version)
+		config.SetLocation("GameFilesLocation", gameDir)
+		config.SetLocation("ExtractLocation", filepath.Join(tmpRoot, "extracted"))
+		config.SetLocation("TranslateLocation", filepath.Join(tmpRoot, "translated"))
+		config.SetLocation("ImportLocation", filepath.Join(tmpRoot, "reimported"))
+
+		interactions.NewInteractionServiceWithConfig(config)
+		Expect(common.GameFilesRoot).To(Equal(gameDir))
+
+		Expect(reader.InitializeInternals()).To(Succeed())
+
+		return tmpRoot
+	}
+
+	// Ciclo de integridade espelhando examples/main.go:
+	// Read -> BuildDTO -> Write JSON -> Read JSON -> Apply DTO -> SaveToBinary -> hash.
+	integrityCycle := func(tmpRoot string, tc integrityCase) {
+		version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+		binFile := tc.read(tc.pattern, version)
+		Expect(binFile).NotTo(BeNil())
+		Expect(binFile.GetObjects()).NotTo(BeNil())
+		Expect(binFile.GetObjects().Len()).To(BeNumerically(">", 0))
+
+		layout, ok := objectsfile.FileLayoutFor(version, tc.pattern)
+		if !ok {
+			// w_name.bin não tem layout registrado (gap pré-existente):
+			// deriva layout ad hoc só com o necessário para a metadata.
+			layout = objectsfile.FileLayout{
+				Version:    version,
+				DirPattern: filepath.Dir(tc.pattern),
+				FileName:   filepath.Base(tc.pattern),
+			}
+		}
+		key := objectsfile.FileLayoutKey(version, tc.pattern)
+
+		collection, err := builders.BuildObjectsDTO(binFile.GetObjects(), layout, key)
+		Expect(err).ToNot(HaveOccurred())
+		paths, err := json.NewJSONObjectFormatter().WriteObjects(collection, version)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(paths).To(HaveLen(1))
+
+		readBack, err := json.NewJSONObjectFormatter().ReadObjects(paths[0])
+		Expect(err).ToNot(HaveOccurred())
+		entryKey := builders.ObjectsCollectionKey(layout)
+		entry, ok := readBack[entryKey]
+		Expect(ok).To(BeTrue())
+		Expect(builders.ApplyObjectsEntry(binFile.GetObjects(), version, key, entry)).To(Succeed())
+
+		outPath := filepath.Join(tmpRoot, "reimported", strings.ReplaceAll(tc.pattern, "/", "_"))
+		Expect(binFile.SaveToBinary(outPath)).To(Succeed())
+
+		info, err := os.Stat(outPath)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(info.Size()).To(BeNumerically(">", 0))
+
+		// gameDir é resolvido através do interaction service.
+		gameDir := interactions.NewInteractionService().GameLocation.GetTargetDirectory()
+		rel := filepath.Join(common.GetLocalizationRoot(common.DefaultLocalization), tc.pattern)
+		origBytes, err := os.ReadFile(filepath.Join(gameDir, rel))
+		Expect(err).ToNot(HaveOccurred())
+		outBytes, err := os.ReadFile(outPath)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(sha256.Sum256(outBytes)).To(Equal(sha256.Sum256(origBytes)))
+	}
+
+	BeforeAll(func() {
+		Expect(testcommon.SetBuildBinPath()).To(Succeed())
+		common.SetVerboseMode(false)
+
+		originalGameFiles = common.GameFilesRoot
+		originalResources = common.ResourcesRoot
+
+		creator = func(data []byte, stringBytes []byte, headerLength int, localization string) (datastore.IGlobalLocalizedTextObject, error) {
+			gameVersion := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+			return objectsfile.NewKeyedStringFile(data, stringBytes, headerLength, localization, gameVersion, objectsfile.NameOnlyLayout, "NameOnlyTextObject")
+		}
+	})
+
+	AfterAll(func() {
+		common.GameFilesRoot = originalGameFiles
+		common.ResourcesRoot = originalResources
+		if tmpRootFFX != "" {
+			os.RemoveAll(tmpRootFFX)
+		}
+		if tmpRootFFX2 != "" {
+			os.RemoveAll(tmpRootFFX2)
+		}
+		if tmpRootLastMiss != "" {
+			os.RemoveAll(tmpRootLastMiss)
+		}
+	})
+
+	Context("FFX (ffx) - examples/main.go runFFXExamples", func() {
+		BeforeAll(func() {
+			srcTree := filepath.Join(testcommon.GetTestDataRootDirectory(), "FFX", "binary")
+			tmpRootFFX = setupVersion(common.GameVersionFFX, srcTree)
+		})
+
+		for _, tc := range ffxIntegrityCases {
+			tc := tc
+			It("should complete integrity cycle with matching hash for "+tc.pattern, func() {
+				integrityCycle(tmpRootFFX, tc)
+			})
+		}
+	})
+
+	Context("FFX-2 (ffx2) - examples/main.go runFFX2Examples", func() {
+		BeforeAll(func() {
+			srcTree := filepath.Join(testcommon.GetTestDataRootDirectory(), "FFX-2", "binary")
+			tmpRootFFX2 = setupVersion(common.GameVersionFFX2, srcTree)
+		})
+
+		// testData/FFX-2/binary contém apenas battle/kernel/a_ability.bin;
+		// os demais arquivos do runFFX2Examples não existem nos dados de teste.
+		It("should complete integrity cycle with matching hash for battle/kernel/a_ability.bin", func() {
+			integrityCycle(tmpRootFFX2, integrityCase{pattern: "battle/kernel/a_ability.bin", read: objectsfile.ReadCommandLocalizations})
+		})
+	})
+
+	Context("LastMiss (lastmiss) - examples/main.go runLastMissExamples", func() {
+		BeforeAll(func() {
+			srcTree := filepath.Join(testcommon.GetTestDataRootDirectory(), "FFX-2", "binary")
+			tmpRootLastMiss = setupVersion(common.GameVersionLastMiss, srcTree)
+		})
+
+		It("should complete integrity cycle with matching hash for lastmiss/kernel/lm_accesary.bin", func() {
+			integrityCycle(tmpRootLastMiss, integrityCase{pattern: "lastmiss/kernel/lm_accesary.bin", read: objectsfile.ReadLastMissionLocalizations})
+		})
+	})
+
+	Context("Access errors", func() {
+		It("should fail LoadFromBinary when file does not exist", func() {
+			version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+			binFile := objectsfile.NewObjectBinaryFile("battle/kernel/does_not_exist.bin", creator, common.DefaultLocalization, version)
+			err := binFile.LoadFromBinary()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("file does not exist"))
+		})
+
+		It("should fail LoadFromBinary when path is a directory", func() {
+			gameDir := interactions.NewInteractionService().GameLocation.GetTargetDirectory()
+			dirAsFile := filepath.Join(gameDir, common.GetLocalizationRoot(common.DefaultLocalization), "battle", "kernel", "dir_as_file.bin")
+			Expect(os.MkdirAll(dirAsFile, 0755)).To(Succeed())
+
+			binFile := objectsfile.NewObjectBinaryFile("battle/kernel/dir_as_file.bin", creator, common.DefaultLocalization, interactions.NewInteractionService().FFXAppConfig().GetGameVersion())
+			err := binFile.LoadFromBinary()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to read file"))
+		})
+
+		It("should fail BuildObjectsDTO when no objects are loaded", func() {
+			version := common.GameVersionFFX
+			layout, ok := objectsfile.FileLayoutFor(version, "battle/kernel/command.bin")
+			Expect(ok).To(BeTrue())
+			binFile := objectsfile.NewObjectBinaryFile("battle/kernel/command.bin", creator, common.DefaultLocalization, version)
+			_, err := builders.BuildObjectsDTO(binFile.GetObjects(), layout, objectsfile.FileLayoutKey(version, "battle/kernel/command.bin"))
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("no objects loaded"))
+		})
+
+		It("should fail WriteObjects when collection is empty", func() {
+			_, err := json.NewJSONObjectFormatter().WriteObjects(nil, common.GameVersionFFX)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("no objects with text data"))
+		})
+
+		It("should fail ReadObjects when json file does not exist", func() {
+			_, err := json.NewJSONObjectFormatter().ReadObjects("binary_integrity_missing.json")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to load"))
+		})
+	})
+})

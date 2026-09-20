@@ -17,24 +17,6 @@ const (
 	LockitParts
 )
 
-type GameVersion int
-
-const (
-	FFX GameVersion = iota + 1
-	FFX2
-)
-
-func (gv GameVersion) String() string {
-	switch gv {
-	case FFX:
-		return "FFX"
-	case FFX2:
-		return "FFX-2"
-	default:
-		return "Unknown"
-	}
-}
-
 type (
 	GameDataInfo struct {
 		FilePath       string `json:"file_path"`

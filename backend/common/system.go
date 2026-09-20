@@ -1,6 +1,7 @@
 package common
 
 import (
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,7 +32,7 @@ func GetBasePath() string {
 	if !ok {
 		panic("Error when obtaining source code path")
 	}
-	
+
 	srcPath := filepath.Dir(filename)
 
 	if base := os.Getenv("APP_BASE_PATH"); base != "" {
@@ -48,4 +49,45 @@ func GetBasePath() string {
 
 func GetTempDir() string {
 	return os.TempDir()
+}
+
+func SetVerboseMode(enabled bool) {
+	if enabled {
+		os.Setenv("VERBOSE_MODE", "1")
+	} else {
+		os.Setenv("VERBOSE_MODE", "0")
+	}
+}
+func IsVerboseMode() bool {
+	verbose := os.Getenv("VERBOSE_MODE")
+	return verbose == "1"
+}
+
+const (
+	colorReset   = "\033[0m"
+	colorVerbose = "\033[33m"
+	colorInfo    = "\033[32m"
+	colorError   = "\033[31m"
+)
+
+func LogVerbose(format string, args ...any) {
+	if IsVerboseMode() {
+		log.Printf(colorVerbose+format+colorReset, args...)
+	}
+}
+
+func LogInfo(format string, args ...any) {
+	log.Printf(colorInfo+format+colorReset, args...)
+}
+
+func LogError(format string, args ...any) {
+	log.Printf(colorError+format+colorReset, args...)
+}
+
+func SetModsEnabled(enabled bool) {
+	DisableMods = !enabled
+}
+
+func AreModsEnabled() bool {
+	return !DisableMods
 }

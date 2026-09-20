@@ -39,6 +39,7 @@ const imports = [
 ];
 
 @Component({
+  standalone: true,
   selector: 'ffx-tree',
   exportAs: 'ffxTree',
   imports: imports,
@@ -58,6 +59,7 @@ export class FfxTreeComponent implements OnInit {
 
   async buildTree() {
     const treeNodes: Array<spira.TreeNode> = await BuildTree();
+    console.log('Tree nodes:', treeNodes);
     this.files.set(treeNodes);
   }
 

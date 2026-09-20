@@ -93,7 +93,7 @@ func (dfe *dcpFileExtractor) populateMissingDcpBinaryFileParts(binaryPartsList c
 
 func (dfe *dcpFileExtractor) ensureAllDcpBinaryFileParts(binaryPartsList components.IList[dcpParts.DcpFileParts]) error {
 	dcpFilePartsLen := dfe.dcpFileProperties.GetPartsLength()
-	binaryPartsListLen := binaryPartsList.GetLength()
+	binaryPartsListLen := binaryPartsList.Len()
 
 	if binaryPartsListLen == dcpFilePartsLen {
 		return nil
@@ -109,7 +109,7 @@ func (dfe *dcpFileExtractor) ensureAllDcpBinaryFileParts(binaryPartsList compone
 		return err
 	}
 
-	if err := lib.EnsurePartsListCount(dcpFilePartsLen, binaryPartsList.GetLength()); err != nil {
+	if err := lib.EnsurePartsListCount(dcpFilePartsLen, binaryPartsList.Len()); err != nil {
 		return err
 	}
 
@@ -141,7 +141,7 @@ func (dfe *dcpFileExtractor) decodeFilesParts(binaryPartsList components.IList[d
 		}
 	}
 
-	binaryPartsList.ForEach(extractParts)
+	binaryPartsList.Range(extractParts)
 
 	if hasError {
 		return fmt.Errorf("error when decoding dcp file parts")

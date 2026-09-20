@@ -18,7 +18,7 @@ const txtExtension = ".txt"
 
 func NewTxtFormatter() *TxtFormatter {
 	return &TxtFormatter{
-		GameVersionDir: interactions.NewInteractionService().FFXGameVersion().GetGameVersion().String(),
+		GameVersionDir: interactions.CurrentGameVersion().String(),
 		GameFilesPath:  interactions.NewInteractionService().GameLocation.GetTargetDirectory(),
 	}
 }

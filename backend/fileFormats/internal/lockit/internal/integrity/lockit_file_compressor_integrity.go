@@ -76,7 +76,7 @@ func (lfi *lockitFileCompressorIntegrity) verifyDataIntegrity(file string, locki
 		return fmt.Errorf("error when checking lockit file integrity:: %w", err)
 	}
 
-	gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
+	gameVersion := interactions.CurrentGameVersion()
 	if err := lfi.temporaryPartsDecoder(tempExtractedBinaryPartsList, lockitEncoding, gameVersion); err != nil {
 		return err
 	}
@@ -125,9 +125,9 @@ func (lfi *lockitFileCompressorIntegrity) populateTemporaryBinaryPartsList(tempP
 		return fmt.Errorf("error when checking lockit file integrity:: %w", err)
 	}
 
-	if tempPartsList.GetLength() != fileOptions.GetPartsLength() {
+	if tempPartsList.Len() != fileOptions.GetPartsLength() {
 		return fmt.Errorf("error checking lockit parts integrity: expected %d, got %d",
-			fileOptions.GetPartsLength(), tempPartsList.GetLength())
+			fileOptions.GetPartsLength(), tempPartsList.Len())
 	}
 
 	setExtractTemporaryDirectory := func(part lockitParts.LockitFileParts) {
@@ -137,12 +137,12 @@ func (lfi *lockitFileCompressorIntegrity) populateTemporaryBinaryPartsList(tempP
 		part.GetDestination().Extract().SetTargetPath(tempDir)
 	}
 
-	tempPartsList.ForEach(setExtractTemporaryDirectory)
+	tempPartsList.Range(setExtractTemporaryDirectory)
 
 	return nil
 }
 
-func (lfi *lockitFileCompressorIntegrity) temporaryPartsDecoder(tempPartsList components.IList[lockitParts.LockitFileParts], lockitEncoding ffxencoding.IFFXTextLockitEncoding, gameVersion models.GameVersion) error {
+func (lfi *lockitFileCompressorIntegrity) temporaryPartsDecoder(tempPartsList components.IList[lockitParts.LockitFileParts], lockitEncoding ffxencoding.IFFXTextLockitEncoding, gameVersion common.GameVersion) error {
 	defaultIntegrityError := fmt.Errorf("error when checking lockit file integrity")
 
 	if tempPartsList.IsEmpty() {
@@ -166,10 +166,10 @@ func (lfi *lockitFileCompressorIntegrity) temporaryPartsComparer(partsList compo
 		return fmt.Errorf("error when checking lockit file integrity")
 	}
 
-	compareFilesList := components.NewList[models.FileComparisonEntry](partsList.GetLength())
+	compareFilesList := components.NewList[models.FileComparisonEntry](partsList.Len())
 	defer compareFilesList.Clear()
 
-	partsList.ForEach(func(part lockitParts.LockitFileParts) {
+	partsList.Range(func(part lockitParts.LockitFileParts) {
 		compareFilesList.Add(models.FileComparisonEntry{
 			FromFile: part.GetDestination().Translate().GetTargetFile(),
 			ToFile:   part.GetDestination().Extract().GetTargetFile(),

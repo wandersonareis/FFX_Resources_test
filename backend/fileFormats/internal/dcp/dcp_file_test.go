@@ -13,7 +13,6 @@ import (
 	"ffxresources/backend/models"
 	testcommon "ffxresources/testData"
 	"math/rand"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -46,7 +45,7 @@ var _ = Describe("DcpFile", Ordered, func() {
 		dcpFileReader     dcp.IDcpFileExtractor
 		dcpFileWriter     dcp.IDcpFileCompressor
 		verifyService     components.IVerificationService
-		config            *interactions.FFXAppConfig
+		config            *interactions.AppConfig
 		temp              *common.TempProvider
 		log               *testcommon.MockLogHandler
 	)
@@ -153,7 +152,7 @@ var _ = Describe("DcpFile", Ordered, func() {
 	Context("Test FFX-2 dcp file test", Ordered, func() {
 		BeforeEach(func() {
 			Expect(testcommon.SetBuildBinPath()).To(Succeed())
-			Expect(os.Setenv("FFX_GAME_VERSION", "2")).To(Succeed())
+			common.SetCurrentGameVersion(common.GameVersionFFX2)
 
 			rootDir = testcommon.GetTestDataRootDirectory()
 			Expect(rootDir).NotTo(BeEmpty(), "Project root directory should not be empty")
@@ -173,20 +172,20 @@ var _ = Describe("DcpFile", Ordered, func() {
 			reimportTempPath = filepath.Join(temp.TempFilePath, "reimport")
 			translatePath = filepath.Join(testDataPath, "translated")
 
-			config = &interactions.FFXAppConfig{
-				FFXGameVersion:    2,
-				GameFilesLocation: gameLocationPath,
-				ExtractLocation:   extractTempPath,
-				TranslateLocation: translatePath,
-				ImportLocation:    reimportTempPath,
-			}
+		config = interactions.NewAppConfig()
+		Expect(config).NotTo(BeNil())
+		config.SetGameVersion(common.GameVersionFFX2)
+		config.SetLocation("GameFilesLocation", gameLocationPath)
+		config.SetLocation("ExtractLocation", extractTempPath)
+		config.SetLocation("TranslateLocation", translatePath)
+		config.SetLocation("ImportLocation", reimportTempPath)
 
 			formatter = &formatters.TxtFormatter{
 				GameVersionDir: gameVersionDir,
 				GameFilesPath:  translatePath,
 			}
 
-			dcpFileProperties = models.NewDcpFileOptions(models.GameVersion(config.FFXGameVersion))
+			dcpFileProperties = models.NewDcpFileOptions(config.GetGameVersion())
 
 			interactions.NewInteractionServiceWithConfig(config)
 			interactions.NewInteractionWithTextFormatter(formatter)
@@ -235,7 +234,7 @@ var _ = Describe("DcpFile", Ordered, func() {
 	Context("Test FFX dcp file test", Ordered, func() {
 		BeforeEach(func() {
 			Expect(testcommon.SetBuildBinPath()).To(Succeed())
-			Expect(os.Setenv("FFX_GAME_VERSION", "1")).To(Succeed())
+			common.SetCurrentGameVersion(common.GameVersionFFX)
 
 			rootDir = testcommon.GetTestDataRootDirectory()
 			Expect(rootDir).NotTo(BeEmpty(), "Project root directory should not be empty")
@@ -255,20 +254,20 @@ var _ = Describe("DcpFile", Ordered, func() {
 			reimportTempPath = filepath.Join(temp.TempFilePath, "reimport")
 			translatePath = filepath.Join(testDataPath, "translated")
 
-			config = &interactions.FFXAppConfig{
-				FFXGameVersion:    1,
-				GameFilesLocation: gameLocationPath,
-				ExtractLocation:   extractTempPath,
-				TranslateLocation: translatePath,
-				ImportLocation:    reimportTempPath,
-			}
+			config = interactions.NewAppConfig()
+			Expect(config).NotTo(BeNil())
+			config.SetGameVersion(common.GameVersionFFX)
+			config.SetLocation("GameFilesLocation", gameLocationPath)
+			config.SetLocation("ExtractLocation", extractTempPath)
+			config.SetLocation("TranslateLocation", translatePath)
+			config.SetLocation("ImportLocation", reimportTempPath)
 
 			formatter = &formatters.TxtFormatter{
 				GameVersionDir: gameVersionDir,
 				GameFilesPath:  translatePath,
 			}
 
-			dcpFileProperties = models.NewDcpFileOptions(1)
+			dcpFileProperties = models.NewDcpFileOptions(common.GameVersionFFX)
 
 			interactions.NewInteractionServiceWithConfig(config)
 			interactions.NewInteractionWithTextFormatter(formatter)

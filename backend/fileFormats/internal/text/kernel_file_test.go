@@ -11,9 +11,7 @@ import (
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/interfaces"
-	"ffxresources/backend/models"
 	testcommon "ffxresources/testData"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -41,7 +39,7 @@ var _ = Describe("KrnlFile", Ordered, func() {
 		translatePath         string
 		testDataPath          string
 		gameLocationPath      string
-		config                *interactions.FFXAppConfig
+		config                *interactions.AppConfig
 		mockNotifierService   *testcommon.MockNotifier
 		temp                  *common.TempProvider
 		log                   *testcommon.MockLogHandler
@@ -49,7 +47,7 @@ var _ = Describe("KrnlFile", Ordered, func() {
 
 	BeforeAll(func() {
 		Expect(testcommon.SetBuildBinPath()).To(Succeed())
-		Expect(os.Setenv("FFX_GAME_VERSION", "2")).To(Succeed())
+		common.SetCurrentGameVersion(common.GameVersionFFX2)
 
 		rootDir = testcommon.GetTestDataRootDirectory()
 		Expect(rootDir).NotTo(BeEmpty(), "Project root directory should not be empty")
@@ -65,13 +63,13 @@ var _ = Describe("KrnlFile", Ordered, func() {
 		reimportTempPath = filepath.Join(temp.TempFilePath, "reimport")
 		translatePath = filepath.Join(testDataPath, "translated")
 
-		config = &interactions.FFXAppConfig{
-			FFXGameVersion:    2,
-			GameFilesLocation: gameLocationPath,
-			ExtractLocation:   extractTempPath,
-			TranslateLocation: translatePath,
-			ImportLocation:    reimportTempPath,
-		}
+		config = interactions.NewAppConfig()
+		Expect(config).NotTo(BeNil())
+		config.SetGameVersion(common.GameVersionFFX2)
+		config.SetLocation("GameFilesLocation", gameLocationPath)
+		config.SetLocation("ExtractLocation", extractTempPath)
+		config.SetLocation("TranslateLocation", translatePath)
+		config.SetLocation("ImportLocation", reimportTempPath)
 
 		formatter = &formatters.TxtFormatter{
 			GameVersionDir:  gameVersionDir,
@@ -304,8 +302,8 @@ var _ = Describe("KrnlFile", Ordered, func() {
 			encoding := ffxencoding.NewFFXTextEncodingFactory().CreateFFXTextDlgEncoding(source.GetType())
 			defer encoding.Dispose()
 
-			gameVersion := interactions.NewInteractionService().FFXGameVersion().GetGameVersion()
-			Expect(gameVersion).To(Equal(models.FFX2))
+			gameVersion := interactions.CurrentGameVersion()
+			Expect(gameVersion).To(Equal(common.GameVersionFFX2))
 
 			count, err := lib.TextSegmentsCounter(sourceFile, source.GetType(), gameVersion)
 			Expect(err).To(BeNil())

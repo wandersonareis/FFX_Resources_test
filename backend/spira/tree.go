@@ -28,8 +28,9 @@ func CreateNodeMap(rootDir string, formatter interfaces.ITextFormatter) fileForm
 		return nil
 	}
 
-	rootMapNode := createRootMapNode(rootDir, entrySource, destination)
-	nodeMap[rootDir] = rootMapNode
+	rootMapNode := createRootMapNode(entrySource, destination)
+	rootKey := entrySource.GetPath()
+	nodeMap[rootKey] = rootMapNode
 
 	err = filepath.WalkDir(rootDir, func(path string, info fs.DirEntry, err error) error {
 		if err != nil || path == rootDir {
@@ -54,17 +55,18 @@ func CreateNodeMap(rootDir string, formatter interfaces.ITextFormatter) fileForm
 
 		childNode := &fileFormats.MapNode{}
 
-		childNode.SetNodeKey(path)
+		key := entrySource.GetPath()
+		childNode.SetNodeKey(key)
 		childNode.SetNodeLabel(info.Name())
 
 		addTreeNodeIcon(childNode, entrySource.GetType())
 		addTreeNodeData(childNode, entrySource, destination)
 
-		nodeMap[path] = childNode
+		nodeMap[key] = childNode
 
 		parent := entrySource.GetParentPath()
 		if parentNode, ok := nodeMap[parent]; ok {
-			parentNode.AddChildKey(path)
+			parentNode.AddChildKey(key)
 		}
 
 		return nil
@@ -95,9 +97,9 @@ func newDestination(source interfaces.ISource, formatter interfaces.ITextFormatt
 	return dest, nil
 }
 
-func createRootMapNode(rootDir string, src interfaces.ISource, dest locations.IDestination) *fileFormats.MapNode {
+func createRootMapNode(src interfaces.ISource, dest locations.IDestination) *fileFormats.MapNode {
 	rootMapNode := &fileFormats.MapNode{}
-	rootMapNode.SetNodeKey(rootDir)
+	rootMapNode.SetNodeKey(src.GetPath())
 	addTreeNodeLabel(rootMapNode, src.Get().Version)
 	addTreeNodeIcon(rootMapNode, src.GetType())
 	addTreeNodeData(rootMapNode, src, dest)

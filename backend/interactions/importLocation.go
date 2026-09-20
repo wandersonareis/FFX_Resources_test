@@ -8,35 +8,24 @@ type (
 	}
 	IImportLocation interface {
 		interfaces.IInteractionBase
+
+		WithTargetDirectory(path string) IImportLocation
 	}
 )
 
-func newImportLocation() IImportLocation {
-	rootDirectoryName := "reimported"
-
-	return &ImportLocation{
+func newImportLocation(path string, config ISetAppConfig) IImportLocation {
+	importLocation := &ImportLocation{
 		interactionBase: &interactionBase{
-			defaultDirName: rootDirectoryName,
+			targetDir: path,
+			config:    config,
+			configKey: "ImportLocation",
 		},
 	}
+	importLocation.SetTargetDirectory(path)
+	return importLocation
 }
 
-func (i *ImportLocation) GetTargetDirectory() string {
-	path, _ := i.interactionBase.GetTargetDirectoryBase(ConfigImportLocation)
-	return path.(string)
-}
-
-func (i *ImportLocation) SetTargetDirectory(path string) error {
-	return i.interactionBase.SetTargetDirectoryBase(ConfigImportLocation, path)
-}
-
-func (i *ImportLocation) ProvideTargetDirectory() error {
-	path := i.GetTargetDirectory()
-
-	err := i.interactionBase.ProviderTargetDirectoryBase(ConfigImportLocation, path)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (i *ImportLocation) WithTargetDirectory(path string) IImportLocation {
+	_ = i.SetTargetDirectory(path)
+	return i
 }

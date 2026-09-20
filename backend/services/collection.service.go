@@ -7,6 +7,7 @@ import (
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/spira"
 	"fmt"
+	"path/filepath"
 )
 
 type CollectionService struct {
@@ -31,7 +32,13 @@ func (c *CollectionService) BuildTree(path string) []spira.TreeNode {
 		return nil
 	}
 
-	rootTreeNode := spira.BuildTreeFromMap(rawMap, path)
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		c.notifier.NotifyError(fmt.Errorf("failed to resolve path: %w", err))
+		return nil
+	}
+
+	rootTreeNode := spira.BuildTreeFromMap(rawMap, absPath)
 
 	return []spira.TreeNode{*rootTreeNode}
 }
@@ -40,7 +47,12 @@ func (c *CollectionService) CreateNodeDataStore(
 	path string,
 	formatter interfaces.ITextFormatter) fileFormats.TreeMapNode {
 	rawMap := spira.CreateNodeMap(path, formatter)
-	NodeDataStore = NewNodeStore(rawMap)
+
+	if NodeDataStore == nil {
+		NodeDataStore = NewNodeStore(rawMap)
+	} else {
+		NodeDataStore.Merge(rawMap)
+	}
 
 	return rawMap
 }

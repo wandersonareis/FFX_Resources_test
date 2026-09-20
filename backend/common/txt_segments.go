@@ -46,7 +46,8 @@ func convertLineBreaksToWindowsFormat(file *os.File) (string, error) {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		content.WriteString(scanner.Text() + "\r\n")
+		content.WriteString(scanner.Text());
+		content.WriteString("\r\n")
 	}
 
 	if err := scanner.Err(); err != nil {

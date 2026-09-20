@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-	"syscall"
 )
 
 func RunCommand(tool string, args []string) (string, error) {
 	cmd := exec.Command(tool, args...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	configureCommand(cmd)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

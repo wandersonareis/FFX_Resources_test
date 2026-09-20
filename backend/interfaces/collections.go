@@ -1,0 +1,48 @@
+package interfaces
+
+// IList defines a declarative interface for a list collection.
+// T can be any type for the list elements.
+// Provides both sequential and parallel iteration capabilities.
+type IList[T any] interface {
+	Add(item T)
+	AddAll(items []T)
+	TrimToSize()
+	Remove(item T, equals func(a, b T) bool)
+	Filter(f func(item T) bool) IList[T]
+	Get(index int) T
+	Items() []T
+	Len() int
+	IsEmpty() bool
+	Clear()
+	// TryAdd insere apenas se nenhum item existente for considerado igual.
+	// A igualdade usa reflect.DeepEqual. Não é atômico: o chamador é responsável
+	// pela sincronização quando necessário.
+	TryAdd(item T) bool
+	Range(f func(item T))
+	RangeIndex(f func(index int, item T))
+	RangeParallel(f func(item T))
+	RangeIndexParallel(f func(index int, item T))
+}
+
+// IMap defines a declarative interface for a map collection.
+// K must be comparable to be used as a map key.
+// V can be any type for the map value.
+type IMap[K comparable, V any] interface {
+	Add(key K, value V)
+	// TryAdd insere apenas se a chave ainda não existir, retornando false
+	// caso contrário. Não é atômico: a sincronização é responsabilidade do
+	// dono do mapa (ex.: o mu do datastore).
+	TryAdd(key K, value V) bool
+	AddAll(entries map[K]V)
+	Remove(key K)
+	Get(key K) (V, bool)
+	GetOrDefault(key K, defaultValue V) V
+	ContainsKey(key K) bool
+	ContainsValue(value V, equals func(a, b V) bool) bool
+	Keys() []K
+	Values() []V
+	Clear()
+	Count() int
+	ForEach(f func(key K, value V))
+	ParallelForEach(f func(key K, value V))
+}

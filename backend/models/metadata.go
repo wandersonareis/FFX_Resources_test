@@ -1,0 +1,128 @@
+package models
+
+import (
+	"ffxresources/backend/common"
+	"os"
+	"path/filepath"
+)
+
+// FileMetadata wraps the SpiraFileInfo of an ORIGINAL game binary so an exported
+// artifact can be mapped back to the file it came from (for binary reconstruction).
+// The Version/DirPattern/FileName fields are the layout metadata:
+// they are omitempty so legacy exports (file_info only) keep parsing, and the
+// legacy payload ignores them when reading new exports.
+type FileMetadata struct {
+	FileInfo   SpiraFileInfo       `json:"file_info"`
+	Version    *common.GameVersion `json:"version,omitempty"`
+	DirPattern string              `json:"dir_pattern,omitempty"`
+	FileName   string              `json:"file_name,omitempty"`
+	Key        string              `json:"key,omitempty"`
+}
+
+// NewFileMetadata creates a FileMetadata from a SpiraFileInfo (nil-safe).
+func NewFileMetadata(info *SpiraFileInfo) *FileMetadata {
+	if info == nil {
+		return nil
+	}
+	cp := *info
+	return &FileMetadata{FileInfo: cp}
+}
+
+// NewObjectFileMetadata creates a FileMetadata for an objectsfile-type binary
+// carrying the layout metadata (version, dir pattern, file name).
+func NewObjectFileMetadata(version common.GameVersion, dirPattern string, fileName string) *FileMetadata {
+	meta := NewFileMetadata(NewFileInfoFromPath(ObjectFileBinaryPath(filepath.Join(dirPattern, fileName))))
+	if meta == nil {
+		meta = &FileMetadata{}
+	}
+	ver := version
+	meta.Version = &ver
+	meta.DirPattern = dirPattern
+	meta.FileName = fileName
+	return meta
+}
+
+// NewObjectFileMetadataKeyed is like NewObjectFileMetadata but also carries the
+// canonical store key (version/patternPath), so the JSON file name is irrelevant
+// and the import can look up the layout directly from the metadata.
+func NewObjectFileMetadataKeyed(version common.GameVersion, dirPattern string, fileName string, key string) *FileMetadata {
+	meta := NewObjectFileMetadata(version, dirPattern, fileName)
+	if meta != nil {
+		meta.Key = key
+	}
+	return meta
+}
+
+// ---- source binary path helpers -------------------------------------------------
+
+// ObjectFileBinaryPath returns the absolute path of an objectsfile-type binary
+// (e.g. "battle/kernel/important.bin") for the default localization.
+func ObjectFileBinaryPath(patternPath string) string {
+	return filepath.Join(common.GameFilesRoot, common.ModsFolder, common.GetLocalizationRoot(common.DefaultLocalization), patternPath)
+}
+
+// EventBinaryPath returns the absolute path of an event binary given its ID
+// (e.g. "ev001" -> .../event/obj_ps3/ev/ev001/ev001.bin).
+func EventBinaryPath(id string) string {
+	if len(id) < 2 {
+		return ""
+	}
+	rel := filepath.Join("event/obj_ps3", id[:2], id, id+".bin")
+	return filepath.Join(common.GameFilesRoot, common.ModsFolder, common.GetLocalizationRoot(common.DefaultLocalization), rel)
+}
+
+// MacroBinaryPath returns the absolute path of a macro dictionary binary for a
+// given localization (e.g. "us" -> .../new_uspc/menu/macrodic.dcp).
+func MacroBinaryPath(localization string) string {
+	rel := filepath.Join("menu", "macrodic.dcp")
+	return filepath.Join(common.GameFilesRoot, common.ModsFolder, common.GetLocalizationRoot(localization), rel)
+}
+
+// NewFileInfoFromPath builds a SpiraFileInfo for an arbitrary file (such as a game binary)
+// without requiring an FFX/FFX-2 prefix in the path. The version resolves to ffx
+// when the prefix is absent. It never returns an error.
+func NewFileInfoFromPath(path string) *SpiraFileInfo {
+	aPath, err := filepath.Abs(path)
+	if err != nil {
+		aPath = path
+	}
+
+	info, statErr := os.Stat(aPath)
+	if info == nil || statErr != nil {
+		return &SpiraFileInfo{
+			Name:       common.RecursiveRemoveFileExtension(filepath.Base(path)),
+			NamePrefix: common.RemoveOneFileExtension(filepath.Base(path)),
+			Extension:  filepath.Ext(path),
+			Path:       path,
+			Parent:     filepath.Dir(path),
+			Type:       guessFileType(path),
+			Version:    getVersionFromPrefix(aPath),
+		}
+	}
+
+	fileInfo := &SpiraFileInfo{
+		Name:       common.RecursiveRemoveFileExtension(info.Name()),
+		NamePrefix: common.RemoveOneFileExtension(info.Name()),
+		Extension:  filepath.Ext(path),
+		IsDir:      info.IsDir(),
+		Path:       path,
+		Parent:     filepath.Dir(path),
+		Type:       guessFileType(path),
+		Version:    getVersionFromPrefix(aPath),
+	}
+
+	if !info.IsDir() && fileInfo.Type != DcpParts {
+		if v, verr := common.CheckFFXPath(aPath); verr == nil {
+			fileInfo.Version = v
+			if rp, rerr := common.RelativePathFromMatch(aPath); rerr == nil {
+				fileInfo.RelativePath = rp
+			}
+		}
+	}
+
+	if !info.IsDir() {
+		fileInfo.Size = info.Size()
+	}
+
+	return fileInfo
+}

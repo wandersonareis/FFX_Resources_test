@@ -3,9 +3,11 @@
 @import "../node_modules/quill/dist/quill.core.css";
 @import "../node_modules/quill/dist/quill.snow.css";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --background-logo-bg: url('/assets/images/logo_us.png');
+}
 
 @layer base {
   body {

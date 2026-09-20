@@ -42,7 +42,7 @@ func (tsv *textSegmentsVerificationStrategy) Verify(source interfaces.ISource, d
 	return nil
 }
 
-func (tsv *textSegmentsVerificationStrategy) compareTextSegmentsCount(binaryFile, textFile string, binaryType models.NodeType, gameVersion models.GameVersion) error {
+func (tsv *textSegmentsVerificationStrategy) compareTextSegmentsCount(binaryFile, textFile string, binaryType models.NodeType, gameVersion common.GameVersion) error {
 	binarySegmentCount, err := lib.TextSegmentsCounter(binaryFile, binaryType, gameVersion)
 	if err != nil {
 		return err

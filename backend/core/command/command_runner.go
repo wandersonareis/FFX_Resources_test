@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"syscall"
 )
 
 type (
@@ -82,7 +81,9 @@ func NewCommandRunner() ICommandRunner {
 // such as those with extensions .bin, .msb, and .00[1-6] (for dialogs in DCP archives) and .bin (for kernel).
 func (c *commandRunner) Run(executablePath string, args []string) (string, error) {
 	cmd := exec.Command(executablePath, args...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	if err := configureCommand(cmd); err != nil {
+        return "", err
+    }
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

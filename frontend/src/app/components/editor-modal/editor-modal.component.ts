@@ -1,5 +1,5 @@
-import {Component, inject, signal, WritableSignal} from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {Component, inject, signal, WritableSignal, ChangeDetectionStrategy} from '@angular/core';
+
 import { FormsModule } from '@angular/forms';
 import { EditorModule } from 'primeng/editor';
 import { DialogModule } from 'primeng/dialog';
@@ -14,13 +14,13 @@ import {TreeNode} from "primeng/api";
 @Component({
     selector: 'app-editor-modal',
     imports: [
-        CommonModule,
-        ButtonModule,
-        FormsModule,
-        DialogModule,
-        EditorModule
-    ],
+    ButtonModule,
+    FormsModule,
+    DialogModule,
+    EditorModule
+],
     templateUrl: './editor-modal.component.html',
+    changeDetection: ChangeDetectionStrategy.Eager,
     styleUrl: './editor-modal.component.css'
 })
 export class EditorModalComponent {

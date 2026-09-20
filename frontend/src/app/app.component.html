@@ -19,6 +19,15 @@
         [class.pointer-events-none]="versionFFX2()"
         (onChange)="versionFFX2Change($event)"
       />
+      <p-togglebutton
+        [(ngModel)]="versionLastMiss"
+        onLabel="LastMiss"
+        offLabel="LastMiss"
+        size="small"
+        styleClass="min-w-20"
+        [class.pointer-events-none]="versionLastMiss()"
+        (onChange)="versionLastMissChange($event)"
+      />
     </aside>
 
     <app-config-modal />

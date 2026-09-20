@@ -28,9 +28,9 @@ func NewComparerContent(loggerHandler loggingService.ILoggerService) IComparerCo
 }
 
 func (pc *comparerContent) CompareContent(filesList components.IList[models.FileComparisonEntry]) error {
-	errChan := make(chan error, filesList.GetLength())
+	errChan := make(chan error, filesList.Len())
 
-	filesList.ParallelForEach(func(item models.FileComparisonEntry) {
+	filesList.RangeParallel(func(item models.FileComparisonEntry) {
 		if err := pc.compare(item.FromFile, item.ToFile); err != nil {
 			errChan <- err
 			return
