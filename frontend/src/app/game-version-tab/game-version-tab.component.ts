@@ -33,21 +33,14 @@ import {
   Upload,
 } from 'lucide-angular';
 import { firstValueFrom } from 'rxjs';
-import {
-  Extract,
-  ReadFileAsString,
-  WriteTextFile,
-} from '../../../wailsjs/go/main/App';
 import { EventsOn } from '../../../wailsjs/runtime/runtime';
 import { dto } from '../../../wailsjs/go/models';
-import { CompressService } from '../../service/compress.service';
 import { ErrorHandlerService } from '../../service/error-handler.service';
-import { ExtractService } from '../../service/extract.service';
 import { DisplayLabelService } from '../core/display-label.service';
 import { ENTRY_KINDS, EntryRow, TreeDataService } from '../core/tree-data.service';
 import { GameVersionId } from '../core/game-version.service';
 import { EntryKind } from '../core/display-names';
-import { EntryEditorDialogComponent } from '../editor/entry-editor-dialog/entry-editor-dialog.component';
+import { EntryRowsEditorDialogComponent } from '../editor/entry-rows-editor-dialog/entry-rows-editor-dialog.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
 interface TreeListNode {
@@ -100,8 +93,6 @@ export class GameVersionTabComponent implements OnInit {
 
   private readonly treeData = inject(TreeDataService);
   private readonly labels = inject(DisplayLabelService);
-  private readonly extractService = inject(ExtractService);
-  private readonly compressService = inject(CompressService);
   private readonly errors = inject(ErrorHandlerService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
@@ -131,7 +122,6 @@ export class GameVersionTabComponent implements OnInit {
       row.id.toLowerCase().includes(filter);
     await this.reload();
     EventsOn('Refresh_Tree', async () => {
-      this.treeData.refreshPathIndex();
       await this.reload();
     });
   }
@@ -212,40 +202,35 @@ export class GameVersionTabComponent implements OnInit {
   }
 
   protected async viewEntry(entry: EntryRow): Promise<void> {
-    const target = entry.fileInfo?.extract_location?.TargetFile as string | undefined;
-    const exists = entry.fileInfo?.extract_location?.IsExist as boolean | undefined;
-    if (!target || exists === false) {
-      this.snackBar.open('Arquivo não extraído. Extraia primeiro.', 'Fechar', {
-        duration: 4000,
-      });
-      return;
-    }
+    this.loading.set(true);
     try {
-      const text = await ReadFileAsString(target);
-      const ref = this.dialog.open(EntryEditorDialogComponent, {
-        width: '80vw',
-        maxWidth: '900px',
-        data: { title: entry.label, content: text },
+      const full = await this.treeData.loadEntry(entry.kind, entry.id, this.version());
+      const ref = this.dialog.open(EntryRowsEditorDialogComponent, {
+        width: '90vw',
+        maxWidth: '1100px',
+        data: { title: entry.label, entry: full },
       });
-      const saved: string | undefined = await firstValueFrom(ref.afterClosed());
+      const saved: dto.FileEntry | undefined = await firstValueFrom(ref.afterClosed());
       if (saved !== undefined) {
-        await WriteTextFile(target, saved);
-        this.snackBar.open('Arquivo salvo.', 'Fechar', { duration: 3000 });
+        await this.treeData.applyEntry(entry.kind, entry.id, this.version(), saved);
+        this.snackBar.open('Alterações aplicadas.', 'Fechar', { duration: 3000 });
+        await this.selectEntry(entry);
       }
     } catch (error) {
       this.errors.sendErrorNotification(error);
+    } finally {
+      this.loading.set(false);
     }
   }
 
   protected async extractEntry(entry: EntryRow): Promise<void> {
     try {
-      const path = entry.fileInfo?.source?.path as string | undefined;
-      if (!path) {
-        this.snackBar.open('Caminho do arquivo não resolvido.', 'Fechar', { duration: 4000 });
-        return;
-      }
-      await this.extractService.extraction(path);
-      this.snackBar.open('Extração solicitada.', 'Fechar', { duration: 3000 });
+      const paths = await this.treeData.exportEntry(entry.kind, entry.id, this.version());
+      this.snackBar.open(
+        `Exportado (JSON + strings): ${paths.length} arquivo(s).`,
+        'Fechar',
+        { duration: 5000 }
+      );
     } catch (error) {
       this.errors.sendErrorNotification(error);
     }
@@ -253,19 +238,15 @@ export class GameVersionTabComponent implements OnInit {
 
   protected async importEntry(entry: EntryRow): Promise<void> {
     try {
-      const path = entry.fileInfo?.source?.path as string | undefined;
-      if (!path) {
-        this.snackBar.open('Caminho do arquivo não resolvido.', 'Fechar', { duration: 4000 });
-        return;
-      }
-      await this.compressService.compress(path);
-      this.snackBar.open('Importação solicitada.', 'Fechar', { duration: 3000 });
+      const paths = await this.treeData.importEntry(entry.kind, entry.id, this.version());
+      this.snackBar.open(
+        `Importado de: ${paths.join(', ')}`,
+        'Fechar',
+        { duration: 5000 }
+      );
+      await this.selectEntry(entry);
     } catch (error) {
       this.errors.sendErrorNotification(error);
     }
-  }
-
-  protected async extractRaw(path: string): Promise<void> {
-    await Extract(path);
   }
 }
