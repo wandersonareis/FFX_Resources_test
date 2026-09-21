@@ -159,6 +159,7 @@ func BuildMacroDTOFromContainers(version common.GameVersion, containers map[stri
 			}
 			return entry.Rows[a].Name < entry.Rows[b].Name
 		})
+		entry.Metadata = entry.Metadata.WithRowCount(len(entry.Rows))
 		out[key] = entry
 	}
 	// TODO: deletar quando colisão xxHash64 for considerada segura —
@@ -182,9 +183,11 @@ func RebuildMacroContainers(version common.GameVersion, c dto.Collection) (map[s
 	for _, key := range c.SortedKeys() {
 		entry := c[key]
 		chunk := -1
-		if entry.Metadata.ChunkIndex != nil {
-			chunk = *entry.Metadata.ChunkIndex
+		if n, ok := dto.ChunkIndexFromID(entry.Metadata.ID); ok {
+			chunk = n
 		} else if n, ok := parseMacroChunkKey(key); ok {
+			chunk = n
+		} else if n, ok := dto.ChunkIndexFromID(key); ok {
 			chunk = n
 		} else {
 			return nil, fmt.Errorf("macro entry %q without chunk index", key)

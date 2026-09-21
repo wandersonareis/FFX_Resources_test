@@ -122,6 +122,7 @@ func BuildObjectsDTO(objects components.IList[datastore.IGlobalLocalizedTextObje
 		return nil, fmt.Errorf("no objects with text data found")
 	}
 	dto.SortRows(entry.Rows)
+	entry.Metadata = entry.Metadata.WithRowCount(len(entry.Rows))
 	out := dto.Collection{ObjectsCollectionKey(layout): entry}
 	// TODO: deletar quando colisão xxHash64 for considerada segura —
 	// guarda temporária de desencargo: reprova DTO com mesmo hash para textos diferentes.

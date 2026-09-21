@@ -61,7 +61,7 @@ func TestJSONEventsFormatterRoundTrip(t *testing.T) {
 	if got := ev001.Rows[0].Hash["us"]; got != hash.Sum64Hex("Tom & Jerry") {
 		t.Fatalf("hash mismatch: %q", got)
 	}
-	if ev001.Metadata.EventID != "ev001" || ev001.Metadata.FileName != "ev001.bin" {
+	if ev001.Metadata.ID != "ev001" {
 		t.Fatalf("metadata not preserved: %+v", ev001.Metadata)
 	}
 }
@@ -72,7 +72,7 @@ func TestJSONEventsFormatterShapesOutput(t *testing.T) {
 		t.Fatalf("marshal: %v", err)
 	}
 	out := string(raw)
-	for _, want := range []string{`"rows"`, `"metadata"`, `"event_id"`, `"hash"`, "ev001", "Tom & Jerry"} {
+	for _, want := range []string{`"rows"`, `"metadata"`, `"key"`, `"id"`, `"hash"`, "ev001", "Tom & Jerry"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("expected output to contain %s:\n%s", want, out)
 		}
@@ -199,24 +199,24 @@ func TestJSONMacroFormatterRoundTrip(t *testing.T) {
 	if len(entry.Rows) != 2 {
 		t.Fatalf("roundtrip mismatch: %+v", entry.Rows)
 	}
-	if entry.Metadata.ChunkIndex == nil || *entry.Metadata.ChunkIndex != 0 {
-		t.Fatalf("chunk index not preserved: %+v", entry.Metadata)
+	if entry.Metadata.ID != "chunk_00" {
+		t.Fatalf("chunk id not preserved: %+v", entry.Metadata)
 	}
 }
 
 func TestMetadataOmitsEmptyFields(t *testing.T) {
-	// Events não fornecem file_info/chunk_index: não podem sair no JSON.
+	// Novo formato: só key/row_count/id/is_dir podem sair no JSON.
 	raw, err := json.NewJSONEventsFormatter().Marshal(sampleCollection())
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
 	out := string(raw)
-	for _, want := range []string{`"file_info"`, `"chunk_index"`, `"name":`, `:null`, `"hash":{}`} {
+	for _, want := range []string{`"event_id"`, `"file_info"`, `"chunk_index"`, `"version"`, `"dir_pattern"`, `"file_name"`, `"shortened"`, `"mid_path"`, `"event_file_path"`, `"localization_pattern"`, `"name":`, `:null`, `"hash":{}`} {
 		if strings.Contains(out, want) {
 			t.Fatalf("unexpected %s in output:\n%s", want, out)
 		}
 	}
-	// Macro não fornece event_id/file_info: omitidos; chunk_index presente.
+	// Macro carrega id=chunk_NN; row_count omitido quando zero.
 	macroRaw, err := json.NewJSONMacroFormatter().Marshal(dto.Collection{
 		"chunk_00": {
 			Metadata: dto.NewMacroMetadata(common.GameVersionFFX, 0),
@@ -227,13 +227,13 @@ func TestMetadataOmitsEmptyFields(t *testing.T) {
 		t.Fatalf("marshal: %v", err)
 	}
 	macroOut := string(macroRaw)
-	for _, want := range []string{`"event_id"`, `"file_info"`} {
+	for _, want := range []string{`"event_id"`, `"file_info"`, `"chunk_index"`} {
 		if strings.Contains(macroOut, want) {
 			t.Fatalf("unexpected %s in macro output:\n%s", want, macroOut)
 		}
 	}
-	if !strings.Contains(macroOut, `"chunk_index"`) {
-		t.Fatalf("expected chunk_index in macro output:\n%s", macroOut)
+	if !strings.Contains(macroOut, `"chunk_00"`) {
+		t.Fatalf("expected chunk id in macro output:\n%s", macroOut)
 	}
 }
 

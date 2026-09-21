@@ -66,7 +66,13 @@ func TestBuildEventsDTOKeysAndRows(t *testing.T) {
 	if len(entry.Rows) != 1 || entry.Rows[0].Index != 0 {
 		t.Fatalf("unexpected rows: %+v", entry.Rows)
 	}
-	if entry.Metadata.EventID != "ev001" || entry.Metadata.FileName != "ev001.bin" {
-		t.Fatalf("metadata mismatch: %+v", entry.Metadata)
+	if entry.Metadata.ID != "ev001" {
+		t.Fatalf("metadata id mismatch: %+v", entry.Metadata)
+	}
+	if entry.Metadata.Key != "ffx/event/obj_ps3/ev/ev001/ev001.bin" {
+		t.Fatalf("metadata key mismatch: %+v", entry.Metadata)
+	}
+	if entry.Metadata.RowCount != 1 {
+		t.Fatalf("metadata row_count mismatch: %+v", entry.Metadata)
 	}
 }

@@ -95,6 +95,7 @@ func BuildEventsDTO(version common.GameVersion, ids []string) (dto.Collection, e
 			continue
 		}
 		dto.SortRows(entry.Rows)
+		entry.Metadata = entry.Metadata.WithRowCount(len(entry.Rows))
 		out[id] = entry
 	}
 	if len(out) == 0 {

@@ -114,3 +114,13 @@ func VersionPathName(version GameVersion) string {
 func GetLocalizationRootForVersion(version GameVersion, localization string) string {
 	return filepath.Join(GetPathRootForVersion(version), "new_"+localization+"pc")
 }
+
+// PackRootForVersion é o prefixo constante de build usado para montar
+// event_file_path = packRoot + localization_pattern. Varia por versão
+// (ffx vs ffx2/lastmiss) e localização, por isso é função e não const.
+func PackRootForVersion(version GameVersion, localization string) string {
+	if localization == "" {
+		localization = DefaultLocalization
+	}
+	return GetLocalizationRootForVersion(version, localization)
+}
