@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"ffxresources/backend/common"
+	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/datastore"
 )
 
@@ -91,6 +92,9 @@ func ResetObjectFileStoreForTest() {
 
 func LoadObjectFile(l FileLayout) (datastore.IBinaryFile, error) {
 	patternPath := l.PatternPath()
+	if err := ffxencoding.EnsureAllCharsetsLoaded(l.Version); err != nil {
+		return nil, fmt.Errorf("charset maps not loaded: %w", err)
+	}
 	var creator CreatorFunc
 	if l.Creator != nil {
 		creator = l.Creator

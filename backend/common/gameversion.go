@@ -70,6 +70,22 @@ func (g GameVersion) Suffix() string {
 	return "_" + g.s
 }
 
+// CharsetVersion normaliza a versão para lookup nos mapas de charset
+// (bytes <-> string), que só têm buckets ffx e ffx2. LastMiss reaproveita
+// os mapas de ffx2. Qualquer outra versão (inclui zero value) causa panic:
+// versão desconhecida no encode/decode é bug, não dado ruim.
+// Uso restrito às funções de bytes para string e string para bytes.
+func CharsetVersion(gv GameVersion) GameVersion {
+	switch gv {
+	case GameVersionFFX:
+		return GameVersionFFX
+	case GameVersionFFX2, GameVersionLastMiss:
+		return GameVersionFFX2
+	default:
+		panic(fmt.Sprintf("unknown game version for charset lookup: %q", gv.String()))
+	}
+}
+
 // currentGameVersion é a versão ativa do processo.
 // Inicializada com FFX; SetCurrentGameVersion assume GameVersion válido.
 var currentGameVersion = GameVersionFFX

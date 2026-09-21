@@ -82,10 +82,17 @@ func ImportFromJson(data *MacroDictionaryJsonImport, version common.GameVersion)
 			gameVersion := version
 			for _, loc := range locKeys {
 				charset := ffxencoding.GetCharsetForLanguage(loc)
-				nameBytes := converter.StringToBytes(s.Name[loc], charset, gameVersion)
+				nameBytes, err := converter.StringToBytes(s.Name[loc], charset, gameVersion)
+				if err != nil {
+					return nil, fmt.Errorf("macro chunk %d string %d loc %s: %w", chunk.ChunkIndex, s.Index, loc, err)
+				}
 				seg := &MacroDictionaryTextSegment{NameBytes: nameBytes}
 				if simpText, ok := s.SimplifiedName[loc]; ok && simpText != "" {
-					seg.SimplifiedNameBytes = converter.StringToBytes(simpText, charset, gameVersion)
+					simpBytes, err := converter.StringToBytes(simpText, charset, gameVersion)
+					if err != nil {
+						return nil, fmt.Errorf("macro chunk %d string %d loc %s simplified: %w", chunk.ChunkIndex, s.Index, loc, err)
+					}
+					seg.SimplifiedNameBytes = simpBytes
 				} else {
 					seg.SimplifiedNameBytes = nameBytes
 				}

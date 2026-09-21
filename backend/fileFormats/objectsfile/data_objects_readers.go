@@ -2,6 +2,7 @@ package objectsfile
 
 import (
 	"ffxresources/backend/common"
+	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/datastore"
 )
 
@@ -17,6 +18,10 @@ func readWithLayout(patternPath string, gameVersion common.GameVersion, layouts 
 
 // newObjectBinaryFile monta, carrega e registra os objetos em datastore.Commands.
 func newObjectBinaryFile(patternPath string, creatorFunc CreatorFunc, gameVersion common.GameVersion, formatter StringFormatter) datastore.IBinaryFile {
+	if err := ffxencoding.EnsureAllCharsetsLoaded(gameVersion); err != nil {
+		common.LogError("charset maps not loaded: %v", err)
+		return nil
+	}
 	binaryDataFile := NewObjectBinaryFile(
 		patternPath,
 		func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {

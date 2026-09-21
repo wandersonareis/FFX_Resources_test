@@ -7,6 +7,7 @@ import (
 
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
+	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
@@ -48,6 +49,9 @@ func (b *EventsBinaryFile) LoadFromBinary() error {
 	}
 	if b.Version.String() == "" {
 		b.Version = currentVersionOrDefault()
+	}
+	if err := ffxencoding.EnsureAllCharsetsLoaded(b.Version); err != nil {
+		return fmt.Errorf("charset maps not loaded: %w", err)
 	}
 
 	first := true

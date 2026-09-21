@@ -1,7 +1,20 @@
 package ffxencoding
 
 import (
+	"errors"
+	"fmt"
+	"sort"
+
 	"ffxresources/backend/common"
+)
+
+// Sentinelas da distinção entre mapa ausente (configuração: aborta a
+// tarefa) e caractere ausente (dado: pula e continua). Propagam com %w
+// para inspeção via errors.Is em cada camada.
+var (
+	ErrVersionNotFound = errors.New("version não encontrada nos mapas de charset")
+	ErrCharsetNotFound = errors.New("charset não encontrado para essa version")
+	ErrCharNotFound    = errors.New("caractere não encontrado no charset")
 )
 
 // Mapas de charset versionados por jogo.
@@ -31,33 +44,81 @@ func ensureVersionBucket(version common.GameVersion) common.GameVersion {
 }
 
 // ByteToChar resolve um byte para rune no charset da versão indicada.
-func ByteToChar(hex uint, charset string, version common.GameVersion) (rune, bool) {
-	byCharset, exists := ByteToCharMaps[version]
-	if !exists {
-		return 0, false
+// Mapa/charset ausente (configuração) e caractere ausente (dado) são
+// distinguidos via ErrVersionNotFound/ErrCharsetNotFound/ErrCharNotFound.
+func ByteToChar(hex uint, charset string, version common.GameVersion) (rune, error) {
+	byCharset, ok := ByteToCharMaps[version]
+	if !ok {
+		return 0, fmt.Errorf("%w: %v", ErrVersionNotFound, version)
 	}
-	charsetMap, exists := byCharset[charset]
-	if !exists {
-		return 0, false
+	charsetMap, ok := byCharset[charset]
+	if !ok {
+		return 0, fmt.Errorf("%w: %q (version=%v)", ErrCharsetNotFound, charset, version)
 	}
 
-	char, exists := charsetMap[hex]
-	return char, exists
+	char, ok := charsetMap[hex]
+	if !ok {
+		return 0, fmt.Errorf("%w: 0x%02X (charset=%q)", ErrCharNotFound, hex, charset)
+	}
+	return char, nil
 }
 
 // CharToByte resolve uma rune para byte no charset da versão indicada.
-func CharToByte(chr rune, charset string, version common.GameVersion) (uint, bool) {
+func CharToByte(chr rune, charset string, version common.GameVersion) (uint, error) {
 	byCharset, ok := CharToByteMaps[version]
 	if !ok {
-		return 0, false
+		return 0, fmt.Errorf("%w: %v", ErrVersionNotFound, version)
 	}
-	charsetMap, exists := byCharset[charset]
-	if !exists {
-		return 0, false
+	charsetMap, ok := byCharset[charset]
+	if !ok {
+		return 0, fmt.Errorf("%w: %q (version=%v)", ErrCharsetNotFound, charset, version)
 	}
+	b, ok := charsetMap[chr]
+	if !ok {
+		return 0, fmt.Errorf("%w: %q (U+%04X)", ErrCharNotFound, chr, chr)
+	}
+	return b, nil
+}
 
-	b, exists := charsetMap[chr]
-	return b, exists
+// EnsureCharsetLoaded verifica (só leitura, sem criar buckets) que os mapas
+// da versão/charset existem. É o fail-fast do load: mapa ausente aborta a
+// tarefa antes de produzir milhares de placeholders. A versão passa por
+// common.CharsetVersion (lastmiss usa os mapas de ffx2).
+func EnsureCharsetLoaded(version common.GameVersion, charset string) error {
+	version = common.CharsetVersion(version)
+	byCharset, ok := ByteToCharMaps[version]
+	if !ok {
+		return fmt.Errorf("%w: %v", ErrVersionNotFound, version)
+	}
+	if _, ok := byCharset[charset]; !ok {
+		return fmt.Errorf("%w: %q (version=%v)", ErrCharsetNotFound, charset, version)
+	}
+	byReverse, ok := CharToByteMaps[version]
+	if !ok {
+		return fmt.Errorf("%w: %v", ErrVersionNotFound, version)
+	}
+	if _, ok := byReverse[charset]; !ok {
+		return fmt.Errorf("%w: %q (version=%v)", ErrCharsetNotFound, charset, version)
+	}
+	return nil
+}
+
+// EnsureAllCharsetsLoaded fail-fast para todos os charsets das localizações
+// suportadas (ordem determinística). Chamado na entrada dos loads
+// (events/objects/macro): mapa ausente aborta a tarefa antes de produzir
+// milhares de placeholders.
+func EnsureAllCharsetsLoaded(version common.GameVersion) error {
+	locs := make([]string, 0, len(common.SupportedLanguages))
+	for loc := range common.SupportedLanguages {
+		locs = append(locs, loc)
+	}
+	sort.Strings(locs)
+	for _, loc := range locs {
+		if err := EnsureCharsetLoaded(version, GetCharsetForLanguage(loc)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // SetCharMap publica os mapas de um charset na versão indicada.

@@ -103,7 +103,12 @@ func (ks *KeyedString) SetString(str, newCharset string) {
 	if newCharset != "" && newCharset != ks.Charset {
 		ks.Charset = newCharset
 	}
-	ks.Bytes = converter.StringToBytes(str, ks.Charset, ks.Version)
+	encoded, err := converter.StringToBytes(str, ks.Charset, ks.Version)
+	if err != nil {
+		common.LogError("SetString: %v", err)
+		return
+	}
+	ks.Bytes = encoded
 }
 
 func RebuildKeyedStrings(strings []datastore.IGlobalKeyedString, charset string, version common.GameVersion) []byte {

@@ -60,8 +60,8 @@ var _ = Describe("PrepareCharset", Ordered, func() {
 				"CharToByteMaps[%s] should not be empty", charset)
 			// Forward mapping (char->byte->char) should always work
 			for char, byteVal := range charToByte {
-				mappedChar, exists := ffxencoding.ByteToChar(byteVal, charset, version)
-				Expect(exists).To(BeTrue(), "ByteToCharMaps should contain mapping for byte %d from charset %s", byteVal, charset)
+				mappedChar, err := ffxencoding.ByteToChar(byteVal, charset, version)
+				Expect(err).ToNot(HaveOccurred(), "ByteToCharMaps should contain mapping for byte %d from charset %s", byteVal, charset)
 				Expect(mappedChar).To(Equal(char), "Forward mapping should be consistent for byte %d in charset %s", byteVal, charset)
 			}
 		}

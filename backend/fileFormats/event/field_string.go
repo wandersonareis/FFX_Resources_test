@@ -181,7 +181,12 @@ func (fs *FieldString) SetRegularString(str string, newCharset ...string) {
 	}
 
 	keepSimplifiedSynced := !fs.HasDistinctSimplified()
-	fs.RegularBytes = converter.StringToBytes(str, fs.Charset, fs.Version)
+	encoded, err := converter.StringToBytes(str, fs.Charset, fs.Version)
+	if err != nil {
+		common.LogError("SetRegularString: %v", err)
+		return
+	}
+	fs.RegularBytes = encoded
 
 	if keepSimplifiedSynced {
 		fs.SimplifiedBytes = fs.RegularBytes
@@ -193,7 +198,12 @@ func (fs *FieldString) SetSimplifiedString(str string, newCharset ...string) {
 		fs.SetCharset(newCharset[0])
 	}
 
-	fs.SimplifiedBytes = converter.StringToBytes(str, fs.Charset, fs.Version)
+	encoded, err := converter.StringToBytes(str, fs.Charset, fs.Version)
+	if err != nil {
+		common.LogError("SetSimplifiedString: %v", err)
+		return
+	}
+	fs.SimplifiedBytes = encoded
 }
 
 func (fs *FieldString) SetCharset(newCharset string) {

@@ -4,16 +4,14 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/fileFormats/event"
-	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
-func TestLocFieldString(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "LocalizedFieldString Suite")
-}
+// Sem Test func próprio: o Ginkgo permite um único RunSpecs por pacote
+// (ver TestFieldString em field_string_test.go); os Describe daqui rodam
+// na mesma suíte. "testing" importado só por ele foi removido.
 
 var _ = Describe("LocalizedFieldStringObject", func() {
 	var (
@@ -85,6 +83,7 @@ var _ = Describe("LocalizedFieldStringObject", func() {
 				// Try to set empty content (offset pointing to null)
 				emptyFieldString := &event.FieldString{
 					Charset:         charset,
+					Version:         common.GameVersionFFX,
 					RegularBytes:    []byte{},
 					SimplifiedBytes: []byte{},
 				}

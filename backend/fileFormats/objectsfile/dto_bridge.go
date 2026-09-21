@@ -100,12 +100,18 @@ func ApplyFieldTexts(obj datastore.IGlobalLocalizedTextObject, fields []FieldTex
 }
 
 // createNewKeyedString creates a new KeyedString with the given text and charset.
+// Encoding failure (configuração inválida) keeps empty Bytes and logs;
+// o chamador (void) não pode abortar.
 func createNewKeyedString(text string, charset string, version common.GameVersion) *KeyedString {
+	encoded, err := converter.StringToBytes(text, charset, version)
+	if err != nil {
+		common.LogError("createNewKeyedString: %v", err)
+	}
 	return &KeyedString{
 		Charset: charset,
 		Version: version,
 		Segment: models.Segment{Offset: 0, Key: 0},
-		Bytes:   converter.StringToBytes(text, charset, version),
+		Bytes:   encoded,
 	}
 }
 

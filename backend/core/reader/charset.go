@@ -117,7 +117,9 @@ func PrepareCharset(version common.GameVersion, charset string) error {
     strict := len(runes) <= maxSingleByteSlots
 
     byteToChar, charToByte := buildMappings(runes, strict, charset)
-    ffxencoding.SetCharMap(version, charset, byteToChar, charToByte)
+    // Os mapas só têm buckets ffx e ffx2: lastmiss reaproveita ffx2 no
+    // lookup (common.CharsetVersion), então a escrita usa o mesmo bucket.
+    ffxencoding.SetCharMap(common.CharsetVersion(version), charset, byteToChar, charToByte)
     return nil
 }
 

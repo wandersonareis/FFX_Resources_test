@@ -239,12 +239,14 @@ var _ = Describe("FieldString", func() {
 				// Create test field strings
 				fs1 := &event.FieldString{
 					Charset: charset,
+					Version: common.GameVersionFFX,
 				}
 				fs1.SetRegularString("Hello")
 				fs1.SetSimplifiedString("Hi")
 
 				fs2 := &event.FieldString{
 					Charset: charset,
+					Version: common.GameVersionFFX,
 				}
 				fs2.SetRegularString("World")
 				fs2.SetSimplifiedString("World") // Same as regular
@@ -281,10 +283,12 @@ var _ = Describe("FieldString", func() {
 			// Create test field strings
 			testFS1 = &event.FieldString{
 				Charset:      "us",
+				Version:      common.GameVersionFFX,
 				RegularBytes: []byte{0x50, 0x51, 0x52}, // "ABC"
 			}
 			testFS2 = &event.FieldString{
 				Charset:      "us",
+				Version:      common.GameVersionFFX,
 				RegularBytes: []byte{0x53, 0x54, 0x55}, // "DEF"
 			}
 		})
@@ -327,6 +331,7 @@ var _ = Describe("FieldString", func() {
 				It("should not overwrite existing content with empty content", func() {
 					emptyFS := &event.FieldString{
 						Charset:      "us",
+						Version:      common.GameVersionFFX,
 						RegularBytes: []byte{},
 					}
 					localizedObj.SetLocalizedContent("us", emptyFS)

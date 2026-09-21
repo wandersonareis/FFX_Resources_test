@@ -2,6 +2,7 @@ package converter
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -23,18 +24,23 @@ var (
 	reHEX    = regexp.MustCompile(`^HEX:([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2})*)$`)
 )
 
-func CharToBytes(chr rune, charset string, version common.GameVersion) []uint {
+func CharToBytes(chr rune, charset string, version common.GameVersion) ([]uint, error) {
 	if chr == '\n' {
-		return []uint{0x03}
+		return []uint{0x03}, nil
 	}
 
-	indexValue, exists := encoding.CharToByte(chr, charset, version)
-	if !exists {
-		return nil
+	indexValue, err := encoding.CharToByte(chr, charset, version)
+	if err != nil {
+		if errors.Is(err, encoding.ErrVersionNotFound) || errors.Is(err, encoding.ErrCharsetNotFound) {
+			// erro de configuração: fatal
+			return nil, fmt.Errorf("CharToBytes: %w", err)
+		}
+		// caractere ausente: retorna erro específico, chamador decide
+		return nil, fmt.Errorf("CharToBytes: %w", err)
 	}
 
 	if indexValue < 0x100 {
-		return []uint{indexValue}
+		return []uint{indexValue}, nil
 	}
 
 	section := (indexValue - 0x30) / 0xD0
@@ -42,19 +48,18 @@ func CharToBytes(chr rune, charset string, version common.GameVersion) []uint {
 	byte2 := indexValue - (section * 0xD0)
 
 	if byte1 <= 0x2F {
-		return []uint{uint(byte1), uint(byte2)}
+		return []uint{uint(byte1), uint(byte2)}, nil
 	}
 
 	adjustedValue := indexValue - 0x410
 
 	if adjustedValue < 0x100 {
-		return []uint{0x04, adjustedValue}
-	} else {
-		adjustedSection := (adjustedValue - 0x30) / 0xD0
-		adjustedByte1 := adjustedSection + 0x2B
-		adjustedByte2 := adjustedValue - (adjustedSection * 0xD0)
-		return []uint{0x04, uint(adjustedByte1), uint(adjustedByte2)}
+		return []uint{0x04, adjustedValue}, nil
 	}
+	adjustedSection := (adjustedValue - 0x30) / 0xD0
+	adjustedByte1 := adjustedSection + 0x2B
+	adjustedByte2 := adjustedValue - (adjustedSection * 0xD0)
+	return []uint{0x04, uint(adjustedByte1), uint(adjustedByte2)}, nil
 }
 
 func GetChoicesInString(s string) int {
@@ -80,6 +85,7 @@ func GetFirstChoiceInString(s string) (uint16, bool) {
 }
 
 func FillByteList(s string, buf *bytes.Buffer, charset string, version common.GameVersion) {
+	version = common.CharsetVersion(version)
 	runes := []rune(s)
 
 	for i := 0; i < len(runes); i++ {
@@ -91,13 +97,17 @@ func FillByteList(s string, buf *bytes.Buffer, charset string, version common.Ga
 		}
 
 		if cmdBytes == nil {
-			charBytes := CharToBytes(chr, charset, version)
-			if charBytes != nil {
+			charBytes, err := CharToBytes(chr, charset, version)
+			if err != nil {
+				if errors.Is(err, encoding.ErrVersionNotFound) || errors.Is(err, encoding.ErrCharsetNotFound) {
+					common.LogError("FillByteList: configuração inválida: %v", err)
+				} else {
+					fmt.Fprintf(os.Stderr, "Unknown character %c at index %d in string %s\n", chr, i, s)
+				}
+			} else {
 				for _, b := range charBytes {
 					buf.WriteByte(byte(b))
 				}
-			} else {
-				fmt.Fprintf(os.Stderr, "Unknown character %c at index %d in string %s\n", chr, i, s)
 			}
 		} else {
 			for _, b := range cmdBytes {
@@ -109,7 +119,8 @@ func FillByteList(s string, buf *bytes.Buffer, charset string, version common.Ga
 	buf.WriteByte(0x00)
 }
 
-func StringToByteList(runes []rune, charset string, version common.GameVersion) []byte {
+func StringToByteList(runes []rune, charset string, version common.GameVersion) ([]byte, error) {
+	version = common.CharsetVersion(version)
 	var buf bytes.Buffer
 	for i := 0; i < len(runes); i++ {
 		r := runes[i]
@@ -118,13 +129,16 @@ func StringToByteList(runes []rune, charset string, version common.GameVersion) 
 			cmdBytes = ParseCommand(runes, i)
 		}
 		if cmdBytes == nil {
-			charBytes := CharToBytes(r, charset, version)
-			if charBytes != nil {
-				for _, b := range charBytes {
-					buf.WriteByte(byte(b))
+			charBytes, err := CharToBytes(r, charset, version)
+			if err != nil {
+				if errors.Is(err, encoding.ErrVersionNotFound) || errors.Is(err, encoding.ErrCharsetNotFound) {
+					return nil, fmt.Errorf("StringToByteList: configuração inválida: %w", err)
 				}
-			} else {
-				fmt.Fprintf(os.Stderr, "Unknown character %c at index %d in string %s\n", r, i, string(runes))
+				fmt.Fprintf(os.Stderr, "Unknown character %c at index %d in %q: %v\n", r, i, string(runes), err)
+				continue
+			}
+			for _, b := range charBytes {
+				buf.WriteByte(byte(b))
 			}
 		} else {
 			for _, b := range cmdBytes {
@@ -133,15 +147,12 @@ func StringToByteList(runes []rune, charset string, version common.GameVersion) 
 			i = getRunePosition(runes, '}', i)
 		}
 	}
-	return buf.Bytes()
+	return buf.Bytes(), nil
 }
 
-func StringToBytes(s, charset string, version common.GameVersion) []byte {
+func StringToBytes(s, charset string, version common.GameVersion) ([]byte, error) {
 	runes := []rune(s)
-	gameVersion := version
-	if version == common.GameVersionLastMiss {
-		gameVersion = common.GameVersionFFX2
-	}
+	gameVersion := common.CharsetVersion(version)
 	return StringToByteList(runes, charset, gameVersion)
 }
 

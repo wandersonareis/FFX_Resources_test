@@ -3,6 +3,7 @@ package converter
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/common"
@@ -15,6 +16,14 @@ func readOneByte(buf *bytes.Reader, out *byte) error {
 	return binary.Read(buf, binary.LittleEndian, out)
 }
 
+// logDecodeError registra erro de configuração no decode (mapa/charset
+// ausente). Caractere ausente é dado esperado (placeholder) e não loga.
+func logDecodeError(err error) {
+	if errors.Is(err, ffxencoding.ErrVersionNotFound) || errors.Is(err, ffxencoding.ErrCharsetNotFound) {
+		common.LogError("decode: configuração inválida: %v", err)
+	}
+}
+
 func getStringAtLookupOffsetBinary(table []byte, offset int, localization string, version common.GameVersion) string {
     if offset < 0 || offset >= len(table) {
         return ""
@@ -23,14 +32,10 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
     var (
         out               strings.Builder
         charset           = ffxencoding.GetCharsetForLanguage(localization)
-        gameVersion       = version
+        gameVersion       = common.CharsetVersion(version)
         extraFiveSections bool
         buf               = bytes.NewReader(table[offset:])
     )
-
-    if version == common.GameVersionLastMiss {
-        gameVersion = common.GameVersionFFX2
-    }
 
     for {
         var idx uint8
@@ -46,12 +51,15 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 
         switch {
         case idx >= 0x30:
-            if chr, ok := ffxencoding.ByteToChar(uint(idx)+extraOffset, charset, gameVersion); ok {
+            if chr, err := ffxencoding.ByteToChar(uint(idx)+extraOffset, charset, gameVersion); err == nil {
                 out.WriteRune(chr)
-            } else if extraOffset != 0 {
-                out.WriteString(fmt.Sprintf("{UNKDBLCHR:04:%02X}", idx))
             } else {
-                out.WriteString(fmt.Sprintf("{UNKCHR:%02X}", idx))
+                logDecodeError(err)
+                if extraOffset != 0 {
+                    out.WriteString(fmt.Sprintf("{UNKDBLCHR:04:%02X}", idx))
+                } else {
+                    out.WriteString(fmt.Sprintf("{UNKCHR:%02X}", idx))
+                }
             }
 
         // === NOVO: bytes duplos desconhecidos (0x06 e 0x26..0x2A) ===
@@ -85,19 +93,23 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
             section := uint(idx) - 0x2B
             actualIdx := section*0xD0 + uint(lowByte)
             newVar := actualIdx + extraOffset
-            if chr, ok := ffxencoding.ByteToChar(newVar, charset, gameVersion); ok {
+            if chr, err := ffxencoding.ByteToChar(newVar, charset, gameVersion); err == nil {
                 out.WriteRune(chr)
-            } else if extraOffset != 0 {
-                out.WriteString(fmt.Sprintf("{UNKTPLCHR:04:%02X:%02X}", idx, lowByte))
             } else {
-                out.WriteString(fmt.Sprintf("{UNKDBLCHR:%02X:%02X}", idx, lowByte))
+                logDecodeError(err)
+                if extraOffset != 0 {
+                    out.WriteString(fmt.Sprintf("{UNKDBLCHR:04:%02X:%02X}", idx, lowByte))
+                } else {
+                    out.WriteString(fmt.Sprintf("{UNKDBLCHR:%02X:%02X}", idx, lowByte))
+                }
             }
 
         // === NOVO: quando extraOffset está ativo, bytes baixos viram caractere ===
         case extraOffset != 0:
-            if chr, ok := ffxencoding.ByteToChar(uint(idx)+extraOffset, charset, gameVersion); ok {
+            if chr, err := ffxencoding.ByteToChar(uint(idx)+extraOffset, charset, gameVersion); err == nil {
                 out.WriteRune(chr)
             } else {
+                logDecodeError(err)
                 out.WriteString(fmt.Sprintf("{UNKDBLCHR:04:%02X}", idx))
             }
 
@@ -249,5 +261,5 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
 }
 
 func BytesToString(rawData []byte, localization string, version common.GameVersion) string {
-	return getStringAtLookupOffsetBinary(rawData, 0, localization, version)
+	return getStringAtLookupOffsetBinary(rawData, 0, localization, common.CharsetVersion(version))
 }

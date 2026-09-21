@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"ffxresources/backend/common"
+	ffxencoding "ffxresources/backend/core/encoding"
 	"fmt"
 )
 
@@ -27,6 +28,9 @@ func DefaultFirstLocalizations() []string {
 // localization first, then populates with the other available localizations.
 // A missing default file is an error; other missing files are skipped.
 func ReadMacroDictionaryContainers(version common.GameVersion) (map[string]*MacroDictionaryBinaryFile, error) {
+	if err := ffxencoding.EnsureAllCharsetsLoaded(version); err != nil {
+		return nil, fmt.Errorf("charset maps not loaded: %w", err)
+	}
 	result := make(map[string]*MacroDictionaryBinaryFile)
 	for _, loc := range DefaultFirstLocalizations() {
 		path := filepath.Join(common.GetLocalizationRoot(loc), "menu", "macrodic.dcp")
