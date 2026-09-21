@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"ffxresources/backend/common"
+	"ffxresources/backend/dto"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/loggingService"
@@ -23,6 +24,7 @@ type App struct {
 	CollectionService *services.CollectionService
 	ExtractService    *services.ExtractService
 	CompressService   *services.CompressService
+	MetadataService   *services.MetadataService
 }
 
 // NewApp creates a new App application struct
@@ -33,6 +35,7 @@ func NewApp() *App {
 		CollectionService: services.NewCollectionService(notifier),
 		ExtractService:    services.NewExtractService(notifier, progress),
 		CompressService:   services.NewCompressService(notifier, progress),
+		MetadataService:   services.NewMetadataService(notifier),
 	}
 }
 
@@ -106,6 +109,7 @@ func (a *App) initServices(ctx context.Context) {
 	a.CollectionService = services.NewCollectionService(notification)
 	a.ExtractService = services.NewExtractService(notification, progress)
 	a.CompressService = services.NewCompressService(notification, progress)
+	a.MetadataService = services.NewMetadataService(notification)
 }
 
 func (a *App) BuildTree() []spira.TreeNode {
@@ -185,4 +189,40 @@ func (a *App) SelectDirectory(title string) string {
 		return ""
 	}
 	return selection
+}
+
+// GetMetadata expõe a metadata nova (key, row_count, id, is_dir) ao frontend.
+// Aceita metadata.key (ffx/...), id de collection (azit0000, command,
+// chunk_00) ou caminho em disco. Gera models.Metadata no wailsjs.
+func (a *App) GetMetadata(query string) (dto.Metadata, error) {
+	if a.MetadataService == nil {
+		return dto.Metadata{}, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.GetMetadata(query)
+}
+
+// ListTextEntries devolve o índice leve (id + key, sem rows) para montar
+// sidebar/tree. kind: events, objects ou macro.
+func (a *App) ListTextEntries(kind string, version common.GameVersion) ([]services.EntrySummary, error) {
+	if a.MetadataService == nil {
+		return nil, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ListEntries(kind, version)
+}
+
+// GetTextEntry devolve uma entrada completa (metadata + rows) por demanda,
+// direto da memória — sem exportar para disco.
+func (a *App) GetTextEntry(kind, id string, version common.GameVersion) (dto.FileEntry, error) {
+	if a.MetadataService == nil {
+		return dto.FileEntry{}, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.GetEntry(kind, id, version)
+}
+
+// GetTextCollection monta o DTO completo em memória (bulk; ids vazio = tudo).
+func (a *App) GetTextCollection(kind string, version common.GameVersion, ids []string) (dto.Collection, error) {
+	if a.MetadataService == nil {
+		return nil, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.GetCollection(kind, version, ids)
 }

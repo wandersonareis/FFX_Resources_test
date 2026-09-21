@@ -14,6 +14,22 @@ export function Extract(arg1) {
   return window['go']['main']['App']['Extract'](arg1);
 }
 
+export function GetMetadata(arg1) {
+  return window['go']['main']['App']['GetMetadata'](arg1);
+}
+
+export function GetTextCollection(arg1, arg2, arg3) {
+  return window['go']['main']['App']['GetTextCollection'](arg1, arg2, arg3);
+}
+
+export function GetTextEntry(arg1, arg2, arg3) {
+  return window['go']['main']['App']['GetTextEntry'](arg1, arg2, arg3);
+}
+
+export function ListTextEntries(arg1, arg2) {
+  return window['go']['main']['App']['ListTextEntries'](arg1, arg2);
+}
+
 export function ReadFileAsString(arg1) {
   return window['go']['main']['App']['ReadFileAsString'](arg1);
 }
