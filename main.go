@@ -36,10 +36,10 @@ func main() {
 	// Create application with options
 	err := wails.Run(&options.App{
 		Title:     "Final Fantasy X/X2 HD Remaster Resources Editor",
-		Width:     800,
-		Height:    450,
-		MinWidth:  700,
-		MinHeight: 450,
+		Width:     1280,
+		Height:    800,
+		MinWidth:  1024,
+		MinHeight: 600,
 		//MaxWidth:          1280,
 		//MaxHeight:         800,
 		DisableResize:     false,

@@ -156,7 +156,11 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
                 out.WriteString("{ICON:??}")
                 break
             }
-            out.WriteString(fmt.Sprintf("{ICON:%02X:%s}", icon, ffxencoding.GetIconName(icon)))
+            if icon < 0x80 {
+                out.WriteString(fmt.Sprintf("{BUTTON:%02X:%s}", icon, ffxencoding.GetButtonName(icon)))
+            } else {
+                out.WriteString(fmt.Sprintf("{ICON:%02X:%s}", icon, ffxencoding.GetIconName(icon)))
+            }
         case idx == 0x0C:
             out.WriteString("{BLANK0C}")
         case idx == 0x0F:

@@ -1,36 +1,19 @@
-<section class="grid grid-cols-1 bg-transparent">
-  <div class="flex justify-end space-x-2">
-    <aside class="flex">
-      <p-togglebutton
-        [(ngModel)]="versionFFX"
-        onLabel="FFX"
-        offLabel="FFX"
-        size="small"
-        styleClass="min-w-20"
-        [class.pointer-events-none]="versionFFX()"
-        (onChange)="versionFFXChange($event)"
-      />
-      <p-togglebutton
-        [(ngModel)]="versionFFX2"
-        onLabel="FFX-2"
-        offLabel="FFX-2"
-        size="small"
-        styleClass="min-w-20"
-        [class.pointer-events-none]="versionFFX2()"
-        (onChange)="versionFFX2Change($event)"
-      />
-      <p-togglebutton
-        [(ngModel)]="versionLastMiss"
-        onLabel="LastMiss"
-        offLabel="LastMiss"
-        size="small"
-        styleClass="min-w-20"
-        [class.pointer-events-none]="versionLastMiss()"
-        (onChange)="versionLastMissChange($event)"
-      />
-    </aside>
+<mat-toolbar color="primary" class="app-toolbar">
+  <span>FFX Resources</span>
+  <span class="toolbar-spacer"></span>
+  <button mat-icon-button (click)="openConfig()" aria-label="Configurações">
+    <mat-icon>settings</mat-icon>
+  </button>
+</mat-toolbar>
 
-    <app-config-modal />
-  </div>
-  <ffx-tree />
-</section>
+<mat-tab-group
+  [selectedIndex]="selectedIndex()"
+  (selectedIndexChange)="onTabChange($event)"
+  class="app-tabs"
+>
+  @for (tab of tabs; track tab.id) {
+    <mat-tab [label]="tab.label">
+      <app-game-version-tab [version]="tab.id" />
+    </mat-tab>
+  }
+</mat-tab-group>

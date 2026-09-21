@@ -1,8 +1,6 @@
-/* You can add global styles to this file, and also import other style files */
-@import "primeicons/primeicons.css";
-@import "../node_modules/quill/dist/quill.core.css";
-@import "../node_modules/quill/dist/quill.snow.css";
-
+/* Tema Angular Material (pré-compilado) + Tailwind (layout) + ícones locais. */
+@import "@angular/material/prebuilt-themes/azure-blue.css";
+@import "material-symbols/outlined.css";
 @import "tailwindcss";
 
 @theme {
@@ -10,19 +8,14 @@
 }
 
 @layer base {
+  html,
   body {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    font-family: Roboto, "Helvetica Neue", sans-serif;
     background: url("/assets/images/logo_us.png") no-repeat center fixed;
   }
 }
-
-/* .p-tree-root {
-  overflow: visible !important;
-} */
-
-.p-dialog-header {
-  @apply p-4 !important;
-}
-
-/* .p-tree-node-toggle-button:hover {
-  @apply bg-blue-200/80 text-slate-600 !important;
-} */

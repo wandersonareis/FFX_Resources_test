@@ -1,94 +1,92 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  inject,
-  NgZone,
   OnInit,
+  effect,
+  inject,
   signal,
 } from '@angular/core';
-import { MessageService } from 'primeng/api';
-import { CommonModule } from '@angular/common';
-import { FfxTreeComponent } from './components/tree/tree.component';
-import { ConfigModalComponent } from './components/config-modal/config-modal.component';
-import { EventsEmit, EventsOn } from '../../wailsjs/runtime/runtime';
-import { ToggleButton, type ToggleButtonChangeEvent } from 'primeng/togglebutton';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { EventsOn } from '../../wailsjs/runtime/runtime';
+import { ConfigDialogComponent } from './config-dialog/config-dialog.component';
+import { TabStorageService } from './core/tab-storage.service';
+import { GAME_VERSIONS, GameVersionService } from './core/game-version.service';
+import { GameVersionTabComponent } from './game-version-tab/game-version-tab.component';
+import { ProgressDialogComponent } from './progress-dialog/progress-dialog.component';
 
-const imports = [
-  CommonModule,
-  FormsModule,
-  ReactiveFormsModule,
-  FfxTreeComponent,
-  ConfigModalComponent,
-  ToggleButton,
-];
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
-  imports: imports,
-  providers: [MessageService],
+  imports: [
+    MatButtonModule,
+    MatDialogModule,
+    MatIconModule,
+    MatSnackBarModule,
+    MatTabsModule,
+    MatToolbarModule,
+    GameVersionTabComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent implements OnInit {
-  private readonly _messageService: MessageService = inject(MessageService);
+  private readonly versions = inject(GameVersionService);
+  private readonly tabStorage = inject(TabStorageService);
+  private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
 
-  versionFFX = signal<boolean>(false);
-  versionFFX2 = signal<boolean>(false);
-  versionLastMiss = signal<boolean>(false);
+  protected readonly tabs = GAME_VERSIONS;
+  protected readonly selectedIndex = signal(this.tabStorage.load());
+  private progressRef: MatDialogRef<ProgressDialogComponent> | null = null;
 
-  ngOnInit() {
-    EventsOn('Notify', (data) => {
-      let sticky: boolean = false;
-      if (data.severity === 'error') {
-        sticky = true;
+  constructor() {
+    // Mantém a aba sincronizada quando a versão muda (evento do backend).
+    effect(() => {
+      const index = this.tabs.findIndex((t) => t.id === this.versions.activeVersion());
+      if (index >= 0 && index !== this.selectedIndex()) {
+        this.selectedIndex.set(index);
+        this.tabStorage.save(index);
       }
+    });
+  }
 
-      this._messageService.add({
-        severity: data.severity,
-        summary: data.severity,
-        detail: data.message,
-        sticky: sticky,
+  ngOnInit(): void {
+    EventsOn('Notify', (data: { severity?: string; message?: string }) => {
+      const sticky = data?.severity === 'error';
+      this.snackBar.open(data?.message ?? 'Notificação', 'Fechar', {
+        duration: sticky ? undefined : 4000,
       });
     });
 
-    EventsOn('GameVersion', (data) => {
-      console.log('GameVersion on init', data);
-      let version: string = String(data);
+    EventsOn('ShowProgress', (visible: unknown) => {
+      if (visible && !this.progressRef) {
+        this.progressRef = this.dialog.open(ProgressDialogComponent, {
+          width: '320px',
+          disableClose: true,
+        });
+      } else if (!visible && this.progressRef) {
+        this.progressRef.close();
+        this.progressRef = null;
+      }
+    });
 
-      this.versionFFX.set(version === 'ffx');
-      this.versionFFX2.set(version === 'ffx2');
-      this.versionLastMiss.set(version === 'lastmiss');
+    EventsOn('Progress', (data: { percentage?: number }) => {
+      this.progressRef?.componentRef?.setInput('value', data?.percentage ?? 0);
     });
   }
 
-  private resetVersions() {
-    this.versionFFX.set(false);
-    this.versionFFX2.set(false);
-    this.versionLastMiss.set(false);
+  protected onTabChange(index: number): void {
+    this.selectedIndex.set(index);
+    this.tabStorage.save(index);
+    this.versions.setVersion(this.tabs[index].id);
   }
 
-  versionFFXChange(event: ToggleButtonChangeEvent) {
-    this.resetVersions();
-    this.versionFFX.set(true);
-    console.log('versionFFXChange', event);
-    EventsEmit('GameVersionChanged', 'ffx');
-    EventsEmit('Refresh_Tree');
-  }
-
-  versionFFX2Change(event: ToggleButtonChangeEvent) {
-    this.resetVersions();
-    this.versionFFX2.set(true);
-    console.log('versionFFX2Change', event);
-    EventsEmit('GameVersionChanged', 'ffx2');
-    EventsEmit('Refresh_Tree');
-  }
-
-  versionLastMissChange(event: ToggleButtonChangeEvent) {
-    this.resetVersions();
-    this.versionLastMiss.set(true);
-    console.log('versionLastMissChange', event);
-    EventsEmit('GameVersionChanged', 'lastmiss');
-    EventsEmit('Refresh_Tree');
+  protected openConfig(): void {
+    this.dialog.open(ConfigDialogComponent, { width: '640px', maxWidth: '90vw' });
   }
 }

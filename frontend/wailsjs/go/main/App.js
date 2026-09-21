@@ -10,6 +10,10 @@ export function Compress(arg1) {
   return window['go']['main']['App']['Compress'](arg1);
 }
 
+export function ExportStrings(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['ExportStrings'](arg1, arg2, arg3, arg4);
+}
+
 export function Extract(arg1) {
   return window['go']['main']['App']['Extract'](arg1);
 }
@@ -24,6 +28,10 @@ export function GetTextCollection(arg1, arg2, arg3) {
 
 export function GetTextEntry(arg1, arg2, arg3) {
   return window['go']['main']['App']['GetTextEntry'](arg1, arg2, arg3);
+}
+
+export function ListLanguages() {
+  return window['go']['main']['App']['ListLanguages']();
 }
 
 export function ListTextEntries(arg1, arg2) {

@@ -1,19 +1,20 @@
 import { ApplicationConfig } from "@angular/core"
 import { provideRouter } from "@angular/router"
-import { providePrimeNG } from 'primeng/config';
+import { provideAnimations } from "@angular/platform-browser/animations"
+import { MatIconRegistry } from "@angular/material/icon"
 import { routes } from "./app.routes"
-
-import { FFXPreset } from "../theme/ffx.theme";
-import { environment } from "../environments/environment";
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
-    providePrimeNG({
-      theme: {
-        preset: FFXPreset
+    provideAnimations(),
+    {
+      provide: 'APP_INITIALIZER',
+      useFactory: (registry: MatIconRegistry) => () => {
+        registry.setDefaultFontSetClass('material-symbols-outlined');
       },
-      license: environment.PRIMENG_LICENSE_KEY
-    })
+      deps: [MatIconRegistry],
+      multi: true,
+    },
   ]
 }

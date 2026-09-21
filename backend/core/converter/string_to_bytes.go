@@ -248,10 +248,10 @@ func ParseCommand(runes []rune, startIndex int) []uint {
 	case strings.HasPrefix(cmd, "COLOR:"):
 		clr := encoding.ColorToByte(cmd[6:])
 		return []uint{0x0A, uint(clr)}
-	case strings.HasPrefix(cmd, "ICON:"):
+	case strings.HasPrefix(cmd, "ICON:") || strings.HasPrefix(cmd, "BUTTON:"):
 		parts := strings.SplitN(cmd, ":", 3)
 		if len(parts) != 3 {
-			fmt.Printf("Invalid ICON format: %s\n", cmd)
+			fmt.Printf("Invalid ICON/BUTTON format: %s\n", cmd)
 			return nil
 		}
 		iconIdx, err := strconv.ParseUint(parts[1], 16, 8)

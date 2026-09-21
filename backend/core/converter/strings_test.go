@@ -80,6 +80,13 @@ var _ = Describe("String Conversion Functions", func() {
 				result, _ := converter.StringToBytes("{CHOICE-END}", "us", common.GameVersionFFX)
 				Expect(result).To(Equal([]byte{0x10, 0xFF}))
 			})
+
+			It("should convert ICON and BUTTON tags to the same bytes", func() {
+				fromIcon, _ := converter.StringToBytes("{ICON:30:TRIANGLE}", "us", common.GameVersionFFX)
+				fromButton, _ := converter.StringToBytes("{BUTTON:30:TRIANGLE}", "us", common.GameVersionFFX)
+				Expect(fromIcon).To(Equal([]byte{0x0B, 0x30}))
+				Expect(fromButton).To(Equal([]byte{0x0B, 0x30}))
+			})
 		})
 
 		Context("when handling unknown characters", func() {
@@ -162,6 +169,13 @@ var _ = Describe("String Conversion Functions", func() {
 			It("should convert player character command bytes", func() {
 				result := converter.BytesToString([]byte{0x13, 0x30}, "us", common.GameVersionFFX)
 				Expect(result).To(Equal("{PC:00:TIDUS}"))
+			})
+
+			It("should emit BUTTON prefix below 0x80 and ICON prefix at or above", func() {
+				result := converter.BytesToString([]byte{0x0B, 0x30}, "us", common.GameVersionFFX)
+				Expect(result).To(Equal("{BUTTON:30:TRIANGLE}"))
+				result = converter.BytesToString([]byte{0x0B, 0x80}, "us", common.GameVersionFFX)
+				Expect(result).To(Equal("{ICON:80:Red Gate}"))
 			})
 		})
 	})

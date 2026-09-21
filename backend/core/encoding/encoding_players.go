@@ -52,7 +52,7 @@ var (
 		0x15: "DUMMY9",
 		0x16: "DUMMY10",
 	}
-	iconMap = map[byte]string{
+	buttonMap = map[byte]string{
 		0x20: "?L1 (SWITCH)",
 		0x2D: "Dummy",
 		0x2E: "Dummy2",
@@ -82,6 +82,8 @@ var (
 		0x4D: "Direcional Up+Left+Down",
 		0x4E: "Direcional Left+Down+Right",
 		0x4F: "Direcional All",
+	}
+	iconMap = map[byte]string{
 		0x80: "Red Gate",
 		0x81: "Green Gate",
 		0x82: "Yellow Gate",
@@ -97,6 +99,13 @@ func GetPlayerChar(pc byte, version common.GameVersion) string {
 		return "?"
 	}
 	if name, ok := playerCharMap[pc]; ok {
+		return name
+	}
+	return "?"
+}
+
+func GetButtonName(buttonIdx byte) string {
+	if name, ok := buttonMap[buttonIdx]; ok {
 		return name
 	}
 	return "?"

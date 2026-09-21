@@ -1,0 +1,92 @@
+<div class="game-text-editor">
+  <div class="editor-toolbar" role="toolbar" aria-label="Formatação do texto do jogo">
+    <mat-button-toggle
+      [checked]="isItalicActive()"
+      (change)="toggleItalic()"
+      matTooltip="Itálico ({TEXT_ITALIC})"
+      aria-label="Itálico"
+    >
+      <mat-icon>format_italic</mat-icon>
+    </mat-button-toggle>
+    <button mat-button (click)="unsetItalic()" matTooltip="Texto normal ({TEXT_NORMAL})">
+      <mat-icon>format_clear</mat-icon>
+      Normal
+    </button>
+
+    <span class="toolbar-separator"></span>
+
+    <button mat-button [matMenuTriggerFor]="buttonsMenu" matTooltip="Inserir botão ({BUTTON:…})">
+      <mat-icon>gamepad</mat-icon>
+      Botões
+      <mat-icon>arrow_drop_down</mat-icon>
+    </button>
+    <mat-menu #buttonsMenu="matMenu">
+      @for (t of buttonTemplates; track t.value) {
+        <button mat-menu-item (click)="insertControlTag(t)">{{ t.label }}</button>
+      }
+    </mat-menu>
+
+    <button mat-button [matMenuTriggerFor]="dpadMenu" matTooltip="Inserir direcional ({BUTTON:…})">
+      <mat-icon>navigation</mat-icon>
+      Direcionais
+      <mat-icon>arrow_drop_down</mat-icon>
+    </button>
+    <mat-menu #dpadMenu="matMenu">
+      @for (t of dpadTemplates; track t.value) {
+        <button mat-menu-item (click)="insertControlTag(t)">{{ t.label }}</button>
+      }
+    </mat-menu>
+
+    <button mat-button [matMenuTriggerFor]="iconsMenu" matTooltip="Inserir ícone ({ICON:…})">
+      <mat-icon>door_front</mat-icon>
+      Ícones
+      <mat-icon>arrow_drop_down</mat-icon>
+    </button>
+    <mat-menu #iconsMenu="matMenu">
+      @for (t of iconTemplates; track t.value) {
+        <button mat-menu-item (click)="insertControlTag(t)">{{ t.label }}</button>
+      }
+    </mat-menu>
+
+    <button mat-button [matMenuTriggerFor]="commandsMenu" matTooltip="Inserir comando">
+      <mat-icon>code</mat-icon>
+      Comandos
+      <mat-icon>arrow_drop_down</mat-icon>
+    </button>
+    <mat-menu #commandsMenu="matMenu">
+      @for (t of commandTemplates; track t.value) {
+        <button mat-menu-item (click)="insertControlTag(t)">{{ t.label }}</button>
+      }
+    </mat-menu>
+
+    <span class="toolbar-separator"></span>
+
+    <span class="color-group" role="group" aria-label="Cores ({CLR:…})">
+      <mat-icon matTooltip="Cores ({CLR:…}, {CLR:WHITE} reseta)">palette</mat-icon>
+      @for (c of colors; track c.name) {
+        <button
+          class="color-swatch"
+          [class.active]="isColorActive(c.hex)"
+          [style.background-color]="c.hex"
+          [matTooltip]="'{' + 'CLR:' + c.name + '}'"
+          [attr.aria-label]="'Cor ' + c.label"
+          (click)="setColor(c.hex)"
+        ></button>
+      }
+      <button mat-icon-button (click)="resetColor()" matTooltip="Resetar cor ({CLR:WHITE})" aria-label="Resetar cor">
+        <mat-icon>format_color_reset</mat-icon>
+      </button>
+    </span>
+
+    <span class="toolbar-separator"></span>
+
+    <button mat-icon-button (click)="undo()" [disabled]="!canUndo()" matTooltip="Desfazer" aria-label="Desfazer">
+      <mat-icon>undo</mat-icon>
+    </button>
+    <button mat-icon-button (click)="redo()" [disabled]="!canRedo()" matTooltip="Refazer" aria-label="Refazer">
+      <mat-icon>redo</mat-icon>
+    </button>
+  </div>
+
+  <div #editorHost class="editor-content"></div>
+</div>
