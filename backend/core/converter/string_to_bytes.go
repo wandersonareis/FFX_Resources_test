@@ -24,6 +24,22 @@ var (
 	reHEX    = regexp.MustCompile(`^HEX:([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2})*)$`)
 )
 
+// Faixa PUA espelhando o esquema de reader/charset.go (puaRune(code) com
+// puaBase 0xE000): runes PUA são dados esperados nos textos e voltam ao
+// código do jogo pela bijeção, mesmo fora dos mapas.
+const (
+	puaBase = 0xE000
+	puaLast = 0xF8FF
+)
+
+// puaCode extrai o código do jogo de uma rune PUA (U+E000+código).
+func puaCode(chr rune) (uint, bool) {
+	if chr >= puaBase && chr <= puaLast {
+		return uint(chr - puaBase), true
+	}
+	return 0, false
+}
+
 func CharToBytes(chr rune, charset string, version common.GameVersion) ([]uint, error) {
 	if chr == '\n' {
 		return []uint{0x03}, nil
@@ -35,8 +51,17 @@ func CharToBytes(chr rune, charset string, version common.GameVersion) ([]uint, 
 			// erro de configuração: fatal
 			return nil, fmt.Errorf("CharToBytes: %w", err)
 		}
-		// caractere ausente: retorna erro específico, chamador decide
-		return nil, fmt.Errorf("CharToBytes: %w", err)
+		if !errors.Is(err, encoding.ErrCharNotFound) {
+			return nil, fmt.Errorf("CharToBytes: %w", err)
+		}
+		// Rune PUA fora dos mapas: dado esperado, deriva o código pela
+		// bijeção em vez de descartar (round-trip com o slot fixo).
+		code, ok := puaCode(chr)
+		if !ok {
+			// caractere ausente: retorna erro específico, chamador decide
+			return nil, fmt.Errorf("CharToBytes: %w", err)
+		}
+		indexValue = code
 	}
 
 	if indexValue < 0x100 {
