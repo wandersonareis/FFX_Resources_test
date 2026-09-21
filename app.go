@@ -19,18 +19,13 @@ import (
 type App struct {
 	noticationService services.INotificationService
 
-	ExtractService  *services.ExtractService
-	CompressService *services.CompressService
 	MetadataService *services.MetadataService
 }
 
 // NewApp creates a new App application struct
 func NewApp() *App {
 	notifier := services.NewEventNotifier(context.Background())
-	progress := services.NewProgressService(context.Background())
 	return &App{
-		ExtractService:  services.NewExtractService(notifier, progress),
-		CompressService: services.NewCompressService(notifier, progress),
 		MetadataService: services.NewMetadataService(notifier),
 	}
 }
@@ -97,36 +92,11 @@ func (a *App) shutdown(ctx context.Context) {
 
 func (a *App) initServices(ctx context.Context) {
 	notification := services.NewEventNotifier(ctx)
-	progress := services.NewProgressService(ctx)
 
 	a.noticationService = notification
 
 	// Initialize services
-	a.ExtractService = services.NewExtractService(notification, progress)
-	a.CompressService = services.NewCompressService(notification, progress)
 	a.MetadataService = services.NewMetadataService(notification)
-}
-
-func (a *App) Extract(path string) {
-	if err := common.CheckArgumentNil(path, "path"); err != nil {
-		a.noticationService.NotifyError(err)
-		return
-	}
-
-	if err := a.ExtractService.Extract(path); err != nil {
-		a.noticationService.NotifyError(err)
-	}
-}
-
-func (a *App) Compress(path string) {
-	if err := common.CheckArgumentNil(path, "path"); err != nil {
-		a.noticationService.NotifyError(err)
-		return
-	}
-
-	if err := a.CompressService.Compress(path); err != nil {
-		a.noticationService.NotifyError(err)
-	}
 }
 
 func (a *App) ReadFileAsString(file string) string {
@@ -180,38 +150,30 @@ func (a *App) GetMetadata(query string) (dto.Metadata, error) {
 	return a.MetadataService.GetMetadata(query)
 }
 
-// ResolveEntryLocation devolve os caminhos em disco (origem + extração) de
-// uma entrada (kind/id/version), sem varrer a árvore de diretórios.
-func (a *App) ResolveEntryLocation(kind, id string, version common.GameVersion) (dto.EntryLocation, error) {
+// ExportEntry monta o DTO da entrada e escreve os artefatos JSON e .strings
+// em mods/edits. Devolve os caminhos escritos. langs nil/vazio = todos.
+func (a *App) ExportEntry(kind, id string, version common.GameVersion, langs []string) ([]string, error) {
 	if a.MetadataService == nil {
-		return dto.EntryLocation{}, fmt.Errorf("metadata service not initialized")
+		return nil, fmt.Errorf("metadata service not initialized")
 	}
-	return a.MetadataService.ResolveEntryLocation(kind, id, version)
+	return a.MetadataService.ExportEntry(kind, version, id, langs)
 }
 
-// ExtractEntry extrai a entrada (kind/id/version) resolvendo o caminho de
-// origem no backend.
-func (a *App) ExtractEntry(kind, id string, version common.GameVersion) error {
-	loc, err := a.ResolveEntryLocation(kind, id, version)
-	if err != nil {
-		return err
+// ImportEntry lê o artefato JSON padrão da entrada em mods/edits e aplica o
+// DTO de volta no binário. Devolve o caminho lido.
+func (a *App) ImportEntry(kind, id string, version common.GameVersion) ([]string, error) {
+	if a.MetadataService == nil {
+		return nil, fmt.Errorf("metadata service not initialized")
 	}
-	if loc.SourcePath == "" {
-		return fmt.Errorf("source path not resolved for %s/%s", kind, id)
-	}
-	return a.ExtractService.Extract(loc.SourcePath)
+	return a.MetadataService.ImportEntry(kind, version, id)
 }
 
-// CompressEntry importa/recomprime a entrada (kind/id/version).
-func (a *App) CompressEntry(kind, id string, version common.GameVersion) error {
-	loc, err := a.ResolveEntryLocation(kind, id, version)
-	if err != nil {
-		return err
+// ApplyEntry aplica uma entrada editada (DTO) de volta no binário e persiste.
+func (a *App) ApplyEntry(kind, id string, version common.GameVersion, entry dto.FileEntry) error {
+	if a.MetadataService == nil {
+		return fmt.Errorf("metadata service not initialized")
 	}
-	if loc.SourcePath == "" {
-		return fmt.Errorf("source path not resolved for %s/%s", kind, id)
-	}
-	return a.CompressService.Compress(loc.SourcePath)
+	return a.MetadataService.ApplyEntry(kind, version, id, entry)
 }
 
 // ListTextEntries devolve o índice leve (id + key, sem rows) para montar

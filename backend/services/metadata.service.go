@@ -15,9 +15,8 @@ import (
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/fileFormats/macrodic"
 	"ffxresources/backend/fileFormats/objectsfile"
+	jsonfmt "ffxresources/backend/formatters/json"
 	strfmt "ffxresources/backend/formatters/strings"
-	"ffxresources/backend/interactions"
-	"ffxresources/backend/spira"
 )
 
 // Kinds lógicos de texto servidos ao frontend.
@@ -205,66 +204,169 @@ func objectKeyForID(version common.GameVersion, id string) (string, bool) {
 	return matches[0], true
 }
 
-// ResolveEntryLocation deriva os caminhos em disco de uma entrada
-// (kind/id/version) a partir da metadata.key canônica, sem varrer a árvore de
-// diretórios. Serve Ver/Extrair/Importar no frontend.
-func (s *MetadataService) ResolveEntryLocation(kind, id string, version common.GameVersion) (dto.EntryLocation, error) {
+// ExportEntry monta o DTO da entrada (kind/id/version) e escreve os artefatos
+// JSON e .strings em mods/edits (caminhos padrão dos formatters). Devolve os
+// caminhos escritos. langs nil/vazio = todos os idiomas.
+func (s *MetadataService) ExportEntry(kind string, version common.GameVersion, id string, langs []string) ([]string, error) {
 	kind = strings.ToLower(strings.TrimSpace(kind))
-	key, err := entryKeyForID(kind, id, version)
+	c, err := s.GetCollection(kind, version, []string{id})
 	if err != nil {
-		return dto.EntryLocation{}, err
-	}
-	p, ok := dto.ParseKey(key)
-	if !ok {
-		return dto.EntryLocation{}, fmt.Errorf("invalid key: %s", key)
+		return nil, err
 	}
 
-	sourcePath := filepath.Join(
-		common.GameFilesRoot,
-		filepath.FromSlash(common.PackRootForVersion(version, common.DefaultLocalization)),
-		filepath.FromSlash(p.LocalizationPattern),
-	)
-
-	loc := dto.EntryLocation{Kind: kind, ID: id, Key: key, SourcePath: sourcePath}
-	if !common.IsFileExists(sourcePath) {
-		return loc, nil
-	}
-
-	formatter := interactions.NewInteractionService().TextFormatter()
-	node, nerr := spira.BuildNode(sourcePath, formatter)
-	if nerr != nil || node == nil || node.Data == nil {
-		return loc, nil
-	}
-	if node.Data.Extract != nil {
-		loc.ExtractTarget = node.Data.Extract.GetTargetFile()
-		loc.IsExtracted = common.IsFileExists(loc.ExtractTarget)
-	}
-	if node.Data.Translate != nil {
-		loc.TranslateTarget = node.Data.Translate.GetTargetFile()
-		loc.IsTranslated = common.IsFileExists(loc.TranslateTarget)
-	}
-	return loc, nil
-}
-
-// entryKeyForID devolve a metadata.key canônica de uma entrada.
-func entryKeyForID(kind, id string, version common.GameVersion) (string, error) {
+	var paths []string
 	switch kind {
 	case KindEvents:
-		return dto.NewEventMetadata(id, version).Key, nil
+		jp, jerr := jsonfmt.NewJSONEventsFormatter().WriteEvents(c, version, langs)
+		if jerr != nil {
+			return paths, jerr
+		}
+		sp, serr := strfmt.NewStringsFormatter().WriteEvents(c, version, langs)
+		if serr != nil {
+			return paths, serr
+		}
+		paths = append(paths, jp, sp)
 	case KindObjects:
-		if key, ok := objectKeyForID(version, id); ok {
-			return key, nil
+		jps, jerr := jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
+		if jerr != nil {
+			return paths, jerr
 		}
-		return "", fmt.Errorf("unknown object id: %s", id)
+		sps, serr := strfmt.NewStringsFormatter().WriteObjects(c, version, langs)
+		if serr != nil {
+			return paths, serr
+		}
+		paths = append(append(paths, jps...), sps...)
 	case KindMacro:
-		chunk, ok := dto.ChunkIndexFromID(id)
-		if !ok {
-			return "", fmt.Errorf("unknown macro chunk id: %s", id)
+		jp, jerr := jsonfmt.NewJSONMacroFormatter().WriteMacro(c, version, langs)
+		if jerr != nil {
+			return paths, jerr
 		}
-		return dto.NewMacroMetadata(version, chunk).Key, nil
+		sp, serr := strfmt.NewStringsFormatter().WriteMacro(c, version, langs)
+		if serr != nil {
+			return paths, serr
+		}
+		paths = append(paths, jp, sp)
 	default:
-		return "", fmt.Errorf("unknown kind: %s", kind)
+		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
+	return paths, nil
+}
+
+// ImportEntry lê o artefato JSON padrão da entrada (mods/edits) e aplica o DTO
+// de volta no binário, persistindo. Devolve o caminho lido.
+func (s *MetadataService) ImportEntry(kind string, version common.GameVersion, id string) ([]string, error) {
+	kind = strings.ToLower(strings.TrimSpace(kind))
+	if err := ensureVersionReady(version); err != nil {
+		return nil, err
+	}
+
+	switch kind {
+	case KindEvents:
+		if err := ensureEventsLoaded(version); err != nil {
+			return nil, err
+		}
+		c, err := s.GetCollection(kind, version, []string{id})
+		if err != nil {
+			return nil, err
+		}
+		path, err := jsonfmt.EventsJSONPath(c, version)
+		if err != nil {
+			return nil, err
+		}
+		read, err := jsonfmt.NewJSONEventsFormatter().ReadEvents(path)
+		if err != nil {
+			return nil, err
+		}
+		if err := builders.ApplyEventsDTO(version, read, []string{id}); err != nil {
+			return nil, err
+		}
+		return []string{path}, nil
+
+	case KindObjects:
+		path, err := jsonfmt.ObjectsJSONPath(id, version)
+		if err != nil {
+			return nil, err
+		}
+		read, err := jsonfmt.NewJSONObjectFormatter().ReadObjects(path)
+		if err != nil {
+			return nil, err
+		}
+		for _, key := range read.SortedKeys() {
+			if err := s.applyObjectsEntry(version, key, read[key]); err != nil {
+				return nil, err
+			}
+		}
+		return []string{path}, nil
+
+	case KindMacro:
+		path, err := jsonfmt.DefaultMacroJSONPath(version)
+		if err != nil {
+			return nil, err
+		}
+		read, err := jsonfmt.NewJSONMacroFormatter().ReadMacro(path)
+		if err != nil {
+			return nil, err
+		}
+		if err := builders.ApplyMacroDTO(version, read); err != nil {
+			return nil, err
+		}
+		return []string{path}, nil
+
+	default:
+		return nil, fmt.Errorf("unknown kind: %s", kind)
+	}
+}
+
+// ApplyEntry aplica uma entrada editada (DTO) de volta no binário e persiste.
+// É o "salvar" do editor in-memory (Ver/Editar).
+func (s *MetadataService) ApplyEntry(kind string, version common.GameVersion, id string, entry dto.FileEntry) error {
+	kind = strings.ToLower(strings.TrimSpace(kind))
+	if err := ensureVersionReady(version); err != nil {
+		return err
+	}
+
+	switch kind {
+	case KindEvents:
+		if err := ensureEventsLoaded(version); err != nil {
+			return err
+		}
+		return builders.ApplyEventsDTO(version, dto.Collection{id: entry}, []string{id})
+	case KindObjects:
+		return s.applyObjectsEntry(version, id, entry)
+	case KindMacro:
+		// Aplica sobre o DTO completo para não perder os outros chunks.
+		c, err := builders.BuildMacroDTO(version)
+		if err != nil {
+			return err
+		}
+		c[id] = entry
+		return builders.ApplyMacroDTO(version, c)
+	default:
+		return fmt.Errorf("unknown kind: %s", kind)
+	}
+}
+
+// applyObjectsEntry carrega o binário do layout, aplica a entrada e salva.
+func (s *MetadataService) applyObjectsEntry(version common.GameVersion, id string, entry dto.FileEntry) error {
+	key, ok := objectKeyForID(version, id)
+	if !ok {
+		return fmt.Errorf("unknown object id: %s", id)
+	}
+	layout, ok := objectsfile.FileLayouts[key]
+	if !ok {
+		layout, ok = objectsfile.FileLayoutFor(version, id+".bin")
+		if !ok {
+			return fmt.Errorf("no object layout for id: %s", id)
+		}
+	}
+	binFile, err := objectsfile.LoadObjectFileFromStoreByLayout(layout)
+	if err != nil {
+		return err
+	}
+	if err := builders.ApplyObjectsEntry(binFile.GetObjects(), version, key, entry); err != nil {
+		return err
+	}
+	return binFile.SaveToBinary(layout.PatternPath())
 }
 
 // ---- texto em memória (DTO estruturado, sem disco) --------------------------

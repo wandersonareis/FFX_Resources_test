@@ -35,21 +35,6 @@ type FileEntry struct {
 // sem extensão (events: eventID; objects: basename; macro: chunk_N).
 type Collection map[string]FileEntry
 
-// EntryLocation reúne os caminhos em disco de uma entrada (kind/id/version):
-// origem no game files e arquivos de saída de extração/tradução, além das
-// flags de existência. É o insumo do frontend para Ver/Extrair/Importar sem
-// depender da árvore de diretórios legada.
-type EntryLocation struct {
-	Kind           string `json:"kind"`
-	ID             string `json:"id"`
-	Key            string `json:"key"`
-	SourcePath     string `json:"source_path"`
-	ExtractTarget  string `json:"extract_target,omitempty"`
-	TranslateTarget string `json:"translate_target,omitempty"`
-	IsExtracted    bool   `json:"is_extracted"`
-	IsTranslated   bool   `json:"is_translated"`
-}
-
 // SortedKeys devolve as chaves ordenadas para saída determinística.
 func (c Collection) SortedKeys() []string {
 	keys := make([]string, 0, len(c))

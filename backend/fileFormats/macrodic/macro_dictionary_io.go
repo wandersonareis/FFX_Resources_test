@@ -39,10 +39,7 @@ func ReadMacroDictionaryContainers(version common.GameVersion) (map[string]*Macr
 			return nil, fmt.Errorf("failed to resolve macro dictionary file: %w", err)
 		}
 		data, err := accessor.ReadBytes()
-		if err != nil {
-			return nil, fmt.Errorf("failed to read macro dictionary file: %w", err)
-		}
-		if len(data) == 0 {
+		if err != nil || len(data) == 0 {
 			if loc == common.DefaultLocalization {
 				return nil, fmt.Errorf("default macro dictionary not found: %s", path)
 			}
