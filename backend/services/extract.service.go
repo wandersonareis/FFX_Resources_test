@@ -3,7 +3,9 @@ package services
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
+	"ffxresources/backend/spira"
 	"fmt"
 )
 
@@ -20,44 +22,51 @@ func NewExtractService(notificationService INotificationService, progressService
 	}
 }
 
+// Extract monta o nó do caminho sob demanda (sem store global da árvore) e
+// delega para arquivo ou diretório.
 func (e *ExtractService) Extract(path string) error {
 	if err := common.CheckArgumentNil(path, "path"); err != nil {
 		return err
 	}
 
-	if err := common.CheckArgumentNil(NodeDataStore, "nodeStore"); err != nil {
+	node, err := e.newNode(path)
+	if err != nil {
 		return err
-	}
-	println("Extracting path:", path)
-
-	node, ok := NodeDataStore.Get(path)
-	println("Node found:", node, "Exists:", ok, "NodeDataStore length:", path)
-	if !ok {
-		return fmt.Errorf("node not found for path: %s", path)
-	}
-
-	if !NodeDataStore.IsNode(node) {
-		return fmt.Errorf("node is invalid for path: %s", path)
 	}
 
 	var cb func(node *fileFormats.MapNode) error
 
 	switch node.Data.Source.Type {
 	case models.Folder:
-		cb = e.extractDirectory
+		cb = func(n *fileFormats.MapNode) error {
+			return e.extractDirectory(n, path)
+		}
 	default:
 		cb = e.extractFile
 	}
 
 	if err := cb(node); err != nil {
 		e.NotificationService.NotifyError(err)
+		return err
 	}
 
 	return nil
 }
 
+func (e *ExtractService) newNode(path string) (*fileFormats.MapNode, error) {
+	formatter := interactions.NewInteractionService().TextFormatter()
+	node, err := spira.BuildNode(path, formatter)
+	if err != nil {
+		return nil, fmt.Errorf("node not found for path %s: %w", path, err)
+	}
+	if node == nil || node.Data == nil {
+		return nil, fmt.Errorf("node is invalid for path: %s", path)
+	}
+	return node, nil
+}
+
 func (e *ExtractService) extractFile(node *fileFormats.MapNode) error {
-	if !NodeDataStore.IsNode(node) {
+	if node == nil || node.Data == nil {
 		return fmt.Errorf("node is invalid")
 	}
 
@@ -77,8 +86,8 @@ func (e *ExtractService) extractFile(node *fileFormats.MapNode) error {
 	return nil
 }
 
-func (e *ExtractService) extractDirectory(node *fileFormats.MapNode) error {
-	if !NodeDataStore.IsNode(node) {
+func (e *ExtractService) extractDirectory(node *fileFormats.MapNode, path string) error {
+	if node == nil || node.Data == nil {
 		return fmt.Errorf("node is invalid")
 	}
 
@@ -90,7 +99,10 @@ func (e *ExtractService) extractDirectory(node *fileFormats.MapNode) error {
 		e.dirExtractService = NewDirectoryExtractService(e.NotificationService, e.ProgressService)
 	}
 
-	if err := e.dirExtractService.ProcessDirectory(node.Data.Source.Path, NodeDataStore); err != nil {
+	formatter := interactions.NewInteractionService().TextFormatter()
+	store := NewNodeStore(spira.CreateNodeMap(path, formatter))
+
+	if err := e.dirExtractService.ProcessDirectory(node.Data.Source.Path, store); err != nil {
 		return err
 	}
 

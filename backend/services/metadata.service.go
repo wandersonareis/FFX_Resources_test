@@ -6,14 +6,18 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"ffxresources/backend/builders"
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/reader"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/fileFormats/macrodic"
 	"ffxresources/backend/fileFormats/objectsfile"
 	strfmt "ffxresources/backend/formatters/strings"
+	"ffxresources/backend/interactions"
+	"ffxresources/backend/spira"
 )
 
 // Kinds lógicos de texto servidos ao frontend.
@@ -40,6 +44,27 @@ type MetadataService struct {
 
 func NewMetadataService(notifier INotificationService) *MetadataService {
 	return &MetadataService{notifier: notifier}
+}
+
+// Cache de inicialização por versão: charsets + macros carregados uma única
+// vez (lazy), sem depender de chamada manual de InitializeInternals.
+var (
+	readyMu       sync.Mutex
+	readyVersions = map[common.GameVersion]error{}
+)
+
+// ensureVersionReady garante charsets e macros da versão antes de qualquer
+// leitura de texto. lastmiss reaproveita o bucket de ffx2 (CharsetVersion).
+func ensureVersionReady(version common.GameVersion) error {
+	v := common.CharsetVersion(version)
+	readyMu.Lock()
+	defer readyMu.Unlock()
+	if err, done := readyVersions[v]; done {
+		return err
+	}
+	err := reader.PrepareVersion(v)
+	readyVersions[v] = err
+	return err
 }
 
 // ---- metadata por key/id/path ---------------------------------------------
@@ -126,15 +151,7 @@ func (s *MetadataService) resolvePath(q string) (string, string, bool, error) {
 		abs = clean
 	}
 	isDir := false
-	if NodeDataStore != nil {
-		if node, ok := NodeDataStore.Get(clean); ok && NodeDataStore.IsNode(node) {
-			isDir = node.Data.Source.IsDir
-		} else if node, ok := NodeDataStore.Get(abs); ok && NodeDataStore.IsNode(node) {
-			isDir = node.Data.Source.IsDir
-		} else if st, serr := os.Stat(abs); serr == nil {
-			isDir = st.IsDir()
-		}
-	} else if st, serr := os.Stat(abs); serr == nil {
+	if st, serr := os.Stat(abs); serr == nil {
 		isDir = st.IsDir()
 	}
 	if isDir {
@@ -188,11 +205,76 @@ func objectKeyForID(version common.GameVersion, id string) (string, bool) {
 	return matches[0], true
 }
 
+// ResolveEntryLocation deriva os caminhos em disco de uma entrada
+// (kind/id/version) a partir da metadata.key canônica, sem varrer a árvore de
+// diretórios. Serve Ver/Extrair/Importar no frontend.
+func (s *MetadataService) ResolveEntryLocation(kind, id string, version common.GameVersion) (dto.EntryLocation, error) {
+	kind = strings.ToLower(strings.TrimSpace(kind))
+	key, err := entryKeyForID(kind, id, version)
+	if err != nil {
+		return dto.EntryLocation{}, err
+	}
+	p, ok := dto.ParseKey(key)
+	if !ok {
+		return dto.EntryLocation{}, fmt.Errorf("invalid key: %s", key)
+	}
+
+	sourcePath := filepath.Join(
+		common.GameFilesRoot,
+		filepath.FromSlash(common.PackRootForVersion(version, common.DefaultLocalization)),
+		filepath.FromSlash(p.LocalizationPattern),
+	)
+
+	loc := dto.EntryLocation{Kind: kind, ID: id, Key: key, SourcePath: sourcePath}
+	if !common.IsFileExists(sourcePath) {
+		return loc, nil
+	}
+
+	formatter := interactions.NewInteractionService().TextFormatter()
+	node, nerr := spira.BuildNode(sourcePath, formatter)
+	if nerr != nil || node == nil || node.Data == nil {
+		return loc, nil
+	}
+	if node.Data.Extract != nil {
+		loc.ExtractTarget = node.Data.Extract.GetTargetFile()
+		loc.IsExtracted = common.IsFileExists(loc.ExtractTarget)
+	}
+	if node.Data.Translate != nil {
+		loc.TranslateTarget = node.Data.Translate.GetTargetFile()
+		loc.IsTranslated = common.IsFileExists(loc.TranslateTarget)
+	}
+	return loc, nil
+}
+
+// entryKeyForID devolve a metadata.key canônica de uma entrada.
+func entryKeyForID(kind, id string, version common.GameVersion) (string, error) {
+	switch kind {
+	case KindEvents:
+		return dto.NewEventMetadata(id, version).Key, nil
+	case KindObjects:
+		if key, ok := objectKeyForID(version, id); ok {
+			return key, nil
+		}
+		return "", fmt.Errorf("unknown object id: %s", id)
+	case KindMacro:
+		chunk, ok := dto.ChunkIndexFromID(id)
+		if !ok {
+			return "", fmt.Errorf("unknown macro chunk id: %s", id)
+		}
+		return dto.NewMacroMetadata(version, chunk).Key, nil
+	default:
+		return "", fmt.Errorf("unknown kind: %s", kind)
+	}
+}
+
 // ---- texto em memória (DTO estruturado, sem disco) --------------------------
 
 // ListEntries devolve o índice leve (id + key, sem rows) para montar
 // sidebar/tree. Barato por design: não carrega binários de objects.
 func (s *MetadataService) ListEntries(kind string, version common.GameVersion) ([]EntrySummary, error) {
+	if err := ensureVersionReady(version); err != nil {
+		return nil, err
+	}
 	switch strings.ToLower(strings.TrimSpace(kind)) {
 	case KindEvents:
 		if err := ensureEventsLoaded(version); err != nil {
@@ -287,6 +369,9 @@ func (s *MetadataService) normalizeIDs(ids []string) []string {
 // uso excepcional; o padrão do frontend é ListEntries + GetEntry).
 // ids aceita ids ou keys (metadata.key/caminho resolvidos para id).
 func (s *MetadataService) GetCollection(kind string, version common.GameVersion, ids []string) (dto.Collection, error) {
+	if err := ensureVersionReady(version); err != nil {
+		return nil, err
+	}
 	ids = s.normalizeIDs(ids)
 	switch strings.ToLower(strings.TrimSpace(kind)) {
 	case KindEvents:

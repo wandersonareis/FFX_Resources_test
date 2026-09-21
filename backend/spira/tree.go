@@ -5,8 +5,10 @@ import (
 	"ffxresources/backend/fileFormats"
 	"ffxresources/backend/interfaces"
 	"ffxresources/backend/models"
+	"fmt"
 	"io/fs"
 	"path/filepath"
+	"strings"
 )
 
 func CreateNodeMap(rootDir string, formatter interfaces.ITextFormatter) fileFormats.TreeMapNode {
@@ -77,6 +79,35 @@ func CreateNodeMap(rootDir string, formatter interfaces.ITextFormatter) fileForm
 	}
 
 	return nodeMap
+}
+
+// BuildNode monta um único MapNode para um caminho existente (arquivo ou
+// diretório), sem varrer a árvore. É o substituto sob demanda do BuildTree
+// para operações de arquivo (Extract/Compress) e resolução de caminhos.
+func BuildNode(path string, formatter interfaces.ITextFormatter) (*fileFormats.MapNode, error) {
+	if strings.TrimSpace(path) == "" {
+		return nil, fmt.Errorf("empty path")
+	}
+
+	src, err := newEntrySource(path)
+	if err != nil {
+		return nil, err
+	}
+
+	prepareSource(src)
+
+	dest, err := newDestination(src, formatter)
+	if err != nil {
+		return nil, err
+	}
+
+	node := &fileFormats.MapNode{}
+	node.SetNodeKey(src.GetPath())
+	node.SetNodeLabel(filepath.Base(src.GetPath()))
+	addTreeNodeIcon(node, src.GetType())
+	addTreeNodeData(node, src, dest)
+
+	return node, nil
 }
 
 func newEntrySource(rootDir string) (interfaces.ISource, error) {

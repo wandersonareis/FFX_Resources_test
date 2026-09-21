@@ -3,7 +3,9 @@ package services
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats"
+	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
+	"ffxresources/backend/spira"
 	"fmt"
 	"sync"
 )
@@ -22,42 +24,51 @@ func NewCompressService(notificationService INotificationService, progressServic
 	}
 }
 
+// Compress monta o nó do caminho sob demanda (sem store global da árvore) e
+// delega para arquivo ou diretório.
 func (c *CompressService) Compress(path string) error {
 	if err := common.CheckArgumentNil(path, "path"); err != nil {
 		return err
 	}
 
-	if err := common.CheckArgumentNil(NodeDataStore, "nodeStore"); err != nil {
+	node, err := c.newNode(path)
+	if err != nil {
 		return err
-	}
-
-	node, ok := NodeDataStore.Get(path)
-	if !ok {
-		return fmt.Errorf("node not found for path: %s", path)
-	}
-
-	if !NodeDataStore.IsNode(node) {
-		return fmt.Errorf("node is invalid for path: %s", path)
 	}
 
 	var cb func(node *fileFormats.MapNode) error
 
 	switch node.Data.Source.Type {
 	case models.Folder:
-		cb = c.compressDirectory
+		cb = func(n *fileFormats.MapNode) error {
+			return c.compressDirectory(n, path)
+		}
 	default:
 		cb = c.compressFile
 	}
 
 	if err := cb(node); err != nil {
 		c.notifierService.NotifyError(err)
+		return err
 	}
 
 	return nil
 }
 
+func (c *CompressService) newNode(path string) (*fileFormats.MapNode, error) {
+	formatter := interactions.NewInteractionService().TextFormatter()
+	node, err := spira.BuildNode(path, formatter)
+	if err != nil {
+		return nil, fmt.Errorf("node not found for path %s: %w", path, err)
+	}
+	if node == nil || node.Data == nil {
+		return nil, fmt.Errorf("node is invalid for path: %s", path)
+	}
+	return node, nil
+}
+
 func (c *CompressService) compressFile(node *fileFormats.MapNode) error {
-	if !NodeDataStore.IsNode(node) {
+	if node == nil || node.Data == nil {
 		return fmt.Errorf("node is invalid")
 	}
 
@@ -72,9 +83,10 @@ func (c *CompressService) compressFile(node *fileFormats.MapNode) error {
 	c.notifierService.NotifySuccess(fmt.Sprintf("File %s compressed successfully!", node.Data.Source.Name))
 	return nil
 }
-func (c *CompressService) compressDirectory(node *fileFormats.MapNode) error {
-	if node == nil {
-		return fmt.Errorf("node is nil")
+
+func (c *CompressService) compressDirectory(node *fileFormats.MapNode, path string) error {
+	if node == nil || node.Data == nil {
+		return fmt.Errorf("node is invalid")
 	}
 
 	if node.Data.Source.Type != models.Folder {
@@ -87,7 +99,10 @@ func (c *CompressService) compressDirectory(node *fileFormats.MapNode) error {
 		})
 	}
 
-	if err := c.dirCompressService.ProcessDirectory(node.Data.Source.Path, NodeDataStore); err != nil {
+	formatter := interactions.NewInteractionService().TextFormatter()
+	store := NewNodeStore(spira.CreateNodeMap(path, formatter))
+
+	if err := c.dirCompressService.ProcessDirectory(node.Data.Source.Path, store); err != nil {
 		return err
 	}
 

@@ -33,7 +33,7 @@ func ReadMacroDictionaryContainers(version common.GameVersion) (map[string]*Macr
 	}
 	result := make(map[string]*MacroDictionaryBinaryFile)
 	for _, loc := range DefaultFirstLocalizations() {
-		path := filepath.Join(common.GetLocalizationRoot(loc), "menu", "macrodic.dcp")
+		path := filepath.Join(common.GetLocalizationRootForVersion(version, loc), "menu", "macrodic.dcp")
 		accessor, err := common.NewFileAccessor(path)
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve macro dictionary file: %w", err)

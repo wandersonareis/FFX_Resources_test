@@ -74,7 +74,7 @@ func NewMacroDictionaryBinaryFileFromBytes(data []byte, localization string, ver
 // LoadFromBinary reads this localization binary from disk and parses the
 // chunk offset table, loading everything PublishStrings needs.
 func (c *MacroDictionaryBinaryFile) LoadFromBinary() error {
-	path := filepath.Join(common.GetLocalizationRoot(c.Localization), c.patternPath)
+	path := filepath.Join(common.GetLocalizationRootForVersion(c.Version, c.Localization), c.patternPath)
 	accessor, err := common.NewFileAccessor(path)
 	if err != nil {
 		return err

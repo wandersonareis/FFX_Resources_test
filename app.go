@@ -8,11 +8,9 @@ import (
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/loggingService"
 	"ffxresources/backend/services"
-	"ffxresources/backend/spira"
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -21,10 +19,9 @@ import (
 type App struct {
 	noticationService services.INotificationService
 
-	CollectionService *services.CollectionService
-	ExtractService    *services.ExtractService
-	CompressService   *services.CompressService
-	MetadataService   *services.MetadataService
+	ExtractService  *services.ExtractService
+	CompressService *services.CompressService
+	MetadataService *services.MetadataService
 }
 
 // NewApp creates a new App application struct
@@ -32,10 +29,9 @@ func NewApp() *App {
 	notifier := services.NewEventNotifier(context.Background())
 	progress := services.NewProgressService(context.Background())
 	return &App{
-		CollectionService: services.NewCollectionService(notifier),
-		ExtractService:    services.NewExtractService(notifier, progress),
-		CompressService:   services.NewCompressService(notifier, progress),
-		MetadataService:   services.NewMetadataService(notifier),
+		ExtractService:  services.NewExtractService(notifier, progress),
+		CompressService: services.NewCompressService(notifier, progress),
+		MetadataService: services.NewMetadataService(notifier),
 	}
 }
 
@@ -106,39 +102,9 @@ func (a *App) initServices(ctx context.Context) {
 	a.noticationService = notification
 
 	// Initialize services
-	a.CollectionService = services.NewCollectionService(notification)
 	a.ExtractService = services.NewExtractService(notification, progress)
 	a.CompressService = services.NewCompressService(notification, progress)
 	a.MetadataService = services.NewMetadataService(notification)
-}
-
-func (a *App) BuildTree() []spira.TreeNode {
-	var tree []spira.TreeNode
-
-	root := interactions.NewInteractionService().GameLocation.GetTargetDirectory()
-	if root == "" {
-		return nil
-	}
-
-	dirs, err := os.ReadDir(root)
-	if err != nil {
-		a.noticationService.NotifyError(fmt.Errorf("failed to read root directory: %s", err))
-		return tree
-	}
-
-	for _, d := range dirs {
-		if d.IsDir() {
-			buildTreeNode := a.CollectionService.BuildTree(filepath.Join(root, d.Name()))
-			tree = append(tree, buildTreeNode...)
-		}
-	}
-
-	if err := common.CheckArgumentNil(tree, "BuildTree"); err != nil {
-		a.noticationService.NotifyError(fmt.Errorf("failed to build files tree"))
-		return nil
-	}
-
-	return tree
 }
 
 func (a *App) Extract(path string) {
@@ -212,6 +178,40 @@ func (a *App) GetMetadata(query string) (dto.Metadata, error) {
 		return dto.Metadata{}, fmt.Errorf("metadata service not initialized")
 	}
 	return a.MetadataService.GetMetadata(query)
+}
+
+// ResolveEntryLocation devolve os caminhos em disco (origem + extração) de
+// uma entrada (kind/id/version), sem varrer a árvore de diretórios.
+func (a *App) ResolveEntryLocation(kind, id string, version common.GameVersion) (dto.EntryLocation, error) {
+	if a.MetadataService == nil {
+		return dto.EntryLocation{}, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ResolveEntryLocation(kind, id, version)
+}
+
+// ExtractEntry extrai a entrada (kind/id/version) resolvendo o caminho de
+// origem no backend.
+func (a *App) ExtractEntry(kind, id string, version common.GameVersion) error {
+	loc, err := a.ResolveEntryLocation(kind, id, version)
+	if err != nil {
+		return err
+	}
+	if loc.SourcePath == "" {
+		return fmt.Errorf("source path not resolved for %s/%s", kind, id)
+	}
+	return a.ExtractService.Extract(loc.SourcePath)
+}
+
+// CompressEntry importa/recomprime a entrada (kind/id/version).
+func (a *App) CompressEntry(kind, id string, version common.GameVersion) error {
+	loc, err := a.ResolveEntryLocation(kind, id, version)
+	if err != nil {
+		return err
+	}
+	if loc.SourcePath == "" {
+		return fmt.Errorf("source path not resolved for %s/%s", kind, id)
+	}
+	return a.CompressService.Compress(loc.SourcePath)
 }
 
 // ListTextEntries devolve o índice leve (id + key, sem rows) para montar
