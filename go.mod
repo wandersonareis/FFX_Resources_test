@@ -3,13 +3,14 @@ module ffxresources
 go 1.26.0
 
 require (
+	github.com/bouine-cache/xxhash/v3 v3.0.0
 	github.com/denisvmedia/asar v0.0.0-20220910114414-6afbb52dd143
 	github.com/google/uuid v1.6.0
 	github.com/onsi/ginkgo/v2 v2.22.2
 	github.com/onsi/gomega v1.36.2
 	github.com/rs/zerolog v1.35.1
 	github.com/stretchr/testify v1.12.1
-	github.com/wailsapp/wails/v2 v2.15.0
+	github.com/wailsapp/wails/v2 v2.16.0
 	golang.org/x/text v0.42.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
@@ -17,7 +18,6 @@ require (
 require (
 	git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3 // indirect
 	github.com/bep/debounce v1.2.1 // indirect
-	github.com/bouine-cache/xxhash/v3 v3.0.0 // indirect
 	github.com/go-extras/errors v0.11.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
