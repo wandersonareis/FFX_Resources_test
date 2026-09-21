@@ -437,3 +437,35 @@ func TestMarshalNoEscapeKeepsAmpersand(t *testing.T) {
 		t.Fatalf("unexpected unicode escape: %s", raw)
 	}
 }
+
+func TestMarshalLangsFilter(t *testing.T) {
+	raw, err := json.NewJSONEventsFormatter().MarshalLangs(sampleCollection(), []string{"us"})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	out := string(raw)
+	if strings.Contains(out, `"sp"`) {
+		t.Fatalf("sp must be filtered:\n%s", out)
+	}
+	if !strings.Contains(out, `"us"`) {
+		t.Fatalf("us must be kept:\n%s", out)
+	}
+	back, err := json.NewJSONEventsFormatter().Unmarshal(raw)
+	if err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if _, ok := back["ev001"].Rows[0].Text["sp"]; ok {
+		t.Fatalf("sp must not roundtrip: %+v", back["ev001"].Rows[0])
+	}
+	if back["ev001"].Rows[0].Text["us"] != "Tom & Jerry" {
+		t.Fatalf("us lost: %+v", back["ev001"].Rows[0])
+	}
+	// nil = todos (compatível com Marshal).
+	full, err := json.NewJSONEventsFormatter().MarshalLangs(sampleCollection(), nil)
+	if err != nil {
+		t.Fatalf("marshal nil langs: %v", err)
+	}
+	if !strings.Contains(string(full), `"sp"`) {
+		t.Fatalf("nil langs must keep all:\n%s", full)
+	}
+}

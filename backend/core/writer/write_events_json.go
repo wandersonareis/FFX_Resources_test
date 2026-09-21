@@ -5,6 +5,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/formatters/json"
+	strfmt "ffxresources/backend/formatters/strings"
 	"ffxresources/backend/interactions"
 	"fmt"
 	"sort"
@@ -31,7 +32,22 @@ func ExportEventsToJSON(ids []string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := json.NewJSONEventsFormatter().WriteEvents(collection, version); err != nil {
+	if _, err := json.NewJSONEventsFormatter().WriteEvents(collection, version, nil); err != nil {
+		return err
+	}
+	return nil
+}
+
+// ExportEventsToStrings exporta os eventos indicados (ids vazio = tudo)
+// para o formato Strings, com só os idiomas pedidos (langs nil/vazio =
+// todos), ao lado do JSON.
+func ExportEventsToStrings(ids, langs []string) error {
+	version := currentGameVersion()
+	collection, err := builders.BuildEventsDTO(version, ids)
+	if err != nil {
+		return err
+	}
+	if _, err := strfmt.NewStringsFormatter().WriteEvents(collection, version, langs); err != nil {
 		return err
 	}
 	return nil

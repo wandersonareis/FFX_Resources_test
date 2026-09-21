@@ -1,10 +1,11 @@
-﻿package writer
+package writer
 
 import (
 	"ffxresources/backend/builders"
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/macrodic"
 	"ffxresources/backend/formatters/json"
+	strfmt "ffxresources/backend/formatters/strings"
 	"ffxresources/backend/interactions"
 	"fmt"
 	"path/filepath"
@@ -36,13 +37,34 @@ func ExportMacroDictionaryToJSON() {
 		}
 	}
 
-	if _, err := json.NewJSONMacroFormatter().WriteMacro(collection, version); err != nil {
+	if _, err := json.NewJSONMacroFormatter().WriteMacro(collection, version, nil); err != nil {
 		common.LogError("Error writing macro dictionary JSON: %v\n", err)
 		return
 	}
 
 	if common.IsVerboseMode() {
 		common.LogVerbose("Arquivo JSON de dicionário de macros exportado (%d chunks)\n", len(collection))
+	}
+}
+
+// ExportMacroDictionaryToStrings reads every available localization container
+// and exports them into a single Strings file holding the requested languages
+// (langs nil/vazio = todos), ao lado do JSON.
+func ExportMacroDictionaryToStrings(langs []string) {
+	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+	collection, err := builders.BuildMacroDTO(version)
+	if err != nil {
+		common.LogError("Error building macro dictionary DTO: %v\n", err)
+		return
+	}
+
+	if _, err := strfmt.NewStringsFormatter().WriteMacro(collection, version, langs); err != nil {
+		common.LogError("Error writing macro dictionary strings: %v\n", err)
+		return
+	}
+
+	if common.IsVerboseMode() {
+		common.LogVerbose("Arquivo Strings de dicionário de macros exportado (%d chunks)\n", len(collection))
 	}
 }
 
@@ -74,7 +96,7 @@ func WriteMacroDictionaryForLocalizationJSON(localization string) {
 		common.LogError("Error creating macro edits directory: %v\n", err)
 		return
 	}
-	if _, err := json.NewJSONMacroFormatter().WriteMacroFile(collection, filepath.Join(dir, common.WithVersionSuffix(fileName))); err != nil {
+	if _, err := json.NewJSONMacroFormatter().WriteMacroFile(collection, filepath.Join(dir, common.WithVersionSuffix(fileName)), nil); err != nil {
 		common.LogError("Error writing macro dictionary JSON: %v\n", err)
 		return
 	}

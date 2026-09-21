@@ -28,10 +28,16 @@ func (JSONEventsFormatter) Extension() string {
 	return extensionJSON
 }
 
-// Marshal organiza a Collection pronta no JSON de saída.
+// Marshal organiza a Collection pronta no JSON de saída (todos os idiomas).
 // Recebe apenas DTO pronto; não toca no domínio.
 func (JSONEventsFormatter) Marshal(c dto.Collection) ([]byte, error) {
 	return marshalCollection(c)
+}
+
+// MarshalLangs organiza a Collection pronta contendo só os idiomas pedidos
+// (nil/vazio = todos).
+func (JSONEventsFormatter) MarshalLangs(c dto.Collection, langs []string) ([]byte, error) {
+	return marshalCollectionLangs(c, langs)
 }
 
 // Unmarshal parseia o JSON de volta para a Collection (DTO),
@@ -59,11 +65,12 @@ func EventsJSONPath(c dto.Collection, version common.GameVersion) (string, error
 
 // WriteEvents serializa a Collection e escreve o arquivo JSON.
 // Recebe apenas DTO pronto e devolve o caminho escrito.
-func (f JSONEventsFormatter) WriteEvents(c dto.Collection, version common.GameVersion) (string, error) {
+// langs nil/vazio = todos os idiomas.
+func (f JSONEventsFormatter) WriteEvents(c dto.Collection, version common.GameVersion, langs []string) (string, error) {
 	if len(c) == 0 {
 		return "", fmt.Errorf("no events with string data to export")
 	}
-	raw, err := f.Marshal(c)
+	raw, err := f.MarshalLangs(c, langs)
 	if err != nil {
 		return "", err
 	}

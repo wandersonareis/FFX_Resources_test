@@ -220,9 +220,29 @@ func (a *App) GetTextEntry(kind, id string, version common.GameVersion) (dto.Fil
 }
 
 // GetTextCollection monta o DTO completo em memória (bulk; ids vazio = tudo).
+// ids aceita ids ou keys (metadata.key/caminho resolvidos para id).
 func (a *App) GetTextCollection(kind string, version common.GameVersion, ids []string) (dto.Collection, error) {
 	if a.MetadataService == nil {
 		return nil, fmt.Errorf("metadata service not initialized")
 	}
 	return a.MetadataService.GetCollection(kind, version, ids)
+}
+
+// ListLanguages devolve os idiomas disponíveis em formato chave/valor
+// (Code para arquivos, Name para exibição no picker).
+func (a *App) ListLanguages() []common.Language {
+	if a.MetadataService == nil {
+		return common.AvailableLanguages()
+	}
+	return a.MetadataService.ListLanguages()
+}
+
+// ExportStrings escreve arquivos .strings ao lado dos .json.
+// kind: events, objects ou macro. ids vazio = tudo (aceita ids ou keys);
+// langs nil/vazio = todos os idiomas.
+func (a *App) ExportStrings(kind string, version common.GameVersion, ids, langs []string) ([]string, error) {
+	if a.MetadataService == nil {
+		return nil, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ExportStrings(kind, version, ids, langs)
 }

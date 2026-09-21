@@ -47,8 +47,8 @@ func ByteToChar(hex uint, charset string, version common.GameVersion) (rune, boo
 
 // CharToByte resolve uma rune para byte no charset da versão indicada.
 func CharToByte(chr rune, charset string, version common.GameVersion) (uint, bool) {
-	byCharset, exists := CharToByteMaps[version]
-	if !exists {
+	byCharset, ok := CharToByteMaps[version]
+	if !ok {
 		return 0, false
 	}
 	charsetMap, exists := byCharset[charset]

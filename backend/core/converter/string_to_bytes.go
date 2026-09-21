@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	encoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/common"
+	encoding "ffxresources/backend/core/encoding"
 )
 
 var (
@@ -138,7 +138,11 @@ func StringToByteList(runes []rune, charset string, version common.GameVersion) 
 
 func StringToBytes(s, charset string, version common.GameVersion) []byte {
 	runes := []rune(s)
-	return StringToByteList(runes, charset, version)
+	gameVersion := version
+	if version == common.GameVersionLastMiss {
+		gameVersion = common.GameVersionFFX2
+	}
+	return StringToByteList(runes, charset, gameVersion)
 }
 
 func GetStringBytesAtLookupOffset(table []byte, offset int) []byte {
@@ -150,10 +154,7 @@ func GetStringBytesAtLookupOffset(table []byte, offset int) []byte {
 	if end == -1 {
 		return table[offset:]
 	}
-	subArray := table[offset : offset+end]
-	var newArray = make([]byte, len(subArray))
-	copy(newArray, subArray)
-	return newArray
+	return table[offset : offset+end]
 }
 
 func ParseCommand(runes []rune, startIndex int) []uint {

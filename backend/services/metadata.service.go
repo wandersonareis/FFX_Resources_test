@@ -13,6 +13,7 @@ import (
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/fileFormats/macrodic"
 	"ffxresources/backend/fileFormats/objectsfile"
+	strfmt "ffxresources/backend/formatters/strings"
 )
 
 // Kinds lógicos de texto servidos ao frontend.
@@ -247,10 +248,46 @@ func (s *MetadataService) GetEntry(kind, id string, version common.GameVersion) 
 	return entry, nil
 }
 
+// ListLanguages devolve os idiomas disponíveis em formato chave/valor
+// (Code para arquivos, Name para exibição). Todas as versões usam
+// os mesmos idiomas.
+func (s *MetadataService) ListLanguages() []common.Language {
+	return common.AvailableLanguages()
+}
+
+// normalizeIDs aceita ids ou keys: item com "/" ou "\" (metadata.key ou
+// caminho) é resolvido para id via Resolve; id puro passa direto.
+// Uma metadata.key de macro (sem chunk) não seleciona nada e é ignorada.
+func (s *MetadataService) normalizeIDs(ids []string) []string {
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		q := strings.TrimSpace(id)
+		if q == "" {
+			continue
+		}
+		if strings.Contains(q, "/") || strings.Contains(q, "\\") {
+			_, rid, _, err := s.Resolve(q)
+			if err != nil {
+				out = append(out, q)
+				continue
+			}
+			if rid == "" {
+				continue
+			}
+			out = append(out, rid)
+			continue
+		}
+		out = append(out, q)
+	}
+	return out
+}
+
 // GetCollection monta o DTO em memória via builders (sem gravar arquivo).
 // ids vazio = tudo (bulk: 20MB FFX / 45MB FFX2+lastmiss em events —
 // uso excepcional; o padrão do frontend é ListEntries + GetEntry).
+// ids aceita ids ou keys (metadata.key/caminho resolvidos para id).
 func (s *MetadataService) GetCollection(kind string, version common.GameVersion, ids []string) (dto.Collection, error) {
+	ids = s.normalizeIDs(ids)
 	switch strings.ToLower(strings.TrimSpace(kind)) {
 	case KindEvents:
 		if err := ensureEventsLoaded(version); err != nil {
@@ -281,6 +318,35 @@ func (s *MetadataService) GetCollection(kind string, version common.GameVersion,
 			return nil, fmt.Errorf("no matching macro chunks in DTO")
 		}
 		return out, nil
+	default:
+		return nil, fmt.Errorf("unknown kind: %s", kind)
+	}
+}
+
+// ExportStrings monta o DTO em memória e escreve arquivos .strings,
+// ao lado dos .json (mesmo diretório, mesmo basename).
+// ids vazio = tudo; langs nil/vazio = todos os idiomas.
+func (s *MetadataService) ExportStrings(kind string, version common.GameVersion, ids, langs []string) ([]string, error) {
+	c, err := s.GetCollection(kind, version, ids)
+	if err != nil {
+		return nil, err
+	}
+	f := strfmt.NewStringsFormatter()
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case KindEvents:
+		p, err := f.WriteEvents(c, version, langs)
+		if err != nil {
+			return nil, err
+		}
+		return []string{p}, nil
+	case KindObjects:
+		return f.WriteObjects(c, version, langs)
+	case KindMacro:
+		p, err := f.WriteMacro(c, version, langs)
+		if err != nil {
+			return nil, err
+		}
+		return []string{p}, nil
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}

@@ -28,7 +28,7 @@ func NewKeyedString(charset string, segment models.Segment, data []byte, version
 		Segment: segment,
 	}
 	ks.Bytes = converter.GetStringBytesAtLookupOffset(data, int(segment.Offset))
-	ks.Text = converter.BytesToString(converter.GetStringBytesAtLookupOffset(data, int(segment.Offset)), charset, version)
+	ks.Text = converter.BytesToString(ks.Bytes, charset, version)
 	return ks
 }
 

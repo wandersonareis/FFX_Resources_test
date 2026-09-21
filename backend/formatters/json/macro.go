@@ -30,10 +30,16 @@ func (JSONMacroFormatter) Extension() string {
 	return extensionJSON
 }
 
-// Marshal organiza a Collection pronta no JSON de saída.
+// Marshal organiza a Collection pronta no JSON de saída (todos os idiomas).
 // Recebe apenas DTO pronto; não toca no domínio.
 func (JSONMacroFormatter) Marshal(c dto.Collection) ([]byte, error) {
 	return marshalCollection(c)
+}
+
+// MarshalLangs organiza a Collection pronta contendo só os idiomas pedidos
+// (nil/vazio = todos).
+func (JSONMacroFormatter) MarshalLangs(c dto.Collection, langs []string) ([]byte, error) {
+	return marshalCollectionLangs(c, langs)
 }
 
 // Unmarshal parseia o JSON de volta para a Collection (DTO),
@@ -62,7 +68,8 @@ func MacroJSONPath(version common.GameVersion) (string, error) {
 
 // WriteMacro serializa a Collection e escreve o arquivo JSON.
 // Recebe apenas DTO pronto e devolve o caminho escrito.
-func (f JSONMacroFormatter) WriteMacro(c dto.Collection, version common.GameVersion) (string, error) {
+// langs nil/vazio = todos os idiomas.
+func (f JSONMacroFormatter) WriteMacro(c dto.Collection, version common.GameVersion, langs []string) (string, error) {
 	if len(c) == 0 {
 		return "", fmt.Errorf("no macro data in DTO to export")
 	}
@@ -70,16 +77,17 @@ func (f JSONMacroFormatter) WriteMacro(c dto.Collection, version common.GameVers
 	if err != nil {
 		return "", err
 	}
-	return f.WriteMacroFile(c, filePath)
+	return f.WriteMacroFile(c, filePath, langs)
 }
 
 // WriteMacroFile serializa a Collection e escreve no caminho dado.
 // Recebe apenas DTO pronto e devolve o caminho escrito.
-func (f JSONMacroFormatter) WriteMacroFile(c dto.Collection, filePath string) (string, error) {
+// langs nil/vazio = todos os idiomas.
+func (f JSONMacroFormatter) WriteMacroFile(c dto.Collection, filePath string, langs []string) (string, error) {
 	if len(c) == 0 {
 		return "", fmt.Errorf("no macro data in DTO to export")
 	}
-	raw, err := f.Marshal(c)
+	raw, err := f.MarshalLangs(c, langs)
 	if err != nil {
 		return "", err
 	}

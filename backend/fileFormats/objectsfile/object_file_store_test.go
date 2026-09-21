@@ -169,7 +169,7 @@ var _ = Describe("Integration: integrity cycle via LoadObjectFileFromStore + Fil
 			key := objectsfile.FileLayoutKey(tc.version, tc.pattern)
 			collection, err := builders.BuildObjectsDTO(binFile.GetObjects(), layout, key)
 			Expect(err).To(BeNil())
-			paths, err := json.NewJSONObjectFormatter().WriteObjects(collection, tc.version)
+			paths, err := json.NewJSONObjectFormatter().WriteObjects(collection, tc.version, nil)
 			Expect(err).To(BeNil())
 			Expect(paths).To(HaveLen(1))
 			readBack, err := json.NewJSONObjectFormatter().ReadObjects(paths[0])

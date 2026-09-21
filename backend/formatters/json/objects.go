@@ -27,10 +27,16 @@ func (JSONObjectFormatter) Extension() string {
 	return extensionJSON
 }
 
-// Marshal organiza a Collection pronta no JSON de saída.
+// Marshal organiza a Collection pronta no JSON de saída (todos os idiomas).
 // Recebe apenas DTO pronto; não toca no domínio.
 func (JSONObjectFormatter) Marshal(c dto.Collection) ([]byte, error) {
 	return marshalCollection(c)
+}
+
+// MarshalLangs organiza a Collection pronta contendo só os idiomas pedidos
+// (nil/vazio = todos).
+func (JSONObjectFormatter) MarshalLangs(c dto.Collection, langs []string) ([]byte, error) {
+	return marshalCollectionLangs(c, langs)
 }
 
 // Unmarshal parseia o JSON de volta para a Collection (DTO),
@@ -51,13 +57,14 @@ func ObjectsJSONPath(key string, version common.GameVersion) (string, error) {
 
 // WriteObjects serializa a Collection e escreve um arquivo JSON por entrada.
 // Recebe apenas DTO pronto e devolve os caminhos escritos.
-func (f JSONObjectFormatter) WriteObjects(c dto.Collection, version common.GameVersion) ([]string, error) {
+// langs nil/vazio = todos os idiomas.
+func (f JSONObjectFormatter) WriteObjects(c dto.Collection, version common.GameVersion, langs []string) ([]string, error) {
 	if len(c) == 0 {
 		return nil, fmt.Errorf("no objects with text data to export")
 	}
 	var paths []string
 	for _, key := range c.SortedKeys() {
-		singleRaw, err := f.Marshal(dto.Collection{key: c[key]})
+		singleRaw, err := f.MarshalLangs(dto.Collection{key: c[key]}, langs)
 		if err != nil {
 			return nil, err
 		}

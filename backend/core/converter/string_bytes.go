@@ -28,10 +28,13 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
         buf               = bytes.NewReader(table[offset:])
     )
 
+    if version == common.GameVersionLastMiss {
+        gameVersion = common.GameVersionFFX2
+    }
+
     for {
         var idx uint8
-        err := readOneByte(buf, &idx)
-        if err != nil || idx == 0x00 {
+        if err := readOneByte(buf, &idx); err != nil || idx == 0x00 {
             break
         }
 

@@ -26,9 +26,10 @@ func ExportMacroDictionaryExample() {
 	}
 	common.LogInfo("   ✓ Dados internos carregados com sucesso")
 
-	// Step 2: Export macro dictionary for all localizations
+	// Step 2: Export macro dictionary for all localizations (JSON + Strings)
 	common.LogInfo("\n2. Exportando dicionário de macros para todas as localizações:")
 	writer.ExportMacroDictionaryToJSON()
+	writer.ExportMacroDictionaryToStrings(common.SupportedLanguageCodes())
 
 	// Step 3: Export macro dictionary for specific localizations
 	common.LogInfo("\n3. Exportando dicionário de macros para localizações específicas:")

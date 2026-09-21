@@ -10,6 +10,7 @@ package json
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
 	"unicode/utf8"
 
 	"ffxresources/backend/common"
@@ -46,12 +47,19 @@ func marshalNoEscape(v any) ([]byte, error) {
 const minDedupRunes = 5
 
 // marshalCollection serializa a Collection com chaves e rows ordenadas
-// (saída determinística). Recebe apenas DTO pronto.
+// (saída determinística), com todos os idiomas. Recebe apenas DTO pronto.
+func marshalCollection(c dto.Collection) ([]byte, error) {
+	return marshalCollectionLangs(c, nil)
+}
+
+// marshalCollectionLangs serializa a Collection contendo só os idiomas
+// pedidos (nil/vazio = todos).
 //
 // Na saída, todo hash ganha o prefixo `$` e, só no idioma default, textos
 // repetidos (len >= 5 runes) viram referência `$hash` — dedup por arquivo.
 // O DTO de entrada nunca é mutado.
-func marshalCollection(c dto.Collection) ([]byte, error) {
+func marshalCollectionLangs(c dto.Collection, langs []string) ([]byte, error) {
+	filter := langSet(langs)
 	seen := make(map[string]string) // hashHex bare -> texto (só default lang)
 	ordered := make(map[string]dto.FileEntry, len(c))
 	for _, k := range c.SortedKeys() {
@@ -62,12 +70,18 @@ func marshalCollection(c dto.Collection) ([]byte, error) {
 			if row.Hash != nil {
 				r.Hash = make(map[string]string, len(row.Hash))
 				for lang, h := range row.Hash {
+					if filter != nil && !filter[lang] {
+						continue
+					}
 					r.Hash[lang] = hash.Prefix(h)
 				}
 			}
 			if row.Text != nil {
 				r.Text = make(map[string]string, len(row.Text))
 				for lang, t := range row.Text {
+					if filter != nil && !filter[lang] {
+						continue
+					}
 					r.Text[lang] = t
 				}
 			}
@@ -87,6 +101,20 @@ func marshalCollection(c dto.Collection) ([]byte, error) {
 		ordered[k] = entry
 	}
 	return marshalNoEscape(ordered)
+}
+
+// langSet normaliza o filtro de idiomas (nil = todos).
+func langSet(langs []string) map[string]bool {
+	if len(langs) == 0 {
+		return nil
+	}
+	set := make(map[string]bool, len(langs))
+	for _, l := range langs {
+		if l = strings.TrimSpace(l); l != "" {
+			set[l] = true
+		}
+	}
+	return set
 }
 
 // unmarshalCollection parseia o JSON de volta para a Collection (DTO),

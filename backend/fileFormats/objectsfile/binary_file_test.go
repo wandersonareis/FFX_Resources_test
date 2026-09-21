@@ -117,7 +117,7 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 
 		collection, err := builders.BuildObjectsDTO(binFile.GetObjects(), layout, key)
 		Expect(err).ToNot(HaveOccurred())
-		paths, err := json.NewJSONObjectFormatter().WriteObjects(collection, version)
+		paths, err := json.NewJSONObjectFormatter().WriteObjects(collection, version, nil)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(paths).To(HaveLen(1))
 
@@ -242,7 +242,7 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 		})
 
 		It("should fail WriteObjects when collection is empty", func() {
-			_, err := json.NewJSONObjectFormatter().WriteObjects(nil, common.GameVersionFFX)
+			_, err := json.NewJSONObjectFormatter().WriteObjects(nil, common.GameVersionFFX, nil)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("no objects with text data"))
 		})
