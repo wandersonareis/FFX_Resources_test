@@ -3,7 +3,7 @@
     <div class="sidenav-header">
       <span>Conteúdo</span>
       <button mat-icon-button (click)="reload()" aria-label="Recarregar">
-        <mat-icon>refresh</mat-icon>
+        <i-lucide name="refresh-cw" [size]="20"></i-lucide>
       </button>
     </div>
     <mat-tree [dataSource]="treeSource" [treeControl]="treeControl">
@@ -14,16 +14,14 @@
           [class.selected]="selectedEntry()?.id === node.entry?.id"
           (click)="selectNode(node)"
         >
-          <mat-icon class="leaf-icon">description</mat-icon>
+          <i-lucide name="file-text" [size]="18" class="leaf-icon"></i-lucide>
           <span class="leaf-label">{{ node.label }}</span>
         </button>
       </mat-tree-node>
       <mat-nested-tree-node *matTreeNodeDef="let node; when: hasChild">
         <div class="mat-tree-node" matTreeNodePadding>
           <button mat-icon-button matTreeNodeToggle [attr.aria-label]="'Alternar ' + node.label">
-            <mat-icon>
-              {{ treeControl.isExpanded(node) ? 'expand_more' : 'chevron_right' }}
-            </mat-icon>
+            <i-lucide [name]="treeControl.isExpanded(node) ? 'chevron-down' : 'chevron-right'" [size]="20"></i-lucide>
           </button>
           <button mat-button (click)="selectNode(node)">{{ node.label }}</button>
         </div>
@@ -40,7 +38,7 @@
       <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-field">
         <mat-label>Filtrar</mat-label>
         <input matInput (keyup)="applyFilter($event)" placeholder="Nome ou id" />
-        <mat-icon matSuffix>search</mat-icon>
+        <i-lucide matSuffix name="search" [size]="20"></i-lucide>
       </mat-form-field>
     </div>
 
@@ -57,7 +55,7 @@
         <th mat-header-cell *matHeaderCellDef>Ações</th>
         <td mat-cell *matCellDef="let row">
           <button mat-icon-button [matMenuTriggerFor]="rowMenu" [matMenuTriggerData]="{ row }" aria-label="Ações">
-            <mat-icon>more_vert</mat-icon>
+            <i-lucide name="ellipsis-vertical" [size]="20"></i-lucide>
           </button>
         </td>
       </ng-container>
@@ -76,13 +74,13 @@
           <h4>{{ entry.label }}</h4>
           <div class="detail-actions">
             <button mat-stroked-button (click)="viewEntry(entry)">
-              <mat-icon>visibility</mat-icon> Ver / Editar
+              <i-lucide name="eye" [size]="18"></i-lucide> Ver / Editar
             </button>
             <button mat-stroked-button (click)="extractEntry(entry)">
-              <mat-icon>download</mat-icon> Extrair
+              <i-lucide name="download" [size]="18"></i-lucide> Extrair
             </button>
             <button mat-stroked-button (click)="importEntry(entry)">
-              <mat-icon>upload</mat-icon> Importar
+              <i-lucide name="upload" [size]="18"></i-lucide> Importar
             </button>
           </div>
         </div>
@@ -117,13 +115,13 @@
 <mat-menu #rowMenu="matMenu">
   <ng-template matMenuContent let-row="row">
     <button mat-menu-item (click)="selectEntry(row); viewEntry(row)">
-      <mat-icon>visibility</mat-icon> Ver / Editar
+      <i-lucide name="eye" [size]="18"></i-lucide> Ver / Editar
     </button>
     <button mat-menu-item (click)="extractEntry(row)">
-      <mat-icon>download</mat-icon> Extrair
+      <i-lucide name="download" [size]="18"></i-lucide> Extrair
     </button>
     <button mat-menu-item (click)="importEntry(row)">
-      <mat-icon>upload</mat-icon> Importar
+      <i-lucide name="upload" [size]="18"></i-lucide> Importar
     </button>
   </ng-template>
 </mat-menu>

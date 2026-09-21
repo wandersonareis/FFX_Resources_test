@@ -11,7 +11,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -19,6 +18,20 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTreeModule, MatTreeNestedDataSource } from '@angular/material/tree';
 import { NestedTreeControl } from '@angular/cdk/tree';
+import {
+  ChevronDown,
+  ChevronRight,
+  Download,
+  EllipsisVertical,
+  Eye,
+  FileText,
+  LUCIDE_ICONS,
+  LucideAngularModule,
+  LucideIconProvider,
+  RefreshCw,
+  Search,
+  Upload,
+} from 'lucide-angular';
 import { firstValueFrom } from 'rxjs';
 import {
   Extract,
@@ -53,7 +66,7 @@ interface TreeListNode {
     MatButtonModule,
     MatDialogModule,
     MatFormFieldModule,
-    MatIconModule,
+    LucideAngularModule,
     MatInputModule,
     MatMenuModule,
     MatSidenavModule,
@@ -63,6 +76,23 @@ interface TreeListNode {
   ],
   templateUrl: './game-version-tab.component.html',
   styleUrl: './game-version-tab.component.css',
+  providers: [
+    {
+      provide: LUCIDE_ICONS,
+      multi: true,
+      useValue: new LucideIconProvider({
+        ChevronDown,
+        ChevronRight,
+        Download,
+        EllipsisVertical,
+        Eye,
+        FileText,
+        RefreshCw,
+        Search,
+        Upload,
+      }),
+    },
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GameVersionTabComponent implements OnInit {

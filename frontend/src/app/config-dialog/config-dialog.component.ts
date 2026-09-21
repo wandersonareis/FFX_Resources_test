@@ -1,45 +1,87 @@
-import { ChangeDetectionStrategy, Component, OnInit, Signal, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnDestroy,
+  OnInit,
+  WritableSignal,
+  signal,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { SelectDirectory } from '../../../wailsjs/go/main/App';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { FolderOpen, LUCIDE_ICONS, LucideAngularModule, LucideIconProvider, X } from 'lucide-angular';
+import {
+  GetGameFilesLocation,
+  GetTranslateLocation,
+  SelectDirectory,
+} from '../../../wailsjs/go/main/App';
 import { EventsEmit, EventsOn } from '../../../wailsjs/runtime';
 
+type LocationKey = 'GameFilesLocation' | 'TranslateLocation';
+
 interface DirectoryInput {
+  key: LocationKey;
   eventName: string;
   label: string;
+  hint: string;
   dialogTitle: string;
-  value: Signal<string>;
+  value: WritableSignal<string>;
 }
 
+/**
+ * Diálogo de diretórios: apenas gamefiles e translated (fonte do
+ * reimport, <game>/mods/translated por padrão). Extract/reimport são
+ * internos do backend e não aparecem aqui.
+ * Toda mudança é aplicada imediatamente (ao confirmar o campo ou
+ * escolher no seletor): o backend persiste no config.json e re-emite
+ * o valor + Refresh_Tree.
+ */
 @Component({
   selector: 'app-config-dialog',
   standalone: true,
-  imports: [MatButtonModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatInputModule],
+  imports: [
+    MatButtonModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSnackBarModule,
+    LucideAngularModule,
+  ],
+  providers: [
+    { provide: LUCIDE_ICONS, multi: true, useValue: new LucideIconProvider({ FolderOpen, X }) },
+  ],
   template: `
     <h2 mat-dialog-title>Configurações</h2>
     <mat-dialog-content class="config-content">
-      @for (item of inputs; track item.label) {
+      @for (item of inputs; track item.key) {
         <div class="config-row">
           <mat-form-field appearance="outline" class="config-field">
             <mat-label>{{ item.label }}</mat-label>
-            <input matInput [value]="item.value()" readonly />
+            <input
+              matInput
+              [value]="item.value()"
+              (change)="applyFromInput(item, $event)"
+              (keydown.enter)="applyFromInput(item, $event)"
+            />
+            <mat-hint>{{ item.hint }}</mat-hint>
           </mat-form-field>
           <button
             mat-icon-button
-            (click)="selectDirectory(item.eventName, item.dialogTitle)"
+            (click)="selectDirectory(item)"
             [attr.aria-label]="'Selecionar ' + item.label"
+            title="Procurar pasta"
           >
-            <mat-icon>folder_open</mat-icon>
+            <i-lucide name="folder-open" [size]="20"></i-lucide>
           </button>
         </div>
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button (click)="close()">Cancelar</button>
-      <button mat-flat-button color="primary" (click)="save()">Salvar</button>
+      <button mat-flat-button color="primary" (click)="close()">
+        <i-lucide name="x" [size]="18"></i-lucide> Fechar
+      </button>
     </mat-dialog-actions>
   `,
   styles: [
@@ -63,60 +105,76 @@ interface DirectoryInput {
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ConfigDialogComponent implements OnInit {
+export class ConfigDialogComponent implements OnInit, OnDestroy {
   private readonly ref: MatDialogRef<ConfigDialogComponent>;
+  private readonly snackBar: MatSnackBar;
+  private readonly unsubscribes: Array<() => void> = [];
 
   protected readonly gameDirectory = signal('');
-  protected readonly extractedDirectory = signal('');
   protected readonly translatedDirectory = signal('');
-  protected readonly importedDirectory = signal('');
 
   protected inputs: DirectoryInput[] = [];
 
-  constructor(ref: MatDialogRef<ConfigDialogComponent>) {
+  constructor(ref: MatDialogRef<ConfigDialogComponent>, snackBar: MatSnackBar) {
     this.ref = ref;
+    this.snackBar = snackBar;
   }
 
   ngOnInit(): void {
-    EventsOn('GameFilesLocation', (data: string) => this.gameDirectory.set(data));
-    EventsOn('ExtractLocation', (data: string) => this.extractedDirectory.set(data));
-    EventsOn('TranslateLocation', (data: string) => this.translatedDirectory.set(data));
-    EventsOn('ReimportLocation', (data: string) => this.importedDirectory.set(data));
+    this.unsubscribes.push(
+      EventsOn('GameFilesLocation', (data: string) => this.gameDirectory.set(data ?? '')),
+      EventsOn('TranslateLocation', (data: string) => this.translatedDirectory.set(data ?? ''))
+    );
 
     this.inputs = [
       {
+        key: 'GameFilesLocation',
         eventName: 'GameLocationChanged',
-        label: 'Arquivos originais',
+        label: 'Arquivos originais do jogo',
+        hint: 'Padrão: <execução>/data',
         dialogTitle: 'Selecione a pasta dos arquivos originais do jogo',
         value: this.gameDirectory,
       },
       {
-        eventName: 'ExtractLocationChanged',
-        label: 'Arquivos extraídos',
-        dialogTitle: 'Selecione a pasta de saída da extração',
-        value: this.extractedDirectory,
-      },
-      {
+        key: 'TranslateLocation',
         eventName: 'TranslateLocationChanged',
-        label: 'Arquivos traduzidos',
+        label: 'Arquivos traduzidos (reimport)',
+        hint: 'Padrão: <jogo>/mods/translated',
         dialogTitle: 'Selecione a pasta dos arquivos traduzidos',
         value: this.translatedDirectory,
       },
-      {
-        eventName: 'ReimportLocationChanged',
-        label: 'Arquivos de saída',
-        dialogTitle: 'Selecione a pasta de saída da reimportação',
-        value: this.importedDirectory,
-      },
     ];
+
+    // Carga sob demanda (não depende do evento de startup do backend).
+    GetGameFilesLocation()
+      .then((v) => this.gameDirectory.set(v ?? ''))
+      .catch((e) => this.notify(e));
+    GetTranslateLocation()
+      .then((v) => this.translatedDirectory.set(v ?? ''))
+      .catch((e) => this.notify(e));
   }
 
-  protected async selectDirectory(eventName: string, dialogTitle: string): Promise<void> {
+  ngOnDestroy(): void {
+    for (const off of this.unsubscribes) {
+      try {
+        off();
+      } catch {
+        // ignora falhas de unsubscribe
+      }
+    }
+  }
+
+  protected applyFromInput(item: DirectoryInput, event: Event): void {
+    const value = (event.target as HTMLInputElement)?.value ?? '';
+    this.apply(item, value);
+  }
+
+  protected async selectDirectory(item: DirectoryInput): Promise<void> {
     try {
-      const path = await SelectDirectory(dialogTitle);
-      if (path) EventsEmit(eventName, path);
+      const path = await SelectDirectory(item.dialogTitle);
+      if (path) this.apply(item, path);
     } catch (error) {
-      EventsEmit('Notify', error);
+      this.notify(error);
     }
   }
 
@@ -124,9 +182,24 @@ export class ConfigDialogComponent implements OnInit {
     this.ref.close();
   }
 
-  protected save(): void {
-    this.ref.close();
-    EventsEmit('Refresh_Tree');
-    EventsEmit('SaveConfig');
+  private apply(item: DirectoryInput, raw: string): void {
+    const path = (raw ?? '').trim();
+    if (!path) {
+      this.snackBar.open('Informe um diretório válido.', 'Fechar', { duration: 3000 });
+      return;
+    }
+    if (path === item.value()) return;
+    item.value.set(path);
+    try {
+      EventsEmit(item.eventName, path);
+    } catch (error) {
+      this.notify(error);
+    }
+  }
+
+  private notify(error: unknown): void {
+    const message = error instanceof Error ? error.message : String(error ?? 'Erro');
+    this.snackBar.open(message, 'Fechar', { duration: 4000 });
+    EventsEmit('Notify', { severity: 'error', message });
   }
 }

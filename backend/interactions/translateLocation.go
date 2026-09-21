@@ -1,6 +1,9 @@
 package interactions
 
-import "ffxresources/backend/interfaces"
+import (
+	"ffxresources/backend/common"
+	"ffxresources/backend/interfaces"
+)
 
 type (
 	TranslateLocation struct {
@@ -28,4 +31,17 @@ func newTranslateLocation(path string, config ISetAppConfig) ITranslateLocation 
 func (t *TranslateLocation) WithTargetDirectory(path string) ITranslateLocation {
 	_ = t.SetTargetDirectory(path)
 	return t
+}
+
+// SetTargetDirectory persiste imediatamente no config.json (via base)
+// e garante a existência do diretório traduzido (<game>/mods/translated
+// por padrão). É a fonte da tradução usada no reimport (Compress).
+func (t *TranslateLocation) SetTargetDirectory(path string) error {
+	if err := t.interactionBase.SetTargetDirectory(path); err != nil {
+		return err
+	}
+	if target := t.interactionBase.GetTargetDirectory(); target != "" {
+		_ = common.EnsurePathExists(target)
+	}
+	return nil
 }

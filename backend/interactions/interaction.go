@@ -37,6 +37,24 @@ func resolveLocationPath(config IAppConfig, configKey, defaultDirName string) st
 	return fa.ResolvedPath
 }
 
+func resolveTranslatePath(config IAppConfig, gameDir string) string {
+	if config != nil {
+		if path := config.GetLocation("TranslateLocation"); path != "" {
+			return path
+		}
+	}
+
+	if gameDir != "" {
+		return common.DefaultTranslatedDir(gameDir)
+	}
+
+	fa, err := common.NewFileAccessor(common.DirTranslated)
+	if err != nil {
+		return ""
+	}
+	return fa.ResolvedPath
+}
+
 func defaultAppConfig() *AppConfig {
 	return &AppConfig{
 		filePath:    filepath.Join(common.GetExecDir(), "config", "config.json"),
@@ -54,7 +72,7 @@ func NewInteractionService() *InteractionService {
 
 		gameDir := resolveLocationPath(config, "GameFilesLocation", common.DirData)
 		extractDir := resolveLocationPath(config, "ExtractLocation", common.DirExtracted)
-		translateDir := resolveLocationPath(config, "TranslateLocation", common.DirTranslated)
+		translateDir := resolveTranslatePath(config, gameDir)
 		importDir := resolveLocationPath(config, "ImportLocation", common.DirReimported)
 
 		interactionInstance = &InteractionService{
@@ -81,7 +99,7 @@ func NewInteractionServiceWithConfig(config *AppConfig) *InteractionService {
 
 	gameDir := resolveLocationPath(config, "GameFilesLocation", common.DirData)
 	extractDir := resolveLocationPath(config, "ExtractLocation", common.DirExtracted)
-	translateDir := resolveLocationPath(config, "TranslateLocation", common.DirTranslated)
+	translateDir := resolveTranslatePath(config, gameDir)
 	importDir := resolveLocationPath(config, "ImportLocation", common.DirReimported)
 
 	s.mu.Lock()

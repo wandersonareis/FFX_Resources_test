@@ -62,16 +62,32 @@ func NewAppConfig() *AppConfig {
 }
 
 // defaultLocations monta os diretórios padrão a partir do diretório do
-// executável e dos nomes em common. Usado quando não há config.json
-// ou quando chaves estão ausentes no arquivo.
+// executável e dos nomes em common. GameFiles = <exec>/data;
+// Translate é derivado: <gamefiles>/mods/translated. Extract/Import
+// são internos (ocultos do frontend) mas mantidos no config.
 func defaultLocations() map[string]string {
 	execDir := common.GetExecDir()
+	gameDir := filepath.Join(execDir, common.DirData)
 	return map[string]string{
-		"GameFilesLocation": filepath.Join(execDir, common.DirData),
+		"GameFilesLocation": gameDir,
 		"ExtractLocation":   filepath.Join(execDir, common.DirExtracted),
-		"TranslateLocation": filepath.Join(execDir, common.DirTranslated),
+		"TranslateLocation": common.DefaultTranslatedDir(gameDir),
 		"ImportLocation":    filepath.Join(execDir, common.DirReimported),
 	}
+}
+
+// ensureTranslateDerived preenche TranslateLocation derivando do
+// GameFilesLocation atual quando a chave está ausente/vazia.
+// Valores customizados do usuário nunca são sobrescritos.
+func ensureTranslateDerived(locations map[string]string) {
+	if strings.TrimSpace(locations["TranslateLocation"]) != "" {
+		return
+	}
+	gameDir := strings.TrimSpace(locations["GameFilesLocation"])
+	if gameDir == "" {
+		gameDir = filepath.Join(common.GetExecDir(), common.DirData)
+	}
+	locations["TranslateLocation"] = common.DefaultTranslatedDir(gameDir)
 }
 
 func (c *AppConfig) validateConfig() error {
@@ -83,10 +99,19 @@ func (c *AppConfig) validateConfig() error {
 	} else {
 		// Preenche chaves ausentes sem sobrescrever as definidas pelo usuário.
 		for key, defPath := range defaultLocations() {
+			if key == "TranslateLocation" {
+				continue
+			}
 			if strings.TrimSpace(c.locations[key]) == "" {
 				c.locations[key] = defPath
 				changed = true
 			}
+		}
+		// Translate deriva do gamefiles atual, não de constante fixa.
+		before := strings.TrimSpace(c.locations["TranslateLocation"])
+		ensureTranslateDerived(c.locations)
+		if strings.TrimSpace(c.locations["TranslateLocation"]) != before {
+			changed = true
 		}
 	}
 
@@ -121,11 +146,23 @@ func (c *AppConfig) UnmarshalJSON(data []byte) error {
 	}
 	// Mescla sobre os defaults: chaves ausentes/vazias no arquivo
 	// mantêm os diretórios padrão em vez de zerarem a config.
+	// Translate vazio deriva do gamefiles (<game>/mods/translated).
 	merged := defaultLocations()
+	// Remove o translate pré-derivado do default para que ele seja
+	// recalculado a partir do GameFilesLocation efetivo (arquivo ou default).
+	delete(merged, "TranslateLocation")
 	for key, path := range aux.Locations {
+		if key == "TranslateLocation" {
+			continue
+		}
 		if strings.TrimSpace(path) != "" {
 			merged[key] = path
 		}
+	}
+	if p := strings.TrimSpace(aux.Locations["TranslateLocation"]); p != "" {
+		merged["TranslateLocation"] = p
+	} else {
+		ensureTranslateDerived(merged)
 	}
 	c.locations = merged
 	c.gameVersion = aux.GameVersion

@@ -115,9 +115,24 @@ func eventOnSetGameLocation(ctx context.Context) {
 	runtime.EventsOn(ctx, "GameLocationChanged", func(data ...any) {
 		fmt.Println("GameLocationChanged", data)
 
-		interactions.NewInteractionService().GameLocation.SetTargetDirectory(data[0].(string))
+		service := interactions.NewInteractionService()
+		oldGameDir := service.GameLocation.GetTargetDirectory()
+		oldDefaultTranslate := common.DefaultTranslatedDir(oldGameDir)
+
+		service.GameLocation.SetTargetDirectory(data[0].(string))
+
+		// Se o translated ainda apontava para o default derivado do
+		// gamefiles anterior, acompanha o novo gamefiles.
+		if service.TranslateLocation.GetTargetDirectory() == oldDefaultTranslate {
+			newDefaultTranslate := common.DefaultTranslatedDir(service.GameLocation.GetTargetDirectory())
+			_ = service.TranslateLocation.SetTargetDirectory(newDefaultTranslate)
+			emitTranslateLocation(ctx)
+		}
 
 		emitGameLocation(ctx)
+		// Aplica imediatamente: config já foi persistido por
+		// SetTargetDirectory; avisa o frontend para recarregar a árvore.
+		runtime.EventsEmit(ctx, "Refresh_Tree")
 	})
 }
 
@@ -138,6 +153,9 @@ func eventOnSetTranslateLocation(ctx context.Context) {
 		interactions.NewInteractionService().TranslateLocation.SetTargetDirectory(data[0].(string))
 
 		emitTranslateLocation(ctx)
+		// Fonte da tradução do reimport (mods/translated); recarrega
+		// metadados da árvore para refletir disponibilidade.
+		runtime.EventsEmit(ctx, "Refresh_Tree")
 	})
 }
 

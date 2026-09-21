@@ -6,19 +6,19 @@
       matTooltip="Itálico ({TEXT_ITALIC})"
       aria-label="Itálico"
     >
-      <mat-icon>format_italic</mat-icon>
+      <i-lucide name="italic" [size]="20"></i-lucide>
     </mat-button-toggle>
     <button mat-button (click)="unsetItalic()" matTooltip="Texto normal ({TEXT_NORMAL})">
-      <mat-icon>format_clear</mat-icon>
+      <i-lucide name="eraser" [size]="20"></i-lucide>
       Normal
     </button>
 
     <span class="toolbar-separator"></span>
 
     <button mat-button [matMenuTriggerFor]="buttonsMenu" matTooltip="Inserir botão ({BUTTON:…})">
-      <mat-icon>gamepad</mat-icon>
+      <i-lucide name="gamepad-2" [size]="20"></i-lucide>
       Botões
-      <mat-icon>arrow_drop_down</mat-icon>
+      <i-lucide name="chevron-down" [size]="18"></i-lucide>
     </button>
     <mat-menu #buttonsMenu="matMenu">
       @for (t of buttonTemplates; track t.value) {
@@ -27,9 +27,9 @@
     </mat-menu>
 
     <button mat-button [matMenuTriggerFor]="dpadMenu" matTooltip="Inserir direcional ({BUTTON:…})">
-      <mat-icon>navigation</mat-icon>
+      <i-lucide name="navigation" [size]="20"></i-lucide>
       Direcionais
-      <mat-icon>arrow_drop_down</mat-icon>
+      <i-lucide name="chevron-down" [size]="18"></i-lucide>
     </button>
     <mat-menu #dpadMenu="matMenu">
       @for (t of dpadTemplates; track t.value) {
@@ -38,9 +38,9 @@
     </mat-menu>
 
     <button mat-button [matMenuTriggerFor]="iconsMenu" matTooltip="Inserir ícone ({ICON:…})">
-      <mat-icon>door_front</mat-icon>
+      <i-lucide name="door-open" [size]="20"></i-lucide>
       Ícones
-      <mat-icon>arrow_drop_down</mat-icon>
+      <i-lucide name="chevron-down" [size]="18"></i-lucide>
     </button>
     <mat-menu #iconsMenu="matMenu">
       @for (t of iconTemplates; track t.value) {
@@ -49,9 +49,9 @@
     </mat-menu>
 
     <button mat-button [matMenuTriggerFor]="commandsMenu" matTooltip="Inserir comando">
-      <mat-icon>code</mat-icon>
+      <i-lucide name="code" [size]="20"></i-lucide>
       Comandos
-      <mat-icon>arrow_drop_down</mat-icon>
+      <i-lucide name="chevron-down" [size]="18"></i-lucide>
     </button>
     <mat-menu #commandsMenu="matMenu">
       @for (t of commandTemplates; track t.value) {
@@ -62,7 +62,7 @@
     <span class="toolbar-separator"></span>
 
     <span class="color-group" role="group" aria-label="Cores ({CLR:…})">
-      <mat-icon matTooltip="Cores ({CLR:…}, {CLR:WHITE} reseta)">palette</mat-icon>
+      <i-lucide name="palette" [size]="20" matTooltip="Cores ({CLR:…}, {CLR:WHITE} reseta)"></i-lucide>
       @for (c of colors; track c.name) {
         <button
           class="color-swatch"
@@ -74,17 +74,17 @@
         ></button>
       }
       <button mat-icon-button (click)="resetColor()" matTooltip="Resetar cor ({CLR:WHITE})" aria-label="Resetar cor">
-        <mat-icon>format_color_reset</mat-icon>
+        <i-lucide name="rotate-ccw" [size]="20"></i-lucide>
       </button>
     </span>
 
     <span class="toolbar-separator"></span>
 
     <button mat-icon-button (click)="undo()" [disabled]="!canUndo()" matTooltip="Desfazer" aria-label="Desfazer">
-      <mat-icon>undo</mat-icon>
+      <i-lucide name="undo-2" [size]="20"></i-lucide>
     </button>
     <button mat-icon-button (click)="redo()" [disabled]="!canRedo()" matTooltip="Refazer" aria-label="Refazer">
-      <mat-icon>redo</mat-icon>
+      <i-lucide name="redo-2" [size]="20"></i-lucide>
     </button>
   </div>
 

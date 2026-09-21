@@ -7,12 +7,19 @@ import (
 )
 
 const (
-	ModsFolder    = "mods/"
-	DirData       = "data"
-	DirExtracted  = "extracted"
-	DirTranslated = "translated"
-	DirReimported = "reimported"
+	ModsFolder        = "mods/"
+	ModsTranslatedDir = "translated"
+	DirData           = "data"
+	DirExtracted      = "extracted"
+	DirTranslated     = "translated"
+	DirReimported     = "reimported"
 )
+
+// DefaultTranslatedDir deriva o diretório de tradução de um gamefiles:
+// <gamefiles>/mods/translated. Usado quando não há valor no config.json.
+func DefaultTranslatedDir(gameFilesDir string) string {
+	return filepath.Join(gameFilesDir, ModsFolder, ModsTranslatedDir)
+}
 
 var (
 	ResourcesRoot = GetExecDir()

@@ -8,10 +8,10 @@ import {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { LucideAngularModule, LUCIDE_ICONS, LucideIconProvider, Settings } from 'lucide-angular';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { ConfigDialogComponent } from './config-dialog/config-dialog.component';
 import { TabStorageService } from './core/tab-storage.service';
@@ -26,11 +26,14 @@ import { ProgressDialogComponent } from './progress-dialog/progress-dialog.compo
   imports: [
     MatButtonModule,
     MatDialogModule,
-    MatIconModule,
+    LucideAngularModule,
     MatSnackBarModule,
     MatTabsModule,
     MatToolbarModule,
     GameVersionTabComponent,
+  ],
+  providers: [
+    { provide: LUCIDE_ICONS, multi: true, useValue: new LucideIconProvider({ Settings }) },
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

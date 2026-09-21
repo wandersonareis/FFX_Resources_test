@@ -15,9 +15,24 @@ import {
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import {
+  ChevronDown,
+  Code,
+  DoorOpen,
+  Eraser,
+  Gamepad2,
+  Italic,
+  LUCIDE_ICONS,
+  LucideAngularModule,
+  LucideIconProvider,
+  Navigation,
+  Palette,
+  Redo2,
+  RotateCcw,
+  Undo2,
+} from 'lucide-angular';
 import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
@@ -77,9 +92,28 @@ const COMMAND_TEMPLATES: ControlTemplate[] = [
     CommonModule,
     MatButtonModule,
     MatButtonToggleModule,
-    MatIconModule,
+    LucideAngularModule,
     MatMenuModule,
     MatTooltipModule,
+  ],
+  providers: [
+    {
+      provide: LUCIDE_ICONS,
+      multi: true,
+      useValue: new LucideIconProvider({
+        ChevronDown,
+        Code,
+        DoorOpen,
+        Eraser,
+        Gamepad2,
+        Italic,
+        Navigation,
+        Palette,
+        Redo2,
+        RotateCcw,
+        Undo2,
+      }),
+    },
   ],
   templateUrl: './game-text-editor.component.html',
   styleUrl: './game-text-editor.component.css',

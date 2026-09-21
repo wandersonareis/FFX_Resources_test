@@ -191,6 +191,19 @@ func (a *App) SelectDirectory(title string) string {
 	return selection
 }
 
+// GetGameFilesLocation devolve o diretório dos arquivos do jogo
+// (config ou default <exec>/data). Consulta sob demanda para o
+// diálogo de config não depender do evento de startup.
+func (a *App) GetGameFilesLocation() string {
+	return interactions.NewInteractionService().GameLocation.GetTargetDirectory()
+}
+
+// GetTranslateLocation devolve o diretório de tradução usado no
+// reimport (<game>/mods/translated por padrão). Consulta sob demanda.
+func (a *App) GetTranslateLocation() string {
+	return interactions.NewInteractionService().TranslateLocation.GetTargetDirectory()
+}
+
 // GetMetadata expõe a metadata nova (key, row_count, id, is_dir) ao frontend.
 // Aceita metadata.key (ffx/...), id de collection (azit0000, command,
 // chunk_00) ou caminho em disco. Gera models.Metadata no wailsjs.
