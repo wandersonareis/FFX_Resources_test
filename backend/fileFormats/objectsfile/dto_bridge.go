@@ -2,7 +2,6 @@ package objectsfile
 
 import (
 	"sort"
-	"strconv"
 
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/converter"
@@ -46,47 +45,37 @@ func collectTexts(seg datastore.IGlobalLocalizedKeyedStringObject, langs []strin
 	return out
 }
 
-// ExportFieldTexts flatteniza todos os campos textuais do objeto em ordem
-// determinística: campos estáticos, abilities (ability1..N) e weapons
-// (chave + "s"+chave por personagem). Campos vazios/ausentes são pulados,
-// como no export legado.
+// orderedFieldKeys expõe a ordem dos campos textuais do objeto conforme o
+// layout/arquivo. Implementado pelos tipos concretos; quando ausente,
+// ExportFieldTexts cai na ordem canônica de staticFields.
+type orderedFieldKeys interface {
+	OrderedFieldKeys() []string
+}
+
+// ExportFieldTexts flatteniza todos os campos textuais do objeto na ordem do
+// layout (ordem em que os textos aparecem no arquivo), para que o tradutor
+// leia os campos na mesma sequência do jogo. Campos vazios/ausentes são
+// pulados.
 func ExportFieldTexts(obj datastore.IGlobalLocalizedTextObject) []FieldText {
 	if obj == nil {
 		return nil
 	}
 	langs := sortedLangs()
+	keys := staticFieldKeys()
+	if ordered, ok := obj.(orderedFieldKeys); ok {
+		keys = ordered.OrderedFieldKeys()
+	}
 	var out []FieldText
-	for _, f := range staticFields {
-		if texts := collectTexts(obj.GetKeyedString(f.key), langs); len(texts) > 0 {
-			out = append(out, FieldText{Key: f.key, Texts: texts})
-		}
-	}
-	for i := 1; ; i++ {
-		key := "ability" + strconv.Itoa(i)
-		seg := obj.GetKeyedString(key)
-		if seg == nil {
-			break
-		}
-		if texts := collectTexts(seg, langs); len(texts) > 0 {
+	for _, key := range keys {
+		if texts := collectTexts(obj.GetKeyedString(key), langs); len(texts) > 0 {
 			out = append(out, FieldText{Key: key, Texts: texts})
-		}
-	}
-	if w, ok := obj.(*WeaponsNameTextObject); ok {
-		for i, ref := range weaponRefs {
-			if texts := collectTexts(w.Names[i], langs); len(texts) > 0 {
-				out = append(out, FieldText{Key: ref.key, Texts: texts})
-			}
-			if texts := collectTexts(w.SimplifiedNames[i], langs); len(texts) > 0 {
-				out = append(out, FieldText{Key: "s" + ref.key, Texts: texts})
-			}
 		}
 	}
 	return out
 }
 
 // ApplyFieldTexts aplica os campos de volta no objeto via GetKeyedString
-// (chaves ausentes são no-op, como no import legado). Não toca em disco:
-// quem persiste é SaveToBinary do dono da lista.
+// (chaves ausentes são no-op).
 func ApplyFieldTexts(obj datastore.IGlobalLocalizedTextObject, fields []FieldText, version common.GameVersion) {
 	if obj == nil {
 		return

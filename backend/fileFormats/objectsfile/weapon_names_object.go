@@ -103,6 +103,16 @@ func (w *WeaponsNameTextObject) GetKeyedString(title string) datastore.IGlobalLo
 	return nil
 }
 
+// OrderedFieldKeys devolve as chaves dos campos na ordem do layout: por
+// personagem (weaponRefs), nome e nome simplificado.
+func (w *WeaponsNameTextObject) OrderedFieldKeys() []string {
+	keys := make([]string, 0, len(weaponRefs)*2)
+	for _, ref := range weaponRefs {
+		keys = append(keys, ref.key, "s"+ref.key)
+	}
+	return keys
+}
+
 func (w *WeaponsNameTextObject) GetWeaponKeyedString(key TextKey) datastore.IGlobalLocalizedKeyedStringObject {
 	return w.GetKeyedString(string(key))
 }

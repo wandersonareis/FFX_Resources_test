@@ -160,6 +160,42 @@ func TestJSONObjectFormatterRoundTrip(t *testing.T) {
 	}
 }
 
+// TestJSONPreservesLayoutFieldOrder garante que campos de um mesmo objeto
+// (mesmo Index) saem na ordem do layout, não em ordem alfabética por Name.
+func TestJSONPreservesLayoutFieldOrder(t *testing.T) {
+	f := json.NewJSONObjectFormatter()
+	version := common.GameVersionFFX
+	order := []string{"name", "simplifiedName", "description", "simplifiedDescription"}
+	rows := make([]dto.TextRow, 0, len(order))
+	for _, name := range order {
+		text := map[string]string{"us": name + " text"}
+		rows = append(rows, dto.TextRow{Index: 0, Name: name, Hash: hash.Texts(text), Text: text})
+	}
+	c := dto.Collection{
+		"command": {
+			Metadata: dto.NewObjectMetadata(version, "battle/kernel", "command.bin", "ffx/battle/kernel/command.bin"),
+			Rows:     rows,
+		},
+	}
+	raw, err := f.Marshal(c)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	back, err := f.Unmarshal(raw)
+	if err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	got := back["command"].Rows
+	if len(got) != len(order) {
+		t.Fatalf("row count: %d vs %d", len(got), len(order))
+	}
+	for i, want := range order {
+		if got[i].Name != want {
+			t.Fatalf("field order at %d: got %q, want %q (rows=%+v)", i, got[i].Name, want, got)
+		}
+	}
+}
+
 func TestJSONMacroFormatterRoundTrip(t *testing.T) {
 	f := json.NewJSONMacroFormatter()
 	if f.Extension() != ".json" {

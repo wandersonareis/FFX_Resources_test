@@ -133,6 +133,18 @@ func (p *NameDescriptionEffectAbilityTextObject) GetKeyedString(title string) da
 	}
 }
 
+// OrderedFieldKeys devolve as chaves dos campos na ordem do layout/arquivo:
+// name, description, ability1..N e effect (mesma ordem de ToBytes).
+func (p *NameDescriptionEffectAbilityTextObject) OrderedFieldKeys() []string {
+	keys := make([]string, 0, 3+len(p.Abilities))
+	keys = append(keys, "name", "description")
+	for i := range p.Abilities {
+		keys = append(keys, fmt.Sprintf("ability%d", i+1))
+	}
+	keys = append(keys, "effect")
+	return keys
+}
+
 func (p *NameDescriptionEffectAbilityTextObject) GetHeaderLength() int {
 	return p.HeaderLength
 }

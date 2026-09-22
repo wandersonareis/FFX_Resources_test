@@ -45,13 +45,10 @@ func (c Collection) SortedKeys() []string {
 	return keys
 }
 
-// SortRows ordena as rows por Index (desempate por Name), necessário para
-// reconstrução do binário na mesma ordem posicional e saída determinística.
+// SortRows ordena as rows por Index de forma estável, necessário para a
+// reconstrução posicional do binário.
 func SortRows(rows []TextRow) {
 	sort.SliceStable(rows, func(a, b int) bool {
-		if rows[a].Index != rows[b].Index {
-			return rows[a].Index < rows[b].Index
-		}
-		return rows[a].Name < rows[b].Name
+		return rows[a].Index < rows[b].Index
 	})
 }

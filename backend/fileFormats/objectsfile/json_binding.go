@@ -27,6 +27,16 @@ var staticFields = []struct {
 	{"simplifiedScanText", "simplified scan text"},
 }
 
+// staticFieldKeys devolve as chaves de staticFields na ordem canônica.
+// É apenas fallback: tipos que conhecem seu layout expõem OrderedFieldKeys.
+func staticFieldKeys() []string {
+	keys := make([]string, 0, len(staticFields))
+	for _, f := range staticFields {
+		keys = append(keys, f.key)
+	}
+	return keys
+}
+
 func applyLocalizedText(seg datastore.IGlobalLocalizedKeyedStringObject, texts map[string]string, version common.GameVersion, label string) {
 	if seg == nil || len(texts) == 0 {
 		return

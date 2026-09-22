@@ -122,6 +122,16 @@ func (f *KeyedStringFile) FormatWith(languageCode string, fn StringFormatter) st
 	return f.defaultString(languageCode)
 }
 
+// OrderedFieldKeys devolve as chaves dos campos na ordem do layout (ordem
+// em que os textos aparecem no arquivo binário).
+func (f *KeyedStringFile) OrderedFieldKeys() []string {
+	keys := make([]string, 0, len(f.fields))
+	for _, field := range f.fields {
+		keys = append(keys, field.Name)
+	}
+	return keys
+}
+
 // GetName retorna o campo "name" se existir; senão o primeiro campo não-vazio.
 func (f *KeyedStringFile) GetName(languageCode string) string {
 	if seg := f.byName["name"]; seg != nil {
