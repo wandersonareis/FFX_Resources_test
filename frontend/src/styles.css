@@ -2,10 +2,6 @@
 @import "@angular/material/prebuilt-themes/azure-blue.css";
 @import "tailwindcss";
 
-@theme {
-  --background-logo-bg: url('/assets/images/logo_us.png');
-}
-
 @layer base {
   html,
   body {
@@ -15,7 +11,6 @@
   body {
     margin: 0;
     font-family: Roboto, "Helvetica Neue", sans-serif;
-    background: url("/assets/images/logo_us.png") no-repeat center fixed;
   }
 
   /* Lucide: alinha o SVG com o texto dentro de botões e menus. */
