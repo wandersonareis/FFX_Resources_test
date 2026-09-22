@@ -52,10 +52,20 @@ export interface TranslationCellDialogData {
   `,
   styles: [
     `
+      mat-dialog-content {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
       .references {
         display: grid;
         gap: 10px;
         margin-bottom: 16px;
+        overflow-y: auto;
+        flex: 1 1 auto;
+        min-height: 120px;
+        max-height: 42vh;
+        padding-right: 4px;
       }
       .ref-lang {
         font-size: 12px;
@@ -72,6 +82,8 @@ export interface TranslationCellDialogData {
       .editor-block {
         display: grid;
         gap: 6px;
+        flex: 0 0 auto;
+        overflow: visible;
       }
       .editor-label {
         font-size: 12px;

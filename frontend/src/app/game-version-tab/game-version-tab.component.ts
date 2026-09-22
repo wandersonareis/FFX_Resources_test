@@ -266,6 +266,7 @@ export class GameVersionTabComponent implements OnInit {
     const ref = this.dialog.open(TranslationCellDialogComponent, {
       width: '720px',
       maxWidth: '90vw',
+      maxHeight: '90vh',
       data: { row, languages: this.languages },
     });
     const value: string | undefined = await firstValueFrom(ref.afterClosed());
