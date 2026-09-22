@@ -26,6 +26,10 @@ const (
 	KindMacro   = "macro"
 )
 
+// LastMissionShortened é o prefixo (eventID[:2]) do grupo de events da
+// Last Mission, que mora na árvore do ffx2: "lm".
+const LastMissionShortened = "lm"
+
 // EntrySummary é o índice leve para sidebar/tree: id + key, sem rows.
 // row_count aparece nas entradas (GetEntry/GetCollection), nunca aqui.
 type EntrySummary struct {
@@ -460,6 +464,31 @@ func (s *MetadataService) applyObjectsEntry(version common.GameVersion, id strin
 
 // ---- texto em memória (DTO estruturado, sem disco) --------------------------
 
+// filterEventIDsForVersion aplica a régua de events por versão, porque o
+// lastmiss é expansão do ffx2 e lê a MESMA árvore de eventos:
+//   - ffx2: esconde o grupo "lm" — é conteúdo de Last Mission;
+//   - lastmiss: mostra só o grupo "lm" (lmdn*/lmev*/lmtuto*/lmys*);
+//   - ffx: inalterado (o "lm" do FFX, lmyt*, é texto dessa versão).
+func filterEventIDsForVersion(ids []string, version common.GameVersion) []string {
+	if version != common.GameVersionFFX2 && version != common.GameVersionLastMiss {
+		return ids
+	}
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		isLM := len(id) >= 2 && strings.EqualFold(id[:2], LastMissionShortened)
+		if version == common.GameVersionLastMiss {
+			if isLM {
+				out = append(out, id)
+			}
+			continue
+		}
+		if !isLM {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
 // ListEntries devolve o índice leve (id + key, sem rows) para montar
 // sidebar/tree. Barato por design: não carrega binários de objects.
 func (s *MetadataService) ListEntries(kind string, version common.GameVersion) ([]EntrySummary, error) {
@@ -471,7 +500,7 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 		if err := ensureEventsLoaded(version); err != nil {
 			return nil, err
 		}
-		ids := event.GetAllEventIDs(version)
+		ids := filterEventIDsForVersion(event.GetAllEventIDs(version), version)
 		sort.Strings(ids)
 		out := make([]EntrySummary, 0, len(ids))
 		for _, id := range ids {
@@ -494,6 +523,11 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 		}
 		return out, nil
 	case KindMacro:
+		if version == common.GameVersionLastMiss {
+			// Last Mission não tem dicionário próprio: não servir os chunks
+			// do macrodic de FFX-2 (apenas retorna vazio, sem erro).
+			return []EntrySummary{}, nil
+		}
 		c, err := builders.BuildMacroDTO(version)
 		if err != nil {
 			return nil, err
@@ -577,6 +611,10 @@ func (s *MetadataService) GetCollection(kind string, version common.GameVersion,
 	case KindObjects:
 		return s.buildObjectsCollection(version, ids)
 	case KindMacro:
+		if version == common.GameVersionLastMiss {
+			// Last Mission não tem dicionário próprio (macrodic do ffx2).
+			return dto.Collection{}, nil
+		}
 		c, err := builders.BuildMacroDTO(version)
 		if err != nil {
 			return nil, err

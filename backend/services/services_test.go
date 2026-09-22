@@ -7,6 +7,7 @@ import (
 	"ffxresources/testData"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -43,6 +44,15 @@ var _ = Describe("MetadataService", Ordered, func() {
 
 		gameLocation = filepath.Join(tmpRoot, "game")
 		Expect(os.CopyFS(gameLocation, os.DirFS(srcTree))).To(Succeed())
+
+		// Semeia um evento no grupo "lm" (conteúdo da Last Mission) para
+		// cobrir a régua de events: ffx2 esconde "lm", lastmiss só o mostra.
+		objRoot := filepath.Join(gameLocation, "ffx_ps2", "ffx2", "master", "new_uspc", "event", "obj_ps3")
+		lmData, err := os.ReadFile(filepath.Join(objRoot, "hi", "hiku2800", "hiku2800.bin"))
+		Expect(err).NotTo(HaveOccurred())
+		lmDir := filepath.Join(objRoot, "lm", "lmhiku0000")
+		Expect(os.MkdirAll(lmDir, 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(lmDir, "lmhiku0000.bin"), lmData, 0o644)).To(Succeed())
 
 		config = interactions.NewAppConfig()
 		Expect(config).NotTo(BeNil())
@@ -107,5 +117,31 @@ var _ = Describe("MetadataService", Ordered, func() {
 		for _, p := range paths {
 			Expect(common.IsFileExists(p)).To(BeTrue(), "exported artifact should exist: %s", p)
 		}
+	})
+
+	It("hides the lm group in ffx2 events (it belongs to lastmiss)", func() {
+		entries, err := metadataService.ListEntries(services.KindEvents, common.GameVersionFFX2)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(entries).NotTo(BeEmpty())
+		for _, e := range entries {
+			Expect(strings.HasPrefix(e.ID, "lm")).To(BeFalse(),
+				"lm is Last Mission content, must not be listed for ffx2: %s", e.ID)
+		}
+	})
+
+	It("lists only lm events for lastmiss", func() {
+		entries, err := metadataService.ListEntries(services.KindEvents, common.GameVersionLastMiss)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(entries).NotTo(BeEmpty(), "seeded lm event should be visible in lastmiss")
+		for _, e := range entries {
+			Expect(strings.HasPrefix(e.ID, "lm")).To(BeTrue(),
+				"lastmiss must list only the lm group: %s", e.ID)
+		}
+	})
+
+	It("has no dictionary (macro) for lastmiss", func() {
+		entries, err := metadataService.ListEntries(services.KindMacro, common.GameVersionLastMiss)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(entries).To(BeEmpty(), "lastmiss has no macro dictionary of its own")
 	})
 })

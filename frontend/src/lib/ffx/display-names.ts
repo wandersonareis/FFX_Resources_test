@@ -1,5 +1,6 @@
 // Dicionário de exibição (frontend decide a apresentação).
 // Backend envia apenas sumário canônico {id, key}; os labels PT-BR vivem aqui.
+// Nomes dos GRUPOS de events (shortened) vivem em event-group-names.ts.
 
 export type EntryKind = 'events' | 'objects' | 'macro';
 
@@ -55,23 +56,6 @@ export const OBJECTS_LABELS: Record<string, string> = {
   lm_trap: 'Armadilhas (Last Mission)',
   lm_warehouse: 'Depósito (Last Mission)',
 };
-
-/**
- * Prefixo shortened (eventID[:2]) -> local do jogo.
- * Mapa ainda não levantado: fallback exibe o próprio id.
- * TODO: preencher com os locais reais quando disponíveis.
- */
-export const SHORTENED_LOCATION: Record<string, string> = {};
-
-/** Shortened do eventID: azit0000 → "az". */
-export function shortenedOf(id: string): string {
-  return id.slice(0, 2).toLowerCase();
-}
-
-/** Label do grupo shortened (editable no map; fallback = próprio prefixo). */
-export function shortenedLabel(shortened: string): string {
-  return SHORTENED_LOCATION[shortened] ?? shortened;
-}
 
 export function resolveEntryLabel(kind: EntryKind, id: string): string {
   if (kind === 'objects') {

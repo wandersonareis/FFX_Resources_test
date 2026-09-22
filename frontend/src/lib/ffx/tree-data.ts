@@ -15,7 +15,12 @@ export interface EntryRow {
   label: string;
 }
 
-export const ENTRY_KINDS: EntryKind[] = ['events', 'objects', 'macro'];
+// Kinds servidos por versão na sidebar. lastmiss é expansão do ffx2 e não tem
+// dicionário próprio → sem 'macro' (a aba não mostra "Dicionário").
+export function entryKindsFor(version: GameVersionId): EntryKind[] {
+  if (version === 'lastmiss') return ['events', 'objects'];
+  return ['events', 'objects', 'macro'];
+}
 
 /**
  * Fluxo novo (DTO): o backend envia o sumário canônico (id + key) e o DTO

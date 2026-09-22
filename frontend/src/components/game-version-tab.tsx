@@ -9,9 +9,10 @@ import {
 import { ChevronDown, ChevronRight, FileText, RefreshCw, Save } from 'lucide-react';
 import { dto } from '@/wailsjs/go/models';
 import { ListLanguages, SetUnsavedEdits } from '@/wailsjs/go/main/App';
-import { KIND_LABELS, EntryKind, shortenedOf, shortenedLabel } from '@/lib/ffx/display-names';
+import { KIND_LABELS, EntryKind } from '@/lib/ffx/display-names';
+import { eventGroupLabel, shortenedOf } from '@/lib/ffx/event-group-names';
 import type { GameVersionId } from '@/lib/ffx/game-version';
-import { ENTRY_KINDS, EntryRow, loadEntry, loadKindEntries } from '@/lib/ffx/tree-data';
+import { EntryRow, entryKindsFor, loadEntry, loadKindEntries } from '@/lib/ffx/tree-data';
 import { useEditDraft } from '@/lib/ffx/edit-draft';
 import { sendErrorNotification } from '@/lib/ffx/error-handler';
 import { SOURCE_LANG, saveAllDrafts } from '@/lib/ffx/save-all';
@@ -102,7 +103,7 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
         const shortKind = 'events' as EntryKind;
         nodes.push({
           id: `group:events:${short}`,
-          label: `${shortenedLabel(short)} (${files.length})`,
+          label: `${eventGroupLabel(version, short)} (${files.length})`,
           kind: shortKind,
           children: files.map((entry) => ({
             id: `leaf:events:${entry.id}`,
@@ -114,7 +115,7 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
       }
       return nodes;
     },
-    []
+    [version]
   );
 
   const reload = useCallback(async () => {
@@ -122,7 +123,7 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
     try {
       const nextRoots: SideNode[] = [];
       const nextExpanded = new Set<string>();
-      for (const kind of ENTRY_KINDS) {
+      for (const kind of entryKindsFor(version)) {
         const entries = await loadKindEntries(kind, version);
         nextRoots.push({
           id: `kind:${kind}`,
