@@ -63,6 +63,16 @@ export const OBJECTS_LABELS: Record<string, string> = {
  */
 export const SHORTENED_LOCATION: Record<string, string> = {};
 
+/** Shortened do eventID: azit0000 → "az". */
+export function shortenedOf(id: string): string {
+  return id.slice(0, 2).toLowerCase();
+}
+
+/** Label do grupo shortened (editable no map; fallback = próprio prefixo). */
+export function shortenedLabel(shortened: string): string {
+  return SHORTENED_LOCATION[shortened] ?? shortened;
+}
+
 export function resolveEntryLabel(kind: EntryKind, id: string): string {
   if (kind === 'objects') {
     return OBJECTS_LABELS[id] ?? id;
@@ -72,8 +82,5 @@ export function resolveEntryLabel(kind: EntryKind, id: string): string {
     if (m) return `Bloco ${m[1]}`;
     return id;
   }
-  // events: id é o eventID; prefixo shortened pode virar nome do local.
-  const shortened = id.slice(0, 2).toLowerCase();
-  const location = SHORTENED_LOCATION[shortened];
-  return location ? `${location} (${id})` : id;
+  return id;
 }

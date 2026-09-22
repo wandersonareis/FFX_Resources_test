@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -20,6 +21,10 @@ type App struct {
 	noticationService services.INotificationService
 
 	MetadataService *services.MetadataService
+
+	ctx          context.Context
+	unsavedMu    sync.Mutex
+	unsavedEdits bool
 }
 
 // NewApp creates a new App application struct
@@ -44,6 +49,8 @@ func (a *App) startup(ctx context.Context) {
 
 	// Initialize services
 	a.initServices(ctx)
+
+	a.ctx = ctx
 
 	interactions.NewInteractionWithCtx(ctx)
 	interactions.NewInteractionWithTextFormatter(formatters.NewTxtFormatter())
@@ -72,17 +79,56 @@ func (a App) domReady(ctx context.Context) {
 func (a *App) beforeClose(ctx context.Context) (prevent bool) {
 	interactions.NewInteractionService().FFXAppConfig().ToJson()
 
-	answer, err := runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
-		Type:    runtime.QuestionDialog,
-		Title:   "Quit?",
-		Message: "Are you sure you want to quit?",
-	})
-	if err != nil {
+	if !a.hasUnsavedEdits() {
 		return false
 	}
 
-	fmt.Println("Answer:", answer)
-	return answer != "Yes"
+	// Há edições não salvas: o texto mora no frontend, então "Salvar" emite
+	// o evento SaveRequested (o frontend salva e chama QuitApp para fechar).
+	answer, err := runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
+		Type:    runtime.QuestionDialog,
+		Title:   "Alterações não salvas",
+		Message: "Há textos editados não salvos. Deseja salvar antes de fechar?",
+		Buttons: []string{"&Salvar", "&Descartar", "&Cancelar"},
+	})
+	if err != nil {
+		return true
+	}
+
+	fmt.Println("Close answer:", answer)
+	switch answer {
+	case "Salvar":
+		runtime.EventsEmit(ctx, "SaveRequested")
+		return true
+	case "Descartar":
+		a.SetUnsavedEdits(false)
+		return false
+	default:
+		return true
+	}
+}
+
+// hasUnsavedEdits consulta a flag de edições pendentes (thread-safe).
+func (a *App) hasUnsavedEdits() bool {
+	a.unsavedMu.Lock()
+	defer a.unsavedMu.Unlock()
+	return a.unsavedEdits
+}
+
+// SetUnsavedEdits recebe do frontend o estado de edições não salvas.
+func (a *App) SetUnsavedEdits(dirty bool) {
+	a.unsavedMu.Lock()
+	a.unsavedEdits = dirty
+	a.unsavedMu.Unlock()
+}
+
+// QuitApp encerra a aplicação (usado após salvar no fluxo SaveRequested).
+func (a *App) QuitApp() {
+	if a.ctx != nil {
+		runtime.Quit(a.ctx)
+		return
+	}
+	runtime.Quit(interactions.NewInteractionService().Ctx)
 }
 
 // shutdown is called at application termination
@@ -168,12 +214,14 @@ func (a *App) ImportEntry(kind, id string, version common.GameVersion) ([]string
 	return a.MetadataService.ImportEntry(kind, version, id)
 }
 
-// ApplyEntry aplica uma entrada editada (DTO) de volta no binário e persiste.
-func (a *App) ApplyEntry(kind, id string, version common.GameVersion, entry dto.FileEntry) error {
+// ApplyTextCollection aplica um lote de entradas editadas (DTO) de volta no
+// binário e persiste: é o "Salvar" do editor (todas as edições, não só a
+// entrada aberta).
+func (a *App) ApplyTextCollection(kind string, version common.GameVersion, c dto.Collection) error {
 	if a.MetadataService == nil {
 		return fmt.Errorf("metadata service not initialized")
 	}
-	return a.MetadataService.ApplyEntry(kind, version, id, entry)
+	return a.MetadataService.ApplyTextCollection(kind, version, c)
 }
 
 // ListTextEntries devolve o índice leve (id + key, sem rows) para montar

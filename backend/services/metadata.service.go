@@ -346,6 +346,95 @@ func (s *MetadataService) ApplyEntry(kind string, version common.GameVersion, id
 	}
 }
 
+// macroChunkHasText informa se alguma row do chunk tem texto em algum idioma.
+func macroChunkHasText(entry dto.FileEntry) bool {
+	for _, row := range entry.Rows {
+		for _, text := range row.Text {
+			if strings.TrimSpace(text) != "" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// ApplyTextCollection aplica um lote de entradas editadas (DTO) e persiste.
+// É o "salvar" do editor do frontend: recebe só as entradas com edição, mas
+// agrupa por arquivo para reconstruir cada binário uma única vez.
+func (s *MetadataService) ApplyTextCollection(kind string, version common.GameVersion, c dto.Collection) error {
+	kind = strings.ToLower(strings.TrimSpace(kind))
+	if len(c) == 0 {
+		return nil
+	}
+	if err := ensureVersionReady(version); err != nil {
+		return err
+	}
+
+	switch kind {
+	case KindEvents:
+		if err := ensureEventsLoaded(version); err != nil {
+			return err
+		}
+		ids := make([]string, 0, len(c))
+		for _, id := range c.SortedKeys() {
+			ids = append(ids, id)
+		}
+		return builders.ApplyEventsDTO(version, c, ids)
+
+	case KindObjects:
+		// Aplica as rows de todas as entradas antes de salvar cada binário:
+		// entradas repetidas (mesmo arquivo) recebem todas as suas rows.
+		byKey := make(map[string][]dto.FileEntry, len(c))
+		order := make([]string, 0, len(c))
+		for _, id := range c.SortedKeys() {
+			key, ok := objectKeyForID(version, id)
+			if !ok {
+				return fmt.Errorf("unknown object id: %s", id)
+			}
+			if _, seen := byKey[key]; !seen {
+				order = append(order, key)
+			}
+			byKey[key] = append(byKey[key], c[id])
+		}
+		for _, key := range order {
+			layout, ok := objectsfile.FileLayouts[key]
+			if !ok {
+				layout, ok = objectsfile.FileLayoutFor(version, key)
+				if !ok {
+					return fmt.Errorf("no object layout for key: %s", key)
+				}
+			}
+			binFile, err := objectsfile.LoadObjectFileFromStoreByLayout(layout)
+			if err != nil {
+				return err
+			}
+			for _, entry := range byKey[key] {
+				if err := builders.ApplyObjectsEntry(binFile.GetObjects(), version, key, entry); err != nil {
+					return err
+				}
+			}
+			if err := binFile.SaveToBinary(layout.PatternPath()); err != nil {
+				return err
+			}
+		}
+		return nil
+
+	case KindMacro:
+		// Aplica sobre o DTO completo para não perder os outros chunks.
+		full, err := builders.BuildMacroDTO(version)
+		if err != nil {
+			return err
+		}
+		for id, entry := range c {
+			full[id] = entry
+		}
+		return builders.ApplyMacroDTO(version, full)
+
+	default:
+		return fmt.Errorf("unknown kind: %s", kind)
+	}
+}
+
 // applyObjectsEntry carrega o binário do layout, aplica a entrada e salva.
 func (s *MetadataService) applyObjectsEntry(version common.GameVersion, id string, entry dto.FileEntry) error {
 	key, ok := objectKeyForID(version, id)
@@ -411,6 +500,10 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 		}
 		out := make([]EntrySummary, 0, len(c))
 		for _, k := range c.SortedKeys() {
+			if !macroChunkHasText(c[k]) {
+				// Chunk sem texto: não interessa ao tradutor; oculto no frontend.
+				continue
+			}
 			out = append(out, EntrySummary{ID: k, Key: c[k].Metadata.Key})
 		}
 		return out, nil

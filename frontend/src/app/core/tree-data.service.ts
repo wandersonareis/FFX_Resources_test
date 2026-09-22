@@ -1,6 +1,5 @@
 import { Injectable, inject } from '@angular/core';
 import {
-  ApplyEntry,
   ExportEntry,
   GetTextEntry,
   ImportEntry,
@@ -81,21 +80,6 @@ export class TreeDataService {
       kind,
       id,
       version as unknown as Parameters<typeof ImportEntry>[2]
-    );
-  }
-
-  /** Aplica uma entrada editada (DTO) de volta no binário. */
-  async applyEntry(
-    kind: EntryKind,
-    id: string,
-    version: GameVersionId,
-    entry: dto.FileEntry
-  ): Promise<void> {
-    return ApplyEntry(
-      kind,
-      id,
-      version as unknown as Parameters<typeof ApplyEntry>[2],
-      entry
     );
   }
 }

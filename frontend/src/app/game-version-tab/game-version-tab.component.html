@@ -34,94 +34,53 @@
 
   <mat-sidenav-content class="tab-content">
     <div class="content-header">
-      <h3>{{ kindLabel() }}</h3>
-      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filter-field">
-        <mat-label>Filtrar</mat-label>
-        <input matInput (keyup)="applyFilter($event)" placeholder="Nome ou id" />
-        <i-lucide matSuffix name="search" [size]="20"></i-lucide>
-      </mat-form-field>
+      <h3>{{ kindLabel() }}@if (selectedEntry(); as entry) {
+        <span class="selected-file"> · {{ entry.label }}</span>
+      }</h3>
+      <button
+        mat-flat-button
+        color="primary"
+        [disabled]="!drafts.hasDirty() || saving()"
+        (click)="saveAll()"
+      >
+        <i-lucide name="save" [size]="18"></i-lucide>
+        {{ saving() ? 'Salvando…' : 'Salvar' }}
+      </button>
     </div>
 
-    <table mat-table [dataSource]="tableSource" class="entries-table">
-      <ng-container matColumnDef="label">
-        <th mat-header-cell *matHeaderCellDef>Nome</th>
-        <td mat-cell *matCellDef="let row">{{ row.label }}</td>
-      </ng-container>
-      <ng-container matColumnDef="id">
-        <th mat-header-cell *matHeaderCellDef>ID</th>
-        <td mat-cell *matCellDef="let row">{{ row.id }}</td>
-      </ng-container>
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef>Ações</th>
-        <td mat-cell *matCellDef="let row">
-          <button mat-icon-button [matMenuTriggerFor]="rowMenu" [matMenuTriggerData]="{ row }" aria-label="Ações">
-            <i-lucide name="ellipsis-vertical" [size]="20"></i-lucide>
-          </button>
-        </td>
-      </ng-container>
-      <tr mat-header-row *matHeaderRowDef="tableColumns"></tr>
-      <tr
-        mat-row
-        *matRowDef="let row; columns: tableColumns"
-        (click)="selectEntry(row)"
-        [class.selected-row]="selectedEntry()?.id === row.id"
-      ></tr>
-    </table>
-
     @if (selectedEntry(); as entry) {
-      <div class="detail-panel">
-        <div class="detail-header">
-          <h4>{{ entry.label }}</h4>
-          <div class="detail-actions">
-            <button mat-stroked-button (click)="viewEntry(entry)">
-              <i-lucide name="eye" [size]="18"></i-lucide> Ver / Editar
-            </button>
-            <button mat-stroked-button (click)="extractEntry(entry)">
-              <i-lucide name="download" [size]="18"></i-lucide> Extrair
-            </button>
-            <button mat-stroked-button (click)="importEntry(entry)">
-              <i-lucide name="upload" [size]="18"></i-lucide> Importar
-            </button>
-          </div>
-        </div>
-        @if (fileEntry(); as detail) {
-          <p class="detail-meta">
-            Key: {{ detail.metadata.key }} · Linhas: {{ detail.rows.length }}
-          </p>
-          <table mat-table [dataSource]="detail.rows" class="rows-table">
-            <ng-container matColumnDef="index">
-              <th mat-header-cell *matHeaderCellDef>#</th>
-              <td mat-cell *matCellDef="let r">{{ r.index }}</td>
-            </ng-container>
-            <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef>Nome</th>
-              <td mat-cell *matCellDef="let r">{{ r.name }}</td>
-            </ng-container>
-            <ng-container matColumnDef="text">
-              <th mat-header-cell *matHeaderCellDef>Texto</th>
-              <td mat-cell *matCellDef="let r">{{ firstText(r) }}</td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="['index', 'name', 'text']"></tr>
-            <tr mat-row *matRowDef="let r; columns: ['index', 'name', 'text']"></tr>
-          </table>
-        } @else if (loading()) {
-          <p>Carregando…</p>
-        }
-      </div>
+      <table mat-table [dataSource]="tableSource" class="text-table">
+        <ng-container matColumnDef="index">
+          <th mat-header-cell *matHeaderCellDef class="col-index">#</th>
+          <td mat-cell *matCellDef="let row" class="col-index">{{ row.index }}</td>
+        </ng-container>
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>Nome</th>
+          <td mat-cell *matCellDef="let row">{{ row.name }}</td>
+        </ng-container>
+        <ng-container matColumnDef="original">
+          <th mat-header-cell *matHeaderCellDef>Original</th>
+          <td mat-cell *matCellDef="let row" class="text-cell">{{ original(row) }}</td>
+        </ng-container>
+        <ng-container matColumnDef="translated">
+          <th mat-header-cell *matHeaderCellDef>Traduzido</th>
+          <td
+            mat-cell
+            *matCellDef="let row"
+            class="text-cell translated-cell"
+            [class.edited]="isEdited(row)"
+            (click)="openTranslation(row)"
+          >
+            {{ translatedOf(row) }}
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns()"></tr>
+      </table>
+    } @else if (loading()) {
+      <p class="empty-state">Carregando…</p>
+    } @else {
+      <p class="empty-state">Selecione um arquivo no sidebar.</p>
     }
   </mat-sidenav-content>
 </mat-sidenav-container>
-
-<mat-menu #rowMenu="matMenu">
-  <ng-template matMenuContent let-row="row">
-    <button mat-menu-item (click)="selectEntry(row); viewEntry(row)">
-      <i-lucide name="eye" [size]="18"></i-lucide> Ver / Editar
-    </button>
-    <button mat-menu-item (click)="extractEntry(row)">
-      <i-lucide name="download" [size]="18"></i-lucide> Extrair
-    </button>
-    <button mat-menu-item (click)="importEntry(row)">
-      <i-lucide name="upload" [size]="18"></i-lucide> Importar
-    </button>
-  </ng-template>
-</mat-menu>

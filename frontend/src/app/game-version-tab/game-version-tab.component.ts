@@ -3,16 +3,13 @@ import {
   Component,
   OnInit,
   computed,
+  effect,
   inject,
   input,
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatMenuModule } from '@angular/material/menu';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
@@ -21,47 +18,58 @@ import { NestedTreeControl } from '@angular/cdk/tree';
 import {
   ChevronDown,
   ChevronRight,
-  Download,
-  EllipsisVertical,
-  Eye,
   FileText,
   LUCIDE_ICONS,
   LucideAngularModule,
   LucideIconProvider,
   RefreshCw,
-  Search,
-  Upload,
+  Save,
 } from 'lucide-angular';
 import { firstValueFrom } from 'rxjs';
+import {
+  ApplyTextCollection,
+  ListLanguages,
+  QuitApp,
+  SetUnsavedEdits,
+} from '../../../wailsjs/go/main/App';
 import { EventsOn } from '../../../wailsjs/runtime/runtime';
 import { dto } from '../../../wailsjs/go/models';
 import { ErrorHandlerService } from '../../service/error-handler.service';
+import { EditDraftService } from '../core/edit-draft.service';
 import { DisplayLabelService } from '../core/display-label.service';
 import { ENTRY_KINDS, EntryRow, TreeDataService } from '../core/tree-data.service';
 import { GameVersionId } from '../core/game-version.service';
-import { EntryKind } from '../core/display-names';
-import { EntryRowsEditorDialogComponent } from '../editor/entry-rows-editor-dialog/entry-rows-editor-dialog.component';
+import {
+  EntryKind,
+  shortenedLabel,
+  shortenedOf,
+} from '../core/display-names';
+import {
+  SOURCE_LANG,
+  TranslationCellDialogComponent,
+} from '../editor/translation-cell-dialog/translation-cell-dialog.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
-interface TreeListNode {
+interface SideNode {
   label: string;
   kind?: EntryKind;
   entry?: EntryRow;
-  children?: TreeListNode[];
+  children?: SideNode[];
 }
+
+const KIND_COLUMNS: Record<EntryKind, string[]> = {
+  events: ['index', 'original', 'translated'],
+  objects: ['index', 'name', 'original', 'translated'],
+  macro: ['index', 'original', 'translated'],
+};
 
 @Component({
   selector: 'app-game-version-tab',
   standalone: true,
   imports: [
-    CommonModule,
-    FormsModule,
     MatButtonModule,
     MatDialogModule,
-    MatFormFieldModule,
     LucideAngularModule,
-    MatInputModule,
-    MatMenuModule,
     MatSidenavModule,
     MatSnackBarModule,
     MatTableModule,
@@ -76,13 +84,9 @@ interface TreeListNode {
       useValue: new LucideIconProvider({
         ChevronDown,
         ChevronRight,
-        Download,
-        EllipsisVertical,
-        Eye,
         FileText,
         RefreshCw,
-        Search,
-        Upload,
+        Save,
       }),
     },
   ],
@@ -93,66 +97,66 @@ export class GameVersionTabComponent implements OnInit {
 
   private readonly treeData = inject(TreeDataService);
   private readonly labels = inject(DisplayLabelService);
+  protected readonly drafts = inject(EditDraftService);
   private readonly errors = inject(ErrorHandlerService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
 
-  protected readonly treeControl = new NestedTreeControl<TreeListNode>(
+  protected readonly treeControl = new NestedTreeControl<SideNode>(
     (node) => node.children ?? []
   );
-  protected readonly treeSource = new MatTreeNestedDataSource<TreeListNode>();
-  protected readonly tableSource = new MatTableDataSource<EntryRow>([]);
-  protected readonly tableColumns = ['label', 'id', 'actions'];
+  protected readonly treeSource = new MatTreeNestedDataSource<SideNode>();
+  protected readonly tableSource = new MatTableDataSource<dto.TextRow>([]);
 
   protected readonly activeKind = signal<EntryKind>('events');
   protected readonly selectedEntry = signal<EntryRow | null>(null);
-  protected readonly fileEntry = signal<dto.FileEntry | null>(null);
   protected readonly loading = signal(false);
+  protected readonly saving = signal(false);
+
+  private currentRows: dto.TextRow[] = [];
 
   protected readonly kindLabel = computed(() =>
     this.labels.kindLabel(this.activeKind())
   );
 
-  hasChild = (_: number, node: TreeListNode): boolean =>
+  protected readonly displayedColumns = computed(() =>
+    KIND_COLUMNS[this.activeKind()]
+  );
+
+  hasChild = (_: number, node: SideNode): boolean =>
     !!node.children && node.children.length > 0;
 
-  async ngOnInit(): Promise<void> {
-    this.tableSource.filterPredicate = (row, filter) =>
-      row.label.toLowerCase().includes(filter) ||
-      row.id.toLowerCase().includes(filter);
-    await this.reload();
-    EventsOn('Refresh_Tree', async () => {
-      await this.reload();
+  constructor() {
+    effect(() => {
+      void SetUnsavedEdits(this.drafts.hasDirty());
     });
   }
 
-  protected applyFilter(event: Event): void {
-    const value = (event.target as HTMLInputElement).value ?? '';
-    this.tableSource.filter = value.trim().toLowerCase();
+  async ngOnInit(): Promise<void> {
+    void this.loadLanguages();
+    await this.reload();
+    EventsOn('SaveRequested', async () => {
+      await this.saveAll();
+      await QuitApp();
+    });
   }
 
   protected async reload(): Promise<void> {
     this.loading.set(true);
     try {
       const version = this.version();
-      const roots: TreeListNode[] = [];
-      const active: EntryRow[] = [];
+      const roots: SideNode[] = [];
       for (const kind of ENTRY_KINDS) {
         const entries = await this.treeData.loadKindEntries(kind, version);
         roots.push({
           label: `${this.labels.kindLabel(kind)} (${entries.length})`,
           kind,
-          children: entries.map((entry) => ({
-            label: entry.label,
-            kind,
-            entry,
-          })),
+          children: kind === 'events' ? this.eventGroups(entries) : this.leaves(entries),
         });
-        if (kind === this.activeKind()) active.push(...entries);
       }
       this.treeSource.data = roots;
-      this.tableSource.data = active;
       this.treeControl.expandAll();
+      await this.reselect();
     } catch (error) {
       this.errors.sendErrorNotification(error);
     } finally {
@@ -160,93 +164,155 @@ export class GameVersionTabComponent implements OnInit {
     }
   }
 
-  protected async selectNode(node: TreeListNode): Promise<void> {
+  private eventGroups(entries: EntryRow[]): SideNode[] {
+    const groups = new Map<string, EntryRow[]>();
+    for (const entry of entries) {
+      const short = shortenedOf(entry.id);
+      const list = groups.get(short) ?? [];
+      list.push(entry);
+      groups.set(short, list);
+    }
+    const nodes: SideNode[] = [];
+    for (const short of [...groups.keys()].sort()) {
+      const files = groups.get(short) ?? [];
+      nodes.push({
+        label: `${shortenedLabel(short)} (${files.length})`,
+        kind: 'events',
+        children: this.leaves(files),
+      });
+    }
+    return nodes;
+  }
+
+  private leaves(entries: EntryRow[]): SideNode[] {
+    return entries.map((entry) => ({
+      label: entry.label,
+      kind: entry.kind,
+      entry,
+    }));
+  }
+
+  /** Mantém a seleção atual após um reload, se o arquivo ainda existir. */
+  private async reselect(): Promise<void> {
+    const current = this.selectedEntry();
+    if (!current) return;
+    const entries = await this.treeData.loadKindEntries(current.kind, this.version());
+    const found = entries.find((e) => e.id === current.id);
+    if (!found) {
+      this.selectedEntry.set(null);
+      this.tableSource.data = [];
+      this.currentRows = [];
+      return;
+    }
+    await this.selectEntry(found);
+  }
+
+  protected async selectNode(node: SideNode): Promise<void> {
     if (node.entry && node.kind) {
-      this.activeKind.set(node.kind);
       await this.selectEntry(node.entry);
     } else if (node.kind) {
       this.activeKind.set(node.kind);
-      this.selectedEntry.set(null);
-      this.fileEntry.set(null);
-      await this.reloadTableOnly();
     }
   }
 
   protected async selectEntry(entry: EntryRow): Promise<void> {
-    this.selectedEntry.set(entry);
     this.loading.set(true);
     try {
-      this.fileEntry.set(await this.treeData.loadEntry(entry.kind, entry.id, this.version()));
-    } catch (error) {
-      this.errors.sendErrorNotification(error);
-      this.fileEntry.set(null);
-    } finally {
-      this.loading.set(false);
-    }
-  }
-
-  private async reloadTableOnly(): Promise<void> {
-    try {
-      this.tableSource.data = await this.treeData.loadKindEntries(
-        this.activeKind(),
-        this.version()
-      );
-    } catch (error) {
-      this.errors.sendErrorNotification(error);
-    }
-  }
-
-  protected firstText(row: dto.TextRow): string {
-    const values = Object.values(row.text ?? {});
-    return values.length > 0 ? String(values[0]) : '';
-  }
-
-  protected async viewEntry(entry: EntryRow): Promise<void> {
-    this.loading.set(true);
-    try {
+      this.activeKind.set(entry.kind);
+      this.selectedEntry.set(entry);
       const full = await this.treeData.loadEntry(entry.kind, entry.id, this.version());
-      const ref = this.dialog.open(EntryRowsEditorDialogComponent, {
-        width: '90vw',
-        maxWidth: '1100px',
-        data: { title: entry.label, entry: full },
-      });
-      const saved: dto.FileEntry | undefined = await firstValueFrom(ref.afterClosed());
-      if (saved !== undefined) {
-        await this.treeData.applyEntry(entry.kind, entry.id, this.version(), saved);
-        this.snackBar.open('Alterações aplicadas.', 'Fechar', { duration: 3000 });
-        await this.selectEntry(entry);
-      }
+      this.drafts.setBase(this.version(), entry.kind, entry.id, full);
+      this.currentRows = full.rows ?? [];
+      this.tableSource.data = [...this.currentRows];
     } catch (error) {
       this.errors.sendErrorNotification(error);
+      this.selectedEntry.set(null);
+      this.currentRows = [];
+      this.tableSource.data = [];
     } finally {
       this.loading.set(false);
     }
   }
 
-  protected async extractEntry(entry: EntryRow): Promise<void> {
+  protected original(row: dto.TextRow): string {
+    return row.text?.[SOURCE_LANG] ?? '';
+  }
+
+  protected translatedOf(row: dto.TextRow): string {
+    const entry = this.selectedEntry();
+    if (!entry) return this.original(row);
+    const edited = this.drafts.editOf(
+      this.version(),
+      entry.kind,
+      entry.id,
+      row,
+      SOURCE_LANG
+    );
+    return edited ?? this.original(row);
+  }
+
+  protected isEdited(row: dto.TextRow): boolean {
+    const entry = this.selectedEntry();
+    if (!entry) return false;
+    return (
+      this.drafts.editOf(this.version(), entry.kind, entry.id, row, SOURCE_LANG) !==
+      undefined
+    );
+  }
+
+  protected async openTranslation(row: dto.TextRow): Promise<void> {
+    const entry = this.selectedEntry();
+    if (!entry) return;
+    const ref = this.dialog.open(TranslationCellDialogComponent, {
+      width: '720px',
+      maxWidth: '90vw',
+      data: { row, languages: this.languages },
+    });
+    const value: string | undefined = await firstValueFrom(ref.afterClosed());
+    if (value === undefined) return;
+    this.drafts.setCell(
+      this.version(),
+      entry.kind,
+      entry.id,
+      row,
+      SOURCE_LANG,
+      value
+    );
+    this.tableSource.data = [...this.currentRows];
+  }
+
+  protected async saveAll(): Promise<void> {
+    if (!this.drafts.hasDirty() || this.saving()) return;
+    this.saving.set(true);
     try {
-      const paths = await this.treeData.exportEntry(entry.kind, entry.id, this.version());
-      this.snackBar.open(
-        `Exportado (JSON + strings): ${paths.length} arquivo(s).`,
-        'Fechar',
-        { duration: 5000 }
-      );
+      for (const [version, byKind] of this.drafts.dirtyBatches()) {
+        for (const kind of byKind.keys()) {
+          const collection = this.drafts.buildCollection(version, kind);
+          if (Object.keys(collection).length === 0) continue;
+          await ApplyTextCollection(
+            kind,
+            version as unknown as Parameters<typeof ApplyTextCollection>[1],
+            collection as unknown as Parameters<typeof ApplyTextCollection>[2]
+          );
+        }
+      }
+      this.drafts.clearAll();
+      this.snackBar.open('Alterações salvas no jogo.', 'Fechar', { duration: 3000 });
+      await this.reselect();
     } catch (error) {
       this.errors.sendErrorNotification(error);
+    } finally {
+      this.saving.set(false);
     }
   }
 
-  protected async importEntry(entry: EntryRow): Promise<void> {
+  private async loadLanguages(): Promise<void> {
     try {
-      const paths = await this.treeData.importEntry(entry.kind, entry.id, this.version());
-      this.snackBar.open(
-        `Importado de: ${paths.join(', ')}`,
-        'Fechar',
-        { duration: 5000 }
-      );
-      await this.selectEntry(entry);
-    } catch (error) {
-      this.errors.sendErrorNotification(error);
+      this.languages = (await ListLanguages()) ?? [];
+    } catch {
+      this.languages = [{ code: SOURCE_LANG, name: 'English' }];
     }
   }
+
+  private languages: Array<{ code: string; name: string }> = [];
 }

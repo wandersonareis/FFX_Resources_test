@@ -4,7 +4,7 @@ import {common} from '../models';
 import {dto} from '../models';
 import {services} from '../models';
 
-export function ApplyEntry(arg1:string,arg2:string,arg3:common.GameVersion,arg4:dto.FileEntry):Promise<void>;
+export function ApplyTextCollection(arg1:string,arg2:common.GameVersion,arg3:dto.Collection):Promise<void>;
 
 export function ExportEntry(arg1:string,arg2:string,arg3:common.GameVersion,arg4:Array<string>):Promise<Array<string>>;
 
@@ -26,8 +26,12 @@ export function ListLanguages():Promise<Array<common.Language>>;
 
 export function ListTextEntries(arg1:string,arg2:common.GameVersion):Promise<Array<services.EntrySummary>>;
 
+export function QuitApp():Promise<void>;
+
 export function ReadFileAsString(arg1:string):Promise<string>;
 
 export function SelectDirectory(arg1:string):Promise<string>;
+
+export function SetUnsavedEdits(arg1:boolean):Promise<void>;
 
 export function WriteTextFile(arg1:string,arg2:string):Promise<void>;
