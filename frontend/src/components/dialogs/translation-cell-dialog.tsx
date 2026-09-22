@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { GameTextEditor } from '@/components/editor/game-text-editor';
+import { GameTextView } from '@/components/game-text-view';
 
 export interface TranslationCellDialogProps {
   open: boolean;
@@ -65,9 +66,11 @@ export function TranslationCellDialog({
                   <span className="text-xs font-semibold opacity-75">
                     {lang.name} ({lang.code})
                   </span>
-                  <p className="mt-0.5 whitespace-pre-wrap">
-                    {row?.text?.[lang.code] ?? '—'}
-                  </p>
+                  <GameTextView
+                    className="mt-0.5"
+                    text={row?.text?.[lang.code]}
+                    fallback="—"
+                  />
                 </div>
               ))
             )}

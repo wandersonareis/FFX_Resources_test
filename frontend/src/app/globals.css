@@ -192,7 +192,15 @@
   margin: 0 0 0.5rem;
 }
 
-.editor-content .game-tag-chip {
+.game-text-view p {
+  margin: 0 0 0.25rem;
+}
+
+.game-text-view p:last-child {
+  margin-bottom: 0;
+}
+
+.game-tag-chip {
   display: inline-block;
   padding: 0 0.45rem;
   margin: 0 0.1rem;
@@ -206,7 +214,7 @@
   vertical-align: baseline;
 }
 
-.editor-content .game-tag-chip.locked {
+.game-tag-chip.locked {
   background: rgba(120, 120, 120, 0.22);
   border-style: dashed;
   cursor: not-allowed;

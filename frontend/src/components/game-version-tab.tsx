@@ -17,6 +17,7 @@ import { useEditDraft } from '@/lib/ffx/edit-draft';
 import { sendErrorNotification } from '@/lib/ffx/error-handler';
 import { SOURCE_LANG, saveAllDrafts } from '@/lib/ffx/save-all';
 import { Button } from '@/components/ui/button';
+import { GameTextView } from '@/components/game-text-view';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Table,
@@ -209,6 +210,7 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
         columnHelper.accessor((row) => row.text?.[SOURCE_LANG] ?? '', {
           id: 'original',
           header: 'Original',
+          cell: (info) => <GameTextView text={info.getValue()} />,
         }),
         columnHelper.accessor(
           (row) => {
@@ -236,7 +238,7 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
                     setDialogOpen(true);
                   }}
                 >
-                  {info.getValue()}
+                  <GameTextView text={info.getValue()} />
                 </div>
               );
             },
