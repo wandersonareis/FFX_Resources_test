@@ -1,11 +1,11 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
   "name": "FFX Resources",
-  "outputfilename": "FFX Resources",
-  "frontend:build": "bunx ng build",
-  "frontend:install": "bun install",
-  "frontend:dev:watcher": "bunx ng serve",
-  "frontend:dev:serverUrl": "http://localhost:4200",
+  "outputfilename": "ffx-resources",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
   "author": {
     "name": "Wanderson A. dos Reis",
     "email": "wandersonfrost8@hotmail.com"
