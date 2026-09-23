@@ -340,7 +340,7 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
 
   return (
     <div className="flex h-full min-h-0 border-t">
-      <aside className="w-80 shrink-0 border-r p-2 flex flex-col min-h-0">
+      <aside className="w-70 shrink-0 border-r p-2 flex flex-col min-h-0">
         <div className="flex items-center justify-between font-semibold px-2 py-1">
           <span>Conteúdo</span>
           <Button variant="ghost" size="icon" onClick={() => void reload()} aria-label="Recarregar">
