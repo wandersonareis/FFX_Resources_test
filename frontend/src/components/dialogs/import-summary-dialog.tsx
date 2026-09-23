@@ -57,8 +57,7 @@ export function ImportSummaryDialog({
           <DialogTitle>Importar textos</DialogTitle>
           <DialogDescription>
             Confira o resumo antes de aplicar. Somente o texto em inglês
-            (&quot;us&quot;) é importado; os outros idiomas ficam como estão na
-            store. O formato não aceita entradas novas.
+            (&quot;us&quot;) é importado; o formato não aceita entradas novas.
           </DialogDescription>
         </DialogHeader>
 
@@ -131,7 +130,7 @@ export function ImportSummaryDialog({
 
             {usages.length > 0 ? (
               <div className="space-y-2">
-                <p className="text-sm font-medium">Limite binário (uint16)</p>
+                <p className="text-sm font-medium">Limite binário</p>
                 {usages.map((usage, i) => {
                   const pct = Math.min(
                     100,
