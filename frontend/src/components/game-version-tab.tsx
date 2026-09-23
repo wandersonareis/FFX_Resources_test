@@ -1,6 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { toast } from 'sonner';
 import {
   createColumnHelper,
@@ -82,6 +88,13 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
   const [ctxNode, setCtxNode] = useState<{ id: string; kind: EntryKind } | null>(
     null
   );
+  // Navegação por teclado: linha focada na tabela (refs p/ mover o foco).
+  const [focusedRowId, setFocusedRowId] = useState<string | null>(null);
+  const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
+  // Container da árvore, para ordenar os nós visíveis no foco por setas.
+  const treeRef = useRef<HTMLDivElement>(null);
+  // ArrowRight na folha: após carregar o arquivo, foca a 1ª linha da tabela.
+  const pendingTableFocusRef = useRef(false);
 
   const hasDirty = snapshot.hasDirty;
 
@@ -238,6 +251,85 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
     });
   };
 
+  // ---- Teclado: sidebar — ↑/↓ movem o foco entre nós visíveis; Enter
+  // alterna expandir/fechar (grupo/raiz) ou abre o arquivo na tabela (folha).
+  const onNodeKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLElement>, node: SideNode) => {
+      const buttons = Array.from(
+        treeRef.current?.querySelectorAll<HTMLElement>('[data-node-button]') ??
+          []
+      );
+      const idx = buttons.indexOf(event.currentTarget);
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        buttons[idx + 1]?.focus();
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        buttons[idx - 1]?.focus();
+      } else if (event.key === 'Enter') {
+        event.preventDefault();
+        if (node.entry) void selectNode(node);
+        else toggleNode(node);
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        if (node.entry) {
+          // Folha: abre o arquivo e já leva o foco para a tabela (↑/↓ direto).
+          pendingTableFocusRef.current = true;
+          void selectNode(node);
+        } else if (!expanded.has(node.id)) {
+          // Grupo/raiz: expande se colapsado (convenção de treeview).
+          toggleNode(node);
+        }
+      }
+    },
+    [selectNode, expanded]
+  );
+
+  // ArrowRight na folha: quando o arquivo termina de carregar, foca a
+  // primeira linha (apenas focus() no DOM — o destaque vem do onFocus,
+  // evitando setState síncrono dentro do effect).
+  useEffect(() => {
+    if (!pendingTableFocusRef.current || !selectedEntry || rows.length === 0)
+      return;
+    pendingTableFocusRef.current = false;
+    rowRefs.current.get(String(rows[0].index))?.focus();
+  }, [selectedEntry, rows]);
+
+  // ---- Teclado: tabela — ↑/↓ movem o foco entre linhas; Enter abre o
+  // modal do editor da linha focada.
+  const onRowKeyDown = useCallback(
+    (
+      event: React.KeyboardEvent<HTMLTableRowElement>,
+      row: dto.TextRow,
+      rowKey: string
+    ) => {
+      const idx = rows.findIndex((r) => r.index === row.index);
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        const next = rows[idx + 1];
+        if (next) {
+          const key = String(next.index);
+          setFocusedRowId(key);
+          rowRefs.current.get(key)?.focus();
+        }
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        const prev = rows[idx - 1];
+        if (prev) {
+          const key = String(prev.index);
+          setFocusedRowId(key);
+          rowRefs.current.get(key)?.focus();
+        }
+      } else if (event.key === 'Enter') {
+        event.preventDefault();
+        setFocusedRowId(rowKey);
+        setTranslationRow(row);
+        setDialogOpen(true);
+      }
+    },
+    [rows]
+  );
+
   // Checkbox: folha = 1 id; grupo = todos os filhos (uma notificação só).
   const checkNode = useCallback(
     (node: SideNode, checked: boolean) => {
@@ -355,6 +447,7 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
         >
           <ContextMenuTrigger asChild>
             <ScrollArea
+              ref={treeRef}
               className="flex-1 min-h-0"
               onContextMenuCapture={(event) => {
                 const row = (event.target as HTMLElement).closest(
@@ -385,6 +478,7 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
                   onToggle={toggleNode}
                   onSelect={(n) => void selectNode(n)}
                   onCheck={checkNode}
+                  onNodeKeyDown={onNodeKeyDown}
                 />
               ))}
             </ScrollArea>
@@ -429,18 +523,36 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
                 ))}
               </TableHeader>
               <TableBody>
-                {table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getAllCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
-                        className={cell.column.id === 'original' ? 'text-cell' : undefined}
-                      >
-                        <table.FlexRender cell={cell} />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
+                {table.getRowModel().rows.map((tRow) => {
+                  const r = tRow.original;
+                  const rowKey = String(r.index);
+                  return (
+                    <TableRow
+                      key={tRow.id}
+                      ref={(el) => {
+                        if (el) rowRefs.current.set(rowKey, el);
+                        else rowRefs.current.delete(rowKey);
+                      }}
+                      tabIndex={0}
+                      onKeyDown={(event) => onRowKeyDown(event, r, rowKey)}
+                      onFocus={() => setFocusedRowId(rowKey)}
+                      className={
+                        focusedRowId === rowKey
+                          ? 'bg-sky-100 outline outline-sky-400'
+                          : 'outline-none focus-visible:bg-muted/40'
+                      }
+                    >
+                      {tRow.getAllCells().map((cell) => (
+                        <TableCell
+                          key={cell.id}
+                          className={cell.column.id === 'original' ? 'text-cell' : undefined}
+                        >
+                          <table.FlexRender cell={cell} />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -493,6 +605,7 @@ function TreeItem({
   onToggle,
   onSelect,
   onCheck,
+  onNodeKeyDown,
 }: {
   node: SideNode;
   depth: number;
@@ -502,6 +615,7 @@ function TreeItem({
   onToggle: (node: SideNode) => void;
   onSelect: (node: SideNode) => void;
   onCheck: (node: SideNode, checked: boolean) => void;
+  onNodeKeyDown: (event: React.KeyboardEvent<HTMLElement>, node: SideNode) => void;
 }) {
   const hasChildren = !!node.children && node.children.length > 0;
   const isExpanded = expanded.has(node.id);
@@ -532,7 +646,7 @@ function TreeItem({
     <div>
       <div
         style={{ paddingLeft: depth * 16 }}
-        className="flex items-center"
+        className="flex items-center pr-1 pb-1"
         data-node-id={node.id}
         data-node-kind={node.kind}
       >
@@ -540,7 +654,7 @@ function TreeItem({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0"
+            className="size-8 shrink-0"
             onClick={() => onToggle(node)}
             aria-label={`Alternar ${node.label}`}
           >
@@ -560,8 +674,12 @@ function TreeItem({
         <Button
           variant="ghost"
           size="sm"
-          className={`w-full justify-start text-left min-w-0${isSelected ? ' bg-accent' : ''}`}
+          data-node-button
+          className={`w-full justify-start text-left min-w-0 focus-visible:bg-sky-200 focus-visible:ring-1 focus-visible:ring-sky-400 focus-visible:outline-none ${
+            isSelected ? 'bg-sky-100 ring-1 ring-sky-400' : ''
+          }`}
           onClick={() => onSelect(node)}
+          onKeyDown={(event) => onNodeKeyDown(event, node)}
         >
           {node.entry ? <FileText size={18} className="mr-2 shrink-0" /> : null}
           <span className="truncate">{node.label}</span>
@@ -579,6 +697,7 @@ function TreeItem({
               onToggle={onToggle}
               onSelect={onSelect}
               onCheck={onCheck}
+              onNodeKeyDown={onNodeKeyDown}
             />
           ))
         : null}

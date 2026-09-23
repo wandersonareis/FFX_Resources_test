@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useHotkey } from '@tanstack/react-hotkeys';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { dto } from '@/wailsjs/go/models';
 import { SOURCE_LANG } from '@/lib/ffx/save-all';
@@ -48,6 +49,19 @@ export function TranslationCellDialog({
     setPrevRow(row);
     setText(row?.text?.[SOURCE_LANG] ?? '');
   }
+
+  // Navegação por teclado: ← Anterior / → Próxima. Registrada no document
+  // (sem escopo por ref: a ref do Radix muda depois do mount e o listener
+  // não re-anexa). Seguro porque o Dialog prende o foco dentro do conteúdo
+  // e o ignoreInputs deixa as setas moverem o caret dentro do editor.
+  useHotkey('ArrowLeft', () => onNavigate('prev', changed ? text : undefined), {
+    enabled: open && hasPrevious,
+    ignoreInputs: true,
+  });
+  useHotkey('ArrowRight', () => onNavigate('next', changed ? text : undefined), {
+    enabled: open && hasNext,
+    ignoreInputs: true,
+  });
 
   const original = row?.text?.[SOURCE_LANG] ?? '';
 
@@ -122,6 +136,11 @@ export function TranslationCellDialog({
         </div>
 
         <DialogFooter>
+          <span className="mr-auto flex items-center gap-1 text-xs text-muted-foreground sm:mr-auto">
+            <kbd className="rounded border px-1.5 py-0.5 font-mono">←</kbd>
+            <kbd className="rounded border px-1.5 py-0.5 font-mono">→</kbd>
+            entre linhas
+          </span>
           <Button variant="ghost" onClick={() => onClosed()}>
             Cancelar
           </Button>

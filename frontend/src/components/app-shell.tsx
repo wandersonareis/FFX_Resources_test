@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useHotkey } from '@tanstack/react-hotkeys';
 import { toast } from 'sonner';
 import { ChevronDown, Download, Settings, Upload } from 'lucide-react';
 import { QuitApp } from '@/wailsjs/go/main/App';
@@ -71,6 +72,33 @@ export function AppShell() {
     EventsEmit('GameVersionChanged', version);
     EventsEmit('Refresh_Tree');
   }, []);
+
+  // ---- Atalhos globais (TanStack Hotkeys) ----
+  const switchTab = (index: number) => {
+    if (index < 0 || index >= GAME_VERSIONS.length || index === selectedIndex)
+      return;
+    setSelectedIndex(index);
+    tabStorage.save(index);
+    setVersion(GAME_VERSIONS[index].id);
+  };
+
+  // Ctrl+1/2/3: trocar aba de versão.
+  useHotkey('Mod+1', () => switchTab(0));
+  useHotkey('Mod+2', () => switchTab(1));
+  useHotkey('Mod+3', () => switchTab(2));
+  // Ctrl+, : abrir Configurações (convenção de settings).
+  useHotkey('Mod+,', () => setConfigOpen(true));
+  // Ctrl+Alt+F: alterna formato JSON ↔ Strings direto (popover não abre).
+  useHotkey('Mod+Alt+F', () => {
+    const next =
+      exportSelection.formatOf() === 'json' ? 'strings' : 'json';
+    exportSelection.setFormat(next);
+    toast.info(`Formato de exportação: ${EXPORT_FORMAT_LABELS[next]}`);
+  });
+  // Ctrl+S: salvar rascunhos (mesma ação do botão Salvar; sem fechar o app).
+  useHotkey('Mod+S', () => {
+    void saveAllDrafts(() => saving, setSaving);
+  });
 
   useWailsEvent('Notify', (data) => {
     const payload = data as { severity?: string; message?: string };
