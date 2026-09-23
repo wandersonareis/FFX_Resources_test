@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { dto } from '@/wailsjs/go/models';
 import { SOURCE_LANG } from '@/lib/ffx/save-all';
@@ -42,13 +42,12 @@ export function TranslationCellDialog({
   onNavigate,
   onClosed,
 }: TranslationCellDialogProps) {
-  // Sem remontagem: o state sincroniza com a linha via effect, então a
-  // navegação troca só o CONTEÚDO do modal (sem fechar/abrir → sem flicker).
   const [text, setText] = useState(row?.text?.[SOURCE_LANG] ?? '');
-
-  useEffect(() => {
+  const [prevRow, setPrevRow] = useState(row);
+  if (prevRow !== row) {
+    setPrevRow(row);
     setText(row?.text?.[SOURCE_LANG] ?? '');
-  }, [row]);
+  }
 
   const original = row?.text?.[SOURCE_LANG] ?? '';
 
@@ -62,7 +61,7 @@ export function TranslationCellDialog({
         if (!o) onClosed();
       }}
     >
-      <DialogContent className="sm:max-w-[720px] max-h-[90vh] flex flex-col pt-10">
+      <DialogContent className="sm:max-w-180 max-h-[90vh] flex flex-col pt-10">
         {/* Linha do título + navegação, abaixo do botão X de fechar */}
         <div className="flex items-center justify-between gap-2">
           <DialogTitle className="truncate">
@@ -95,7 +94,7 @@ export function TranslationCellDialog({
         </DialogDescription>
 
         <div className="flex flex-col gap-4 overflow-hidden">
-          <div className="grid gap-2.5 overflow-y-auto flex-1 min-h-[120px] max-h-[42vh] pr-1">
+          <div className="grid gap-2.5 overflow-y-auto flex-1 min-h-30 max-h-[42vh] pr-1">
             {referenceLangs.length === 0 ? (
               <p className="opacity-70">Sem outros idiomas nesta linha.</p>
             ) : (

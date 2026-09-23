@@ -451,12 +451,10 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
         )}
       </main>
 
-      {/* Sem key: a instância persiste e a navegação troca só o conteúdo */}
       <TranslationCellDialog
         open={dialogOpen}
         row={translationRow}
         languages={languages}
-        // Navegação limitada ao arquivo atual (rows da entrada carregada).
         hasPrevious={rows.findIndex((r) => r.index === translationRow?.index) > 0}
         hasNext={
           rows.findIndex((r) => r.index === translationRow?.index) <
@@ -470,7 +468,7 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
           }
           const idx = rows.findIndex((r) => r.index === translationRow?.index);
           const next = rows[idx + (direction === 'next' ? 1 : -1)];
-          if (next) setTranslationRow(next); // sem fechar: a key remonta o editor
+          if (next) setTranslationRow(next);
         }}
         onClosed={(value) => {
           const entry = selectedEntry;
