@@ -6,8 +6,16 @@ export function ApplyTextCollection(arg1, arg2, arg3) {
   return window['go']['main']['App']['ApplyTextCollection'](arg1, arg2, arg3);
 }
 
+export function CountChangedTexts(arg1, arg2) {
+  return window['go']['main']['App']['CountChangedTexts'](arg1, arg2);
+}
+
 export function ExportEntry(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ExportEntry'](arg1, arg2, arg3, arg4);
+}
+
+export function ExportJSON(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['ExportJSON'](arg1, arg2, arg3, arg4);
 }
 
 export function ExportStrings(arg1, arg2, arg3, arg4) {
@@ -38,12 +46,20 @@ export function ImportEntry(arg1, arg2, arg3) {
   return window['go']['main']['App']['ImportEntry'](arg1, arg2, arg3);
 }
 
+export function ImportFile(arg1, arg2) {
+  return window['go']['main']['App']['ImportFile'](arg1, arg2);
+}
+
 export function ListLanguages() {
   return window['go']['main']['App']['ListLanguages']();
 }
 
 export function ListTextEntries(arg1, arg2) {
   return window['go']['main']['App']['ListTextEntries'](arg1, arg2);
+}
+
+export function PreviewImport(arg1, arg2) {
+  return window['go']['main']['App']['PreviewImport'](arg1, arg2);
 }
 
 export function QuitApp() {
@@ -56,6 +72,10 @@ export function ReadFileAsString(arg1) {
 
 export function SelectDirectory(arg1) {
   return window['go']['main']['App']['SelectDirectory'](arg1);
+}
+
+export function SelectImportFile() {
+  return window['go']['main']['App']['SelectImportFile']();
 }
 
 export function SetUnsavedEdits(arg1) {

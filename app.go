@@ -269,3 +269,57 @@ func (a *App) ExportStrings(kind string, version common.GameVersion, ids, langs 
 	}
 	return a.MetadataService.ExportStrings(kind, version, ids, langs)
 }
+
+// ExportJSON escreve os artefatos JSON do lote (ids vazio = tudo).
+// Caminho no padrão dos formatters (mods/edits) — o mesmo lido na importação.
+func (a *App) ExportJSON(kind string, version common.GameVersion, ids, langs []string) ([]string, error) {
+	if a.MetadataService == nil {
+		return nil, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ExportJSON(kind, version, ids, langs)
+}
+
+// SelectImportFile abre o seletor nativo de arquivo para importar
+// (.json / .strings). Devolve "" quando o usuário cancela.
+func (a *App) SelectImportFile() string {
+	selection, err := runtime.OpenFileDialog(interactions.NewInteractionService().Ctx, runtime.OpenDialogOptions{
+		Title: "Selecionar arquivo para importar",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Arquivos de importação (*.json; *.strings)", Pattern: "*.json;*.strings"},
+			{DisplayName: "JSON (*.json)", Pattern: "*.json"},
+			{DisplayName: "Strings (*.strings)", Pattern: "*.strings"},
+			{DisplayName: "Todos os arquivos (*.*)", Pattern: "*.*"},
+		},
+	})
+	if err != nil {
+		return ""
+	}
+	return selection
+}
+
+// PreviewImport parseia/valida o arquivo e devolve o resumo para o modal
+// de confirmação (sem aplicar nada).
+func (a *App) PreviewImport(path string, version common.GameVersion) (dto.ImportSummary, error) {
+	if a.MetadataService == nil {
+		return dto.ImportSummary{}, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.PreviewImport(path, version)
+}
+
+// ImportFile aplica o arquivo validado no binário (só o texto 'us').
+// Devolve quantos textos em inglês mudaram em relação à store.
+func (a *App) ImportFile(path string, version common.GameVersion) (int, error) {
+	if a.MetadataService == nil {
+		return 0, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ImportFile(path, version)
+}
+
+// CountChangedTexts confere quantas rows têm 'us' diferente entre duas
+// coleções (utilitário de conferência do frontend).
+func (a *App) CountChangedTexts(imported, store dto.Collection) int {
+	if a.MetadataService == nil {
+		return 0
+	}
+	return a.MetadataService.CountChangedTexts(imported, store)
+}

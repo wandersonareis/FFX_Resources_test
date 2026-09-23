@@ -1,8 +1,13 @@
 import {
   ExportEntry,
+  ExportJSON,
+  ExportStrings,
   GetTextEntry,
   ImportEntry,
+  ImportFile,
   ListTextEntries,
+  PreviewImport,
+  SelectImportFile,
 } from '@/wailsjs/go/main/App';
 import { dto, services } from '@/wailsjs/go/models';
 import { resolveEntryLabel, EntryKind } from './display-names';
@@ -83,4 +88,45 @@ export async function importEntry(
     id,
     version as Parameters<typeof ImportEntry>[2]
   );
+}
+
+/** Exporta o lote em JSON (ids vazio = tudo do kind; langs vazio = todos). */
+export async function exportJSON(
+  kind: EntryKind,
+  version: GameVersionId,
+  ids: string[],
+  langs: string[] = []
+): Promise<string[]> {
+  return ExportJSON(kind, version as Parameters<typeof ExportJSON>[1], ids, langs);
+}
+
+/** Exporta o lote em .strings (mesmo contrato de exportJSON). */
+export async function exportStrings(
+  kind: EntryKind,
+  version: GameVersionId,
+  ids: string[],
+  langs: string[] = []
+): Promise<string[]> {
+  return ExportStrings(kind, version as Parameters<typeof ExportStrings>[1], ids, langs);
+}
+
+/** Seletor nativo de arquivo (.json/.strings). "" = cancelado. */
+export function selectImportFile(): Promise<string> {
+  return SelectImportFile();
+}
+
+/** Valida o arquivo e devolve o resumo do modal (sem aplicar nada). */
+export async function previewImport(
+  path: string,
+  version: GameVersionId
+): Promise<dto.ImportSummary> {
+  return PreviewImport(path, version as Parameters<typeof PreviewImport>[1]);
+}
+
+/** Aplica o arquivo validado; devolve quantos textos 'us' mudaram. */
+export async function importFile(
+  path: string,
+  version: GameVersionId
+): Promise<number> {
+  return ImportFile(path, version as Parameters<typeof ImportFile>[1]);
 }

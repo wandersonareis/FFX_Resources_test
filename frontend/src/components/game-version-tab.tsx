@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import {
   createColumnHelper,
   tableFeatures,
@@ -12,11 +13,31 @@ import { ListLanguages, SetUnsavedEdits } from '@/wailsjs/go/main/App';
 import { KIND_LABELS, EntryKind } from '@/lib/ffx/display-names';
 import { eventGroupLabel, shortenedOf } from '@/lib/ffx/event-group-names';
 import type { GameVersionId } from '@/lib/ffx/game-version';
-import { EntryRow, entryKindsFor, loadEntry, loadKindEntries } from '@/lib/ffx/tree-data';
+import {
+  EntryRow,
+  entryKindsFor,
+  exportJSON,
+  exportStrings,
+  loadEntry,
+  loadKindEntries,
+} from '@/lib/ffx/tree-data';
 import { useEditDraft } from '@/lib/ffx/edit-draft';
-import { sendErrorNotification } from '@/lib/ffx/error-handler';
+import { parseError, sendErrorNotification } from '@/lib/ffx/error-handler';
+import {
+  EXPORT_FORMAT_LABELS,
+  exportSelection,
+  useExportSelection,
+} from '@/lib/ffx/export-selection';
+import { useWailsEvent } from '@/lib/ffx/use-wails-event';
 import { SOURCE_LANG, saveAllDrafts } from '@/lib/ffx/save-all';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 import { GameTextView } from '@/components/game-text-view';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -41,6 +62,8 @@ const features = tableFeatures({});
 
 type F = typeof features;
 
+const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
+
 const columnHelper = createColumnHelper<F, dto.TextRow>();
 
 export function GameVersionTab({ version }: { version: GameVersionId }) {
@@ -56,8 +79,22 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
   const [languages, setLanguages] = useState<Array<{ code: string; name: string }>>([]);
   const [translationRow, setTranslationRow] = useState<dto.TextRow | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [ctxNode, setCtxNode] = useState<{ id: string; kind: EntryKind } | null>(
+    null
+  );
 
   const hasDirty = snapshot.hasDirty;
+
+  const selection = useExportSelection();
+  // Seleção de exportação por kind (checkbox tri-state + menu de contexto).
+  const selectedByKind = useMemo(() => {
+    const out = new Map<EntryKind, ReadonlySet<string>>();
+    for (const kind of entryKindsFor(version)) {
+      out.set(kind, new Set(selection.byKind.get(`${version}|${kind}`) ?? []));
+    }
+    return out;
+  }, [selection, version]);
+  const ctxCount = ctxNode ? (selectedByKind.get(ctxNode.kind)?.size ?? 0) : 0;
 
   useEffect(() => {
     void SetUnsavedEdits(hasDirty);
@@ -178,6 +215,9 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
     [version]
   );
 
+  // Após importar, o backend emite ImportDone → recarrega árvore e tabela.
+  useWailsEvent('ImportDone', () => void reload());
+
   const selectNode = useCallback(
     async (node: SideNode) => {
       if (node.entry && node.kind) {
@@ -197,6 +237,45 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
       return next;
     });
   };
+
+  // Checkbox: folha = 1 id; grupo = todos os filhos (uma notificação só).
+  const checkNode = useCallback(
+    (node: SideNode, checked: boolean) => {
+      if (!node.kind) return;
+      const ids = node.entry
+        ? [node.entry.id]
+        : (node.children ?? [])
+            .filter((child) => child.entry)
+            .map((child) => child.entry!.id);
+      exportSelection.setMany(version, node.kind, ids, checked);
+    },
+    [version]
+  );
+
+  // Exporta só o que está marcado na árvore invocada, no FORMATO SELECIONADO
+  // no topo (JSON | Strings) — leitura imperativa do store compartilhado.
+  const onCtxExport = useCallback(async () => {
+    const kind = ctxNode?.kind;
+    if (!kind) return;
+    const ids = exportSelection.idsOf(version, kind);
+    if (ids.length === 0) return;
+    const format = exportSelection.formatOf();
+    const label = EXPORT_FORMAT_LABELS[format];
+    const toastId = 'export';
+    toast.loading(`Exportando (${label})…`, { id: toastId });
+    try {
+      const paths =
+        format === 'json'
+          ? await exportJSON(kind, version, ids)
+          : await exportStrings(kind, version, ids);
+      toast.success(
+        `Exportado (${label}): ${(paths ?? []).length} arquivo(s).`,
+        { id: toastId }
+      );
+    } catch (error) {
+      toast.error(parseError(error), { id: toastId });
+    }
+  }, [ctxNode, version]);
   const columns = useMemo(
     () =>
       columnHelper.columns([
@@ -268,19 +347,54 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
             <RefreshCw size={20} />
           </Button>
         </div>
-        <ScrollArea className="flex-1 min-h-0">
-          {roots.map((node) => (
-            <TreeItem
-              key={node.id}
-              node={node}
-              depth={0}
-              expanded={expanded}
-              selectedId={selectedEntry ? `leaf:${selectedEntry.kind}:${selectedEntry.id}` : null}
-              onToggle={toggleNode}
-              onSelect={(n) => void selectNode(n)}
-            />
-          ))}
-        </ScrollArea>
+        <ContextMenu
+          open={ctxNode !== null && ctxCount > 0}
+          onOpenChange={(open) => {
+            if (!open) setCtxNode(null);
+          }}
+        >
+          <ContextMenuTrigger asChild>
+            <ScrollArea
+              className="flex-1 min-h-0"
+              onContextMenuCapture={(event) => {
+                const row = (event.target as HTMLElement).closest(
+                  '[data-node-id]'
+                );
+                if (!(row instanceof HTMLElement)) {
+                  setCtxNode(null);
+                  return;
+                }
+                const kind = row.getAttribute(
+                  'data-node-kind'
+                ) as EntryKind | null;
+                setCtxNode(
+                  kind
+                    ? { id: row.getAttribute('data-node-id') ?? '', kind }
+                    : null
+                );
+              }}
+            >
+              {roots.map((node) => (
+                <TreeItem
+                  key={node.id}
+                  node={node}
+                  depth={0}
+                  expanded={expanded}
+                  selectedId={selectedEntry ? `leaf:${selectedEntry.kind}:${selectedEntry.id}` : null}
+                  selectedByKind={selectedByKind}
+                  onToggle={toggleNode}
+                  onSelect={(n) => void selectNode(n)}
+                  onCheck={checkNode}
+                />
+              ))}
+            </ScrollArea>
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            <ContextMenuItem onSelect={() => void onCtxExport()}>
+              Exportar
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
       </aside>
 
       <main className="flex-1 min-w-0 p-3 px-4 overflow-auto">
@@ -346,6 +460,22 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
         open={dialogOpen}
         row={translationRow}
         languages={languages}
+        // Navegação limitada ao arquivo atual (rows da entrada carregada).
+        hasPrevious={rows.findIndex((r) => r.index === translationRow?.index) > 0}
+        hasNext={
+          rows.findIndex((r) => r.index === translationRow?.index) <
+          rows.length - 1
+        }
+        onNavigate={(direction, value) => {
+          const entry = selectedEntry;
+          if (value !== undefined && entry && translationRow) {
+            drafts.setCell(version, entry.kind, entry.id, translationRow, SOURCE_LANG, value);
+            setRows((prev) => [...prev]);
+          }
+          const idx = rows.findIndex((r) => r.index === translationRow?.index);
+          const next = rows[idx + (direction === 'next' ? 1 : -1)];
+          if (next) setTranslationRow(next); // sem fechar: a key remonta o editor
+        }}
         onClosed={(value) => {
           const entry = selectedEntry;
           if (value !== undefined && entry) {
@@ -365,23 +495,53 @@ function TreeItem({
   depth,
   expanded,
   selectedId,
+  selectedByKind,
   onToggle,
   onSelect,
+  onCheck,
 }: {
   node: SideNode;
   depth: number;
   expanded: Set<string>;
   selectedId: string | null;
+  selectedByKind: ReadonlyMap<EntryKind, ReadonlySet<string>>;
   onToggle: (node: SideNode) => void;
   onSelect: (node: SideNode) => void;
+  onCheck: (node: SideNode, checked: boolean) => void;
 }) {
   const hasChildren = !!node.children && node.children.length > 0;
   const isExpanded = expanded.has(node.id);
   const isSelected = node.entry ? selectedId === `leaf:${node.entry.kind}:${node.entry.id}` : false;
+  // Raiz de kind (Eventos/Sistema/Dicionário) não tem checkbox: "extrair o
+  // kind inteiro" é papel do botão Exportar na linha das abas.
+  const isKindRoot = node.id.startsWith('kind:');
+  const selected = node.kind
+    ? (selectedByKind.get(node.kind) ?? EMPTY_IDS)
+    : EMPTY_IDS;
+
+  let checked: boolean | 'indeterminate' = false;
+  if (!isKindRoot) {
+    if (node.entry) {
+      checked = selected.has(node.entry.id);
+    } else {
+      // Grupo: tri-state sobre os ids dos filhos (raiz de evento tem folhas).
+      const childIds = (node.children ?? [])
+        .filter((child) => child.entry)
+        .map((child) => child.entry!.id);
+      const count = childIds.filter((id) => selected.has(id)).length;
+      checked =
+        count === 0 ? false : count === childIds.length ? true : 'indeterminate';
+    }
+  }
 
   return (
     <div>
-      <div style={{ paddingLeft: depth * 16 }} className="flex items-center">
+      <div
+        style={{ paddingLeft: depth * 16 }}
+        className="flex items-center"
+        data-node-id={node.id}
+        data-node-kind={node.kind}
+      >
         {hasChildren ? (
           <Button
             variant="ghost"
@@ -394,6 +554,14 @@ function TreeItem({
           </Button>
         ) : (
           <span className="w-8 shrink-0" />
+        )}
+        {isKindRoot ? null : (
+          <Checkbox
+            className="mr-1"
+            checked={checked}
+            onCheckedChange={(value) => onCheck(node, value === true)}
+            aria-label={`Selecionar ${node.label}`}
+          />
         )}
         <Button
           variant="ghost"
@@ -413,8 +581,10 @@ function TreeItem({
               depth={depth + 1}
               expanded={expanded}
               selectedId={selectedId}
+              selectedByKind={selectedByKind}
               onToggle={onToggle}
               onSelect={onSelect}
+              onCheck={onCheck}
             />
           ))
         : null}

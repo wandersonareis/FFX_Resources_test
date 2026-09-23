@@ -181,6 +181,31 @@ func StringToBytes(s, charset string, version common.GameVersion) ([]byte, error
 	return StringToByteList(runes, charset, gameVersion)
 }
 
+// StringToStoredBytes devolve os bytes exatos que FillByteList gravaria para o
+// texto (charset/versão aplicados e terminador 0x00 incluído): o texto vai
+// direto a bytes — o chamador não cria buffer auxiliar, arquivo nem instância
+// de domínio (FieldString, container etc.). Erro apenas em configuração
+// (charset/versão); rune desconhecido é ignorado, igual a FillByteList.
+func StringToStoredBytes(s, charset string, version common.GameVersion) ([]byte, error) {
+	encoded, err := StringToBytes(s, charset, version)
+	if err != nil {
+		return nil, err
+	}
+	return append(encoded, 0x00), nil
+}
+
+// StringToByteSize devolve quantos bytes o texto ocupa armazenado — o mesmo
+// que StringToStoredBytes, medido sem materializar a fatia para o chamador.
+// Base para validar limites de binário (ex.: offsets uint16 pós-conversão de
+// tags de controle) usando só o texto, sem rebuild nem objetos auxiliares.
+func StringToByteSize(s, charset string, version common.GameVersion) (int, error) {
+	encoded, err := StringToBytes(s, charset, version)
+	if err != nil {
+		return 0, err
+	}
+	return len(encoded) + 1, nil
+}
+
 func GetStringBytesAtLookupOffset(table []byte, offset int) []byte {
 	if offset < 0 || offset >= len(table) {
 		return nil

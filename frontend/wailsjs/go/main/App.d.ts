@@ -6,7 +6,11 @@ import {services} from '../models';
 
 export function ApplyTextCollection(arg1:string,arg2:common.GameVersion,arg3:dto.Collection):Promise<void>;
 
+export function CountChangedTexts(arg1:dto.Collection,arg2:dto.Collection):Promise<number>;
+
 export function ExportEntry(arg1:string,arg2:string,arg3:common.GameVersion,arg4:Array<string>):Promise<Array<string>>;
+
+export function ExportJSON(arg1:string,arg2:common.GameVersion,arg3:Array<string>,arg4:Array<string>):Promise<Array<string>>;
 
 export function ExportStrings(arg1:string,arg2:common.GameVersion,arg3:Array<string>,arg4:Array<string>):Promise<Array<string>>;
 
@@ -22,15 +26,21 @@ export function GetTranslateLocation():Promise<string>;
 
 export function ImportEntry(arg1:string,arg2:string,arg3:common.GameVersion):Promise<Array<string>>;
 
+export function ImportFile(arg1:string,arg2:common.GameVersion):Promise<number>;
+
 export function ListLanguages():Promise<Array<common.Language>>;
 
 export function ListTextEntries(arg1:string,arg2:common.GameVersion):Promise<Array<services.EntrySummary>>;
+
+export function PreviewImport(arg1:string,arg2:common.GameVersion):Promise<dto.ImportSummary>;
 
 export function QuitApp():Promise<void>;
 
 export function ReadFileAsString(arg1:string):Promise<string>;
 
 export function SelectDirectory(arg1:string):Promise<string>;
+
+export function SelectImportFile():Promise<string>;
 
 export function SetUnsavedEdits(arg1:boolean):Promise<void>;
 
