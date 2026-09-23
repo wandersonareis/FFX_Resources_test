@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { dto } from '@/wailsjs/go/models';
 import { SOURCE_LANG } from '@/lib/ffx/save-all';
@@ -42,8 +42,13 @@ export function TranslationCellDialog({
   onNavigate,
   onClosed,
 }: TranslationCellDialogProps) {
-  // Remontado por key no pai a cada linha: o state inicial já reflete a linha.
+  // Sem remontagem: o state sincroniza com a linha via effect, então a
+  // navegação troca só o CONTEÚDO do modal (sem fechar/abrir → sem flicker).
   const [text, setText] = useState(row?.text?.[SOURCE_LANG] ?? '');
+
+  useEffect(() => {
+    setText(row?.text?.[SOURCE_LANG] ?? '');
+  }, [row]);
 
   const original = row?.text?.[SOURCE_LANG] ?? '';
 
@@ -65,26 +70,24 @@ export function TranslationCellDialog({
             {row?.name ? <span className="opacity-70"> · {row.name}</span> : null}
           </DialogTitle>
           <div className="flex shrink-0 items-center gap-1.5">
-            {hasPrevious ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onNavigate('prev', changed ? text : undefined)}
-              >
-                <ChevronLeft size={16} />
-                Anterior
-              </Button>
-            ) : null}
-            {hasNext ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onNavigate('next', changed ? text : undefined)}
-              >
-                Próxima
-                <ChevronRight size={16} />
-              </Button>
-            ) : null}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!hasPrevious}
+              onClick={() => onNavigate('prev', changed ? text : undefined)}
+            >
+              <ChevronLeft size={16} />
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!hasNext}
+              onClick={() => onNavigate('next', changed ? text : undefined)}
+            >
+              Próxima
+              <ChevronRight size={16} />
+            </Button>
           </div>
         </div>
         <DialogDescription className="mt-1">

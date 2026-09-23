@@ -451,12 +451,8 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
         )}
       </main>
 
+      {/* Sem key: a instância persiste e a navegação troca só o conteúdo */}
       <TranslationCellDialog
-        key={
-          translationRow
-            ? `${translationRow.index}:${translationRow.name ?? ''}`
-            : 'none'
-        }
         open={dialogOpen}
         row={translationRow}
         languages={languages}
