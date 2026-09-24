@@ -1,38 +1,6 @@
 package interfaces
 
-import (
-	"ffxresources/backend/common"
-	"ffxresources/backend/models"
-)
-
 type (
-	ISource interface {
-		Get() models.SpiraFileInfo
-		GetName() string
-		GetNameWithoutExtension() string
-		GetExtension() string
-		GetPath() string
-		SetPath(path string)
-		GetRelativePath() string
-		SetRelativePath(relativePath string)
-		GetParentPath() string
-		GetSize() int64
-		GetType() models.NodeType
-		GetVersion() common.GameVersion
-		IsDir() bool
-		PopulateDuplicatesFiles()
-	}
-
-	ITextFormatter interface {
-		GetTargetExtension() string
-		ReadFile(source ISource, targetDirectory string) (string, string)
-		WriteFile(source ISource, targetDirectory string) (string, string)
-	}
-
-	IValidate interface {
-		Validate() error
-	}
-
 	// IBinaryFile orquestra o ciclo de vida de um arquivo binário de localização:
 	// carregar do binário e salvar de volta no binário.
 	//

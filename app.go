@@ -4,7 +4,6 @@ import (
 	"context"
 	"ffxresources/backend/common"
 	"ffxresources/backend/dto"
-	"ffxresources/backend/formatters"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/loggingService"
 	"ffxresources/backend/services"
@@ -53,7 +52,6 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
 	interactions.NewInteractionWithCtx(ctx)
-	interactions.NewInteractionWithTextFormatter(formatters.NewTxtFormatter())
 }
 
 // domReady is called after front-end resources have been loaded

@@ -3,7 +3,6 @@ package interactions
 import (
 	"context"
 	"ffxresources/backend/common"
-	"ffxresources/backend/interfaces"
 	"path/filepath"
 	"sync"
 )
@@ -14,7 +13,6 @@ type InteractionService struct {
 	cancel            context.CancelFunc
 	mu                sync.Mutex
 	ffxAppConfig      IAppConfig
-	ffxTextFormat     interfaces.ITextFormatter
 	GameLocation      IGameLocation
 	ExtractLocation   IExtractLocation
 	TranslateLocation ITranslateLocation
@@ -132,21 +130,8 @@ func NewInteractionWithCtx(ctx context.Context) *InteractionService {
 	return s
 }
 
-func NewInteractionWithTextFormatter(formatter interfaces.ITextFormatter) *InteractionService {
-	s := NewInteractionService()
-
-	s.mu.Lock()
-	s.ffxTextFormat = formatter
-	s.mu.Unlock()
-	return s
-}
-
 func (i *InteractionService) FFXAppConfig() IAppConfig {
 	return i.ffxAppConfig
-}
-
-func (i *InteractionService) TextFormatter() interfaces.ITextFormatter {
-	return i.ffxTextFormat
 }
 
 func (i *InteractionService) Start() context.Context {
