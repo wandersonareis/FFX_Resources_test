@@ -1,10 +1,7 @@
 package common
 
-const FFX_DIR_MARKER = "ffx_ps2"
 const (
-	MonsterMaxIndex            = 360
-	OriginalsFolder            = "jppc/"
-	PathTextOutputRoot         = "target/text/"
-	DefaultLocalization        = "us"
-	SkipBlitzballEvents        = true
+	OriginalsFolder     = "jppc/"
+	DefaultLocalization = "us"
+	SkipBlitzballEvents = true
 )

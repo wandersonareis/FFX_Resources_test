@@ -57,17 +57,6 @@ func PrepareVersion(version common.GameVersion) error {
 	return nil
 }
 
-// InitializeAllInternals carrega charsets das duas versões sem mexer no
-// datastore de macros (útil quando FFX e FFX-2 precisam coexistir).
-func InitializeAllInternals() error {
-	for _, cs := range common.Charsets {
-		if err := PrepareAllCharsets(cs); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func logMacroLookup(gameVersion common.GameVersion) {
 	if common.IsVerboseMode() {
 		datastore.GetMacros(gameVersion).ForEach(func(_ int, strings datastore.IGlobalLocalizedMacroStringObject) {

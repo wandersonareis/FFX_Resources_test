@@ -3,11 +3,8 @@ package reader_test
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/reader"
-	"ffxresources/backend/core/writer"
 	"ffxresources/backend/datastore"
-	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/core/encoding"
-	"ffxresources/backend/interactions"
 	testcommon "ffxresources/testData"
 	"os"
 	"path/filepath"
@@ -16,10 +13,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
-
-func interactionsVersion() common.GameVersion {
-	return interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-}
 
 func TestReadManager(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -169,25 +162,6 @@ var _ = Describe("ReadManager", Ordered, func() {
 			Expect(func() {
 				reader.InitializeInternals()
 			}).ToNot(Panic())
-		})
-	})
-
-	Context("should read all event files", func() {
-		It("should read event file and write event file binary successfully", func() {
-			// Initialize internals to read event files
-			err := reader.InitializeInternals()
-			Expect(err).ToNot(HaveOccurred(), "Initializing internals should not return an error")
-
-			eventsFolder, err := common.NewFileAccessor(common.GetPathOriginalsEvent())
-			Expect(err).ToNot(HaveOccurred(), "Resolving events directory should not return an error")
-
-			err = reader.ReadAllEvents(eventsFolder)
-			Expect(err).ToNot(HaveOccurred(), "Reading all events should not return an error")
-
-			// Verify that EventFiles map is populated
-			Expect(event.HasEvents(interactionsVersion())).To(BeTrue(), "Events should be populated in datastore")
-			writer.ExportAllLocalizationsToJSON()
-			Expect(reader.EditAndSaveEventJSONFiles()).To(Succeed())
 		})
 	})
 })

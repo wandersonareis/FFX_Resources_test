@@ -44,27 +44,6 @@ func getModdedFile(path string) string {
 	return filepath.Join(GameFilesRoot, ModsFolder, path)
 }
 
-// WriteStringToFile writes a string to a file using UTF-8 encoding
-// Creates necessary directories before writing
-func WriteStringToFile(path string, content string) error {
-	CreateDirectories(path)
-
-	file, err := os.Create(path)
-	if err != nil {
-		fmt.Println("Failed to write file")
-		return err
-	}
-	defer file.Close()
-
-	_, err = file.WriteString(content)
-	if err != nil {
-		fmt.Println("Failed to write file")
-		return err
-	}
-
-	return file.Sync()
-}
-
 // WriteBytesToFile writes a slice of integers as bytes to a file
 // Creates necessary directories before writing
 func WriteBytesToFile(path string, bytes []byte) error {

@@ -18,19 +18,6 @@ func GetEncodingDirForVersion(gv GameVersion) string {
 	}
 }
 
-// GetEncodingDirForVersionString mantém compatibilidade com chamadores legados.
-func GetEncodingDirForVersionString(gameVersionString string) string {
-	gv, err := ParseGameVersionStrict(gameVersionString)
-	if err != nil {
-		gv = GameVersionFFX
-	}
-	return GetEncodingDirForVersion(gv)
-}
-
-func GetEncodingPath(charset string) string {
-	return GetEncodingPathForVersion(CurrentGameVersion(), charset)
-}
-
 // GetEncodingPathForVersion monta o caminho do charset para uma versão
 // explícita, sem ler o estado global.
 func GetEncodingPathForVersion(gv GameVersion, charset string) string {
@@ -58,41 +45,8 @@ func GetPathRootForVersion(gv GameVersion) string {
 	}
 }
 
-// GetPathRootForVersionString mantém compatibilidade com chamadores legados.
-func GetPathRootForVersionString(gameVersionString string) string {
-	gv, err := ParseGameVersionStrict(gameVersionString)
-	if err != nil {
-		gv = GameVersionFFX
-	}
-	return GetPathRootForVersion(gv)
-}
-
 func GetPathOriginalsRoot() string {
 	return filepath.Join(GetPathRoot(), OriginalsFolder)
-}
-
-func GetPathOriginalsKernel() string {
-	return filepath.Join(GetPathOriginalsRoot(), "battle", "kernel")
-}
-
-func GetPathMonsterFolder() string {
-	return filepath.Join(GetPathOriginalsRoot(), "battle", "mon")
-}
-
-func GetPathOriginalsEncounter() string {
-	return filepath.Join(GetPathOriginalsRoot(), "battle", "btl")
-}
-
-func GetInternationalEncounterPath() string {
-	return filepath.Join(GetPathRoot(), "inpc", "battle", "btl")
-}
-
-func GetPathOriginalsEvent() string {
-	return filepath.Join(GetPathOriginalsRoot(), "event", "obj")
-}
-
-func GetAbmapPath() string {
-	return filepath.Join(GetPathOriginalsRoot(), "menu", "abmap")
 }
 
 func GetLocalizationRoot(localization string) string {
@@ -104,7 +58,7 @@ func GetLocalizationRoot(localization string) string {
 // então normaliza para "ffx2". Só existem esses dois nomes, sem variação.
 func VersionPathName(version GameVersion) string {
 	if version == GameVersionFFX {
-		return GameVersionFFX.String()
+		return version.String()
 	}
 	return GameVersionFFX2.String()
 }

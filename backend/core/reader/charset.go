@@ -4,10 +4,7 @@ import (
     "encoding/json"
     "fmt"
     "path/filepath"
-    "regexp"
-    "strconv"
     "strings"
-    "unicode/utf8"
 
     "ffxresources/backend/common"
     "ffxresources/backend/core/encoding"
@@ -18,34 +15,6 @@ const puaBase = 0xE000
 func puaRune(code uint) rune { return rune(puaBase + int(code)) }
 
 func tokenFor(code uint) string { return fmt.Sprintf("⟨%X⟩", code) }
-
-var (
-    rePUA   = regexp.MustCompile(`[\x{E000}-\x{F8FF}]`)
-    reToken = regexp.MustCompile(`⟨([0-9A-Fa-f]+)⟩`)
-)
-
-func Detokenize(s string) string {
-    return rePUA.ReplaceAllStringFunc(s, func(m string) string {
-        r, _ := utf8.DecodeRuneInString(m)
-        return tokenFor(uint(r - puaBase))
-    })
-}
-
-func Tokenize(s string) (string, error) {
-    var firstErr error
-    out := reToken.ReplaceAllStringFunc(s, func(m string) string {
-        sub := reToken.FindStringSubmatch(m)
-        code, err := strconv.ParseUint(sub[1], 16, 32)
-        if err != nil || code < 0x30 {
-            if firstErr == nil {
-                firstErr = fmt.Errorf("token inválido: %s", m)
-            }
-            return m
-        }
-        return string(puaRune(uint(code)))
-    })
-    return out, firstErr
-}
 
 type slotFix struct {
     code uint // código do jogo (0x30 + índice no arquivo)
@@ -121,18 +90,6 @@ func PrepareCharset(version common.GameVersion, charset string) error {
     // lookup (common.CharsetVersion), então a escrita usa o mesmo bucket.
     ffxencoding.SetCharMap(common.CharsetVersion(version), charset, byteToChar, charToByte)
     return nil
-}
-
-// PrepareAllCharsets carrega um charset para as duas versões (FFX e FFX-2).
-// Erros de uma versão não bloqueiam a outra; retorna o último erro encontrado.
-func PrepareAllCharsets(charset string) error {
-    var lastErr error
-    for _, v := range []common.GameVersion{common.GameVersionFFX, common.GameVersionFFX2} {
-        if err := PrepareCharset(v, charset); err != nil {
-            lastErr = err
-        }
-    }
-    return lastErr
 }
 
 

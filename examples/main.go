@@ -76,7 +76,7 @@ func showMainMenu() {
 	//writer.WriteStringsEventForAllLocalizationsJSON("akagi0100", true) // Exporta o evento "akagi0100" para JSON
 	writer.ExportMacroDictionaryToJSON()
 	//reader.EditAndSaveMacroDictJSONFiles(true) // Exemplo de fluxo completo de exportação/importação
-	reader.EditAndSaveSpecificEventFromJSON("znkd1500") // Edita e salva o evento "znkd1500" do JSON
+	//event.ExportEventStringsToLocalizations(common.CurrentGameVersion(), "znkd1500") // Fluxo novo: exporta/reconstrói o evento via fileFormats/event
 	// ===== WORKFLOW JSON =====
 	// demoWorkflowJSON()
 	// exemploEditorEspecificoDemo()	// ===== EXEMPLO ATIVO (descomente para testar) =====

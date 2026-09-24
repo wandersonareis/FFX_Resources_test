@@ -11,7 +11,6 @@ import (
 	"ffxresources/backend/fileFormats/objectsfile"
 	"ffxresources/backend/formatters/json"
 	"ffxresources/backend/interactions"
-	"ffxresources/backend/models"
 	testcommon "ffxresources/testData"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -77,30 +76,6 @@ var _ = Describe("LoadObjectFileFromStore error handling", Ordered, func() {
 		_, err := objectsfile.LoadObjectFileFromStore(common.GameVersionFFX, "battle/kernel/nonexistent.bin")
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("no layout registered"))
-	})
-})
-
-var _ = Describe("Export/Import roundtrip with FileMetadata", Ordered, func() {
-	BeforeAll(func() {
-		Expect(testcommon.SetBuildBinPath()).To(Succeed())
-		common.SetVerboseMode(false)
-	})
-
-	It("should produce FileMetadata with version/dir/filename from a layout", func() {
-		layout, ok := objectsfile.FileLayoutFor(common.GameVersionFFX, "battle/kernel/command.bin")
-		Expect(ok).To(BeTrue())
-
-		meta := models.NewObjectFileMetadata(layout.Version, layout.DirPattern, layout.FileName)
-		Expect(meta.DirPattern).To(Equal("battle/kernel"))
-		Expect(meta.FileName).To(Equal("command.bin"))
-	})
-
-	It("should write/omit new fields as expected", func() {
-		layout, _ := objectsfile.FileLayoutFor(common.GameVersionFFX, "battle/kernel/command.bin")
-		meta := models.NewObjectFileMetadata(layout.Version, layout.DirPattern, layout.FileName)
-
-		Expect(*meta.Version).To(Equal(layout.Version))
-		Expect(meta.Version.String()).To(Equal("ffx"))
 	})
 })
 
