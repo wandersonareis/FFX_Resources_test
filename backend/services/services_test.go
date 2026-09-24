@@ -115,7 +115,8 @@ var _ = Describe("MetadataService", Ordered, func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(paths).To(HaveLen(2))
 		for _, p := range paths {
-			Expect(common.IsFileExists(p)).To(BeTrue(), "exported artifact should exist: %s", p)
+			_, statErr := os.Stat(p)
+			Expect(statErr).NotTo(HaveOccurred(), "exported artifact should exist: %s", p)
 		}
 	})
 
