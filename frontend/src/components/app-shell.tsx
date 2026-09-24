@@ -165,6 +165,8 @@ export function AppShell() {
         let written = 0;
         for (const kind of kinds) {
           const ids = useCheckedIds ? exportSelection.idsOf(version, kind) : [];
+          // Exportar seleção = atalho do Exportar do contexto.
+          if (useCheckedIds && ids.length === 0) continue;
           const paths =
             format === 'json'
               ? await exportJSON(kind, version, ids)
