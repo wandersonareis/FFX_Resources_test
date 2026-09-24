@@ -149,6 +149,7 @@ export function ContentTree({ view }: { view: EntryView }) {
       >
         <ContextMenuTrigger asChild>
           <ScrollArea
+            id="entry-tree"
             ref={treeRef}
             className="flex-1 min-h-0"
             onContextMenuCapture={(event) => {

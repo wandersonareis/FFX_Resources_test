@@ -31,7 +31,6 @@ export function EntryTable({ view }: { view: EntryView }) {
   const { store: drafts, snapshot } = useEditDraft();
   const version = view.version;
 
-  // Navegação por teclado: linha focada na tabela (refs p/ mover o foco).
   const [focusedRowId, setFocusedRowId] = useState<string | null>(null);
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
 
@@ -64,9 +63,20 @@ export function EntryTable({ view }: { view: EntryView }) {
         event.preventDefault();
         setFocusedRowId(rowKey);
         actions.openDialog(row);
+      } else if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        // Volta o foco para o nó selecionado na árvore (fecha o ciclo de
+        // navegação árvore ↔ tabela). Se o nó estiver desmontado (grupo
+        // colapsado), cai no primeiro botão visível da árvore.
+        const tree = document.getElementById('entry-tree');
+        const node =
+          tree?.querySelector<HTMLElement>(
+            `[data-node-id="leaf:${selectedEntry?.kind}:${selectedEntry?.id}"] [data-node-button]`
+          ) ?? tree?.querySelector<HTMLElement>('[data-node-button]');
+        node?.focus();
       }
     },
-    [rows, actions]
+    [rows, actions, selectedEntry]
   );
 
   const columns = useMemo(
@@ -114,8 +124,6 @@ export function EntryTable({ view }: { view: EntryView }) {
           }
         ),
       ]),
-    // snapshot.revision: recompute as colunas quando o rascunho muda
-    // (editOf lê do store mutável, fora do escopo do memo).
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [activeKind, selectedEntry, version, snapshot.revision, drafts, actions]
   );
@@ -129,8 +137,7 @@ export function EntryTable({ view }: { view: EntryView }) {
   const pendingTableFocus = useSelector(store, (s) => s.pendingTableFocus);
 
   // ArrowRight na folha: quando o arquivo termina de carregar, foca a
-  // primeira linha (apenas focus() no DOM — o destaque vem do onFocus,
-  // evitando setState síncrono dentro do effect).
+  // primeira linha (apenas focus() no DOM.
   useEffect(() => {
     if (!pendingTableFocus || !selectedEntry || rows.length === 0) return;
     actions.consumeTableFocus();

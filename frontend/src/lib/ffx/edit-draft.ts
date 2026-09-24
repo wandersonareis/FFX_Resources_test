@@ -1,4 +1,5 @@
-import { useSyncExternalStore } from 'react';
+import { createStore } from '@tanstack/store';
+import { useSelector } from '@tanstack/react-store';
 import { dto } from '@/wailsjs/go/models';
 import { EntryKind } from './display-names';
 import type { GameVersionId } from './game-version';
@@ -24,32 +25,34 @@ interface DraftSnapshot {
   revision: number;
 }
 
-type Listener = () => void;
 type ReloadListener = () => void;
+
+/**
+ * Store reativo do resumo de rascunhos (TanStack Store): {hasDirty, revision}
+ * substitui o snapshot imutável que o useSyncExternalStore consumia. Os dados
+ * (estados/dirtyFiles) ficam imperativos no singleton abaixo — só a notificação
+ * é reativa.
+ */
+const editStore = createStore<DraftSnapshot>({
+  hasDirty: false,
+  revision: 0,
+});
 
 /**
  * Rascunhos de edição em memória (singleton reativo). Trocar de arquivo não
  * perde nada: o rascunho fica por (version|kind|id) até o usuário salvar ou
  * descartar. O "traduzido" é o texto editado que substitui o slot 'us' no
- * binário. O snapshot é imutável para uso com useSyncExternalStore.
+ * binário. As notificações disparam o TanStack Store compartilhado.
  */
 class EditDraftStore {
   private readonly states = new Map<string, DraftState>();
   private readonly dirtyFiles = new Set<string>();
-  private readonly listeners = new Set<Listener>();
   private readonly reloadListeners = new Set<ReloadListener>();
-  private snapshot: DraftSnapshot = { hasDirty: false, revision: 0 };
 
-  subscribe = (listener: Listener): (() => void) => {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
-  };
-
-  getSnapshot = (): DraftSnapshot => this.snapshot;
-
-  private readonly serverSnapshot: DraftSnapshot = { hasDirty: false, revision: 0 };
-
-  getServerSnapshot = (): DraftSnapshot => this.serverSnapshot;
+  /** Snapshot imutável atual (leitura imperativa, p/ saveAllDrafts). */
+  getSnapshot(): DraftSnapshot {
+    return editStore.state;
+  }
 
   /** Callback chamado após salvar tudo (reselect da aba ativa). */
   onSaved(listener: ReloadListener): () => void {
@@ -58,11 +61,10 @@ class EditDraftStore {
   }
 
   private notify(): void {
-    this.snapshot = {
+    editStore.setState((prev) => ({
       hasDirty: this.dirtyFiles.size > 0,
-      revision: this.snapshot.revision + 1,
-    };
-    for (const listener of this.listeners) listener();
+      revision: prev.revision + 1,
+    }));
   }
 
   /** Registra a base (entrada original) ao abrir o arquivo na tabela. */
@@ -224,18 +226,14 @@ class EditDraftStore {
   }
 }
 
+export const editDraft = new EditDraftStore();
+
 function splitDraftKey(key: string): [EntryKind, string] {
   const parts = key.split('|');
   return [parts[1] as EntryKind, parts[2]];
 }
 
-export const editDraft = new EditDraftStore();
-
 export function useEditDraft(): { store: EditDraftStore; snapshot: DraftSnapshot } {
-  const snapshot = useSyncExternalStore(
-    editDraft.subscribe,
-    editDraft.getSnapshot,
-    editDraft.getServerSnapshot
-  );
+  const snapshot = useSelector(editStore);
   return { store: editDraft, snapshot };
 }

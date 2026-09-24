@@ -1,8 +1,8 @@
-import { useSyncExternalStore } from 'react';
+import { useEffect } from 'react';
+import { createStore } from '@tanstack/store';
+import { useSelector } from '@tanstack/react-store';
 import type { EntryKind } from './display-names';
 import type { GameVersionId } from './game-version';
-
-type Listener = () => void;
 
 export type ExportFormat = 'json' | 'strings';
 
@@ -25,7 +25,7 @@ function loadStoredFormat(): ExportFormat {
 
 interface SelectionSnapshot {
   revision: number;
-  /** ids selecionados por `${version}|${kind}` (imutável p/ useSyncExternalStore). */
+  /** ids selecionados por `${version}|${kind}` (imutável entre notificações). */
   byKind: ReadonlyMap<string, readonly string[]>;
   /** Formato ativo para todas as exportações feitas pelo frontend. */
   format: ExportFormat;
@@ -35,44 +35,42 @@ const stateKey = (version: GameVersionId, kind: EntryKind): string =>
   `${version}|${kind}`;
 
 /**
+ * Store reativo da seleção (TanStack Store): o estado é o snapshot imutável
+ * {revision, byKind, format} consumido pelo hook. Os dados de trabalho ficam
+ * imperativos no singleton abaixo.
+ */
+const exportStore = createStore<SelectionSnapshot>({
+  revision: 0,
+  byKind: new Map(),
+  // 'json' é o default de hidratação; o formato persistido no localStorage é
+  // carregado no cliente dentro do useExportSelection (mesmo padrão do
+  // tabStorage no app-shell).
+  format: 'json',
+});
+
+/**
  * Seleção de entradas para exportação (singleton reativo, mesmo padrão do
  * edit-draft). Marcar na sidebar alimenta dois destinos:
  *   - menu de contexto: exporta só o que está marcado na árvore invocada;
  *   - Exportar do topo: ids por kind, com `[]` (nada marcado) = tudo do kind.
  */
 class ExportSelectionStore {
-  private format: ExportFormat = loadStoredFormat();
+  private format: ExportFormat = 'json';
   private readonly selected = new Map<string, Set<string>>();
-  private readonly listeners = new Set<Listener>();
-  private snapshot: SelectionSnapshot = {
-    revision: 0,
-    byKind: new Map(),
-    format: this.format,
-  };
-  private readonly serverSnapshot: SelectionSnapshot = {
-    revision: 0,
-    byKind: new Map(),
-    format: 'json',
-  };
 
-  subscribe = (listener: Listener): (() => void) => {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
-  };
-
-  getSnapshot = (): SelectionSnapshot => this.snapshot;
-
-  getServerSnapshot = (): SelectionSnapshot => this.serverSnapshot;
+  /** Snapshot imutável atual (leitura imperativa). */
+  getSnapshot(): SelectionSnapshot {
+    return exportStore.state;
+  }
 
   private notify(): void {
     const copied = new Map<string, readonly string[]>();
     for (const [key, ids] of this.selected) copied.set(key, [...ids]);
-    this.snapshot = {
-      revision: this.snapshot.revision + 1,
+    exportStore.setState((prev) => ({
+      revision: prev.revision + 1,
       byKind: copied,
       format: this.format,
-    };
-    for (const listener of this.listeners) listener();
+    }));
   }
 
   /**
@@ -140,9 +138,14 @@ export const exportSelection = new ExportSelectionStore();
 
 /** Snapshot reativo da seleção (rerender ao marcar/desmarcar). */
 export function useExportSelection(): SelectionSnapshot {
-  return useSyncExternalStore(
-    exportSelection.subscribe,
-    exportSelection.getSnapshot,
-    exportSelection.getServerSnapshot
-  );
+  const snapshot = useSelector(exportStore);
+
+  // Hydration-safe: localStorage só existe no cliente. setFormat cedo-retorna
+  // quando o formato já é o mesmo, então chamadas repetidas (remount da
+  // aba) são no-op.
+  useEffect(() => {
+    exportSelection.setFormat(loadStoredFormat());
+  }, []);
+
+  return snapshot;
 }
