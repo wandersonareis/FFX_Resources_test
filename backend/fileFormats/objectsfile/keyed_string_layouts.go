@@ -182,13 +182,6 @@ var (
 			FieldString(f, "description", lang),
 			FieldString(f, "effect", lang))
 	}
-
-	// Formato único do NameDescriptionEffectAbilityTextObject (name - description).
-	nameDescriptionFmt = func(f *KeyedStringFile, lang string) string {
-		return formatNameDescription(
-			FieldString(f, "name", lang),
-			FieldString(f, "description", lang))
-	}
 )
 
 // formatNameDescription é compartilhado entre o KeyedStringFile e o tipo
@@ -201,16 +194,4 @@ func formatNameDescription(name, description string) string {
 // só o weapon_refs do primeiro personagem). Mantido aqui para centralização.
 func weaponLegacyFmt(w *WeaponsNameTextObject, lang string) string {
 	return fmt.Sprintf("Weapons: %s", w.Names[Tidus].GetLocalizedString(lang))
-}
-
-// newKeyedString cria a instância aplicando um formatter legado opcional.
-func newKeyedString(bytes, stringBytes []byte, headerLength int, languageCode string, version common.GameVersion, layouts LayoutSet, typeName string, formatter StringFormatter) (*KeyedStringFile, error) {
-	f, err := NewKeyedStringFile(bytes, stringBytes, headerLength, languageCode, version, layouts, typeName)
-	if err != nil {
-		return nil, err
-	}
-	if formatter != nil {
-		f.SetFormatter(formatter)
-	}
-	return f, nil
 }

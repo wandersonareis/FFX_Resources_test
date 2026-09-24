@@ -13,7 +13,6 @@ import (
 
 // parsedLine é uma linha de conteúdo decomposta.
 type parsedLine struct {
-	version string
 	id      string
 	name    string
 	index   int
@@ -173,10 +172,7 @@ func parseLine(line string, lineno int) (parsedLine, error) {
 	if _, err := hex.DecodeString(bare); err != nil {
 		return fail("hash is not hex: %q", bare)
 	}
-	value := rest[eq+1:]
-	if stdstrings.HasPrefix(value, " ") {
-		value = value[1:]
-	}
+	value := stdstrings.TrimPrefix(rest[eq+1:], " ")
 	fields := stdstrings.Split(keyPart, ":")
 	if len(fields) < 3 {
 		return fail("key needs at least id:index:lang, got %q", keyPart)

@@ -199,40 +199,6 @@ func (b *ObjectBinaryFileStore) buildObjects(dataBytes []byte) {
 	}
 }
 
-// newObjectBinaryFileStore monta, carrega e registra os objetos em
-// datastore.Commands. Espelha newObjectBinaryFile do caminho Read.
-func newObjectBinaryFileStore(patternPath string, creatorFunc CreatorFunc, gameVersion common.GameVersion, formatter StringFormatterStore) *ObjectBinaryFileStore {
-	binaryDataFile := &ObjectBinaryFileStore{
-		Header:       NewBinaryHeader(gameVersion),
-		patternPath:  patternPath,
-		languageCode: common.DefaultLocalization,
-		creator: func(cBytes, sBytes []byte, hLen int, lang string) (datastore.IGlobalLocalizedTextObject, error) {
-			obj, err := creatorFunc(cBytes, sBytes, hLen, lang)
-			if err != nil {
-				return nil, err
-			}
-			if formatter != nil {
-				if kf, ok := obj.(*KeyedStringFileStore); ok {
-					kf.SetFormatter(formatter)
-				}
-			}
-			return obj, nil
-		},
-		Version: gameVersion,
-	}
-
-	if err := binaryDataFile.LoadFromBinary(); err != nil {
-		common.LogVerbose("Error loading binary data: %v", err)
-		return nil
-	}
-
-	if objects := binaryDataFile.GetObjects(); objects != nil && !objects.IsEmpty() {
-		common.LogVerbose("Loaded %d objects with all localizations", objects.Len())
-		datastore.Commands = objects
-	}
-	return binaryDataFile
-}
-
 func (b *ObjectBinaryFileStore) SaveToBinary(filePath string) error {
 	return SaveBinaryFileStore(b, filePath)
 }

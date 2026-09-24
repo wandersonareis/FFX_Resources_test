@@ -175,7 +175,6 @@ func ParseDataListWithIlistV2Store(data []byte, languageCode string, creator fun
 	offset += 4
 
 	totalLength := int(binary.LittleEndian.Uint32(data[offset : offset+4]))
-	offset += 4
 
 	expectedTotalLength := (maxIndex - minIndex + 1) * individualLength
 	if totalLength != expectedTotalLength {

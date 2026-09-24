@@ -13,7 +13,6 @@ import (
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/event"
-	"ffxresources/backend/fileFormats/macrodic"
 	"ffxresources/backend/fileFormats/objectsfile"
 	jsonfmt "ffxresources/backend/formatters/json"
 	strfmt "ffxresources/backend/formatters/strings"
@@ -379,11 +378,7 @@ func (s *MetadataService) ApplyTextCollection(kind string, version common.GameVe
 		if err := ensureEventsLoaded(version); err != nil {
 			return err
 		}
-		ids := make([]string, 0, len(c))
-		for _, id := range c.SortedKeys() {
-			ids = append(ids, id)
-		}
-		return builders.ApplyEventsDTO(version, c, ids)
+		return builders.ApplyEventsDTO(version, c, c.SortedKeys())
 
 	case KindObjects:
 		// Aplica as rows de todas as entradas antes de salvar cada binário:
@@ -756,7 +751,3 @@ func ensureEventsLoaded(version common.GameVersion) error {
 	return nil
 }
 
-// EnsureMacroContainers expõe a leitura dos containers (uso avançado).
-func (s *MetadataService) macroContainers(version common.GameVersion) (map[string]*macrodic.MacroDictionaryBinaryFile, error) {
-	return macrodic.ReadMacroDictionaryContainers(version)
-}

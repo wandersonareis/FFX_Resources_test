@@ -11,16 +11,6 @@ import (
 	"path/filepath"
 )
 
-// getLocalizationKeys returns all available localization keys
-// This function returns the localization keys from the common package
-func getLocalizationKeys() []string {
-	var keys []string
-	for key := range common.SupportedLanguages {
-		keys = append(keys, key)
-	}
-	return keys
-}
-
 // ExportMacroDictionaryToJSON reads every available localization container and
 // exports them into a single DTO-based JSON file holding all languages.
 func ExportMacroDictionaryToJSON() {
