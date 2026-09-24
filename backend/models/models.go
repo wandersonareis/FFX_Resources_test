@@ -29,9 +29,4 @@ type (
 		Offset int64
 		Value  uint32
 	}
-
-	FileComparisonEntry struct {
-		FromFile string
-		ToFile   string
-	}
 )

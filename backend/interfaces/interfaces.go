@@ -6,14 +6,6 @@ import (
 )
 
 type (
-	IExtractor interface {
-		Extract() error
-	}
-
-	ICompressor interface {
-		Compress() error
-	}
-
 	ISource interface {
 		Get() models.SpiraFileInfo
 		GetName() string
@@ -29,12 +21,6 @@ type (
 		GetVersion() common.GameVersion
 		IsDir() bool
 		PopulateDuplicatesFiles()
-	}
-
-	IFileProcessor interface {
-		ICompressor
-		IExtractor
-		GetSource() ISource
 	}
 
 	ITextFormatter interface {

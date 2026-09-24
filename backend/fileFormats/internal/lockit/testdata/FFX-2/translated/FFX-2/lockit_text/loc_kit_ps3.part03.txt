@@ -1,3 +1,0 @@
-Save Data {VAR05:30}
-Location:
-Play Time:
