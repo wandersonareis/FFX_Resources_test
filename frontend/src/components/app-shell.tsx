@@ -243,7 +243,7 @@ export function AppShell() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 gap-1 px-2 text-sm"
+              className="min-w-19 h-9 gap-1 px-2 text-sm"
             >
               {EXPORT_FORMAT_LABELS[exportFormat]}
               <ChevronDown size={14} />
