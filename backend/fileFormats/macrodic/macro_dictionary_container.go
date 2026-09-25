@@ -301,7 +301,7 @@ func (c *MacroDictionaryBinaryFile) PublishStrings() error {
 // to filePath, defaulting to this localization game file.
 func (c *MacroDictionaryBinaryFile) SaveToBinary(filePath string) error {
 	if filePath == "" {
-		filePath = common.MacroBinaryPath(c.Localization)
+		filePath = common.MacroBinaryPath(c.Version, c.Localization)
 	}
 	files, err := c.Files()
 	if err != nil {

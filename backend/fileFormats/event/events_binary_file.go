@@ -38,8 +38,35 @@ func currentVersionOrDefault() common.GameVersion {
 	return common.GameVersionFFX
 }
 
+// eventsFolder resolve o diretório de eventos para uma localização.
+// Descoberta na árvore ORIGINAL: com mods habilitado, a pasta
+// mods/<loc>/event/obj_ps3 existe após o primeiro import com apenas alguns
+// eventos — enumerar nela carregaria só o que está em mods. O fluxo correto:
+// enumerar os eventos em gamefiles e, por arquivo, preferir o binário de mods
+// (ReadLocalizedStringFiles via NewFileAccessor). Fallback: sem árvore
+// original, usa o caminho resolvido normal (mods).
 func (b *EventsBinaryFile) eventsFolder(localization string) (common.FileAccessor, error) {
-	return common.NewFileAccessor(filepath.Join(common.GetLocalizationRootForVersion(b.Version, localization), "event", "obj_ps3"))
+	version := b.Version
+	if version.String() == "" {
+		version = common.GameVersionFFX
+	}
+	folder, err := common.NewRealFileAccessor(filepath.Join(
+		common.GetPathRootForVersion(version),
+		"new_"+localization+"pc",
+		"event",
+		"obj_ps3",
+	))
+	if err != nil {
+		return common.FileAccessor{}, err
+	}
+	if folder.Exists {
+		return folder, nil
+	}
+	return common.NewFileAccessor(filepath.Join(
+		common.GetLocalizationRootForVersion(version, localization),
+		"event",
+		"obj_ps3",
+	))
 }
 
 func (b *EventsBinaryFile) LoadFromBinary() error {

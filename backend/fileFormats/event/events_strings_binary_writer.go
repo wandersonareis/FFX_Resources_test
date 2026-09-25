@@ -104,7 +104,9 @@ func writeEventStringsToAllLocalizations(pathPattern string, localizedStrings []
 	}
 
 	for localizationKey := range common.SupportedLanguages {
-		localizationRoot := common.GetLocalizationRoot(localizationKey)
+		// Versão explícita do import/apply: lastmiss divide a árvore com o
+		// ffx2 e o estado global pode divergir do arquivo sendo salvo.
+		localizationRoot := common.GetLocalizationRootForVersion(version, localizationKey)
 		localePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, localizationRoot, pathPattern)
 		localePath = filepath.FromSlash(localePath)
 

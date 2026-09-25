@@ -137,9 +137,12 @@ func CheckFFXPath(path string) (GameVersion, error) {
 	return GameVersionFFX, fmt.Errorf("not a valid spira us path: %s", path)
 }
 
-// MacroBinaryPath returns the absolute path of a macro dictionary binary for a
-// given localization (e.g. "us" -> .../new_uspc/menu/macrodic.dcp).
-func MacroBinaryPath(localization string) string {
+// MacroBinaryPath retorna o caminho absoluto do binário do dicionário de
+// macros de uma versão/localização
+// (ex.: ffx+us -> .../ffx_ps2/ffx/master/new_uspc/menu/macrodic.dcp em mods).
+// Versão explícita: lastmiss divide a árvore com o ffx2 e o estado global
+// pode divergir do arquivo sendo salvo.
+func MacroBinaryPath(version GameVersion, localization string) string {
 	rel := filepath.Join("menu", "macrodic.dcp")
-	return filepath.Join(GameFilesRoot, ModsFolder, GetLocalizationRoot(localization), rel)
+	return filepath.Join(GameFilesRoot, ModsFolder, GetLocalizationRootForVersion(version, localization), rel)
 }
