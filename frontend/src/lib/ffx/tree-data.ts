@@ -21,10 +21,11 @@ export interface EntryRow {
 }
 
 // Kinds servidos por versão na sidebar. lastmiss é expansão do ffx2 e não tem
-// dicionário próprio → sem 'macro' (a aba não mostra "Dicionário").
+// dicionário próprio → sem 'macro' (a aba não mostra "Dicionário"). O lockit
+// (kit de localização do menu/launcher) existe em FFX e FFX-2.
 export function entryKindsFor(version: GameVersionId): EntryKind[] {
   if (version === 'lastmiss') return ['events', 'objects'];
-  return ['events', 'objects', 'macro'];
+  return ['events', 'objects', 'macro', 'lockit'];
 }
 
 /**

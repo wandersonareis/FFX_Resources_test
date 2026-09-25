@@ -2,12 +2,25 @@
 // Backend envia apenas sumário canônico {id, key}; os labels PT-BR vivem aqui.
 // Nomes dos GRUPOS de events (shortened) vivem em event-group-names.ts.
 
-export type EntryKind = 'events' | 'objects' | 'macro';
+export type EntryKind = 'events' | 'objects' | 'macro' | 'lockit';
 
 export const KIND_LABELS: Record<EntryKind, string> = {
   events: 'Eventos',
   objects: 'Sistema',
   macro: 'Dicionário',
+  lockit: 'Loc Kit',
+};
+
+/** Tipo de armazenamento de um registro do lockit. */
+export const LOCKIT_LABELS: Record<string, string> = {
+  game: 'Jogo',
+  utf8: 'UTF-8',
+};
+
+/** Collection id do lockit -> nome de exibição. */
+export const LOCKIT_ENTRY_LABELS: Record<string, string> = {
+  ffx_loc_kit_ps3: 'Kit de localização (FFX)',
+  ffx2_loc_kit_ps3: 'Kit de localização (FFX-2)',
 };
 
 /** Collection id (basename sem extensão) -> nome de exibição. */
@@ -66,5 +79,14 @@ export function resolveEntryLabel(kind: EntryKind, id: string): string {
     if (m) return `Bloco ${m[1]}`;
     return id;
   }
+  if (kind === 'lockit') {
+    return LOCKIT_ENTRY_LABELS[id] ?? id;
+  }
   return id;
+}
+
+/** Rótulo do tipo (game/utf8) das rows do lockit. */
+export function resolveSegmentLabel(name: string | undefined): string {
+  if (!name) return '';
+  return LOCKIT_LABELS[name] ?? name;
 }

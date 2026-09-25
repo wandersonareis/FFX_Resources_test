@@ -6,6 +6,7 @@ import { useSelector } from '@tanstack/react-store';
 import { dto } from '@/wailsjs/go/models';
 import { useEditDraft } from '@/lib/ffx/edit-draft';
 import { SOURCE_LANG } from '@/lib/ffx/save-all';
+import { resolveSegmentLabel } from '@/lib/ffx/display-names';
 import { GameTextView } from '@/components/game-text-view';
 import {
   Table,
@@ -79,15 +80,48 @@ export function EntryTable({ view }: { view: EntryView }) {
     [rows, actions, selectedEntry]
   );
 
+  // lockit: numeração própria por grupo (game/utf8), sem expor o índice
+  // técnico do backend.
+  const lockitSeq = useMemo(() => {
+    const counters = new Map<string, number>();
+    const map = new Map<string, number>();
+    for (const r of rows) {
+      const k = r.name ?? '';
+      const n = (counters.get(k) ?? 0) + 1;
+      counters.set(k, n);
+      map.set(`${k}:${r.index}`, n);
+    }
+    return map;
+  }, [rows]);
+
   const columns = useMemo(
     () =>
       columnHelper.columns([
         columnHelper.accessor('index', {
           header: '#',
-          cell: (info) => <span className="text-muted-foreground">{info.getValue()}</span>,
+          cell: (info) => {
+            const r = info.row.original;
+            if (activeKind === 'lockit') {
+              const n = lockitSeq.get(`${r.name ?? ''}:${r.index}`) ?? '';
+              return <span className="text-muted-foreground">{n}</span>;
+            }
+            return <span className="text-muted-foreground">{info.getValue()}</span>;
+          },
         }),
-        ...(activeKind === 'objects'
-          ? [columnHelper.accessor('name', { header: 'Nome' })]
+        ...(activeKind === 'objects' || activeKind === 'lockit'
+          ? [
+              columnHelper.accessor('name', {
+                header: activeKind === 'lockit' ? 'Tipo' : 'Nome',
+                cell: (info) =>
+                  activeKind === 'lockit' ? (
+                    <span className="text-muted-foreground">
+                      {resolveSegmentLabel(info.getValue())}
+                    </span>
+                  ) : (
+                    <span>{info.getValue()}</span>
+                  ),
+              }),
+            ]
           : []),
         columnHelper.accessor((row) => row.text?.[SOURCE_LANG] ?? '', {
           id: 'original',
@@ -125,7 +159,7 @@ export function EntryTable({ view }: { view: EntryView }) {
         ),
       ]),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeKind, selectedEntry, version, snapshot.revision, drafts, actions]
+    [activeKind, selectedEntry, version, snapshot.revision, drafts, actions, lockitSeq]
   );
 
   const table = useTable({
@@ -153,7 +187,11 @@ export function EntryTable({ view }: { view: EntryView }) {
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
-                  className={header.column.id === 'index' ? 'w-14' : undefined}
+                  className={
+                    header.column.id === 'index' || header.column.id === 'seq'
+                      ? 'w-14'
+                      : undefined
+                  }
                 >
                   {header.isPlaceholder ? null : <table.FlexRender header={header} />}
                 </TableHead>
