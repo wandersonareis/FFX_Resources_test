@@ -184,6 +184,18 @@ func (a *App) GetTranslateLocation() string {
 	return interactions.NewInteractionService().TranslateLocation.GetTargetDirectory()
 }
 
+// GetEnableMods devolve a preferência mods-first da carga de binários
+// (config EnableMods). Consulta sob demanda para o checkbox de config.
+func (a *App) GetEnableMods() bool {
+	return interactions.NewInteractionService().FFXAppConfig().GetEnableMods()
+}
+
+// SetEnableMods persiste e aplica o toggle mods-first imediatamente.
+func (a *App) SetEnableMods(enabled bool) error {
+	interactions.NewInteractionService().FFXAppConfig().SetEnableMods(enabled)
+	return nil
+}
+
 // GetMetadata expõe a metadata nova (key, row_count, id, is_dir) ao frontend.
 // Aceita metadata.key (ffx/...), id de collection (azit0000, command,
 // chunk_00) ou caminho em disco. Gera models.Metadata no wailsjs.

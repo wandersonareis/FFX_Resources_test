@@ -3,8 +3,8 @@ package interactions
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"ffxresources/backend/common"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,11 +14,13 @@ type IGetAppConfig interface {
 	GetGameVersion() common.GameVersion
 	GetLocations() map[string]string
 	GetLocation(name string) string
+	GetEnableMods() bool
 }
 
 type ISetAppConfig interface {
 	SetGameVersion(version common.GameVersion)
 	SetLocation(name, path string)
+	SetEnableMods(enabled bool)
 }
 
 type IAppConfig interface {
@@ -32,11 +34,13 @@ type AppConfig struct {
 	filePath    string
 	locations   map[string]string
 	gameVersion common.GameVersion
+	enableMods  bool
 }
 
 type appConfigJSON struct {
-	Locations   map[string]string `json:"Locations"`
+	Locations   map[string]string  `json:"Locations"`
 	GameVersion common.GameVersion `json:"GameVersion"`
+	EnableMods  *bool              `json:"EnableMods,omitempty"`
 }
 
 func NewAppConfig() *AppConfig {
@@ -46,13 +50,14 @@ func NewAppConfig() *AppConfig {
 		filePath:    filePath,
 		locations:   defaultLocations(),
 		gameVersion: common.GameVersionFFX,
+		enableMods:  true, // mods-first é o comportamento padrão
 	}
 
-	// FromJson mescla o arquivo sobre os defaults; em qualquer falha
-	// mantemos o config padrão válido em vez de retornar nil.
 	if err := c.FromJson(); err != nil {
 		common.LogVerbose("Using default config (%v)", err)
 	}
+
+	common.SetModsEnabled(c.enableMods)
 
 	if err := c.validateConfig(); err != nil {
 		common.LogVerbose("Could not persist default config (%v)", err)
@@ -136,6 +141,7 @@ func (c *AppConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(appConfigJSON{
 		Locations:   c.locations,
 		GameVersion: c.gameVersion,
+		EnableMods:  &c.enableMods,
 	})
 }
 
@@ -166,6 +172,10 @@ func (c *AppConfig) UnmarshalJSON(data []byte) error {
 	}
 	c.locations = merged
 	c.gameVersion = aux.GameVersion
+	// EnableMods ausente no arquivo → mantém o default (true).
+	if aux.EnableMods != nil {
+		c.enableMods = *aux.EnableMods
+	}
 	return nil
 }
 
@@ -226,7 +236,7 @@ func (c *AppConfig) GetGameVersion() common.GameVersion {
 func (c *AppConfig) SetGameVersion(version common.GameVersion) {
 	c.gameVersion = version
 	common.SetCurrentGameVersion(c.gameVersion)
-	
+
 	_ = c.ToJson()
 }
 
@@ -243,5 +253,17 @@ func (c *AppConfig) SetLocation(name, path string) {
 		c.locations = make(map[string]string)
 	}
 	c.locations[name] = path
+	_ = c.ToJson()
+}
+
+// GetEnableMods devolve a preferência mods-first (config EnableMods).
+func (c *AppConfig) GetEnableMods() bool {
+	return c.enableMods
+}
+
+// SetEnableMods persiste o toggle e aplica na resolução de caminhos.
+func (c *AppConfig) SetEnableMods(enabled bool) {
+	c.enableMods = enabled
+	common.SetModsEnabled(enabled)
 	_ = c.ToJson()
 }

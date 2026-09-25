@@ -22,6 +22,10 @@ export function ExportStrings(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ExportStrings'](arg1, arg2, arg3, arg4);
 }
 
+export function GetEnableMods() {
+  return window['go']['main']['App']['GetEnableMods']();
+}
+
 export function GetGameFilesLocation() {
   return window['go']['main']['App']['GetGameFilesLocation']();
 }
@@ -76,6 +80,10 @@ export function SelectDirectory(arg1) {
 
 export function SelectImportFile() {
   return window['go']['main']['App']['SelectImportFile']();
+}
+
+export function SetEnableMods(arg1) {
+  return window['go']['main']['App']['SetEnableMods'](arg1);
 }
 
 export function SetUnsavedEdits(arg1) {

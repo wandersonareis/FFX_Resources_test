@@ -14,6 +14,8 @@ export function ExportJSON(arg1:string,arg2:common.GameVersion,arg3:Array<string
 
 export function ExportStrings(arg1:string,arg2:common.GameVersion,arg3:Array<string>,arg4:Array<string>):Promise<Array<string>>;
 
+export function GetEnableMods():Promise<boolean>;
+
 export function GetGameFilesLocation():Promise<string>;
 
 export function GetMetadata(arg1:string):Promise<dto.Metadata>;
@@ -41,6 +43,8 @@ export function ReadFileAsString(arg1:string):Promise<string>;
 export function SelectDirectory(arg1:string):Promise<string>;
 
 export function SelectImportFile():Promise<string>;
+
+export function SetEnableMods(arg1:boolean):Promise<void>;
 
 export function SetUnsavedEdits(arg1:boolean):Promise<void>;
 

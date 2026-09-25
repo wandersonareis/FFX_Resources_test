@@ -24,8 +24,17 @@ func DefaultTranslatedDir(gameFilesDir string) string {
 var (
 	ResourcesRoot = GetExecDir()
 	GameFilesRoot = ResourcesRoot
-	DisableMods   = true
+	// DisableMods desliga a preferência por arquivos em mods/. O estado
+	// é controlado em runtime via SetModsEnabled (config EnableMods).
+	DisableMods = false
 )
+
+// SetModsEnabled liga/desliga a preferência mods-first da resolução de
+// caminhos (FileAccessor + loaders de binário). O valor vem do config
+// (EnableMods) e é aplicado no bootstrap da aplicação.
+func SetModsEnabled(enabled bool) {
+	DisableMods = !enabled
+}
 
 func SetGameFilesRoot(path string) {
 	if path == "" {
@@ -121,6 +130,36 @@ func (f *FileAccessor) ReadBytes() ([]byte, error) {
 		return nil, err
 	}
 	return data, nil
+}
+
+// NewRealFileAccessor cria um FileAccessor apontando SEMPRE para o arquivo
+// original (<gamefiles>/<path>), ignorando mods — para enumeração de
+// diretórios (descoberta de eventos) e casos onde o caminho deve ser o
+// original mesmo com mods habilitado. A leitura por arquivo continua podendo
+// preferir mods via NewFileAccessor.
+func NewRealFileAccessor(path string) (FileAccessor, error) {
+	resolvedPath, err := getRealPath(path)
+	if err != nil {
+		return FileAccessor{}, err
+	}
+
+	fileInfo, exists := getFileInfo(resolvedPath)
+
+	return FileAccessor{
+		RootPath:     path,
+		ResolvedPath: resolvedPath,
+		Info:         fileInfo,
+		Size:         getFileSize(fileInfo),
+		Exists:       exists,
+	}, nil
+}
+
+// getRealPath resolve o caminho absoluto na árvore original, sem mods.
+func getRealPath(path string) (string, error) {
+	if filepath.IsAbs(path) {
+		return filepath.Clean(path), nil
+	}
+	return getRealFile(path), nil
 }
 
 func resolvePath(path string) (string, error) {

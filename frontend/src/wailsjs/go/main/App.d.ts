@@ -16,6 +16,10 @@ export function ExportStrings(arg1:string,arg2:common.GameVersion,arg3:Array<str
 
 export function GetGameFilesLocation():Promise<string>;
 
+export function GetEnableMods():Promise<boolean>;
+
+export function SetEnableMods(arg1:boolean):Promise<void>;
+
 export function GetMetadata(arg1:string):Promise<dto.Metadata>;
 
 export function GetTextCollection(arg1:string,arg2:common.GameVersion,arg3:Array<string>):Promise<dto.Collection>;

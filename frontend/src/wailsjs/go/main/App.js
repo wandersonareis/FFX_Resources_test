@@ -26,6 +26,14 @@ export function GetGameFilesLocation() {
   return window['go']['main']['App']['GetGameFilesLocation']();
 }
 
+export function GetEnableMods() {
+  return window['go']['main']['App']['GetEnableMods']();
+}
+
+export function SetEnableMods(arg1) {
+  return window['go']['main']['App']['SetEnableMods'](arg1);
+}
+
 export function GetMetadata(arg1) {
   return window['go']['main']['App']['GetMetadata'](arg1);
 }
