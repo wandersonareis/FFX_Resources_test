@@ -2,33 +2,6 @@ package common
 
 import "path/filepath"
 
-func GetEncodingDir() string {
-	return GetEncodingDirForVersion(CurrentGameVersion())
-}
-
-// GetEncodingDirForVersion resolve o diretório de encoding sem depender
-// de estado global ("ffx" -> ffx_encoding, "ffx2" -> ffx2_encoding,
-// "lastmiss" reaproveita ffx2_encoding).
-func GetEncodingDirForVersion(gv GameVersion) string {
-	switch gv {
-	case GameVersionFFX2, GameVersionLastMiss:
-		return "ffx2_encoding"
-	default:
-		return "ffx_encoding"
-	}
-}
-
-// GetEncodingPathForVersion monta o caminho do charset para uma versão
-// explícita, sem ler o estado global.
-func GetEncodingPathForVersion(gv GameVersion, charset string) string {
-	encodingDir := GetEncodingDirForVersion(gv)
-	base := gv.String()
-	if gv == GameVersionLastMiss {
-		base = GameVersionFFX2.String()
-	}
-	return filepath.Join(encodingDir, base+"sjistbl_"+charset+".bin")
-}
-
 // GetPathRoot monta a raiz ffx_ps2/<versão>/master da versão ativa.
 func GetPathRoot() string {
 	return GetPathRootForVersion(CurrentGameVersion())

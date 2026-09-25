@@ -2,6 +2,7 @@
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/fileFormats/macrodic"
 	"ffxresources/backend/interactions"
@@ -39,9 +40,11 @@ func InitializeInternals() error {
 // PrepareVersion carrega os charsets da versão e publica os macros no
 // datastore. É idempotente do ponto de vista dos dados (sobrescreve os mapas)
 // e independente da versão global ativa, para servir FFX/FFX-2/LastMiss.
+// Os charsets são tabelas embutidas (core/encoding/charset_tables.go): sem
+// leitura de arquivo, a carga nunca falha por recurso ausente.
 func PrepareVersion(version common.GameVersion) error {
 	for _, cs := range common.Charsets {
-		if err := PrepareCharset(version, cs); err != nil {
+		if err := ffxencoding.PrepareCharset(version, cs); err != nil {
 			return err
 		}
 	}
