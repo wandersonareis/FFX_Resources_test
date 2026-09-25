@@ -1,10 +1,13 @@
 package strings_test
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/converter"
+	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/formatters/hash"
 	fmtstrings "ffxresources/backend/formatters/strings"
@@ -255,5 +258,95 @@ func TestRightAnchorGrowth(t *testing.T) {
 	}
 	if entry.Rows[0].Name != "name" || entry.Rows[0].Text["us"] != "Potion" {
 		t.Fatalf("wrong row: %+v", entry.Rows[0])
+	}
+}
+
+
+// TestStringsFormatPUARoundTrip valida o token {PUA:XX:CHAR} no formato
+// strings, que não dá uso especial a aspas ou caracteres de controle (só
+// escapa \, CR, LF e ║): o token cruza marshal/unmarshal intacto e o texto
+// volta aos bytes originais byte-a-byte.
+//
+// Com as correções de font na tabela us (comprovadas pela atlas
+// font_0_0/font_0_1), aspas e apóstrofo deixam de duplicar:
+//   - 0x3C desenha aspas RETAS → rune " (canônico); 0x95 desenha as CURVAS
+//     (inclinadas) → rune ” único: nenhum dos dois gera token.
+//   - 0x41 desenha apóstrofo reto → rune '; 0xD5 o curvo → rune ’ único
+//     (o byte usado 181× nos diálogos originais).
+//   - Duplicata genuína restante: espaço em 0xA0 (glifo vazio, igual a
+//     0x3A) → decode emite {PUA:A0: }, com o mesmo rune da ocorrência
+//     normal dentro do token.
+func TestStringsFormatPUARoundTrip(t *testing.T) {
+	// Tabela us real; snapshot para restaurar os mapas do pacote.
+	prevB2C := ffxencoding.GetByteToCharMap(common.GameVersionFFX, "us")
+	prevC2B := ffxencoding.GetCharToByteMap(common.GameVersionFFX, "us")
+	defer func() {
+		ffxencoding.SetCharMap(common.GameVersionFFX, "us", prevB2C, prevC2B)
+	}()
+	if err := ffxencoding.PrepareCharset(common.GameVersionFFX, "us"); err != nil {
+		t.Fatalf("PrepareCharset: %v", err)
+	}
+
+	// Sem duplicata: 0x3C (aspas retas) e 0x95 (curvas) decodificam puros.
+	decoded := converter.BytesToString([]byte{0x3C, 0x95, 0x00}, "us", common.GameVersionFFX)
+	if want := "\"”"; decoded != want {
+		t.Fatalf("decode de 0x3C+0x95 sem duplicata:\n got %q\nwant %q", decoded, want)
+	}
+	// Canônicos do encode — o byte "certo" de cada rune é o slot do seu glifo.
+	for char, want := range map[rune]uint{'"': 0x3C, '”': 0x95, '\'': 0x41} {
+		if b, err := ffxencoding.CharToByte(char, "us", common.GameVersionFFX); err != nil || b != want {
+			t.Fatalf("byte canônico de %q: got 0x%02X (err %v), want 0x%02X", char, b, err, want)
+		}
+	}
+
+	// Duplicata genuína: espaço normal (0x3A) + slot extra (0xA0). O decode
+	// repete o caractere — o rune dentro do token é o mesmo espaço — e o
+	// token preserva o byte exato para o re-import.
+	spaceDecoded := converter.BytesToString([]byte{0x3A, 0xA0, 0x00}, "us", common.GameVersionFFX)
+	if want := " {PUA:A0: }"; spaceDecoded != want {
+		t.Fatalf("decode de 0x3A+0xA0:\n got %q\nwant %q", spaceDecoded, want)
+	}
+	reencoded, err := converter.StringToStoredBytes(spaceDecoded, "us", common.GameVersionFFX)
+	if err != nil {
+		t.Fatalf("re-encode: %v", err)
+	}
+	if !reflect.DeepEqual(reencoded, []byte{0x3A, 0xA0, 0x00}) {
+		t.Fatalf("round-trip byte-exato:\n got % X\nwant % X", reencoded, []byte{0x3A, 0xA0, 0x00})
+	}
+
+	// Round-trip pelo formato strings: aspas retas/curvas e o token passam
+	// sem escape e o re-encode pós-formato continua byte-exato.
+	text := decoded + spaceDecoded
+	collection := dto.Collection{
+		"test0000": {
+			Metadata: dto.NewEventMetadata("test0000", common.GameVersionFFX).WithRowCount(1),
+			Rows: []dto.TextRow{{
+				Index: 0,
+				Hash:  hash.Texts(map[string]string{"us": text}),
+				Text:  map[string]string{"us": text},
+			}},
+		},
+	}
+	data, err := fmtstrings.Marshal(collection)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	parsed, err := fmtstrings.Unmarshal(data)
+	if err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	entry, ok := parsed["test0000"]
+	if !ok || len(entry.Rows) != 1 {
+		t.Fatalf("Unmarshal perdeu a entrada: %+v", parsed)
+	}
+	if got := entry.Rows[0].Text["us"]; got != text {
+		t.Fatalf("texto mudou no round-trip do formato strings:\n got %q\nwant %q", got, text)
+	}
+	reencodedFmt, err := converter.StringToStoredBytes(entry.Rows[0].Text["us"], "us", common.GameVersionFFX)
+	if err != nil {
+		t.Fatalf("re-encode pós-formato: %v", err)
+	}
+	if want := []byte{0x3C, 0x95, 0x3A, 0xA0, 0x00}; !reflect.DeepEqual(reencodedFmt, want) {
+		t.Fatalf("round-trip byte-exato pós-formato:\n got % X\nwant % X", reencodedFmt, want)
 	}
 }
