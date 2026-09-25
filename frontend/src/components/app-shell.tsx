@@ -209,7 +209,7 @@ export function AppShell() {
       const changed = await importFile(current.path, version);
       setImportSummary(null);
       toast.success(
-        `Importação concluída — ${changed} texto(s) atualizado(s).`,
+        `Importação concluída — ${changed} texto(s) atualizado(s) e salvos em binário (mods/).`,
         { id: toastId }
       );
       // Avisa a aba ativa para recarregar árvore/tabela (rascunhos preservados).

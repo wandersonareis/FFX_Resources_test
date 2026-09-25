@@ -36,7 +36,10 @@ type ImportSummary struct {
 	EntryCount   int               `json:"entry_count"`
 	TotalIndices int               `json:"total_indices"`
 	ChangedTexts int               `json:"changed_texts"`
-	Entries      []ImportEntryInfo `json:"entries"`
-	Usages       []ImportUsage     `json:"usages"`
-	Errors       []string          `json:"errors"`
+	// SavesBinary avisa no modal que a confirmação reconstrói e grava os
+	// binários em mods/ — e que a carga seguinte passa a ler deles.
+	SavesBinary bool              `json:"saves_binary"`
+	Entries     []ImportEntryInfo `json:"entries"`
+	Usages      []ImportUsage     `json:"usages"`
+	Errors      []string          `json:"errors"`
 }

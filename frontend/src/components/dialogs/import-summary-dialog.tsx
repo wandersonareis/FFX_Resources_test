@@ -84,6 +84,14 @@ export function ImportSummaryDialog({
             </div>
             <p className="text-xs break-all text-muted-foreground">{summary.path}</p>
 
+            {summary.saves_binary ? (
+              <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-2 text-sm text-amber-600 dark:text-amber-400">
+                Ao confirmar, o texto importado será <strong>salvo em binário</strong> em
+                <code className="mx-1">mods/</code> e recarregado dali nas próximas sessões
+                (continuidade da tradução).
+              </div>
+            ) : null}
+
             {blocked ? (
               <div className="rounded-md border border-destructive/50 bg-destructive/10 p-2 text-sm text-destructive">
                 <p className="font-semibold">

@@ -150,6 +150,7 @@ export namespace dto {
 	    entry_count: number;
 	    total_indices: number;
 	    changed_texts: number;
+	    saves_binary?: boolean;
 	    entries: ImportEntryInfo[];
 	    usages: ImportUsage[];
 	    errors: string[];
@@ -168,6 +169,7 @@ export namespace dto {
 	        this.entry_count = source["entry_count"];
 	        this.total_indices = source["total_indices"];
 	        this.changed_texts = source["changed_texts"];
+	        if ('saves_binary' in source) this.saves_binary = source["saves_binary"];
 	        this.entries = this.convertValues(source["entries"], ImportEntryInfo);
 	        this.usages = this.convertValues(source["usages"], ImportUsage);
 	        this.errors = source["errors"];

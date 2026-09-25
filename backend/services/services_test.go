@@ -2,6 +2,9 @@ package services_test
 
 import (
 	"ffxresources/backend/common"
+	"ffxresources/backend/dto"
+	"ffxresources/backend/formatters/hash"
+	strfmt "ffxresources/backend/formatters/strings"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/services"
 	"ffxresources/testData"
@@ -144,5 +147,58 @@ var _ = Describe("MetadataService", Ordered, func() {
 		entries, err := metadataService.ListEntries(services.KindMacro, common.GameVersionLastMiss)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(entries).To(BeEmpty(), "lastmiss has no macro dictionary of its own")
+	})
+
+	It("imports strings, warns about binary save and persists it in mods", func() {
+		entries, err := metadataService.ListEntries(services.KindEvents, common.GameVersionFFX2)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(entries).NotTo(BeEmpty())
+
+		id := entries[0].ID
+		entry, err := metadataService.GetEntry(services.KindEvents, id, common.GameVersionFFX2)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(entry.Metadata.Key).NotTo(BeEmpty())
+
+		// Encurta um texto 'us' (capacity-safe) para gerar uma alteração.
+		changed := false
+		for i := range entry.Rows {
+			if t := entry.Rows[i].Text[common.DefaultLocalization]; len(t) > 1 {
+				newText := t[:len(t)-1]
+				entry.Rows[i].Text[common.DefaultLocalization] = newText
+				entry.Rows[i].Hash[common.DefaultLocalization] = hash.Sum64Hex(newText)
+				changed = true
+				break
+			}
+		}
+		Expect(changed).To(BeTrue(), "a entrada deve ter um texto 'us' encurtável")
+
+		// .strings da entrada em arquivo de importação.
+		c := dto.Collection{id: entry}
+		raw, err := strfmt.Marshal(c)
+		Expect(err).NotTo(HaveOccurred())
+		importPath := filepath.Join(tmpRoot, "reimported", "test_import.strings")
+		Expect(os.MkdirAll(filepath.Dir(importPath), 0o755)).To(Succeed())
+		Expect(os.WriteFile(importPath, raw, 0o644)).To(Succeed())
+
+		// O modal deve avisar que a confirmação salva em binário.
+		summary, err := metadataService.PreviewImport(importPath, common.GameVersionFFX2)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(summary.SavesBinary).To(BeTrue(),
+			"o resumo deve avisar que o import será salvo em binário")
+
+		changedCount, err := metadataService.ImportFile(importPath, common.GameVersionFFX2)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(changedCount).To(Equal(1))
+
+		// O binário reconstruído deve existir em <game>/mods/... — de onde
+		// a carga mods-first o lê na sessão seguinte.
+		p, ok := dto.ParseKey(entry.Metadata.Key)
+		Expect(ok).To(BeTrue())
+		Expect(p.LocalizationPattern).NotTo(BeEmpty())
+		modBinary := filepath.Join(gameLocation, "mods", "ffx_ps2", "ffx2", "master",
+			"new_uspc", filepath.FromSlash(p.LocalizationPattern))
+		_, statErr := os.Stat(modBinary)
+		Expect(statErr).NotTo(HaveOccurred(),
+			"binário importado deve existir em mods: %s", modBinary)
 	})
 })

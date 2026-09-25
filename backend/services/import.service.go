@@ -515,9 +515,12 @@ func (s *MetadataService) prepareImport(path string, version common.GameVersion)
 		Kind:      kind,
 		Version:   version.String(),
 		Languages: importLanguages(imported),
-		Entries:   make([]dto.ImportEntryInfo, 0, len(imported)),
-		Usages:    make([]dto.ImportUsage, 0, len(known)),
-		Errors:    []string{},
+		// Toda importação confirmada reconstrói e grava os binários em mods/;
+		// o aviso no modal deixa o efeito explícito antes de aplicar.
+		SavesBinary: true,
+		Entries:     make([]dto.ImportEntryInfo, 0, len(imported)),
+		Usages:      make([]dto.ImportUsage, 0, len(known)),
+		Errors:      []string{},
 	}
 
 	valid := make(dto.Collection, len(known))

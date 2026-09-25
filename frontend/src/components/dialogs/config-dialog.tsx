@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { FolderOpen, X } from 'lucide-react';
 import {
+  GetEnableMods,
   GetGameFilesLocation,
   GetTranslateLocation,
   SelectDirectory,
+  SetEnableMods,
 } from '@/wailsjs/go/main/App';
 import { EventsEmit } from '@/wailsjs/runtime/runtime';
 import { useWailsEvent } from '@/lib/ffx/use-wails-event';
@@ -19,6 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -50,6 +53,7 @@ export function ConfigDialog({
 }) {
   const [gameDirectory, setGameDirectory] = useState('');
   const [translatedDirectory, setTranslatedDirectory] = useState('');
+  const [enableMods, setEnableMods] = useState(true);
 
   useWailsEvent('GameFilesLocation', (data) => setGameDirectory((data as string) ?? ''));
   useWailsEvent('TranslateLocation', (data) => setTranslatedDirectory((data as string) ?? ''));
@@ -62,7 +66,21 @@ export function ConfigDialog({
     GetTranslateLocation()
       .then((v) => setTranslatedDirectory(v ?? ''))
       .catch(notify);
+    GetEnableMods()
+      .then((v) => setEnableMods(Boolean(v)))
+      .catch(notify);
   }, [open]);
+
+  const applyEnableMods = async (checked: boolean) => {
+    const previous = enableMods;
+    setEnableMods(checked);
+    try {
+      await SetEnableMods(checked);
+    } catch (error) {
+      setEnableMods(previous);
+      notify(error);
+    }
+  };
 
   const inputs: DirectoryInput[] = [
     {
@@ -140,6 +158,26 @@ export function ConfigDialog({
               </Button>
             </div>
           ))}
+        </div>
+
+        <div className="flex items-start gap-2 pt-2">
+          <Checkbox
+            id="EnableMods"
+            checked={enableMods}
+            onCheckedChange={(v) => void applyEnableMods(Boolean(v))}
+          />
+          <div className="grid gap-1 leading-none">
+            <Label htmlFor="EnableMods" className="cursor-pointer">
+              Preferir binários traduzidos (mods)
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Ao carregar, usa primeiro os binários salvos em
+              <code className="mx-1">mods/</code>
+              e cai para os originais quando não existirem — a tradução
+              continua de onde parou. O import de JSON/strings grava os
+              binários nessa pasta.
+            </p>
+          </div>
         </div>
 
         <DialogFooter>
