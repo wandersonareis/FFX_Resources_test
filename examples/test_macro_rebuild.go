@@ -16,13 +16,13 @@ func TestMacroStringRebuild() {
 
 	// Initialize data first
 	fmt.Println("Inicializando dados...")
-	if err := reader.InitializeInternals(); err != nil {
+	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
+	if err := reader.InitializeInternals(version); err != nil {
 		fmt.Printf("Erro ao inicializar: %v\n", err)
 		return
 	}
 
 	// Get test data from available containers
-	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
 	containers, err := macrodic.ReadMacroDictionaryContainers(version)
 	if err != nil {
 		fmt.Printf("Erro ao ler containers: %v\n", err)

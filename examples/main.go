@@ -29,7 +29,7 @@ func main() {
 	// Inicialização obrigatória
 	common.LogInfo("=== FFX (v1) ===")
 	common.LogInfo("Inicializando sistema (FFX v1)...")
-	if err := reader.InitializeInternals(); err != nil {
+	if err := reader.InitializeInternals(common.GameVersionFFX); err != nil {
 		common.LogError("Erro ao inicializar sistema: %v\n", err)
 		return
 	}
@@ -46,7 +46,7 @@ func main() {
 
 	common.LogInfo("\n=== FFX-2 (v2) ===")
 	common.LogInfo("Reinicializando dicionários para FFX-2...")
-	if err := reader.InitializeInternals(); err != nil {
+	if err := reader.InitializeInternals(common.GameVersionFFX2); err != nil {
 		common.LogError("Erro ao inicializar sistema: %v\n", err)
 		return
 	}
