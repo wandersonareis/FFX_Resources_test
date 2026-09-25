@@ -80,7 +80,7 @@ func collectBinaryKeyedStringsStore(b *ObjectBinaryFileStore, localizationKey st
 	return all
 }
 
-func writeBinaryLocalizedFileStore(b *ObjectBinaryFileStore, version common.GameVersion, localizationKey, data []byte) error {
+func writeBinaryLocalizedFileStore(b *ObjectBinaryFileStore, version common.GameVersion, localizationKey string, data []byte) error {
 	// A cópia na árvore de mods espelha a localização canônica do arquivo
 	// (patternPath) — nunca o filePath do chamador, que pode ser absoluto
 	// (ex.: testes gravando em temp dir) e não deve ser embutido no join.

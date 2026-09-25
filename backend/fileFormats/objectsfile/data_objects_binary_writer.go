@@ -80,7 +80,7 @@ func collectBinaryKeyedStrings(b *ObjectBinaryFile, localizationKey string) []da
 	return all
 }
 
-func writeBinaryLocalizedFile(b *ObjectBinaryFile, localizationKey, data []byte) error {
+func writeBinaryLocalizedFile(b *ObjectBinaryFile, localizationKey string, data []byte) error {
 	// A cópia na árvore de mods espelha a localização canônica do arquivo
 	// (patternPath) — nunca o filePath do chamador, que pode ser absoluto
 	// (ex.: testes gravando em temp dir) e não deve ser embutido no join.
