@@ -55,7 +55,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 
 		Context("when all required files exist", func() {
 			It("should initialize all character maps for available charsets", func() {
-				Expect(reader.InitializeInternals()).To(Succeed())
+				Expect(reader.InitializeInternals(common.GameVersionFFX)).To(Succeed())
 
 				// Verify that character maps were created for each charset
 				for _, charset := range common.Charsets {
@@ -70,7 +70,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 			})
 
 			It("should prepare string macros for all localizations", func() {
-				Expect(reader.InitializeInternals()).To(Succeed())
+				Expect(reader.InitializeInternals(common.GameVersionFFX)).To(Succeed())
 
 				// Verify that macros were published into the datastore
 				// Since we can't access specific macros by localization directly,
@@ -80,7 +80,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 			It("should handle Korean and Chinese localizations without output", func() {
 				// This test verifies that kr and ch localizations are processed
 				// but with printOutput set to false
-				Expect(reader.InitializeInternals()).To(Succeed())
+				Expect(reader.InitializeInternals(common.GameVersionFFX)).To(Succeed())
 
 				// We can't directly test the printOutput behavior in unit tests,
 				// but we can verify the function completes without error
@@ -146,7 +146,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 			// Os charsets vivem em core/encoding/charset_tables.go — não há
 			// mais I/O de tabela, então nada falha por recurso ausente aqui.
 			// Macros ausentes são ignoradas silenciosamente (PrepareStringMacros).
-			Expect(reader.InitializeInternals()).To(Succeed())
+			Expect(reader.InitializeInternals(common.GameVersionFFX)).To(Succeed())
 		})
 	})
 
@@ -163,7 +163,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 			// This depends on how PrepareStringMacros handles errors
 			// You might want to adjust this based on actual error handling
 			Expect(func() {
-				reader.InitializeInternals()
+				reader.InitializeInternals(common.GameVersionFFX)
 			}).ToNot(Panic())
 		})
 	})

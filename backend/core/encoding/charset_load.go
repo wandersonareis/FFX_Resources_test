@@ -26,6 +26,20 @@ func PrepareCharset(version common.GameVersion, charset string) error {
 	return nil
 }
 
+// PrepareVersionCharsets publica os mapas de todos os charsets da versão
+// indicada (common.Charsets). É a parte sem I/O da inicialização: os charsets
+// vivem em charset_tables.go, então a carga só falha para charset/versão
+// desconhecidos. Delegada por reader.PrepareVersion, que orquestra também a
+// carga dos macros (I/O legítimo do reader).
+func PrepareVersionCharsets(version common.GameVersion) error {
+	for _, cs := range common.Charsets {
+		if err := PrepareCharset(version, cs); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // buildMappings constrói os mapas do charset.
 //
 //	decode (byteToChar): todos os slots, repetidos incluídos — muitos-para-um.

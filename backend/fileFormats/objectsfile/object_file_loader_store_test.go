@@ -66,7 +66,7 @@ var _ = Describe("LoadObjectFile differential vs Read oracle", Ordered, func() {
 		config.SetLocation("ImportLocation", filepath.Join(tmpRoot, "reimported"))
 
 		interactions.NewInteractionServiceWithConfig(config)
-		Expect(reader.InitializeInternals()).To(Succeed())
+		Expect(reader.InitializeInternals(common.GameVersionFFX)).To(Succeed())
 	})
 
 	AfterAll(func() {
@@ -172,7 +172,7 @@ var _ = Describe("LastMiss load without global version", Ordered, func() {
 		config.SetLocation("ImportLocation", filepath.Join(tmpRoot, "reimported"))
 
 		interactions.NewInteractionServiceWithConfig(config)
-		Expect(reader.InitializeInternals()).To(Succeed())
+		Expect(reader.InitializeInternals(common.GameVersionLastMiss)).To(Succeed())
 	})
 
 	AfterAll(func() {

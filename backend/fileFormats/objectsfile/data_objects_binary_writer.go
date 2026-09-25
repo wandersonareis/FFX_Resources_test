@@ -27,7 +27,7 @@ func SaveBinaryFile(b *ObjectBinaryFile, filePath string) error {
 			return err
 		}
 
-		if err := writeBinaryLocalizedFile(b, localizationKey, filePath, buf.Bytes()); err != nil {
+		if err := writeBinaryLocalizedFile(b, localizationKey, buf.Bytes()); err != nil {
 			return err
 		}
 		lastBuf = buf.Bytes()
@@ -80,9 +80,11 @@ func collectBinaryKeyedStrings(b *ObjectBinaryFile, localizationKey string) []da
 	return all
 }
 
-func writeBinaryLocalizedFile(b *ObjectBinaryFile, localizationKey, filePath string, data []byte) error {
-	_ = b
-	localePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, common.GetLocalizationRoot(localizationKey), filePath)
+func writeBinaryLocalizedFile(b *ObjectBinaryFile, localizationKey, data []byte) error {
+	// A cópia na árvore de mods espelha a localização canônica do arquivo
+	// (patternPath) — nunca o filePath do chamador, que pode ser absoluto
+	// (ex.: testes gravando em temp dir) e não deve ser embutido no join.
+	localePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, common.GetLocalizationRoot(localizationKey), b.patternPath)
 	localePath = filepath.FromSlash(localePath)
 
 	dir := filepath.Dir(localePath)

@@ -5,7 +5,6 @@ import (
 	"ffxresources/backend/core/encoding"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/fileFormats/macrodic"
-	"ffxresources/backend/interactions"
 	"path/filepath"
 )
 
@@ -25,28 +24,30 @@ func PrepareStringMacros(filename, localization string, version common.GameVersi
 	return nil
 }
 
-func InitializeInternals() error {
-	gameVersion := interactions.CurrentGameVersion()
-	if err := PrepareVersion(gameVersion); err != nil {
+// InitializeInternals prepara os internals da versão indicada: charsets
+// (embutidos, via core/encoding) e macros das localizações. A versão é
+// recebida do chamador — o reader não consulta a versão global, ficando sem
+// acoplamento a interactions e testável por versão sem instâncias.
+func InitializeInternals(version common.GameVersion) error {
+	if err := PrepareVersion(version); err != nil {
 		return err
 	}
 
 	common.LogVerbose("Macro Lookup Table:\n")
-	logMacroLookup(gameVersion)
+	logMacroLookup(version)
 
 	return nil
 }
 
-// PrepareVersion carrega os charsets da versão e publica os macros no
+// PrepareVersion publica os charsets da versão (delegados ao core/encoding:
+// tabelas embutidas, sem I/O) e carrega os macros das localizações para o
 // datastore. É idempotente do ponto de vista dos dados (sobrescreve os mapas)
 // e independente da versão global ativa, para servir FFX/FFX-2/LastMiss.
-// Os charsets são tabelas embutidas (core/encoding/charset_tables.go): sem
-// leitura de arquivo, a carga nunca falha por recurso ausente.
+// O reader fica com o I/O legítimo: ler os macrodic.dcp — a carga dos charsets
+// nunca falha por recurso ausente.
 func PrepareVersion(version common.GameVersion) error {
-	for _, cs := range common.Charsets {
-		if err := ffxencoding.PrepareCharset(version, cs); err != nil {
-			return err
-		}
+	if err := ffxencoding.PrepareVersionCharsets(version); err != nil {
+		return err
 	}
 
 	// Default localization first, then populate with the other available ones.

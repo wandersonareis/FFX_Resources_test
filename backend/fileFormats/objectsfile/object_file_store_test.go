@@ -113,7 +113,7 @@ var _ = Describe("Integration: integrity cycle via LoadObjectFileFromStore + Fil
 		config.SetLocation("ImportLocation", filepath.Join(tmpRoot, "reimported"))
 
 		interactions.NewInteractionServiceWithConfig(config)
-		Expect(reader.InitializeInternals()).To(Succeed())
+		Expect(reader.InitializeInternals(common.GameVersionFFX)).To(Succeed())
 	})
 
 	AfterAll(func() {

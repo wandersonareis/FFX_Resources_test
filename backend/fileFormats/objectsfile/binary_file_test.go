@@ -89,7 +89,7 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 		interactions.NewInteractionServiceWithConfig(config)
 		Expect(common.GameFilesRoot).To(Equal(gameDir))
 
-		Expect(reader.InitializeInternals()).To(Succeed())
+		Expect(reader.InitializeInternals(version)).To(Succeed())
 
 		return tmpRoot
 	}
