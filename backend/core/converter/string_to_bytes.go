@@ -22,23 +22,8 @@ var (
 	reChoice = regexp.MustCompile(`\{CHOICE:([0-9A-Fa-f]{2})\}`)
 	reMCR    = regexp.MustCompile(`^MCR:s([0-9A-Fa-f]{1,2}):l([0-9A-Fa-f]{1,2}):`)
 	reHEX    = regexp.MustCompile(`^HEX:([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2})*)$`)
+	rePUA    = regexp.MustCompile(`^PUA:([0-9A-Fa-f]+)`)
 )
-
-// Faixa PUA espelhando o esquema de reader/charset.go (puaRune(code) com
-// puaBase 0xE000): runes PUA são dados esperados nos textos e voltam ao
-// código do jogo pela bijeção, mesmo fora dos mapas.
-const (
-	puaBase = 0xE000
-	puaLast = 0xF8FF
-)
-
-// puaCode extrai o código do jogo de uma rune PUA (U+E000+código).
-func puaCode(chr rune) (uint, bool) {
-	if chr >= puaBase && chr <= puaLast {
-		return uint(chr - puaBase), true
-	}
-	return 0, false
-}
 
 func CharToBytes(chr rune, charset string, version common.GameVersion) ([]uint, error) {
 	if chr == '\n' {
@@ -51,21 +36,20 @@ func CharToBytes(chr rune, charset string, version common.GameVersion) ([]uint, 
 			// erro de configuração: fatal
 			return nil, fmt.Errorf("CharToBytes: %w", err)
 		}
-		if !errors.Is(err, encoding.ErrCharNotFound) {
-			return nil, fmt.Errorf("CharToBytes: %w", err)
-		}
-		// Rune PUA fora dos mapas: dado esperado, deriva o código pela
-		// bijeção em vez de descartar (round-trip com o slot fixo).
-		code, ok := puaCode(chr)
-		if !ok {
-			// caractere ausente: retorna erro específico, chamador decide
-			return nil, fmt.Errorf("CharToBytes: %w", err)
-		}
-		indexValue = code
+		// ErrCharNotFound: caractere ausente — dado ruim, o chamador decide
+		// (pular, abortar, logar).
+		return nil, fmt.Errorf("CharToBytes: %w", err)
 	}
 
+	return indexBytes(indexValue), nil
+}
+
+// indexBytes converte o índice flat do slot (código do jogo) nos bytes do
+// encoding: single byte (0x30..0xFF), bytes de seção (0x2B/0xD0) ou extensão
+// de 5 seções (0x04/0x410). É a inversa exata do decode em string_bytes.go.
+func indexBytes(indexValue uint) []uint {
 	if indexValue < 0x100 {
-		return []uint{indexValue}, nil
+		return []uint{indexValue}
 	}
 
 	section := (indexValue - 0x30) / 0xD0
@@ -73,18 +57,18 @@ func CharToBytes(chr rune, charset string, version common.GameVersion) ([]uint, 
 	byte2 := indexValue - (section * 0xD0)
 
 	if byte1 <= 0x2F {
-		return []uint{uint(byte1), uint(byte2)}, nil
+		return []uint{byte1, byte2}
 	}
 
 	adjustedValue := indexValue - 0x410
 
 	if adjustedValue < 0x100 {
-		return []uint{0x04, adjustedValue}, nil
+		return []uint{0x04, adjustedValue}
 	}
 	adjustedSection := (adjustedValue - 0x30) / 0xD0
 	adjustedByte1 := adjustedSection + 0x2B
 	adjustedByte2 := adjustedValue - (adjustedSection * 0xD0)
-	return []uint{0x04, uint(adjustedByte1), uint(adjustedByte2)}, nil
+	return []uint{0x04, uint(adjustedByte1), uint(adjustedByte2)}
 }
 
 func GetChoicesInString(s string) int {
@@ -390,6 +374,40 @@ func ParseCommand(runes []rune, startIndex int) []uint {
 			result[i] = uint(val)
 		}
 		return result
+	case strings.HasPrefix(cmd, "PUA:"):
+		// {PUA:CÓDIGO:CHAR} — slot duplicado da tabela de encoding.
+		//
+		// O decode (string_bytes.go, charOrPUAToken) emite este token quando o
+		// byte lido decodifica a um rune cujo byte canônico do encode (1ª
+		// ocorrência na tabela) é OUTRO byte: o slot é uma repetição. Emitir o
+		// rune puro perderia o byte no re-import — e o byte exato importa
+		// porque o font atlas pode desenhar glifos distintos por slot mesmo
+		// quando a tabela os mapeia ao mesmo rune (ex.: Œ/œ onde a tabela diz
+		// espaço; aspas duplas em 0x3C e 0x95 da tabela us).
+		//
+		// Semântica do re-import:
+		//   - CÓDIGO é autoritativo: re-emite os bytes exatos do slot original
+		//     (indexBytes), garantindo round-trip byte-a-byte.
+		//   - CHAR é apenas informativo (o rune decodificado, para o texto
+		//     extraído ficar pesquisável/legível) e é ignorado aqui.
+		//   - Para trocar o caractere no texto, remova o token e escreva o
+		//     caractere desejado — o encode vai ao slot canônico.
+		//
+		// O formato emitido pelo decode é sempre {PUA:CÓDIGO:CHAR}. O código é
+		// hex de largura variável (%X — sempre ≥ 2 dígitos, pois os slots
+		// começam em 0x30) e pode exceder 0xFF/0x410 em tabelas com seções,
+		// daí indexBytes reconstruir os bytes 0x2B/0x04 quando preciso.
+		matches := rePUA.FindStringSubmatch(cmd)
+		if len(matches) != 2 {
+			fmt.Printf("Invalid PUA format: %s\n", cmd)
+			return nil
+		}
+		code, err := strconv.ParseUint(matches[1], 16, 32)
+		if err != nil {
+			fmt.Printf("Invalid PUA code: %s in command %s\n", matches[1], cmd)
+			return nil
+		}
+		return indexBytes(uint(code))
 	default:
 		return nil
 	}
