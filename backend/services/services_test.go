@@ -1,17 +1,21 @@
 package services_test
 
 import (
-	"ffxresources/backend/common"
-	"ffxresources/backend/dto"
-	"ffxresources/backend/formatters/hash"
-	strfmt "ffxresources/backend/formatters/strings"
-	"ffxresources/backend/interactions"
-	"ffxresources/backend/services"
-	"ffxresources/testData"
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"ffxresources/backend/common"
+	"ffxresources/backend/dto"
+	"ffxresources/backend/fileFormats/lockit"
+	"ffxresources/backend/formatters/hash"
+	jsonfmt "ffxresources/backend/formatters/json"
+	strfmt "ffxresources/backend/formatters/strings"
+	"ffxresources/backend/interactions"
+	"ffxresources/backend/services"
+	"ffxresources/testData"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -200,5 +204,158 @@ var _ = Describe("MetadataService", Ordered, func() {
 		_, statErr := os.Stat(modBinary)
 		Expect(statErr).NotTo(HaveOccurred(),
 			"binário importado deve existir em mods: %s", modBinary)
+	})
+
+	It("lists lockit entries for ffx2 and none for lastmiss", func() {
+		entries, err := metadataService.ListEntries(services.KindLockit, common.GameVersionFFX2)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(entries).To(HaveLen(1), "ffx2 tem um único kit de localização")
+		Expect(entries[0].ID).To(Equal("ffx2_loc_kit_ps3"))
+		Expect(entries[0].Key).To(Equal("ffx2/gamedata/ps3data/lockit/ffx2_loc_kit_ps3.bin"))
+
+		// Last Mission é expansão do ffx2 e não tem lockit próprio.
+		lm, err := metadataService.ListEntries(services.KindLockit, common.GameVersionLastMiss)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(lm).To(BeEmpty(), "lastmiss não tem lockit próprio")
+
+		c, err := metadataService.GetCollection(services.KindLockit, common.GameVersionLastMiss, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c).To(BeEmpty(), "lastmiss não serve o lockit do ffx2")
+	})
+
+	It("gets a lockit entry grouped in game and utf8 rows", func() {
+		entry, err := metadataService.GetEntry(services.KindLockit, "ffx2_loc_kit_ps3", common.GameVersionFFX2)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(entry.Metadata.Key).To(Equal("ffx2/gamedata/ps3data/lockit/ffx2_loc_kit_ps3.bin"))
+		Expect(entry.Metadata.RowCount).To(Equal(len(entry.Rows)))
+		Expect(len(entry.Rows)).To(BeNumerically(">", 1000))
+
+		// game ocupa 0..G-1 e utf8 G..G+U-1, contíguos e nessa ordem.
+		game, utf8 := 0, 0
+		for _, row := range entry.Rows {
+			Expect(row.Name).To(BeElementOf("game", "utf8"), "linha com name inesperado")
+			if row.Name == "game" {
+				Expect(row.Index).To(Equal(game), "índices game contíguos a partir de 0")
+				game++
+				continue
+			}
+			Expect(row.Index).To(Equal(game+utf8), "índices utf8 contíguos após o grupo game")
+			utf8++
+		}
+		Expect(game).To(BeNumerically(">", 1000))
+		Expect(utf8).To(BeNumerically(">", 400))
+		Expect(game + utf8).To(Equal(len(entry.Rows)))
+	})
+
+	It("exports lockit to json and strings", func() {
+		paths, err := metadataService.ExportEntry(services.KindLockit, common.GameVersionFFX2, "ffx2_loc_kit_ps3", nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(paths).To(HaveLen(2))
+		for _, p := range paths {
+			_, statErr := os.Stat(p)
+			Expect(statErr).NotTo(HaveOccurred(), "exported artifact should exist: %s", p)
+		}
+	})
+
+	It("imports edited lockit json, touching only the edited line", func() {
+		const id = "ffx2_loc_kit_ps3"
+		entry, err := metadataService.GetEntry(services.KindLockit, id, common.GameVersionFFX2)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Edita uma row do grupo game (índice 2) mantendo a tag intacta.
+		target := entry.Rows[2]
+		Expect(target.Name).To(Equal("game"))
+		const newText = "LOCKIT EDITADO"
+		Expect(target.Text[common.DefaultLocalization]).NotTo(Equal(newText))
+		target.Text[common.DefaultLocalization] = newText
+		target.Hash[common.DefaultLocalization] = hash.Sum64Hex(newText)
+
+		raw, err := jsonfmt.NewJSONObjectFormatter().Marshal(dto.Collection{id: entry})
+		Expect(err).NotTo(HaveOccurred())
+		importPath := filepath.Join(tmpRoot, "reimported", "lockit_import.json")
+		Expect(os.MkdirAll(filepath.Dir(importPath), 0o755)).To(Succeed())
+		Expect(os.WriteFile(importPath, raw, 0o644)).To(Succeed())
+
+		summary, err := metadataService.PreviewImport(importPath, common.GameVersionFFX2)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(summary.Kind).To(Equal(services.KindLockit))
+		Expect(summary.SavesBinary).To(BeTrue())
+		Expect(summary.Errors).To(BeEmpty())
+		Expect(summary.ChangedTexts).To(Equal(1))
+
+		changed, err := metadataService.ImportFile(importPath, common.GameVersionFFX2)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(changed).To(Equal(1))
+
+		// Só a linha editada difere do original: rows intocadas devolvem
+		// byte-a-byte a origem (re-encode apenas do que foi editado).
+		rel := filepath.FromSlash("ffx-2_data/gamedata/ps3data/lockit/ffx2_loc_kit_ps3_us.bin")
+		orig, err := os.ReadFile(filepath.Join(gameLocation, rel))
+		Expect(err).NotTo(HaveOccurred())
+		mod, err := os.ReadFile(filepath.Join(gameLocation, "mods", rel))
+		Expect(err).NotTo(HaveOccurred())
+		origLines := bytes.Split(orig, []byte("\n"))
+		modLines := bytes.Split(mod, []byte("\n"))
+		Expect(modLines).To(HaveLen(len(origLines)), "o nº de linhas não pode mudar")
+		diff := 0
+		for i := range origLines {
+			if !bytes.Equal(origLines[i], modLines[i]) {
+				diff++
+			}
+		}
+		Expect(diff).To(Equal(1), "apenas a linha editada pode diferir da origem")
+
+		// A edição volta na leitura mods-first, no registro certo do grupo.
+		lockit.DataStore.Clear()
+		l, ok := lockit.LayoutForID(common.GameVersionFFX2, id)
+		Expect(ok).To(BeTrue())
+		f, err := lockit.Load(l)
+		Expect(err).NotTo(HaveOccurred())
+		game, _ := f.IndexesByKind()
+		Expect(f.Records()[game[target.Index]].Text(common.DefaultLocalization)).To(Equal(newText))
+	})
+
+	It("imports edited lockit strings back to the binary", func() {
+		const id = "ffx2_loc_kit_ps3"
+		entry, err := metadataService.GetEntry(services.KindLockit, id, common.GameVersionFFX2)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Edita a primeira row do grupo utf8 com texto 'us'.
+		target := -1
+		for i := range entry.Rows {
+			if entry.Rows[i].Name == "utf8" && entry.Rows[i].Text[common.DefaultLocalization] != "" {
+				target = i
+				break
+			}
+		}
+		Expect(target).To(BeNumerically(">=", 0), "deve haver row utf8 com texto 'us'")
+		const newText = "LOCKIT UTF8 EDITADO"
+		entry.Rows[target].Text[common.DefaultLocalization] = newText
+		entry.Rows[target].Hash[common.DefaultLocalization] = hash.Sum64Hex(newText)
+
+		raw, err := strfmt.Marshal(dto.Collection{id: entry})
+		Expect(err).NotTo(HaveOccurred())
+		importPath := filepath.Join(tmpRoot, "reimported", "lockit_import.strings")
+		Expect(os.WriteFile(importPath, raw, 0o644)).To(Succeed())
+
+		summary, err := metadataService.PreviewImport(importPath, common.GameVersionFFX2)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(summary.Kind).To(Equal(services.KindLockit))
+		Expect(summary.Errors).To(BeEmpty(), "o .strings deve reimportar sem erros de validação")
+		Expect(summary.ChangedTexts).To(Equal(1))
+
+		changed, err := metadataService.ImportFile(importPath, common.GameVersionFFX2)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(changed).To(Equal(1))
+
+		// Conferência da posição física do grupo utf8.
+		lockit.DataStore.Clear()
+		l, ok := lockit.LayoutForID(common.GameVersionFFX2, id)
+		Expect(ok).To(BeTrue())
+		f, err := lockit.Load(l)
+		Expect(err).NotTo(HaveOccurred())
+		game, utf8 := f.IndexesByKind()
+		phys := utf8[entry.Rows[target].Index-len(game)]
+		Expect(f.Records()[phys].Text(common.DefaultLocalization)).To(Equal(newText))
 	})
 })

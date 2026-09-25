@@ -29,6 +29,7 @@ import (
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/fileFormats/lockit"
 	"ffxresources/backend/fileFormats/objectsfile"
 	"ffxresources/backend/formatters/hash"
 	jsonfmt "ffxresources/backend/formatters/json"
@@ -187,7 +188,7 @@ func mergeImportUs(store, imported dto.Collection) dto.Collection {
 // ---- detecção ----------------------------------------------------------------
 
 // kindFromKey decide o kind pela metadata.key: macrodic.dcp → macro,
-// /event/ → events; demais → objects.
+// /event/ → events; /gamedata/ps3data/lockit/ → lockit; demais → objects.
 func kindFromKey(key string) string {
 	lower := strings.ToLower(key)
 	if strings.HasSuffix(lower, "macrodic.dcp") {
@@ -195,6 +196,9 @@ func kindFromKey(key string) string {
 	}
 	if strings.Contains(lower, "/event/") {
 		return KindEvents
+	}
+	if lockit.IsLockitKey(key) {
+		return KindLockit
 	}
 	return KindObjects
 }
@@ -257,6 +261,12 @@ func (s *MetadataService) importKnownIDs(kind string, version common.GameVersion
 	case KindObjects:
 		for _, id := range imported.SortedKeys() {
 			if _, ok := objectKeyForID(version, id); ok {
+				known[id] = true
+			}
+		}
+	case KindLockit:
+		for _, id := range imported.SortedKeys() {
+			if _, ok := lockit.LayoutForID(version, id); ok {
 				known[id] = true
 			}
 		}
@@ -573,6 +583,9 @@ func (s *MetadataService) prepareImport(path string, version common.GameVersion)
 				}
 			}
 		}
+	} else if kind == KindLockit {
+		// O lockit é uma lista CRLF sem offsets uint16 nem cabeçalho; não há
+		// limite de capacidade a medir (o import grava apenas o us).
 	} else {
 		for _, id := range merged.SortedKeys() {
 			var usage dto.ImportUsage
@@ -652,6 +665,8 @@ func (s *MetadataService) ExportJSON(kind string, version common.GameVersion, id
 			return nil, jerr
 		}
 		return []string{p}, nil
+	case KindLockit:
+		return jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}

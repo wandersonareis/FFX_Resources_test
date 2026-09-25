@@ -13,6 +13,7 @@ import (
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/fileFormats/lockit"
 	"ffxresources/backend/fileFormats/objectsfile"
 	jsonfmt "ffxresources/backend/formatters/json"
 	strfmt "ffxresources/backend/formatters/strings"
@@ -23,6 +24,7 @@ const (
 	KindEvents  = "events"
 	KindObjects = "objects"
 	KindMacro   = "macro"
+	KindLockit  = "lockit"
 )
 
 // LastMissionShortened é o prefixo (eventID[:2]) do grupo de events da
@@ -139,6 +141,9 @@ func (s *MetadataService) resolveID(id string) (string, string, bool, error) {
 	if key, ok := objectKeyForID(cur, id); ok {
 		return key, id, false, nil
 	}
+	if l, ok := lockit.LayoutForID(cur, id); ok {
+		return l.Key(), id, false, nil
+	}
 	if len(id) < 2 {
 		return "", "", false, fmt.Errorf("unknown id: %s", id)
 	}
@@ -165,6 +170,16 @@ func (s *MetadataService) resolvePath(q string) (string, string, bool, error) {
 		version = v
 	}
 	slash := filepath.ToSlash(abs)
+	if lockit.IsLockitKey(slash) {
+		base := filepath.Base(slash)
+		stem := strings.TrimSuffix(base, filepath.Ext(base))
+		for _, l := range lockit.LayoutsForVersion(version) {
+			if strings.HasPrefix(stem, l.ID()) {
+				return l.Key(), l.ID(), false, nil
+			}
+		}
+		return "", "", false, fmt.Errorf("lockit path desconhecido: %s", q)
+	}
 	locPattern, ok := localizationPatternFromPath(slash)
 	if !ok {
 		return "", "", false, fmt.Errorf("path is not under a localization root: %s", q)
@@ -249,6 +264,16 @@ func (s *MetadataService) ExportEntry(kind string, version common.GameVersion, i
 			return paths, serr
 		}
 		paths = append(paths, jp, sp)
+	case KindLockit:
+		jps, jerr := jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
+		if jerr != nil {
+			return paths, jerr
+		}
+		sps, serr := strfmt.NewStringsFormatter().WriteObjects(c, version, langs)
+		if serr != nil {
+			return paths, serr
+		}
+		paths = append(append(paths, jps...), sps...)
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
@@ -315,6 +340,20 @@ func (s *MetadataService) ImportEntry(kind string, version common.GameVersion, i
 		}
 		return []string{path}, nil
 
+	case KindLockit:
+		path, err := jsonfmt.ObjectsJSONPath(id, version)
+		if err != nil {
+			return nil, err
+		}
+		read, err := jsonfmt.NewJSONObjectFormatter().ReadObjects(path)
+		if err != nil {
+			return nil, err
+		}
+		if err := builders.ApplyLockitDTO(version, read); err != nil {
+			return nil, err
+		}
+		return []string{path}, nil
+
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
@@ -344,6 +383,8 @@ func (s *MetadataService) ApplyEntry(kind string, version common.GameVersion, id
 		}
 		c[id] = entry
 		return builders.ApplyMacroDTO(version, c)
+	case KindLockit:
+		return builders.ApplyLockitDTO(version, dto.Collection{id: entry})
 	default:
 		return fmt.Errorf("unknown kind: %s", kind)
 	}
@@ -428,6 +469,9 @@ func (s *MetadataService) ApplyTextCollection(kind string, version common.GameVe
 			full[id] = entry
 		}
 		return builders.ApplyMacroDTO(version, full)
+
+	case KindLockit:
+		return builders.ApplyLockitDTO(version, c)
 
 	default:
 		return fmt.Errorf("unknown kind: %s", kind)
@@ -536,6 +580,13 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 			out = append(out, EntrySummary{ID: k, Key: c[k].Metadata.Key})
 		}
 		return out, nil
+	case KindLockit:
+		layouts := lockit.LayoutsForVersion(version)
+		out := make([]EntrySummary, 0, len(layouts))
+		for _, l := range layouts {
+			out = append(out, EntrySummary{ID: l.ID(), Key: l.Key()})
+		}
+		return out, nil
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
@@ -631,6 +682,13 @@ func (s *MetadataService) GetCollection(kind string, version common.GameVersion,
 			return nil, fmt.Errorf("no matching macro chunks in DTO")
 		}
 		return out, nil
+	case KindLockit:
+		if version == common.GameVersionLastMiss {
+			// Last Mission é expansão do ffx2 e não tem lockit próprio
+			// (mesma régua do macro: vazio, sem erro).
+			return dto.Collection{}, nil
+		}
+		return builders.BuildLockitDTO(version, ids)
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
@@ -660,6 +718,8 @@ func (s *MetadataService) ExportStrings(kind string, version common.GameVersion,
 			return nil, err
 		}
 		return []string{p}, nil
+	case KindLockit:
+		return f.WriteObjects(c, version, langs)
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
