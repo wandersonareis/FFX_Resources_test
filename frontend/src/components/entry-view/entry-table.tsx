@@ -7,6 +7,7 @@ import { dto } from '@/wailsjs/go/models';
 import { useEditDraft } from '@/lib/ffx/edit-draft';
 import { SOURCE_LANG } from '@/lib/ffx/save-all';
 import { resolveSegmentLabel } from '@/lib/ffx/display-names';
+import { DEDUP_VIEW_KINDS } from '@/lib/ffx/hash-ref';
 import { GameTextView } from '@/components/game-text-view';
 import {
   Table,
@@ -179,13 +180,18 @@ export function EntryTable({ view }: { view: EntryView }) {
     rowRefs.current.get(String(rows[0].index))?.focus();
   }, [pendingTableFocus, selectedEntry, rows, actions]);
 
-  // Help 100% deduplicado: todas as linhas deste painel são refs de textos
-  // cuja def vive em outro arquivo — sem linhas para traduzir aqui.
-  if (activeKind === 'help' && selectedEntry && !loading && rows.length === 0) {
+  // Painel 100% deduplicado: todas as linhas deste arquivo são refs de
+  // textos cuja def vive em outro arquivo — sem linhas para traduzir aqui.
+  if (
+    DEDUP_VIEW_KINDS.has(activeKind) &&
+    selectedEntry &&
+    !loading &&
+    rows.length === 0
+  ) {
     return (
       <div className="mt-2 rounded-md border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
-        Todas as linhas deste painel são repetições de textos de outros arquivos
-        (dedup) — nada a traduzir aqui.
+        Todas as linhas deste arquivo são repetições de textos definidos em
+        outro arquivo (dedup) — nada a traduzir aqui.
       </div>
     );
   }
