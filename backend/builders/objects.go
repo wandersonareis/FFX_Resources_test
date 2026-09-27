@@ -159,6 +159,16 @@ func BuildObjectsDTOByJSONName(objects components.IList[datastore.IGlobalLocaliz
 // ApplyObjectsEntry aplica uma entrada do DTO de volta na lista em memória
 // (parse DTO → objetos). Não persiste em disco: quem salva é SaveToBinary.
 // A metadata Key, quando presente, precisa bater com a chave esperada.
+//
+// Com dedup, o algoritmo é o padrão dos formatos dedupáveis (4 fases —
+// decisões contra o estado PRÉ-aplicação; escopo = o próprio arquivo,
+// refs não propagam entre objetos):
+//  1. defs do lote: hash → texto literal de 'us';
+//  2. índice pré-estado: texto 'us' atual → todos os pares (objeto, campo)
+//     do arquivo (a alavanca da propagação — editar a def de "Attack"
+//     alcança as centenas de cópias);
+//  3. coleta: valida as rows e agenda as mudanças;
+//  4. escrita via ApplyFieldTexts (primitivo do domínio).
 func ApplyObjectsEntry(objects components.IList[datastore.IGlobalLocalizedTextObject], version common.GameVersion, key string, entry dto.FileEntry) error {
 	if objects == nil || objects.IsEmpty() {
 		return fmt.Errorf("no objects loaded or empty")
@@ -168,6 +178,42 @@ func ApplyObjectsEntry(objects components.IList[datastore.IGlobalLocalizedTextOb
 	}
 	items := objects.Items()
 	dto.SortRows(entry.Rows)
+
+	// Fase 1 — defs do lote: hash → texto literal de 'us'. Montadas antes
+	// de qualquer escrita porque uma ref pode vir antes da def nas rows.
+	defs := make(map[string]string)
+	for _, row := range entry.Rows {
+		t := row.Text[common.DefaultLocalization]
+		if t == "" {
+			continue
+		}
+		if _, isRef := refBare(row, t); isRef {
+			continue
+		}
+		if h := row.Hash[common.DefaultLocalization]; h != "" {
+			defs[h] = t
+		}
+	}
+
+	// Fase 2 — índice pré-estado: texto 'us' atual → todos os campos do
+	// arquivo com esse texto (todas as cópias gêmeas, em qualquer objeto).
+	index := make(map[string][]objectTarget)
+	objects.RangeIndex(func(_ int, obj datastore.IGlobalLocalizedTextObject) {
+		if obj == nil {
+			return
+		}
+		for _, f := range objectsfile.ExportFieldTexts(obj) {
+			t := f.Texts[common.DefaultLocalization]
+			if t == "" {
+				continue
+			}
+			index[t] = append(index[t], objectTarget{obj: obj, field: f.Key})
+		}
+	})
+
+	// Fase 3 — coleta: valida os índices e agenda as mudanças (sem escrever;
+	// rows com índice fora da lista são logadas e puladas, como antes).
+	var usChanges, dirChanges []objectChange
 	for _, row := range entry.Rows {
 		if row.Index < 0 || row.Index >= len(items) {
 			common.LogError("Object ID without range: %d", row.Index)
@@ -179,16 +225,88 @@ func ApplyObjectsEntry(objects components.IList[datastore.IGlobalLocalizedTextOb
 			continue
 		}
 		for lang, newText := range row.Text {
-			if want, ok := row.Hash[lang]; ok && want != "" && newText != "" {
-				if got := hash.Sum64Hex(newText); got != want {
-					common.LogVerbose("hash mismatch for object %d field %q lang %s: file %s vs text %s",
-						row.Index, row.Name, lang, want, got)
-				}
+			if newText == "" {
+				continue
 			}
+			current := currentObjectText(obj, row.Name, lang)
+
+			if lang == common.DefaultLocalization {
+				// 'us': ref resolve contra a def do lote (sem def =
+				// identidade, mantém o texto atual); literal editada
+				// agenda TODAS as cópias do texto atual.
+				if bare, isRef := refBare(row, newText); isRef {
+					resolved, ok := defs[bare]
+					if !ok {
+						continue
+					}
+					newText = resolved
+				}
+				if newText == current {
+					continue // sem mudança neste campo: nada a agendar
+				}
+				targets := index[current]
+				if len(targets) == 0 {
+					targets = []objectTarget{{obj: obj, field: row.Name}}
+				}
+				usChanges = append(usChanges, objectChange{targets: targets, newText: newText})
+				continue
+			}
+
+			// Idiomas ≠ us nunca participam do dedup nem da propagação.
+			if newText == current {
+				continue
+			}
+			dirChanges = append(dirChanges, objectChange{
+				targets: []objectTarget{{obj: obj, field: row.Name}},
+				lang:    lang,
+				newText: newText,
+			})
 		}
-		common.LogVerbose("Processing localized object %d field %q", row.Index, row.Name)
-		objectsfile.ApplyFieldTexts(obj, []objectsfile.FieldText{{Key: row.Name, Texts: row.Text}}, version)
+	}
+
+	// Fase 4 — escrita: alvos congelados no pré-estado; conflitos (mesmo
+	// texto velho editado de formas diferentes) resolvem por última escrita.
+	for _, ch := range dirChanges {
+		for _, t := range ch.targets {
+			objectsfile.ApplyFieldTexts(t.obj, []objectsfile.FieldText{
+				{Key: t.field, Texts: map[string]string{ch.lang: ch.newText}},
+			}, version)
+		}
+	}
+	for _, ch := range usChanges {
+		for _, t := range ch.targets {
+			objectsfile.ApplyFieldTexts(t.obj, []objectsfile.FieldText{
+				{Key: t.field, Texts: map[string]string{common.DefaultLocalization: ch.newText}},
+			}, version)
+		}
 	}
 	common.LogVerbose("Localized objects updated successfully (%d rows)", len(entry.Rows))
 	return nil
+}
+
+// objectTarget é um campo textual alvo de escrita: (objeto, chave do campo).
+type objectTarget struct {
+	obj   datastore.IGlobalLocalizedTextObject
+	field string
+}
+
+// objectChange é uma mudança agendada: newText no idioma lang para todos
+// os targets (em 'us', as cópias idênticas do estado pré-aplicação).
+type objectChange struct {
+	targets []objectTarget
+	lang    string
+	newText string
+}
+
+// currentObjectText lê o texto atual do campo (obj, field) no idioma.
+// Campo ausente/vazio = "" (consistente com ExportFieldTexts).
+func currentObjectText(obj datastore.IGlobalLocalizedTextObject, field, lang string) string {
+	if obj == nil {
+		return ""
+	}
+	seg := obj.GetKeyedString(field)
+	if seg == nil {
+		return ""
+	}
+	return seg.GetLocalizedString(lang)
 }
