@@ -48,6 +48,48 @@ type MetadataService struct {
 	notifier INotificationService
 }
 
+// dedupViewKinds são os kinds cujo view (GetEntry) sai com dedup global
+// da versão — os formatos que agrupam texto numa única extração, onde as
+// repetições cruzam arquivos: help (arquivo único com os 6 painéis) e
+// events (eventos gêmeos com repetição maciça, ex.: arena do Blitzball).
+// objects é extração 1:1 por arquivo — refs não propagam entre objetos.
+var dedupViewKinds = map[string]bool{
+	KindHelp:   true,
+	KindEvents: true,
+}
+
+// Cache do view dedupado por (versão|kind): o dedup global exige construir
+// a versão inteira (events: 45MB no ffx2) — construído uma única vez por
+// carga e invalidado por qualquer escrita (apply/import altera o store).
+var (
+	dedupViewMu    sync.Mutex
+	dedupViewCache = map[string]dto.Collection{}
+)
+
+func (s *MetadataService) dedupView(kind string, version common.GameVersion) (dto.Collection, error) {
+	key := version.String() + "|" + kind
+	dedupViewMu.Lock()
+	defer dedupViewMu.Unlock()
+	if c, ok := dedupViewCache[key]; ok {
+		return c, nil
+	}
+	full, err := s.GetCollection(kind, version, nil)
+	if err != nil {
+		return nil, err
+	}
+	dedup := builders.DedupDTO(full)
+	dedupViewCache[key] = dedup
+	return dedup, nil
+}
+
+// clearDedupViewCache invalida o view dedupado: o store mudou (apply ou
+// import), e os hashes/defs precisam ser reconstruídos na próxima entrega.
+func clearDedupViewCache() {
+	dedupViewMu.Lock()
+	dedupViewCache = map[string]dto.Collection{}
+	dedupViewMu.Unlock()
+}
+
 func NewMetadataService(notifier INotificationService) *MetadataService {
 	return &MetadataService{notifier: notifier}
 }
@@ -310,8 +352,10 @@ func (s *MetadataService) ExportEntry(kind string, version common.GameVersion, i
 }
 
 // ImportEntry lê o artefato JSON padrão da entrada (mods/edits) e aplica o DTO
-// de volta no binário, persistindo. Devolve o caminho lido.
+// de volta no binário, persistindo. Devolve o caminho lido. Escrita muda o
+// store: o view dedupado (cache por versão) é invalidado.
 func (s *MetadataService) ImportEntry(kind string, version common.GameVersion, id string) ([]string, error) {
+	clearDedupViewCache()
 	kind = strings.ToLower(strings.TrimSpace(kind))
 	if err := ensureVersionReady(version); err != nil {
 		return nil, err
@@ -412,8 +456,10 @@ func (s *MetadataService) ImportEntry(kind string, version common.GameVersion, i
 }
 
 // ApplyEntry aplica uma entrada editada (DTO) de volta no binário e persiste.
-// É o "salvar" do editor in-memory (Ver/Editar).
+// É o "salvar" do editor in-memory (Ver/Editar). Escrita muda o store: o
+// view dedupado (cache por versão) é invalidado.
 func (s *MetadataService) ApplyEntry(kind string, version common.GameVersion, id string, entry dto.FileEntry) error {
+	clearDedupViewCache()
 	kind = strings.ToLower(strings.TrimSpace(kind))
 	if err := ensureVersionReady(version); err != nil {
 		return err
@@ -462,7 +508,9 @@ func macroChunkHasText(entry dto.FileEntry) bool {
 // ApplyTextCollection aplica um lote de entradas editadas (DTO) e persiste.
 // É o "salvar" do editor do frontend: recebe só as entradas com edição, mas
 // agrupa por arquivo para reconstruir cada binário uma única vez.
+// Escrever muda o store: o view dedupado (cache por versão) é invalidado.
 func (s *MetadataService) ApplyTextCollection(kind string, version common.GameVersion, c dto.Collection) error {
+	clearDedupViewCache()
 	kind = strings.ToLower(strings.TrimSpace(kind))
 	if len(c) == 0 {
 		return nil
@@ -677,17 +725,18 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 }
 
 // GetEntry devolve uma entrada completa (metadata + rows) por demanda.
-// Para help, o DTO vem COM o dedup aplicado (refs "$hash" ocultas na
-// tabela): a def precisa da visão global dos 6 painéis, na mesma ordem e
-// regra do artefato exportado. GetCollection continua RAW (export,
-// preview e validação de import).
+// Para kinds com dedup global (help, events), o DTO vem COM as refs
+// "$hash" (repetições idênticas ocultas na tabela): a def precisa da
+// visão global da versão, na mesma ordem e regra do bulk export.
+// GetCollection continua RAW (export, preview e validação de import).
 func (s *MetadataService) GetEntry(kind, id string, version common.GameVersion) (dto.FileEntry, error) {
-	if strings.EqualFold(strings.TrimSpace(kind), KindHelp) {
-		full, err := s.GetCollection(kind, version, nil)
+	kind = strings.ToLower(strings.TrimSpace(kind))
+	if dedupViewKinds[kind] {
+		c, err := s.dedupView(kind, version)
 		if err != nil {
 			return dto.FileEntry{}, err
 		}
-		entry, ok := builders.DedupHelpDTO(full)[id]
+		entry, ok := c[id]
 		if !ok {
 			return dto.FileEntry{}, fmt.Errorf("%s entry not found: %s", kind, id)
 		}

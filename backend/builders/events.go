@@ -112,6 +112,19 @@ func BuildEventsDTO(version common.GameVersion, ids []string) (dto.Collection, e
 // ApplyEventsDTO aplica o DTO de volta no store/binário (parse DTO → binário).
 // Só o applier faz isso; o formatter nunca toca no binário.
 // Se ids vazio, aplica todas as entradas da Collection; senão, só as pedidas.
+//
+// Com dedup, o algoritmo é o mesmo do help (4 fases — todas as decisões
+// tomadas contra o estado PRÉ-aplicação, para o resultado não depender da
+// ordem das entradas do lote):
+//  1. defs do lote: hash → texto literal de 'us' (refs resolvem por aqui;
+//     def fora do lote ⇒ identidade — a ref mantém o texto atual);
+//  2. índice pré-estado: texto 'us' → todos os segmentos iguais em TODOS os
+//     eventos da versão (a alavanca da propagação anti-desalinhamento: a
+//     edição de uma def alcança os gêmeos — mesmo fora do lote — e cada
+//     binário tocado é recompilado);
+//  3. coleta: valida a estrutura de cada entrada e agenda as mudanças —
+//     um 'us' que difere do estado atual agenda TODAS as cópias dele;
+//  4. escrita + save só dos eventos realmente tocados.
 func ApplyEventsDTO(version common.GameVersion, c dto.Collection, ids []string) error {
 	filter := make(map[string]bool)
 	if len(ids) > 0 {
@@ -119,26 +132,113 @@ func ApplyEventsDTO(version common.GameVersion, c dto.Collection, ids []string) 
 			filter[id] = true
 		}
 	}
+	inBatch := func(id string) bool { return len(filter) == 0 || filter[id] }
+
+	// Fase 1 — defs do lote: hash → texto literal de 'us'. Montadas antes
+	// de qualquer escrita porque uma ref pode vir antes da def na ordem das
+	// entradas. Ref não vira def (o valor dela é $hash, não texto).
+	defs := make(map[string]string)
+	for _, id := range c.SortedKeys() {
+		if !inBatch(id) {
+			continue
+		}
+		for _, row := range c[id].Rows {
+			t := row.Text[common.DefaultLocalization]
+			if t == "" {
+				continue
+			}
+			if _, isRef := refBare(row, t); isRef {
+				continue
+			}
+			if h := row.Hash[common.DefaultLocalization]; h != "" {
+				defs[h] = t
+			}
+		}
+	}
+
+	// Fase 2 — índice pré-estado: texto 'us' → todos os FieldStrings iguais
+	// em TODOS os eventos da versão. É por ele que cada edição enxerga as
+	// cópias ANTES de qualquer escrita: um texto novo igual ao velho de
+	// outro evento não arrasta alvos alheios nem reverte rascunho de
+	// terceiros.
+	index := make(map[string][]eventTarget)
+	for _, id := range event.GetAllEventIDs(version) {
+		ev := event.GetEvent(version, id)
+		if ev == nil {
+			continue
+		}
+		for _, obj := range ev.Strings {
+			if obj == nil {
+				continue
+			}
+			fs := obj.GetLocalizedContent(common.DefaultLocalization)
+			if fs == nil {
+				continue
+			}
+			text := fs.GetRegularString()
+			index[text] = append(index[text], eventTarget{eventID: id, fs: fs})
+		}
+	}
+
+	// Fase 3 — coleta: valida tudo do lote antes de escrever qualquer coisa
+	// (um DTO malformado não deixa meio evento aplicado).
 	var failed []string
 	var applied []string
-	for _, key := range c.SortedKeys() {
-		if len(filter) > 0 && !filter[key] {
+	var usChanges, dirChanges []eventChange
+	for _, id := range c.SortedKeys() {
+		if !inBatch(id) {
 			continue
 		}
-		entry := c[key]
-		if err := applySingleEventDTO(version, key, entry); err != nil {
-			common.LogError("failed to update event %s: %v", key, err)
-			failed = append(failed, key)
+		ev := event.GetEvent(version, id)
+		if ev == nil {
+			common.LogError("failed to update event %s: evento não carregado", id)
+			failed = append(failed, id)
 			continue
 		}
-		applied = append(applied, key)
+		us, dir, err := collectEventChanges(id, ev, c[id], defs, index)
+		if err != nil {
+			common.LogError("failed to update event %s: %v", id, err)
+			failed = append(failed, id)
+			continue
+		}
+		usChanges = append(usChanges, us...)
+		dirChanges = append(dirChanges, dir...)
+		applied = append(applied, id)
 	}
 	if len(applied) == 0 && len(failed) == 0 {
 		return fmt.Errorf("no matching events in DTO to apply")
 	}
-	// Persiste os aplicados de volta no binário.
+
+	// Fase 4 — escrita: alvos congelados no pré-estado; conflitos (mesmo
+	// texto velho editado de formas diferentes) resolvem por último da ordem
+	// do lote (SortedKeys), mantendo o grupo inteiro alinhado.
+	saveSet := make(map[string]bool)
+	for _, ch := range dirChanges {
+		for _, t := range ch.targets {
+			if ch.newText == t.fs.GetRegularString() {
+				continue
+			}
+			t.fs.SetRegularString(ch.newText)
+			saveSet[t.eventID] = true
+		}
+	}
+	for _, ch := range usChanges {
+		for _, t := range ch.targets {
+			if ch.newText == t.fs.GetRegularString() {
+				continue
+			}
+			t.fs.SetRegularString(ch.newText)
+			saveSet[t.eventID] = true
+		}
+	}
+
+	// Save: só o que recebeu texto novo (lote ou propagação) — o binário
+	// compilado vai para mods/; o original do gamefiles fica intacto.
 	var saveFailed []string
-	for _, id := range applied {
+	for _, id := range event.GetAllEventIDs(version) {
+		if !saveSet[id] {
+			continue
+		}
 		if err := event.ExportEventStringsToLocalizations(version, id); err != nil {
 			common.LogVerbose("Error saving event %s: %v", id, err)
 			saveFailed = append(saveFailed, id)
@@ -154,19 +254,28 @@ func ApplyEventsDTO(version common.GameVersion, c dto.Collection, ids []string) 
 	return nil
 }
 
-func applySingleEventDTO(version common.GameVersion, eventID string, entry dto.FileEntry) error {
-	ev := event.GetEvent(version, eventID)
-	if ev == nil {
-		return fmt.Errorf("event not found in memory: %s", eventID)
-	}
+// eventTarget é um segmento 'us' alvo de escrita, com seu evento.
+type eventTarget struct {
+	eventID string
+	fs      *event.FieldString
+}
+
+// eventChange é uma mudança agendada: todos os FieldStrings que devem
+// passar a ter newText (em 'us', as cópias idênticas do estado pré-aplicação).
+type eventChange struct {
+	targets []eventTarget
+	newText string
+}
+
+// collectEventChanges valida a entrada e agenda as mudanças dela contra o
+// estado pré-aplicação (index). Não escreve nada.
+func collectEventChanges(eventID string, ev *event.EventFile, entry dto.FileEntry, defs map[string]string, index map[string][]eventTarget) (usChanges, dirChanges []eventChange, err error) {
 	dto.SortRows(entry.Rows)
+
+	// Fase 1 — validação estrutural.
 	for _, row := range entry.Rows {
 		if row.Index < 0 || row.Index >= len(ev.Strings) {
-			return fmt.Errorf("string index out of range for event %s: %d", eventID, row.Index)
-		}
-		obj := ev.Strings[row.Index]
-		if obj == nil {
-			continue
+			return nil, nil, fmt.Errorf("string index out of range for event %s: %d", eventID, row.Index)
 		}
 		for lang, newText := range row.Text {
 			if newText == "" {
@@ -176,22 +285,61 @@ func applySingleEventDTO(version common.GameVersion, eventID string, entry dto.F
 				common.LogVerbose("unsupported localization %s for event %s[%d]", lang, eventID, row.Index)
 				continue
 			}
-			if want, ok := row.Hash[lang]; ok && want != "" {
-				if got := hash.Sum64Hex(newText); got != want {
-					common.LogVerbose("hash mismatch for event %s[%d] lang %s: file %s vs text %s",
-						eventID, row.Index, lang, want, got)
-				}
-			}
-			fs := obj.GetLocalizedContent(lang)
-			if fs == nil {
-				return fmt.Errorf("failed to get localized content for %s", lang)
-			}
-			if fs.GetRegularString() == newText {
+			obj := ev.Strings[row.Index]
+			if obj == nil {
 				continue
 			}
-			fs.SetRegularString(newText)
+			if obj.GetLocalizedContent(lang) == nil {
+				return nil, nil, fmt.Errorf("failed to get localized content for %s", lang)
+			}
 		}
 	}
-	event.SetEvent(version, eventID, ev)
-	return nil
+
+	// Fase 2 — agendamento contra o pré-estado.
+	for _, row := range entry.Rows {
+		obj := ev.Strings[row.Index]
+		if obj == nil {
+			continue
+		}
+		for lang, newText := range row.Text {
+			if newText == "" {
+				continue
+			}
+			if _, ok := common.SupportedLanguages[lang]; !ok {
+				continue
+			}
+			fs := obj.GetLocalizedContent(lang)
+
+			if lang != common.DefaultLocalization {
+				// Idiomas ≠ us nunca participam do dedup nem da
+				// propagação: escrevem direto quando mudam.
+				if newText != fs.GetRegularString() {
+					dirChanges = append(dirChanges, eventChange{
+						targets: []eventTarget{{eventID: eventID, fs: fs}},
+						newText: newText,
+					})
+				}
+				continue
+			}
+
+			// 'us': ref vira o texto da def do lote (sem def = identidade,
+			// mantém o atual); literal editada agenda as cópias.
+			if bare, isRef := refBare(row, newText); isRef {
+				resolved, ok := defs[bare]
+				if !ok {
+					continue
+				}
+				newText = resolved
+			}
+			if newText == fs.GetRegularString() {
+				continue // sem mudança no segmento desta row: nada a agendar
+			}
+			targets := index[fs.GetRegularString()]
+			if len(targets) == 0 {
+				targets = []eventTarget{{eventID: eventID, fs: fs}}
+			}
+			usChanges = append(usChanges, eventChange{targets: targets, newText: newText})
+		}
+	}
+	return usChanges, dirChanges, nil
 }
