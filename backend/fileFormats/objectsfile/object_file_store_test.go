@@ -163,6 +163,27 @@ var _ = Describe("Integration: integrity cycle via LoadObjectFileFromStore + Fil
 			Expect(err).To(BeNil())
 			outBytes, err := os.ReadFile(reimported.Name())
 			Expect(err).To(BeNil())
+
+			if hasDuplicateUSStrings(binFile) {
+				// Dedup de offsets (RebuildKeyedStrings): arquivo com
+				// strings repetidas compila MENOR (bytes compartilhados) —
+				// o oráculo aqui é o CONTEÚDO re-lido, não o SHA. O fixture
+				// é cópia em diretório temporário: sobrescrever é seguro.
+				Expect(len(outBytes)).To(BeNumerically("<=", len(origBytes)))
+				Expect(os.WriteFile(filepath.Join(gameDir, origRel), outBytes, 0o644)).To(Succeed())
+				reloaded := objectsfile.ReadCommandLocalizations(tc.pattern, tc.version)
+				Expect(reloaded).NotTo(BeNil())
+				Expect(reloaded.GetObjects().Len()).To(Equal(binFile.GetObjects().Len()))
+				origItems := binFile.GetObjects().Items()
+				reItems := reloaded.GetObjects().Items()
+				for i := range origItems {
+					Expect(reItems[i].ToString(common.DefaultLocalization)).
+						To(Equal(origItems[i].ToString(common.DefaultLocalization)),
+							"text mismatch at index %d", i)
+				}
+				continue
+			}
+
 			Expect(sha256.Sum256(outBytes)).To(Equal(sha256.Sum256(origBytes)))
 		}
 	})

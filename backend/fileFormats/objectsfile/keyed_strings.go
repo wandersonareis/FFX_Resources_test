@@ -113,10 +113,24 @@ func (ks *KeyedString) SetString(str, newCharset string) {
 
 func RebuildKeyedStrings(strings []datastore.IGlobalKeyedString, charset string, version common.GameVersion) []byte {
 	var buf bytes.Buffer
+	// Dedup de bytes: texto já gravado no arquivo compartilha o offset
+	// (mesma técnica do RebuildFieldStrings dos events) — kernel com
+	// repetição massiva intra-arquivo (ex.: "Attack" centenas de vezes)
+	// compila sem duplicar bytes. O arquivo continua existindo inteiro;
+	// a deduplicação de trabalho é para o tradutor, a de offsets é de
+	// formato.
+	offsetMap := make(map[string]models.Offset)
 
 	for _, ks := range strings {
 		s := ks.GetString()
 
+		if s != "" {
+			if offset, shared := offsetMap[s]; shared {
+				ks.SetOffset(offset)
+				continue
+			}
+			offsetMap[s] = models.Offset(buf.Len())
+		}
 		ks.SetOffset(models.Offset(buf.Len()))
 		converter.FillByteList(s, &buf, charset, version)
 	}
