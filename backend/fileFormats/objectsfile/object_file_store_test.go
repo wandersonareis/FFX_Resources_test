@@ -41,6 +41,10 @@ var _ = Describe("FileLayout Registry", Ordered, func() {
 
 var _ = Describe("ObjectFileStore", Ordered, func() {
 	It("should Register and Get", func() {
+		// A store é GLOBAL e outros specs (differential/integrity) registram
+		// arquivos nela — com ordem aleatória de specs, o estado inicial
+		// precisa ser determinístico.
+		objectsfile.ResetObjectFileStoreForTest()
 		store := objectsfile.NewObjectFileStore()
 		Expect(store.Len()).To(Equal(0))
 
