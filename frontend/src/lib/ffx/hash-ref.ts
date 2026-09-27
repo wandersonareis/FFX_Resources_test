@@ -5,15 +5,21 @@
 
 /**
  * Kinds cujo view sai com dedup global (refs "$hash" ocultas na tabela):
- * os formatos que agrupam texto numa única extração — help (arquivo único
- * com os 6 painéis) e events (eventos gêmeos com repetição maciça).
- * objects é extração 1:1 por arquivo — refs não propagam entre objetos.
+ * os formatos de extração única/agregada — help (arquivo único com os 6
+ * painéis), events (eventos gêmeos com repetição maciça), macro (dicionário
+ * único em um artefato) e objects (repetição massiva intra-arquivo; refs
+ * não propagam entre objetos).
  */
-export const DEDUP_VIEW_KINDS: ReadonlySet<string> = new Set(['help', 'events']);
+export const DEDUP_VIEW_KINDS: ReadonlySet<string> = new Set([
+  'help',
+  'events',
+  'macro',
+  'objects',
+]);
 
 /**
  * Linha é referência de dedup de `text` (repetição idêntica de outro
- * ponto/painel) no idioma dado? As refs chegam do backend no DTO de help
+ * ponto/painel) no idioma dado? As refs chegam do backend no DTO dedupado
  * e ficam fora da tabela — o tradutor vê cada texto uma vez; o resolve/
  * propaga do texto editado é do backend no salvar.
  */
