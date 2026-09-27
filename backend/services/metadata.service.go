@@ -13,6 +13,7 @@ import (
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/fileFormats/helpfile"
 	"ffxresources/backend/fileFormats/lockit"
 	"ffxresources/backend/fileFormats/objectsfile"
 	jsonfmt "ffxresources/backend/formatters/json"
@@ -25,6 +26,7 @@ const (
 	KindObjects = "objects"
 	KindMacro   = "macro"
 	KindLockit  = "lockit"
+	KindHelp    = "help"
 )
 
 // LastMissionShortened é o prefixo (eventID[:2]) do grupo de events da
@@ -138,6 +140,9 @@ func (s *MetadataService) resolveID(id string) (string, string, bool, error) {
 	if _, ok := dto.ChunkIndexFromID(id); ok {
 		return common.VersionPathName(cur) + "/menu/macrodic.dcp", id, false, nil
 	}
+	if helpfile.IsHelpEntry(id) {
+		return dto.NewHelpMetadata(id, "help/"+helpfile.HelpEntryDir(id), cur).Key, id, false, nil
+	}
 	if key, ok := objectKeyForID(cur, id); ok {
 		return key, id, false, nil
 	}
@@ -184,6 +189,10 @@ func (s *MetadataService) resolvePath(q string) (string, string, bool, error) {
 	if !ok {
 		return "", "", false, fmt.Errorf("path is not under a localization root: %s", q)
 	}
+	if strings.HasPrefix(locPattern, helpfile.HelpDirPrefix+"/") && strings.HasSuffix(locPattern, helpfile.HelpFileExt) {
+		stem := strings.TrimSuffix(filepath.Base(locPattern), filepath.Ext(locPattern))
+		return common.VersionPathName(version) + "/" + locPattern, stem, false, nil
+	}
 	key := common.VersionPathName(version) + "/" + locPattern
 	id := strings.TrimSuffix(filepath.Base(locPattern), filepath.Ext(locPattern))
 	if strings.EqualFold(filepath.Base(locPattern), "macrodic.dcp") {
@@ -227,7 +236,17 @@ func objectKeyForID(version common.GameVersion, id string) (string, bool) {
 // caminhos escritos. langs nil/vazio = todos os idiomas.
 func (s *MetadataService) ExportEntry(kind string, version common.GameVersion, id string, langs []string) ([]string, error) {
 	kind = strings.ToLower(strings.TrimSpace(kind))
-	c, err := s.GetCollection(kind, version, []string{id})
+	// help: o artefato é único e SEMPRE cobre os 6 painéis (as defs do dedup
+	// só resolvem com todos os arquivos no mesmo arquivo) — a seleção da
+	// árvore é validada e ignorada.
+	ids := []string{id}
+	if kind == KindHelp {
+		if !helpfile.IsHelpEntry(id) {
+			return nil, fmt.Errorf("painel de ajuda desconhecido: %s", id)
+		}
+		ids = helpfile.HelpEntryNames()
+	}
+	c, err := s.GetCollection(kind, version, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -270,6 +289,16 @@ func (s *MetadataService) ExportEntry(kind string, version common.GameVersion, i
 			return paths, jerr
 		}
 		sps, serr := strfmt.NewStringsFormatter().WriteObjects(c, version, langs)
+		if serr != nil {
+			return paths, serr
+		}
+		paths = append(append(paths, jps...), sps...)
+	case KindHelp:
+		jps, jerr := jsonfmt.NewJSONHelpFormatter().WriteHelp(c, version, langs)
+		if jerr != nil {
+			return paths, jerr
+		}
+		sps, serr := strfmt.NewStringsFormatter().WriteHelp(c, version, langs)
 		if serr != nil {
 			return paths, serr
 		}
@@ -354,6 +383,29 @@ func (s *MetadataService) ImportEntry(kind string, version common.GameVersion, i
 		}
 		return []string{path}, nil
 
+	case KindHelp:
+		if err := ensureHelpLoaded(version); err != nil {
+			return nil, err
+		}
+		// Artefato único de help: lê mods/edits e aplica as entradas nele
+		// presentes — o arquivo é a unidade de import (sem agrupamento).
+		if !helpfile.IsHelpEntry(id) {
+			return nil, fmt.Errorf("painel de ajuda desconhecido: %s", id)
+		}
+		path, err := jsonfmt.HelpJSONPath(version)
+		if err != nil {
+			return nil, err
+		}
+		read, err := jsonfmt.NewJSONHelpFormatter().ReadHelp(path)
+		if err != nil {
+			return nil, err
+		}
+		stripHelpRowNames(read)
+		if err := builders.ApplyHelpDTO(version, read, read.SortedKeys()); err != nil {
+			return nil, err
+		}
+		return []string{path}, nil
+
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
@@ -385,6 +437,11 @@ func (s *MetadataService) ApplyEntry(kind string, version common.GameVersion, id
 		return builders.ApplyMacroDTO(version, c)
 	case KindLockit:
 		return builders.ApplyLockitDTO(version, dto.Collection{id: entry})
+	case KindHelp:
+		if err := ensureHelpLoaded(version); err != nil {
+			return err
+		}
+		return builders.ApplyHelpDTO(version, dto.Collection{id: entry}, []string{id})
 	default:
 		return fmt.Errorf("unknown kind: %s", kind)
 	}
@@ -472,6 +529,12 @@ func (s *MetadataService) ApplyTextCollection(kind string, version common.GameVe
 
 	case KindLockit:
 		return builders.ApplyLockitDTO(version, c)
+
+	case KindHelp:
+		if err := ensureHelpLoaded(version); err != nil {
+			return err
+		}
+		return builders.ApplyHelpDTO(version, c, c.SortedKeys())
 
 	default:
 		return fmt.Errorf("unknown kind: %s", kind)
@@ -587,13 +650,49 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 			out = append(out, EntrySummary{ID: l.ID(), Key: l.Key()})
 		}
 		return out, nil
+	case KindHelp:
+		// Painéis de ajuda são FFX-only: a árvore ffx2 (e a lastmiss, que
+		// divide a árvore do ffx2) não tem a pasta help/. Sem erro — vazio,
+		// como o macro/lockit para lastmiss.
+		if version != common.GameVersionFFX {
+			return []EntrySummary{}, nil
+		}
+		if err := ensureHelpLoaded(version); err != nil {
+			return nil, err
+		}
+		out := make([]EntrySummary, 0, len(helpfile.HelpEntries))
+		for _, entry := range helpfile.HelpEntries {
+			if helpfile.GetHelp(version, entry.Name) == nil {
+				continue
+			}
+			out = append(out, EntrySummary{
+				ID:  entry.Name,
+				Key: dto.NewHelpMetadata(entry.Name, "help/"+entry.Dir, version).Key,
+			})
+		}
+		return out, nil
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
 }
 
 // GetEntry devolve uma entrada completa (metadata + rows) por demanda.
+// Para help, o DTO vem COM o dedup aplicado (refs "$hash" ocultas na
+// tabela): a def precisa da visão global dos 6 painéis, na mesma ordem e
+// regra do artefato exportado. GetCollection continua RAW (export,
+// preview e validação de import).
 func (s *MetadataService) GetEntry(kind, id string, version common.GameVersion) (dto.FileEntry, error) {
+	if strings.EqualFold(strings.TrimSpace(kind), KindHelp) {
+		full, err := s.GetCollection(kind, version, nil)
+		if err != nil {
+			return dto.FileEntry{}, err
+		}
+		entry, ok := builders.DedupHelpDTO(full)[id]
+		if !ok {
+			return dto.FileEntry{}, fmt.Errorf("%s entry not found: %s", kind, id)
+		}
+		return entry, nil
+	}
 	c, err := s.GetCollection(kind, version, []string{id})
 	if err != nil {
 		return dto.FileEntry{}, err
@@ -689,16 +788,32 @@ func (s *MetadataService) GetCollection(kind string, version common.GameVersion,
 			return dto.Collection{}, nil
 		}
 		return builders.BuildLockitDTO(version, ids)
+	case KindHelp:
+		if version != common.GameVersionFFX {
+			// A árvore ffx2/lastmiss não tem a pasta help/.
+			return dto.Collection{}, nil
+		}
+		return builders.BuildHelpDTO(version, ids)
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
+}
+
+// helpExportIDs decide os ids do export: o artefato de help é único e
+// SEMPRE cobre os 6 painéis (as defs do dedup só resolvem com todos os
+// arquivos no mesmo arquivo); demais kinds passam os ids recebidos.
+func helpExportIDs(kind string, ids []string) []string {
+	if strings.EqualFold(strings.TrimSpace(kind), KindHelp) {
+		return helpfile.HelpEntryNames()
+	}
+	return ids
 }
 
 // ExportStrings monta o DTO em memória e escreve arquivos .strings,
 // ao lado dos .json (mesmo diretório, mesmo basename).
 // ids vazio = tudo; langs nil/vazio = todos os idiomas.
 func (s *MetadataService) ExportStrings(kind string, version common.GameVersion, ids, langs []string) ([]string, error) {
-	c, err := s.GetCollection(kind, version, ids)
+	c, err := s.GetCollection(kind, version, helpExportIDs(kind, ids))
 	if err != nil {
 		return nil, err
 	}
@@ -720,6 +835,8 @@ func (s *MetadataService) ExportStrings(kind string, version common.GameVersion,
 		return []string{p}, nil
 	case KindLockit:
 		return f.WriteObjects(c, version, langs)
+	case KindHelp:
+		return f.WriteHelp(c, version, langs)
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
@@ -811,3 +928,7 @@ func ensureEventsLoaded(version common.GameVersion) error {
 	return nil
 }
 
+// ensureHelpLoaded garante os painéis de ajuda em memória (carga única).
+func ensureHelpLoaded(version common.GameVersion) error {
+	return helpfile.EnsureHelpLoaded(version)
+}

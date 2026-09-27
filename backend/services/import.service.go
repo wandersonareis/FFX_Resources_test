@@ -29,6 +29,7 @@ import (
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/fileFormats/helpfile"
 	"ffxresources/backend/fileFormats/lockit"
 	"ffxresources/backend/fileFormats/objectsfile"
 	"ffxresources/backend/formatters/hash"
@@ -185,10 +186,22 @@ func mergeImportUs(store, imported dto.Collection) dto.Collection {
 	return out
 }
 
+// stripHelpRowNames remove o row.Name legado ("text_%04d") das entradas
+// help. A rows nova não tem name; artefatos exportados antes da remoção
+// ainda casam com a store (rowKey = index\x00name) depois da limpeza.
+func stripHelpRowNames(c dto.Collection) {
+	for _, entry := range c {
+		for i := range entry.Rows {
+			entry.Rows[i].Name = ""
+		}
+	}
+}
+
 // ---- detecção ----------------------------------------------------------------
 
 // kindFromKey decide o kind pela metadata.key: macrodic.dcp → macro,
-// /event/ → events; /gamedata/ps3data/lockit/ → lockit; demais → objects.
+// /event/ → events; /gamedata/ps3data/lockit/ → lockit; help/…/*.sps2 → help;
+// demais → objects.
 func kindFromKey(key string) string {
 	lower := strings.ToLower(key)
 	if strings.HasSuffix(lower, "macrodic.dcp") {
@@ -199,6 +212,9 @@ func kindFromKey(key string) string {
 	}
 	if lockit.IsLockitKey(key) {
 		return KindLockit
+	}
+	if strings.Contains(lower, "/help/") && strings.HasSuffix(lower, ".sps2") {
+		return KindHelp
 	}
 	return KindObjects
 }
@@ -283,6 +299,15 @@ func (s *MetadataService) importKnownIDs(kind string, version common.GameVersion
 		macroFull = full
 		for _, id := range imported.SortedKeys() {
 			if _, ok := full[id]; ok {
+				known[id] = true
+			}
+		}
+	case KindHelp:
+		if err := ensureHelpLoaded(version); err != nil {
+			return nil, nil, err
+		}
+		for _, id := range imported.SortedKeys() {
+			if helpfile.GetHelp(version, id) != nil {
 				known[id] = true
 			}
 		}
@@ -507,6 +532,13 @@ func (s *MetadataService) prepareImport(path string, version common.GameVersion)
 	if err != nil {
 		return nil, err
 	}
+	if kind == KindHelp {
+		// Compat com artefatos antigos: rows de help antes carregavam
+		// name (text_%04d); o formato novo diferencia linhas pelo
+		// arquivo + index, e a store já está sem name — sem limpar aqui,
+		// o rowKey (index\x00name) não casaria e o import seria bloqueado.
+		stripHelpRowNames(imported)
+	}
 	if err := ensureVersionReady(version); err != nil {
 		return nil, err
 	}
@@ -583,9 +615,12 @@ func (s *MetadataService) prepareImport(path string, version common.GameVersion)
 				}
 			}
 		}
-	} else if kind == KindLockit {
+	} else if kind == KindLockit || kind == KindHelp {
 		// O lockit é uma lista CRLF sem offsets uint16 nem cabeçalho; não há
 		// limite de capacidade a medir (o import grava apenas o us).
+		// O help tem ponteiros u32 com textEnd/footer recalculados no
+		// rebuild — nenhum limite uint16 a medir; a validação estrutural
+		// acontece no próprio rebuild (reader revalida ao aplicar).
 	} else {
 		for _, id := range merged.SortedKeys() {
 			var usage dto.ImportUsage
@@ -646,7 +681,7 @@ func (s *MetadataService) ImportFile(path string, version common.GameVersion) (i
 // usado na importação (seletor nativo).
 func (s *MetadataService) ExportJSON(kind string, version common.GameVersion, ids, langs []string) ([]string, error) {
 	kind = strings.ToLower(strings.TrimSpace(kind))
-	c, err := s.GetCollection(kind, version, ids)
+	c, err := s.GetCollection(kind, version, helpExportIDs(kind, ids))
 	if err != nil {
 		return nil, err
 	}
@@ -667,6 +702,12 @@ func (s *MetadataService) ExportJSON(kind string, version common.GameVersion, id
 		return []string{p}, nil
 	case KindLockit:
 		return jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
+	case KindHelp:
+		paths, jerr := jsonfmt.NewJSONHelpFormatter().WriteHelp(c, version, langs)
+		if jerr != nil {
+			return nil, jerr
+		}
+		return paths, nil
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}

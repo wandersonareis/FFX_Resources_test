@@ -61,6 +61,15 @@ func NewObjectMetadata(version common.GameVersion, dirPattern, fileName, key str
 	return Metadata{Key: filepath.ToSlash(key), ID: id}
 }
 
+// NewHelpMetadata gera a metadata de um painel de ajuda (kind help).
+// dirPattern = "help/<dir>" (ex.: help/now_help, help/mon_boku);
+// id = stem do arquivo (now_help, now_help_page, mon_boku, ...).
+func NewHelpMetadata(name, dirPattern string, version common.GameVersion) Metadata {
+	id := strings.TrimSpace(name)
+	key := strings.Trim(strings.TrimSpace(dirPattern)+"/"+strings.TrimSpace(id)+".sps2", "/")
+	return Metadata{Key: filepath.ToSlash(common.VersionPathName(version) + "/" + key), ID: id}
+}
+
 // MacroChunkID é o id universal de um chunk: chunk_NN.
 func MacroChunkID(chunk int) string {
 	return fmt.Sprintf("chunk_%02d", chunk)

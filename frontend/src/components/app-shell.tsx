@@ -14,6 +14,7 @@ import { saveAllDrafts } from '@/lib/ffx/save-all';
 import { EntryKind, KIND_LABELS } from '@/lib/ffx/display-names';
 import {
   entryKindsFor,
+  exportDestination,
   exportJSON,
   exportStrings,
   importFile,
@@ -163,6 +164,7 @@ export function AppShell() {
       toast.loading(`Exportando (${label})…`, { id: toastId });
       try {
         let written = 0;
+        const allPaths: string[] = [];
         for (const kind of kinds) {
           const ids = useCheckedIds ? exportSelection.idsOf(version, kind) : [];
           // Exportar seleção = atalho do Exportar do contexto.
@@ -171,14 +173,17 @@ export function AppShell() {
             format === 'json'
               ? await exportJSON(kind, version, ids)
               : await exportStrings(kind, version, ids);
+          allPaths.push(...(paths ?? []));
           written += (paths ?? []).length;
         }
         if (written === 0) {
           toast.info('Nada para exportar.', { id: toastId });
         } else {
-          toast.success(`Exportado (${label}): ${written} arquivo(s).`, {
-            id: toastId,
-          });
+          const dest = exportDestination(allPaths);
+          toast.success(
+            `Exportado (${label}): ${dest || `${written} arquivo(s)`}.`,
+            { id: toastId }
+          );
         }
       } catch (error) {
         toast.error(parseError(error), { id: toastId });

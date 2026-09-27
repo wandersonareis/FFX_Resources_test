@@ -11,6 +11,7 @@ import {
 } from '@/lib/ffx/tree-data';
 import { editDraft } from '@/lib/ffx/edit-draft';
 import { sendErrorNotification } from '@/lib/ffx/error-handler';
+import { isRefText } from '@/lib/ffx/hash-ref';
 import { SOURCE_LANG } from '@/lib/ffx/save-all';
 import type { SideNode } from './types';
 
@@ -119,7 +120,14 @@ export function createEntryView(version: GameVersionId): EntryView {
       patch({ activeKind: entry.kind, selectedEntry: entry });
       const full = await loadEntry(entry.kind, entry.id, version);
       editDraft.setBase(version, entry.kind, entry.id, full);
-      patch({ rows: [...(full.rows ?? [])] });
+      // Dedup: refs "$hash" (repetições idênticas) ficam fora da tabela —
+      // o tradutor traduz cada texto uma vez. A base do rascunho guarda a
+      // entry COMPLETA; o backend resolve refs e propaga o texto editado
+      // para todas as cópias no salvar (UI e import).
+      const rows = (full.rows ?? []).filter(
+        (r) => !isRefText(r.text?.[SOURCE_LANG], r.hash?.[SOURCE_LANG])
+      );
+      patch({ rows });
     } catch (error) {
       sendErrorNotification(error);
       patch({ selectedEntry: null, rows: [] });

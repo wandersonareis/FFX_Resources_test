@@ -29,6 +29,7 @@ export function EntryTable({ view }: { view: EntryView }) {
   const rows = useSelector(store, (s) => s.rows);
   const activeKind = useSelector(store, (s) => s.activeKind);
   const selectedEntry = useSelector(store, (s) => s.selectedEntry);
+  const loading = useSelector(store, (s) => s.loading);
   const { store: drafts, snapshot } = useEditDraft();
   const version = view.version;
 
@@ -177,6 +178,17 @@ export function EntryTable({ view }: { view: EntryView }) {
     actions.consumeTableFocus();
     rowRefs.current.get(String(rows[0].index))?.focus();
   }, [pendingTableFocus, selectedEntry, rows, actions]);
+
+  // Help 100% deduplicado: todas as linhas deste painel são refs de textos
+  // cuja def vive em outro arquivo — sem linhas para traduzir aqui.
+  if (activeKind === 'help' && selectedEntry && !loading && rows.length === 0) {
+    return (
+      <div className="mt-2 rounded-md border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
+        Todas as linhas deste painel são repetições de textos de outros arquivos
+        (dedup) — nada a traduzir aqui.
+      </div>
+    );
+  }
 
   return (
     <div className="mt-2">

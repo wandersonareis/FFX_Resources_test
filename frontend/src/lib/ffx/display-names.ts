@@ -2,13 +2,14 @@
 // Backend envia apenas sumário canônico {id, key}; os labels PT-BR vivem aqui.
 // Nomes dos GRUPOS de events (shortened) vivem em event-group-names.ts.
 
-export type EntryKind = 'events' | 'objects' | 'macro' | 'lockit';
+export type EntryKind = 'events' | 'objects' | 'macro' | 'lockit' | 'help';
 
 export const KIND_LABELS: Record<EntryKind, string> = {
   events: 'Eventos',
   objects: 'Sistema',
   macro: 'Dicionário',
   lockit: 'Loc Kit',
+  help: 'Painel de ajuda',
 };
 
 /** Tipo de armazenamento de um registro do lockit. */
@@ -70,6 +71,16 @@ export const OBJECTS_LABELS: Record<string, string> = {
   lm_warehouse: 'Depósito (Last Mission)',
 };
 
+/** Collection id (stem do .sps2) dos painéis de ajuda -> nome de exibição. */
+export const HELP_ENTRY_LABELS: Record<string, string> = {
+  now_help: 'Ajuda (textos)',
+  now_help_page: 'Ajuda (páginas)',
+  mon_boku: 'Registro de monstros',
+  s_monitor: 'Monitor de status',
+  dvdcopy: 'Cópia de DVD',
+  dvdcopy_page: 'Cópia de DVD (páginas)',
+};
+
 export function resolveEntryLabel(kind: EntryKind, id: string): string {
   if (kind === 'objects') {
     return OBJECTS_LABELS[id] ?? id;
@@ -81,6 +92,9 @@ export function resolveEntryLabel(kind: EntryKind, id: string): string {
   }
   if (kind === 'lockit') {
     return LOCKIT_ENTRY_LABELS[id] ?? id;
+  }
+  if (kind === 'help') {
+    return HELP_ENTRY_LABELS[id] ?? id;
   }
   return id;
 }

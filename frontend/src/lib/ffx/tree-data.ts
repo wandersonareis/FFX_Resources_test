@@ -22,9 +22,11 @@ export interface EntryRow {
 
 // Kinds servidos por versão na sidebar. lastmiss é expansão do ffx2 e não tem
 // dicionário próprio → sem 'macro' (a aba não mostra "Dicionário"). O lockit
-// (kit de localização do menu/launcher) existe em FFX e FFX-2.
+// (kit de localização do menu/launcher) existe em FFX e FFX-2. Os painéis de
+// ajuda (.sps2 em help/) são FFX-only: a árvore do ffx2 não tem a pasta help/.
 export function entryKindsFor(version: GameVersionId): EntryKind[] {
   if (version === 'lastmiss') return ['events', 'objects'];
+  if (version === 'ffx') return ['events', 'objects', 'macro', 'lockit', 'help'];
   return ['events', 'objects', 'macro', 'lockit'];
 }
 
@@ -109,6 +111,18 @@ export async function exportStrings(
   langs: string[] = []
 ): Promise<string[]> {
   return ExportStrings(kind, version as Parameters<typeof ExportStrings>[1], ids, langs);
+}
+
+/**
+ * Resumo do destino do export para o toast: os artefatos saem em mods/edits
+ * (todos os kinds), então mostra a contagem + diretório (ou o caminho único).
+ */
+export function exportDestination(paths: string[]): string {
+  const list = paths ?? [];
+  if (list.length === 0) return '';
+  if (list.length === 1) return list[0];
+  const dir = list[0].replace(/[\\/][^\\/]*$/, '');
+  return `${list.length} arquivos em ${dir}`;
 }
 
 /** Seletor nativo de arquivo (.json/.strings). "" = cancelado. */

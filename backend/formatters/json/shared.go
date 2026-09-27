@@ -39,13 +39,6 @@ func marshalNoEscape(v any) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// minDedupRunes é o tamanho mínimo (em runes) para um texto virar
-// referência `$hash`. Partículas curtas como "ok" nunca viram ref:
-// repetem-se muito e cada ocorrência pode ter tradução distinta por
-// contexto. A contagem é em runes para não miscaracterizar CJK
-// (ex.: "你好" tem 2 runes mas 6 bytes).
-const minDedupRunes = 5
-
 // marshalCollection serializa a Collection com chaves e rows ordenadas
 // (saída determinística), com todos os idiomas. Recebe apenas DTO pronto.
 func marshalCollection(c dto.Collection) ([]byte, error) {
@@ -56,8 +49,8 @@ func marshalCollection(c dto.Collection) ([]byte, error) {
 // pedidos (nil/vazio = todos).
 //
 // Na saída, todo hash ganha o prefixo `$` e, só no idioma default, textos
-// repetidos (len >= 5 runes) viram referência `$hash` — dedup por arquivo.
-// O DTO de entrada nunca é mutado.
+// repetidos (len >= hash.MinDedupRunes runes) viram referência `$hash` —
+// mesma regra do DedupHelpDTO do builders. O DTO de entrada nunca é mutado.
 func marshalCollectionLangs(c dto.Collection, langs []string) ([]byte, error) {
 	filter := langSet(langs)
 	seen := make(map[string]string) // hashHex bare -> texto (só default lang)
@@ -85,7 +78,7 @@ func marshalCollectionLangs(c dto.Collection, langs []string) ([]byte, error) {
 					r.Text[lang] = t
 				}
 			}
-			if t := r.Text[common.DefaultLocalization]; utf8.RuneCountInString(t) >= minDedupRunes {
+			if t := r.Text[common.DefaultLocalization]; utf8.RuneCountInString(t) >= hash.MinDedupRunes {
 				if h, _ := hash.Strip(r.Hash[common.DefaultLocalization]); h != "" {
 					if _, ok := seen[h]; ok {
 						r.Text[common.DefaultLocalization] = hash.Prefix(h)

@@ -7,6 +7,7 @@ import { useSelector } from '@tanstack/react-store';
 import type { EntryKind } from '@/lib/ffx/display-names';
 import {
   entryKindsFor,
+  exportDestination,
   exportJSON,
   exportStrings,
 } from '@/lib/ffx/tree-data';
@@ -119,8 +120,9 @@ export function ContentTree({ view }: { view: EntryView }) {
         format === 'json'
           ? await exportJSON(kind, version, ids)
           : await exportStrings(kind, version, ids);
+      const dest = exportDestination(paths);
       toast.success(
-        `Exportado (${label}): ${(paths ?? []).length} arquivo(s).`,
+        `Exportado (${label}): ${dest || `${(paths ?? []).length} arquivo(s)`}.`,
         { id: toastId }
       );
     } catch (error) {
