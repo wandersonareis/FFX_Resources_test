@@ -56,6 +56,13 @@ func asStringsPath(jsonPath string) string {
 	return stdstrings.TrimSuffix(jsonPath, ".json") + extensionStrings
 }
 
+// StringsPathFor devolve o caminho .strings irmão de um caminho .json
+// (mesmo basename, extensão trocada) — para chamadores que decidem o
+// naming do artefato (escopo do export).
+func StringsPathFor(jsonPath string) string {
+	return asStringsPath(jsonPath)
+}
+
 // EventsStringsPath resolve o caminho do Strings de eventos em edits/,
 // ao lado do JSON (mesmo basename).
 func EventsStringsPath(c dto.Collection, version common.GameVersion) (string, error) {
@@ -78,6 +85,24 @@ func (f StringsFormatter) WriteEvents(c dto.Collection, version common.GameVersi
 		return "", err
 	}
 	filePath, err := EventsStringsPath(c, version)
+	if err != nil {
+		return "", err
+	}
+	if err := common.WriteBytesToFile(filePath, raw); err != nil {
+		return "", fmt.Errorf("error writing strings file %s: %v", filePath, err)
+	}
+	common.LogVerbose("Exported event strings file: %s", filePath)
+	return filePath, nil
+}
+
+// WriteEventsFile serializa a Collection e escreve no caminho dado — o
+// naming é decisão do chamador (escopo do export: bulk, individual ou
+// subconjunto; o dedup do marshal é por arquivo = self-contained).
+func (f StringsFormatter) WriteEventsFile(c dto.Collection, filePath string, langs []string) (string, error) {
+	if len(c) == 0 {
+		return "", fmt.Errorf("no events with string data to export")
+	}
+	raw, err := f.MarshalLangs(c, langs)
 	if err != nil {
 		return "", err
 	}

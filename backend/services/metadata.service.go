@@ -316,11 +316,17 @@ func (s *MetadataService) ExportEntry(kind string, version common.GameVersion, i
 		}
 		paths = append(append(paths, jps...), sps...)
 	case KindMacro:
-		jp, jerr := jsonfmt.NewJSONMacroFormatter().WriteMacro(c, version, langs)
+		// Chunk selecionado não pode sobrescrever o artefato canônico
+		// (macro_dictionary): o naming segue o escopo do pedido.
+		path, perr := macroExportPath(version, []string{id})
+		if perr != nil {
+			return nil, perr
+		}
+		jp, jerr := jsonfmt.NewJSONMacroFormatter().WriteMacroFile(c, path, langs)
 		if jerr != nil {
 			return paths, jerr
 		}
-		sp, serr := strfmt.NewStringsFormatter().WriteMacro(c, version, langs)
+		sp, serr := strfmt.NewStringsFormatter().WriteMacroFile(c, strfmt.StringsPathFor(path), langs)
 		if serr != nil {
 			return paths, serr
 		}
@@ -860,26 +866,40 @@ func helpExportIDs(kind string, ids []string) []string {
 
 // ExportStrings monta o DTO em memória e escreve arquivos .strings,
 // ao lado dos .json (mesmo diretório, mesmo basename).
-// ids vazio = tudo; langs nil/vazio = todos os idiomas.
+// ids vazio = tudo; langs nil/vazio = todos os idiomas. O dedup do marshal
+// é por arquivo: o escopo do pedido vira o escopo do dedup (self-contained,
+// sem refs órfãs), e o nome do artefato reflete o escopo (eventsExportPath).
 func (s *MetadataService) ExportStrings(kind string, version common.GameVersion, ids, langs []string) ([]string, error) {
+	kind = strings.ToLower(strings.TrimSpace(kind))
+	if kind == KindEvents || kind == KindMacro {
+		ids = s.normalizeIDs(ids)
+	}
 	c, err := s.GetCollection(kind, version, helpExportIDs(kind, ids))
 	if err != nil {
 		return nil, err
 	}
 	f := strfmt.NewStringsFormatter()
-	switch strings.ToLower(strings.TrimSpace(kind)) {
+	switch kind {
 	case KindEvents:
-		p, err := f.WriteEvents(c, version, langs)
-		if err != nil {
-			return nil, err
+		path, perr := eventsExportPath(version, ids)
+		if perr != nil {
+			return nil, perr
+		}
+		p, werr := f.WriteEventsFile(c, strfmt.StringsPathFor(path), langs)
+		if werr != nil {
+			return nil, werr
 		}
 		return []string{p}, nil
 	case KindObjects:
 		return f.WriteObjects(c, version, langs)
 	case KindMacro:
-		p, err := f.WriteMacro(c, version, langs)
-		if err != nil {
-			return nil, err
+		path, perr := macroExportPath(version, ids)
+		if perr != nil {
+			return nil, perr
+		}
+		p, werr := f.WriteMacroFile(c, path, langs)
+		if werr != nil {
+			return nil, werr
 		}
 		return []string{p}, nil
 	case KindLockit:

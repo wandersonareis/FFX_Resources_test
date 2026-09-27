@@ -86,6 +86,25 @@ func (f JSONEventsFormatter) WriteEvents(c dto.Collection, version common.GameVe
 	return filePath, nil
 }
 
+// WriteEventsFile serializa a Collection e escreve no caminho dado — o
+// naming é decisão do chamador (escopo do export: bulk, individual ou
+// subconjunto; o dedup do marshal é por arquivo = self-contained).
+func (f JSONEventsFormatter) WriteEventsFile(c dto.Collection, filePath string, langs []string) (string, error) {
+	if len(c) == 0 {
+		return "", fmt.Errorf("no events with string data to export")
+	}
+	raw, err := f.MarshalLangs(c, langs)
+	if err != nil {
+		return "", err
+	}
+	if err := common.WriteBytesToFile(filePath, raw); err != nil {
+		return "", fmt.Errorf("error writing JSON file %s: %w", filePath, err)
+	}
+	common.LogVerbose("Exported event JSON file: %s", filePath)
+	common.LogVerbose("Total events exported: %d", len(c))
+	return filePath, nil
+}
+
 // ReadEvents lê o arquivo JSON de eventos e devolve a Collection (DTO).
 // Outro responsável (applier) aplica o DTO de volta no binário.
 func (f JSONEventsFormatter) ReadEvents(filePath string) (dto.Collection, error) {

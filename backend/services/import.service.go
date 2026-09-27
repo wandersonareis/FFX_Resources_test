@@ -678,16 +678,25 @@ func (s *MetadataService) ImportFile(path string, version common.GameVersion) (i
 
 // ExportJSON escreve os artefatos JSON do lote em mods/edits (ids vazio =
 // tudo; langs nil/vazio = todos os idiomas). O caminho do arquivo é o mesmo
-// usado na importação (seletor nativo).
+// usado na importação (seletor nativo). O dedup do marshal é por arquivo:
+// o escopo do pedido vira o escopo do dedup (self-contained, sem refs
+// órfãs), e o nome do artefato reflete o escopo (eventsExportPath).
 func (s *MetadataService) ExportJSON(kind string, version common.GameVersion, ids, langs []string) ([]string, error) {
 	kind = strings.ToLower(strings.TrimSpace(kind))
+	if kind == KindEvents || kind == KindMacro {
+		ids = s.normalizeIDs(ids)
+	}
 	c, err := s.GetCollection(kind, version, helpExportIDs(kind, ids))
 	if err != nil {
 		return nil, err
 	}
 	switch kind {
 	case KindEvents:
-		p, jerr := jsonfmt.NewJSONEventsFormatter().WriteEvents(c, version, langs)
+		path, perr := eventsExportPath(version, ids)
+		if perr != nil {
+			return nil, perr
+		}
+		p, jerr := jsonfmt.NewJSONEventsFormatter().WriteEventsFile(c, path, langs)
 		if jerr != nil {
 			return nil, jerr
 		}
@@ -695,7 +704,11 @@ func (s *MetadataService) ExportJSON(kind string, version common.GameVersion, id
 	case KindObjects:
 		return jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
 	case KindMacro:
-		p, jerr := jsonfmt.NewJSONMacroFormatter().WriteMacro(c, version, langs)
+		path, perr := macroExportPath(version, ids)
+		if perr != nil {
+			return nil, perr
+		}
+		p, jerr := jsonfmt.NewJSONMacroFormatter().WriteMacroFile(c, path, langs)
 		if jerr != nil {
 			return nil, jerr
 		}
