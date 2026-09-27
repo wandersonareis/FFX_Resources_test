@@ -140,28 +140,43 @@ func ObjectsStringsPath(key string, version common.GameVersion) (string, error) 
 
 // WriteObjects serializa a Collection e escreve um arquivo Strings por
 // entrada. Recebe apenas DTO pronto e devolve os caminhos escritos.
-// langs nil/vazio = todos os idiomas.
+// langs nil/vazio = todos os idiomas. Cada arquivo é serializado isolado:
+// o dedup do marshal tem escopo do próprio arquivo (self-contained).
 func (f StringsFormatter) WriteObjects(c dto.Collection, version common.GameVersion, langs []string) ([]string, error) {
 	if len(c) == 0 {
 		return nil, fmt.Errorf("no objects with text data to export")
 	}
 	var paths []string
 	for _, key := range c.SortedKeys() {
-		singleRaw, err := f.MarshalLangs(dto.Collection{key: c[key]}, langs)
-		if err != nil {
-			return nil, err
-		}
 		filePath, err := ObjectsStringsPath(key, version)
 		if err != nil {
 			return nil, err
 		}
-		if err := common.WriteBytesToFile(filePath, singleRaw); err != nil {
-			return nil, fmt.Errorf("error writing strings file %s: %v", filePath, err)
+		p, err := f.WriteObjectsFile(dto.Collection{key: c[key]}, filePath, langs)
+		if err != nil {
+			return nil, err
 		}
-		common.LogVerbose("Exported objects strings file: %s", filePath)
-		paths = append(paths, filePath)
+		paths = append(paths, p)
 	}
 	return paths, nil
+}
+
+// WriteObjectsFile serializa a Collection e escreve no caminho dado — o
+// naming é decisão do chamador (export completo em arquivo único: dedup
+// global entre as entradas via mapa $hash compartilhado).
+func (f StringsFormatter) WriteObjectsFile(c dto.Collection, filePath string, langs []string) (string, error) {
+	if len(c) == 0 {
+		return "", fmt.Errorf("no objects with text data to export")
+	}
+	raw, err := f.MarshalLangs(c, langs)
+	if err != nil {
+		return "", err
+	}
+	if err := common.WriteBytesToFile(filePath, raw); err != nil {
+		return "", fmt.Errorf("error writing strings file %s: %v", filePath, err)
+	}
+	common.LogVerbose("Exported objects strings file: %s", filePath)
+	return filePath, nil
 }
 
 // ReadObjects lê um arquivo Strings de objetos e devolve a Collection (DTO).

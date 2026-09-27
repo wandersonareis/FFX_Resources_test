@@ -748,6 +748,21 @@ func (s *MetadataService) GetEntry(kind, id string, version common.GameVersion) 
 		}
 		return entry, nil
 	}
+	if kind == KindObjects {
+		// Dedup com escopo do PRÓPRIO arquivo (refs não propagam entre
+		// objetos): a repetição massiva de kernel (ex.: "Attack" 400x em
+		// command.bin) sai como refs da 1ª ocorrência no view. Export por
+		// arquivo é igualmente self-contained — view e artefato alinhados.
+		c, err := s.GetCollection(kind, version, []string{id})
+		if err != nil {
+			return dto.FileEntry{}, err
+		}
+		entry, ok := builders.DedupDTO(c)[id]
+		if !ok {
+			return dto.FileEntry{}, fmt.Errorf("%s entry not found: %s", kind, id)
+		}
+		return entry, nil
+	}
 	c, err := s.GetCollection(kind, version, []string{id})
 	if err != nil {
 		return dto.FileEntry{}, err
@@ -891,6 +906,19 @@ func (s *MetadataService) ExportStrings(kind string, version common.GameVersion,
 		}
 		return []string{p}, nil
 	case KindObjects:
+		if len(ids) == 0 {
+			// Export completo: arquivo único com dedup global entre as
+			// entradas (irmão do JSON bulk, mesmo basename).
+			path, perr := objectsBulkPath(version)
+			if perr != nil {
+				return nil, perr
+			}
+			p, werr := f.WriteObjectsFile(c, strfmt.StringsPathFor(path), langs)
+			if werr != nil {
+				return nil, werr
+			}
+			return []string{p}, nil
+		}
 		return f.WriteObjects(c, version, langs)
 	case KindMacro:
 		path, perr := macroExportPath(version, ids)

@@ -702,6 +702,21 @@ func (s *MetadataService) ExportJSON(kind string, version common.GameVersion, id
 		}
 		return []string{p}, nil
 	case KindObjects:
+		if len(ids) == 0 {
+			// Export completo: UM arquivo com todas as entradas (cada uma
+			// com sua metadata.key) e dedup GLOBAL entre elas — a repetição
+			// entre arquivos de sistema sai como refs do bulk.
+			path, perr := objectsBulkPath(version)
+			if perr != nil {
+				return nil, perr
+			}
+			p, werr := jsonfmt.NewJSONObjectFormatter().WriteObjectsFile(c, path, langs)
+			if werr != nil {
+				return nil, werr
+			}
+			return []string{p}, nil
+		}
+		// Seleção: um arquivo por entrada (dedup intra-arquivo, self-contained).
 		return jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
 	case KindMacro:
 		path, perr := macroExportPath(version, ids)

@@ -33,6 +33,16 @@ func eventsExportPath(version common.GameVersion, ids []string) (string, error) 
 	return filepath.Join(editsPath, common.WithVersionSuffixFor(name, version)), nil
 }
 
+// objectsBulkPath resolve o caminho do artefato JSON ÚNICO de objects
+// (export completo): objects_all_localizations[_<v>].json em edits/.
+func objectsBulkPath(version common.GameVersion) (string, error) {
+	editsPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits")
+	if err := common.EnsurePathExists(editsPath); err != nil {
+		return "", fmt.Errorf("error creating edits directory: %w", err)
+	}
+	return filepath.Join(editsPath, common.WithVersionSuffixFor("objects_all_localizations.json", version)), nil
+}
+
 // macroExportPath resolve o caminho do artefato JSON do dicionário:
 //   - ids vazio (tudo)  → edits/macrodic/macro_dictionary_all_localizations
 //     (artefato canônico, mesmo do import padrão);
