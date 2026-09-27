@@ -50,12 +50,14 @@ type MetadataService struct {
 
 // dedupViewKinds são os kinds cujo view (GetEntry) sai com dedup global
 // da versão — os formatos que agrupam texto numa única extração, onde as
-// repetições cruzam arquivos: help (arquivo único com os 6 painéis) e
-// events (eventos gêmeos com repetição maciça, ex.: arena do Blitzball).
-// objects é extração 1:1 por arquivo — refs não propagam entre objetos.
+// repetições cruzam arquivos: help (arquivo único com os 6 painéis),
+// events (eventos gêmeos com repetição maciça) e macro (dicionário único
+// em um artefato). objects é extração 1:1 por arquivo — dedup intra-arquivo
+// no GetEntry, refs não propagam entre objetos.
 var dedupViewKinds = map[string]bool{
 	KindHelp:   true,
 	KindEvents: true,
+	KindMacro:  true,
 }
 
 // Cache do view dedupado por (versão|kind): o dedup global exige construir
@@ -579,7 +581,9 @@ func (s *MetadataService) ApplyTextCollection(kind string, version common.GameVe
 		for id, entry := range c {
 			full[id] = entry
 		}
-		return builders.ApplyMacroDTO(version, full)
+		// Refs "$hash" do payload (view dedupado) resolvem contra as defs
+		// do dicionário inteiro — nunca são gravadas literais no rebuild.
+		return builders.ApplyMacroDTO(version, builders.ResolveDedupRefs(full))
 
 	case KindLockit:
 		return builders.ApplyLockitDTO(version, c)

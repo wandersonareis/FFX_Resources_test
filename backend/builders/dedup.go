@@ -53,6 +53,59 @@ func DedupDTO(c dto.Collection) dto.Collection {
 	return out
 }
 
+// ResolveDedupRefs devolve uma cópia da Collection com as refs "$hash"
+// expandidas: a tabela hash → texto é construída das PRÓPRIAS defs (rows
+// literais) do collection — o mesmo mecanismo da 2ª passada do unmarshal
+// JSON/strings. Ref sem def no collection permanece como está (identidade:
+// o texto atual vence). A entrada não é mutada.
+//
+// É o passo de aplicação do lote vindo do frontend (view dedupado) nos
+// formatos cujo apply não expande refs por conta própria (macro: o DTO
+// mesclado vai direto para o rebuild).
+func ResolveDedupRefs(c dto.Collection) dto.Collection {
+	defs := make(map[string]string)
+	for _, k := range c.SortedKeys() {
+		for _, row := range c[k].Rows {
+			t := row.Text[common.DefaultLocalization]
+			if t == "" {
+				continue
+			}
+			if _, isRef := refBare(row, t); isRef {
+				continue
+			}
+			if h := row.Hash[common.DefaultLocalization]; h != "" {
+				defs[h] = t
+			}
+		}
+	}
+	out := make(dto.Collection, len(c))
+	for _, k := range c.SortedKeys() {
+		entry := c[k]
+		rows := make([]dto.TextRow, len(entry.Rows))
+		copy(rows, entry.Rows)
+		for i := range rows {
+			r := &rows[i]
+			bare, isRef := refBare(*r, r.Text[common.DefaultLocalization])
+			if !isRef {
+				continue
+			}
+			resolved, ok := defs[bare]
+			if !ok {
+				continue // ref órfã: identidade (mantém o texto atual)
+			}
+			text := make(map[string]string, len(r.Text))
+			for lk, lv := range r.Text {
+				text[lk] = lv
+			}
+			text[common.DefaultLocalization] = resolved
+			r.Text = text
+		}
+		entry.Rows = rows
+		out[k] = entry
+	}
+	return out
+}
+
 // refBare devolve o hash por trás de uma ref "$hash" da própria row.
 // Espelha a segurança do unmarshal do JSON/strings: prefixo `$` só conta
 // se casar com o hash PRÓPRIO da row (literal que comece com `$` passa
