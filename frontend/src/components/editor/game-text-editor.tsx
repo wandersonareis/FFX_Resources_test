@@ -8,9 +8,17 @@ import { Color } from '@tiptap/extension-color';
 import { ChevronDown, Code, DoorOpen, Eraser, Gamepad2, Italic, Navigation, Palette, RotateCcw, Undo2, Redo2 } from 'lucide-react';
 import { gameTextParser } from '@/lib/ffx/game-text-parser';
 import { KNOWN_COLORS, extractChipLabel, isLockedTagInner } from '@/lib/ffx/game-text-tags';
+import {
+  getChipValidator,
+  loadTagCatalog,
+  type TagCatalog,
+} from '@/lib/ffx/tag-catalog';
+import type { GameVersionId } from '@/lib/ffx/game-version';
 import { GameTagExtension } from './game-tag.extension';
 import { LockedTagsExtension } from './locked-tags.extension';
 import { createPasteHandlerExtension } from './paste-handler.extension';
+import { createTagAutocompleteExtension } from './tag-autocomplete.extension';
+import { createTypedTagExtension } from './typed-tag.extension';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -72,22 +80,48 @@ export interface GameTextEditorProps {
   value: string;
   /** Emite o texto canônico serializado a cada edição. */
   onValueChange: (value: string) => void;
+  /** Versão do jogo: define o catálogo de tags (autocomplete/validação). */
+  version: GameVersionId;
 }
 
-export function GameTextEditor({ value, onValueChange }: GameTextEditorProps) {
+export function GameTextEditor({
+  value,
+  onValueChange,
+  version,
+}: GameTextEditorProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
+  /** Wrapper do editor: container de montagem do popup de sugestões. */
+  const popupContainerRef = useRef<HTMLDivElement | null>(null);
   const suppressUpdate = useRef(false);
   const onValueChangeRef = useRef(onValueChange);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [, setTick] = useState(0);
+  // undefined = catálogo ainda carregando (o editor só nasce com ele pronto:
+  // parse, colagem e tags digitadas precisam do MESMO validador).
+  const [catalog, setCatalog] = useState<TagCatalog | null | undefined>(
+    undefined
+  );
 
   useEffect(() => {
     onValueChangeRef.current = onValueChange;
   }, [onValueChange]);
 
   useEffect(() => {
+    let alive = true;
+    loadTagCatalog(version).then((loaded) => {
+      if (alive) setCatalog(loaded);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [version]);
+
+  useEffect(() => {
+    const element = hostRef.current;
+    if (catalog === undefined || !element) return;
+    const validate = getChipValidator(catalog);
     const ed = new Editor({
-      element: hostRef.current ?? undefined,
+      element,
       extensions: [
         StarterKit.configure({
           heading: false,
@@ -104,9 +138,11 @@ export function GameTextEditor({ value, onValueChange }: GameTextEditorProps) {
         Color,
         GameTagExtension,
         LockedTagsExtension,
-        createPasteHandlerExtension(gameTextParser),
+        createTypedTagExtension(validate),
+        createTagAutocompleteExtension(catalog, () => popupContainerRef.current),
+        createPasteHandlerExtension(gameTextParser, validate),
       ],
-      content: gameTextParser.parseGameTextToHTML(value),
+      content: gameTextParser.parseGameTextToHTML(value, validate),
       onUpdate: ({ editor: updated }) => {
         suppressUpdate.current = true;
         try {
@@ -124,17 +160,20 @@ export function GameTextEditor({ value, onValueChange }: GameTextEditorProps) {
       ed.destroy();
       setEditor(null);
     };
-    // Cria o editor uma única vez.
+    // O editor nasce com o catálogo da versão e nunca é recriado depois.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [catalog]);
 
   useEffect(() => {
-    if (!editor || suppressUpdate.current) return;
-    const html = gameTextParser.parseGameTextToHTML(value);
+    if (!editor || suppressUpdate.current || catalog === undefined) return;
+    const html = gameTextParser.parseGameTextToHTML(
+      value,
+      getChipValidator(catalog)
+    );
     if (editor.getHTML() !== html) {
       editor.commands.setContent(html, { emitUpdate: false });
     }
-  }, [editor, value]);
+  }, [editor, value, catalog]);
 
   const insertControlTag = (template: ControlTemplate) => {
     if (!editor) return;
@@ -148,6 +187,9 @@ export function GameTextEditor({ value, onValueChange }: GameTextEditorProps) {
           value: template.value,
           label: extractChipLabel(inner),
           locked: isLockedTagInner(inner),
+          // Mesmo critério do parse: um template que não round-tripa
+          // aparece marcado, não "ok" na tela e errado no binário.
+          invalid: !getChipValidator(catalog ?? null)(inner),
         },
       })
       .run();
@@ -156,14 +198,21 @@ export function GameTextEditor({ value, onValueChange }: GameTextEditorProps) {
   const colors = Object.values(KNOWN_COLORS).filter((c) => c.name !== 'WHITE');
 
   return (
-    <div className="game-text-editor">
-      <div className="editor-toolbar" role="toolbar" aria-label="Formatação do texto do jogo">
+    <div
+      ref={popupContainerRef}
+      className="relative flex flex-col gap-2"
+    >
+      <div
+        className="flex flex-wrap items-center gap-1 rounded border border-border px-2 py-1"
+        role="toolbar"
+        aria-label="Formatação do texto do jogo"
+      >
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
               size="sm"
-              className="toolbar-toggle"
+              className="data-[active=true]:bg-accent data-[active=true]:text-accent-foreground"
               data-active={editor?.isActive('italic') ?? false}
               onClick={() => editor?.chain().focus().toggleItalic().run()}
               aria-label="Itálico"
@@ -188,7 +237,7 @@ export function GameTextEditor({ value, onValueChange }: GameTextEditorProps) {
           <TooltipContent>Texto normal ({'{TEXT_NORMAL}'})</TooltipContent>
         </Tooltip>
 
-        <Separator orientation="vertical" className="toolbar-separator" />
+        <Separator orientation="vertical" className="mx-1 my-1 w-px" />
 
         <TemplateDropdown
           label="Botões"
@@ -219,24 +268,36 @@ export function GameTextEditor({ value, onValueChange }: GameTextEditorProps) {
           onSelect={insertControlTag}
         />
 
-        <Separator orientation="vertical" className="toolbar-separator" />
+        <Separator orientation="vertical" className="mx-1 my-1 w-px" />
 
-        <span className="color-group" role="group" aria-label="Cores ({CLR:…})">
+        <span
+          className="inline-flex items-center gap-1"
+          role="group"
+          aria-label="Cores ({CLR:…})"
+        >
           <Palette size={20} aria-label="Cores ({CLR:…}, {CLR:WHITE} reseta)" />
-          {colors.map((c) => (
-            <Tooltip key={c.name}>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className={`color-swatch${editor?.isActive('textStyle', { color: c.hex }) ? ' active' : ''}`}
-                  style={{ backgroundColor: c.hex }}
-                  aria-label={`Cor ${c.label}`}
-                  onClick={() => editor?.chain().focus().setColor(c.hex).run()}
-                />
-              </TooltipTrigger>
-              <TooltipContent>{`{CLR:${c.name}}`}</TooltipContent>
-            </Tooltip>
-          ))}
+          {colors.map((c) => {
+            const isActive =
+              editor?.isActive('textStyle', { color: c.hex }) ?? false;
+            return (
+              <Tooltip key={c.name}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="h-[22px] w-[22px] cursor-pointer rounded border-2 p-0"
+                    style={{
+                      backgroundColor: c.hex,
+                      borderColor: isActive ? 'currentColor' : 'transparent',
+                      boxShadow: isActive ? '0 0 0 1px currentColor' : 'none',
+                    }}
+                    aria-label={`Cor ${c.label}`}
+                    onClick={() => editor?.chain().focus().setColor(c.hex).run()}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>{`{CLR:${c.name}}`}</TooltipContent>
+              </Tooltip>
+            );
+          })}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -252,7 +313,7 @@ export function GameTextEditor({ value, onValueChange }: GameTextEditorProps) {
           </Tooltip>
         </span>
 
-        <Separator orientation="vertical" className="toolbar-separator" />
+        <Separator orientation="vertical" className="mx-1 my-1 w-px" />
 
         <Tooltip>
           <TooltipTrigger asChild>
@@ -284,7 +345,10 @@ export function GameTextEditor({ value, onValueChange }: GameTextEditorProps) {
         </Tooltip>
       </div>
 
-      <div ref={hostRef} className="editor-content" />
+      <div
+        ref={hostRef}
+        className="min-h-40 rounded border border-border p-3 outline-none [&_.tiptap_p]:mb-2 [&_.tiptap_p:last-child]:mb-0"
+      />
     </div>
   );
 }

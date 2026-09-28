@@ -6,6 +6,7 @@ import {
   getResolvedColorFromTag,
   isLockedTagInner,
 } from './game-text-tags';
+import type { ChipValidator } from './tag-catalog';
 
 /**
  * Conversão entre o texto canônico do backend (tags {…}) e o HTML do Tiptap.
@@ -18,8 +19,13 @@ import {
 export const gameTextParser = {
   /**
    * Texto canônico com tags -> HTML do Tiptap.
+   *
+   * `validate` (opcional) marca como inválido o chip da tag digitada que não
+   * sobreviveria ao round-trip — a MESMA instância usada na conversão de tags
+   * digitadas, senão o HTML divergiria do valor e o setContent perderia o
+   * cursor.
    */
-  parseGameTextToHTML(rawText: string): string {
+  parseGameTextToHTML(rawText: string, validate?: ChipValidator): string {
     if (!rawText) return '<p></p>';
 
     // Quebras: \n real ou {TEXT_NEWLINE} viram parágrafos.
@@ -67,11 +73,17 @@ export const gameTextParser = {
           const fullTag = `{${inner}}`;
           const label = extractChipLabel(inner);
           const locked = isLockedTagInner(inner);
+          const invalid = !!validate && !validate(inner);
+          // Ordem idêntica ao renderHTML do nó gameTag (data-game-tag, class,
+          // data-locked, data-invalid): a comparação com getHTML() é literal
+          // e uma ordem diferente dispararia setContent à toa.
           resultHTML += `<span data-game-tag="${this.escapeAttr(
             fullTag
-          )}"${locked ? ' data-locked="true"' : ''} class="game-tag-chip${
-            locked ? ' locked' : ''
-          }">${this.escapeHtml(label)}</span>`;
+          )}" class="game-tag-chip${locked ? ' locked' : ''}${
+            invalid ? ' invalid' : ''
+          }"${locked ? ' data-locked="true"' : ''}${
+            invalid ? ' data-invalid="true"' : ''
+          }>${this.escapeHtml(label)}</span>`;
         }
 
         lastIndex = tagRegex.lastIndex;
@@ -189,17 +201,29 @@ export const gameTextParser = {
     return escaped;
   },
 
+  /**
+   * Escapa texto de nó (mesmo algoritmo da serialização HTML): só `&`, `<`,
+   * `>` e nbsp. Escapar aspas (como `&quot;`/`&#039;`) tornaria o HTML
+   * diferente do getHTML() — a comparação é literal e o setContent só roda
+   * quando o documento realmente divergiu.
+   */
   escapeHtml(text: string): string {
     return text
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
+      .replace(/\u00A0/g, '&nbsp;');
   },
 
+  /**
+   * Escapa valor de atributo (idem serialização HTML): `&`, `"`, nbsp e CR.
+   */
   escapeAttr(text: string): string {
-    return this.escapeHtml(text);
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/\u00A0/g, '&nbsp;')
+      .replace(/\r/g, '&#13;');
   },
 };
 

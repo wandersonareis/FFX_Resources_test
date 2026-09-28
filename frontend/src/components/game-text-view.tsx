@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { gameTextParser } from '@/lib/ffx/game-text-parser';
+import { cn } from '@/lib/utils';
 
 interface GameTextViewProps {
   /** Texto canônico com tags (ex: linha de TextRow.text[lang]). */
@@ -28,7 +29,10 @@ export function GameTextView({ text, fallback = '', className }: GameTextViewPro
 
   return (
     <div
-      className={`game-text-view${className ? ` ${className}` : ''}`}
+      className={cn(
+        '[&_p]:mb-1 [&_p:last-child]:mb-0',
+        className
+      )}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

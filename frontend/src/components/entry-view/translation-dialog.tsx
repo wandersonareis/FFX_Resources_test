@@ -29,6 +29,7 @@ export function TranslationDialog({ view }: { view: EntryView }) {
     <TranslationCellDialog
       open={open}
       row={row}
+      version={view.version}
       languages={languages}
       hasPrevious={rows.findIndex((r) => r.index === row?.index) > 0}
       hasNext={

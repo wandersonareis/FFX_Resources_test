@@ -7,6 +7,8 @@ export interface GameTagAttrs {
   label: string;
   /** CMD, HEX, UNK ou VAR: valores calculados no jogo, nunca editáveis. */
   locked: boolean;
+  /** Tag digitada que não sobrevive ao round-trip (gramática/catálogo). */
+  invalid: boolean;
 }
 
 /**
@@ -36,6 +38,10 @@ export const GameTagExtension = Node.create<GameTagAttrs>({
         default: false,
         parseHTML: (element) => element.hasAttribute('data-locked'),
       },
+      invalid: {
+        default: false,
+        parseHTML: (element) => element.hasAttribute('data-invalid'),
+      },
     };
   },
 
@@ -47,11 +53,15 @@ export const GameTagExtension = Node.create<GameTagAttrs>({
     const value = node?.attrs['value'] ?? '';
     const label = node?.attrs['label'] ?? value;
     const locked = !!node?.attrs['locked'];
+    const invalid = !!node?.attrs['invalid'];
     const attrs: Record<string, string> = {
       'data-game-tag': value,
-      class: locked ? 'game-tag-chip locked' : 'game-tag-chip',
+      class: `game-tag-chip${locked ? ' locked' : ''}${
+        invalid ? ' invalid' : ''
+      }`,
     };
     if (locked) attrs['data-locked'] = 'true';
+    if (invalid) attrs['data-invalid'] = 'true';
     return ['span', attrs, label];
   },
 });

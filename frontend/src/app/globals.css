@@ -129,75 +129,8 @@
   }
 }
 
-.game-text-editor {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.editor-toolbar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  padding: 0.25rem 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-}
-
-.toolbar-separator {
-  align-self: stretch;
-  margin: 0.25rem 0.25rem;
-  height: auto;
-  width: 1px;
-}
-
-.toolbar-toggle[data-active="true"] {
-  background: var(--accent);
-  color: var(--accent-foreground);
-}
-
-.color-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.color-swatch {
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
-  border: 2px solid transparent;
-  cursor: pointer;
-  padding: 0;
-}
-
-.color-swatch.active {
-  border-color: currentColor;
-  box-shadow: 0 0 0 1px currentColor;
-}
-
-.editor-content {
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0.75rem;
-  min-height: 160px;
-}
-
-.editor-content:focus {
-  outline: none;
-}
-
 .editor-content .tiptap p {
   margin: 0 0 0.5rem;
-}
-
-.game-text-view p {
-  margin: 0 0 0.25rem;
-}
-
-.game-text-view p:last-child {
-  margin-bottom: 0;
 }
 
 .game-tag-chip {
@@ -219,6 +152,117 @@
   border-style: dashed;
   cursor: not-allowed;
   text-transform: none;
+}
+
+.game-tag-chip.invalid {
+  background: rgba(190, 60, 60, 0.16);
+  border-color: rgba(190, 60, 60, 0.65);
+}
+
+/* Decoracão do `{query` enquanto o autocomplete está ativo. */
+.tag-suggestion-active {
+  background: rgba(90, 130, 200, 0.18);
+  border-radius: 3px;
+  text-decoration: underline dotted;
+}
+
+.tag-suggestion-active.is-empty {
+  text-decoration: none;
+}
+
+/* Popup do autocomplete do editor, montado DENTRO do container passado à
+   extensão (o wrapper do GameTextEditor; num modal Radix, dentro do diálogo).
+   Estar dentro do conteúdo do Dialog é o que torna cliques/Escape nele
+   internos ao modal — montado no body, o DismissableLayer do Radix FECHA
+   o diálogo inteiro em qualquer clique no popup (interact-outside).
+   O clique nos itens faz preventDefault no mousedown (no JS): o foco/caret
+   permanece no editor (senão o Tiptap perde a seleção e a sugestão sai
+   antes do click completar). */
+.tag-suggestion {
+  position: absolute;
+  z-index: 100;
+  min-width: 240px;
+  max-width: 380px;
+  max-height: 300px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    0 2px 6px rgba(0, 0, 0, 0.12);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.tag-suggestion-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+}
+
+.tag-suggestion-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.28rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.tag-suggestion-item.active {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.tag-suggestion-label {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tag-suggestion-detail {
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag-suggestion-empty {
+  padding: 0.6rem;
+  opacity: 0.65;
+}
+
+.tag-suggestion-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.7rem;
+  opacity: 0.75;
+}
+
+/* Aviso do rodapé: N itens ocultos pelo corte de MAX_VALUES — filtre. */
+.tag-suggestion-note {
+  flex-basis: 100%;
+  margin-top: 0.1rem;
+  font-size: 0.68rem;
+  font-style: italic;
+}
+
+.tag-suggestion-footer kbd {
+  min-width: 1.1rem;
+  padding: 0 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.68rem;
+  text-align: center;
 }
 
 .text-cell {
