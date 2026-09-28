@@ -20,6 +20,8 @@ export function GetGameFilesLocation():Promise<string>;
 
 export function GetMetadata(arg1:string):Promise<dto.Metadata>;
 
+export function GetTagCatalog(arg1:common.GameVersion):Promise<services.TagCatalog>;
+
 export function GetTextCollection(arg1:string,arg2:common.GameVersion,arg3:Array<string>):Promise<dto.Collection>;
 
 export function GetTextEntry(arg1:string,arg2:string,arg3:common.GameVersion):Promise<dto.FileEntry>;

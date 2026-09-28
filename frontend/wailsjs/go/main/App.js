@@ -34,6 +34,10 @@ export function GetMetadata(arg1) {
   return window['go']['main']['App']['GetMetadata'](arg1);
 }
 
+export function GetTagCatalog(arg1) {
+  return window['go']['main']['App']['GetTagCatalog'](arg1);
+}
+
 export function GetTextCollection(arg1, arg2, arg3) {
   return window['go']['main']['App']['GetTextCollection'](arg1, arg2, arg3);
 }

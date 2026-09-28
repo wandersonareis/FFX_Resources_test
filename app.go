@@ -261,6 +261,16 @@ func (a *App) GetTextCollection(kind string, version common.GameVersion, ids []s
 	return a.MetadataService.GetCollection(kind, version, ids)
 }
 
+// GetTagCatalog devolve o catálogo de tags nomeadas (PC/MCR/BUTTON/ICON) da
+// versão para o autocomplete do editor. Os valores são ordenados pelo uso
+// (mods/edits/tag_frequency_<v>.json), quando o ranking existe.
+func (a *App) GetTagCatalog(version common.GameVersion) (services.TagCatalog, error) {
+	if a.MetadataService == nil {
+		return services.TagCatalog{}, fmt.Errorf("metadata service not initialized")
+	}
+	return services.BuildTagCatalog(version)
+}
+
 // ListLanguages devolve os idiomas disponíveis em formato chave/valor
 // (Code para arquivos, Name para exibição no picker).
 func (a *App) ListLanguages() []common.Language {

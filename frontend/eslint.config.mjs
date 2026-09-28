@@ -14,6 +14,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Bindings gerados pelo Wails — não editar.
     "src/wailsjs/**",
+    "wailsjs/**",
   ]),
 ]);
 
