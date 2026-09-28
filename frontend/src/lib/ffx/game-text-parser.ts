@@ -1,6 +1,7 @@
 import type { JSONContent } from '@tiptap/core';
 import {
   COLOR_RESET_TAG,
+  buttonSpriteClasses,
   extractChipLabel,
   getColorTagName,
   getResolvedColorFromTag,
@@ -74,16 +75,37 @@ export const gameTextParser = {
           const label = extractChipLabel(inner);
           const locked = isLockedTagInner(inner);
           const invalid = !!validate && !validate(inner);
-          // Ordem idêntica ao renderHTML do nó gameTag (data-game-tag, class,
-          // data-locked, data-invalid): a comparação com getHTML() é literal
-          // e uma ordem diferente dispararia setContent à toa.
-          resultHTML += `<span data-game-tag="${this.escapeAttr(
-            fullTag
-          )}" class="game-tag-chip${locked ? ' locked' : ''}${
-            invalid ? ' invalid' : ''
-          }"${locked ? ' data-locked="true"' : ''}${
-            invalid ? ' data-invalid="true"' : ''
-          }>${this.escapeHtml(label)}</span>`;
+          // BUTTON com glifo(s) mapeado(s) e sem marcação: os ícones vão
+          // DIRETO no texto (sem chip) — igual aos botões do jogo. Chip
+          // textual fica para os casos com texto (locked/invalid/dummy).
+          const btnClasses = buttonSpriteClasses(inner);
+          if (btnClasses.length > 0 && !locked && !invalid) {
+            // O wrapper externo (data-game-tag) é o ponto de re-parse do
+            // node gameTag; os ícones ficam ANINHADOS dentro dele — um node
+            // atômico do ProseMirror só aceita UM elemento raiz no
+            // renderHTML, e irmãos no mesmo nível virariam filhos do
+            // primeiro tile (tile tem tamanho fixo: sobrepõem). Estrutura
+            // byte-idêntica à do renderHTML do gameTag.
+            resultHTML +=
+              `<span data-game-tag="${this.escapeAttr(fullTag)}">` +
+              btnClasses
+                .map(
+                  (cls) =>
+                    `<span class="gb-sprite ${cls}" title="${this.escapeAttr(
+                      label
+                    )}"></span>`
+                )
+                .join('') +
+              '</span>';
+          } else {
+            resultHTML += `<span data-game-tag="${this.escapeAttr(
+              fullTag
+            )}" class="game-tag-chip${locked ? ' locked' : ''}${
+              invalid ? ' invalid' : ''
+            }"${locked ? ' data-locked="true"' : ''}${
+              invalid ? ' data-invalid="true"' : ''
+            }>${this.escapeHtml(label)}</span>`;
+          }
         }
 
         lastIndex = tagRegex.lastIndex;

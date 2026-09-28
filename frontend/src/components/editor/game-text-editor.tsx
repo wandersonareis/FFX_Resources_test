@@ -5,7 +5,7 @@ import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
-import { ChevronDown, Code, DoorOpen, Eraser, Gamepad2, Italic, Navigation, Palette, RotateCcw, Undo2, Redo2 } from 'lucide-react';
+import { ChevronDown, DoorOpen, Eraser, Italic, Palette, RotateCcw, Undo2, Redo2 } from 'lucide-react';
 import { gameTextParser } from '@/lib/ffx/game-text-parser';
 import { KNOWN_COLORS, extractChipLabel, isLockedTagInner } from '@/lib/ffx/game-text-tags';
 import {
@@ -33,46 +33,69 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-interface ControlTemplate {
+interface TemplateItem {
+  /** Tag completa, ex: {BUTTON:31:X}. */
+  value: string;
+  /** Nome canônico (buttonMap do backend). */
+  name: string;
+  /** Classes CSS dos tiles na sprite public/pad_icon.png (sequência). */
+  cls: string[];
+}
+
+/**
+ * buttonMap completo exposto ao menu Botões — espelho do Go
+ * (backend/core/encoding/encoding_players.go) na arte do Xbox do jogo:
+ * 30 TRIANGLE→Y, 31 X→A, 32 CIRCLE→B, 33 SQUARE→X.
+ * Dummy/Dummy2 (0x2D, 0x2E) ficam de fora: são dummies legados sem glifo
+ * na sprite, e o chip deles continua textual.
+ */
+const BUTTON_ITEMS: TemplateItem[] = [
+  { value: '{BUTTON:30:TRIANGLE}', name: 'TRIANGLE', cls: ['gb-y'] },
+  { value: '{BUTTON:31:X}', name: 'X', cls: ['gb-a'] },
+  { value: '{BUTTON:32:CIRCLE}', name: 'CIRCLE', cls: ['gb-b'] },
+  { value: '{BUTTON:33:SQUARE}', name: 'SQUARE', cls: ['gb-x'] },
+  { value: '{BUTTON:34:L1}', name: 'L1', cls: ['gb-lb'] },
+  { value: '{BUTTON:35:R1}', name: 'R1', cls: ['gb-rb'] },
+  { value: '{BUTTON:36:L2}', name: 'L2', cls: ['gb-lt'] },
+  { value: '{BUTTON:37:R2}', name: 'R2', cls: ['gb-rt'] },
+  { value: '{BUTTON:38:START}', name: 'START', cls: ['gb-start'] },
+  { value: '{BUTTON:39:SELECT}', name: 'SELECT', cls: ['gb-back'] },
+];
+
+/**
+ * buttonMap dos direcionais (0x40–0x4F) completo — sequências de setas na
+ * ordem do nome do código (como o jogo renderiza). "Direcional" (0x40) e
+ * "All" (0x4F) usam o cursor ✛ do pad.
+ */
+const DPAD_ITEMS: TemplateItem[] = [
+  { value: '{BUTTON:40:Direcional}', name: 'Direcional', cls: ['gb-cursor'] },
+  { value: '{BUTTON:41:Direcional UP}', name: 'Direcional UP', cls: ['gb-arrow-up'] },
+  { value: '{BUTTON:42:Direcional RIGHT}', name: 'Direcional RIGHT', cls: ['gb-arrow-right'] },
+  { value: '{BUTTON:43:Direcional Up+Right}', name: 'Direcional Up+Right', cls: ['gb-arrow-up', 'gb-arrow-right'] },
+  { value: '{BUTTON:44:Direcional DOWN}', name: 'Direcional DOWN', cls: ['gb-arrow-down'] },
+  { value: '{BUTTON:45:Direcional Up+Down}', name: 'Direcional Up+Down', cls: ['gb-arrow-up', 'gb-arrow-down'] },
+  { value: '{BUTTON:46:Direcional Down+Right}', name: 'Direcional Down+Right', cls: ['gb-arrow-down', 'gb-arrow-right'] },
+  { value: '{BUTTON:47:Direcional Up+Right+Down}', name: 'Direcional Up+Right+Down', cls: ['gb-arrow-up', 'gb-arrow-right', 'gb-arrow-down'] },
+  { value: '{BUTTON:48:Direcional LEFT}', name: 'Direcional LEFT', cls: ['gb-arrow-left'] },
+  { value: '{BUTTON:49:Direcional Up+Left}', name: 'Direcional Up+Left', cls: ['gb-arrow-up', 'gb-arrow-left'] },
+  { value: '{BUTTON:4A:Direcional Left+Right}', name: 'Direcional Left+Right', cls: ['gb-arrow-left', 'gb-arrow-right'] },
+  { value: '{BUTTON:4B:Direcional Up+Left+Right}', name: 'Direcional Up+Left+Right', cls: ['gb-arrow-up', 'gb-arrow-left', 'gb-arrow-right'] },
+  { value: '{BUTTON:4C:Direcional Left+Down}', name: 'Direcional Left+Down', cls: ['gb-arrow-left', 'gb-arrow-down'] },
+  { value: '{BUTTON:4D:Direcional Up+Left+Down}', name: 'Direcional Up+Left+Down', cls: ['gb-arrow-up', 'gb-arrow-left', 'gb-arrow-down'] },
+  { value: '{BUTTON:4E:Direcional Left+Down+Right}', name: 'Direcional Left+Down+Right', cls: ['gb-arrow-left', 'gb-arrow-down', 'gb-arrow-right'] },
+  { value: '{BUTTON:4F:Direcional All}', name: 'Direcional All', cls: ['gb-cursor'] },
+];
+
+interface IconTemplate {
   label: string;
   value: string;
 }
 
-const BUTTON_TEMPLATES: ControlTemplate[] = [
-  { label: 'TRIANGLE', value: '{BUTTON:30:TRIANGLE}' },
-  { label: 'X', value: '{BUTTON:31:X}' },
-  { label: 'CIRCLE', value: '{BUTTON:32:CIRCLE}' },
-  { label: 'SQUARE', value: '{BUTTON:33:SQUARE}' },
-  { label: 'L1', value: '{BUTTON:34:L1}' },
-  { label: 'R1', value: '{BUTTON:35:R1}' },
-  { label: 'L2', value: '{BUTTON:36:L2}' },
-  { label: 'R2', value: '{BUTTON:37:R2}' },
-  { label: 'START', value: '{BUTTON:38:START}' },
-  { label: 'SELECT', value: '{BUTTON:39:SELECT}' },
-];
-
-const DPAD_TEMPLATES: ControlTemplate[] = [
-  { label: 'Direcional', value: '{BUTTON:40:Direcional}' },
-  { label: 'Cima', value: '{BUTTON:41:Direcional UP}' },
-  { label: 'Direita', value: '{BUTTON:42:Direcional RIGHT}' },
-  { label: 'Baixo', value: '{BUTTON:44:Direcional DOWN}' },
-  { label: 'Esquerda', value: '{BUTTON:48:Direcional LEFT}' },
-  { label: 'Todos', value: '{BUTTON:4F:Direcional All}' },
-];
-
-const ICON_TEMPLATES: ControlTemplate[] = [
+const ICON_TEMPLATES: IconTemplate[] = [
   { label: 'Red Gate', value: '{ICON:80:Red Gate}' },
   { label: 'Green Gate', value: '{ICON:81:Green Gate}' },
   { label: 'Yellow Gate', value: '{ICON:82:Yellow Gate}' },
   { label: 'Blue Gate', value: '{ICON:83:Blue Gate}' },
-];
-
-const COMMAND_TEMPLATES: ControlTemplate[] = [
-  { label: 'PAUSE', value: '{PAUSE}' },
-  { label: 'BREAK', value: '{BREAK}' },
-  { label: 'Nova página', value: '{TEXT_NEWLINE}' },
-  { label: 'CHOICE:00', value: '{CHOICE:00}' },
-  { label: 'CHOICE-END', value: '{CHOICE-END}' },
 ];
 
 export interface GameTextEditorProps {
@@ -175,7 +198,7 @@ export function GameTextEditor({
     }
   }, [editor, value, catalog]);
 
-  const insertControlTag = (template: ControlTemplate) => {
+  const insertControlTag = (template: TemplateItem | IconTemplate) => {
     if (!editor) return;
     const inner = template.value.slice(1, -1);
     editor
@@ -239,32 +262,25 @@ export function GameTextEditor({
 
         <Separator orientation="vertical" className="mx-1 my-1 w-px" />
 
-        <TemplateDropdown
-          label="Botões"
-          icon={<Gamepad2 size={20} />}
-          templates={BUTTON_TEMPLATES}
+        <SpriteTemplateDropdown
+          ariaLabel="Botões ({BUTTON:…})"
           tooltip="Inserir botão ({BUTTON:…})"
+          items={BUTTON_ITEMS}
+          triggerCls={['gb-a']}
           onSelect={insertControlTag}
         />
-        <TemplateDropdown
-          label="Direcionais"
-          icon={<Navigation size={20} />}
-          templates={DPAD_TEMPLATES}
+        <SpriteTemplateDropdown
+          ariaLabel="Direcionais ({BUTTON:…})"
           tooltip="Inserir direcional ({BUTTON:…})"
+          items={DPAD_ITEMS}
+          triggerCls={['gb-cursor']}
           onSelect={insertControlTag}
         />
         <TemplateDropdown
-          label="Ícones"
+          ariaLabel="Ícones ({ICON:…})"
+          tooltip="Inserir ícone ({ICON:…})"
           icon={<DoorOpen size={20} />}
           templates={ICON_TEMPLATES}
-          tooltip="Inserir ícone ({ICON:…})"
-          onSelect={insertControlTag}
-        />
-        <TemplateDropdown
-          label="Comandos"
-          icon={<Code size={20} />}
-          templates={COMMAND_TEMPLATES}
-          tooltip="Inserir comando"
           onSelect={insertControlTag}
         />
 
@@ -353,28 +369,30 @@ export function GameTextEditor({
   );
 }
 
+/**
+ * Menu de templates textuais (Ícones — gates não têm tile na sprite).
+ */
 function TemplateDropdown({
-  label,
+  ariaLabel,
   icon,
   templates,
   tooltip,
   onSelect,
 }: {
-  label: string;
+  ariaLabel: string;
   icon: React.ReactNode;
-  templates: ControlTemplate[];
+  templates: IconTemplate[];
   tooltip: string;
-  onSelect: (t: ControlTemplate) => void;
+  onSelect: (t: IconTemplate) => void;
 }) {
   return (
     <Tooltip>
       <DropdownMenu>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" aria-label={ariaLabel}>
               {icon}
-              {label}
-              <ChevronDown size={18} />
+              <ChevronDown size={14} />
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
@@ -382,6 +400,63 @@ function TemplateDropdown({
           {templates.map((t) => (
             <DropdownMenuItem key={t.value} onSelect={() => onSelect(t)}>
               {t.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <TooltipContent>{tooltip}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+/**
+ * Menu só-ícone de controles (Botões / Direcionais): trigger com glifo da
+ * sprite e itens ícone + nome do buttonMap.
+ */
+function SpriteTemplateDropdown({
+  ariaLabel,
+  tooltip,
+  items,
+  triggerCls,
+  onSelect,
+}: {
+  ariaLabel: string;
+  tooltip: string;
+  items: TemplateItem[];
+  triggerCls: string[];
+  onSelect: (t: TemplateItem) => void;
+}) {
+  return (
+    <Tooltip>
+      <DropdownMenu>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" aria-label={ariaLabel}>
+              {triggerCls.map((cls) => (
+                <span
+                  key={cls}
+                  className={`gb-sprite gb-trigger-ico ${cls}`}
+                  aria-hidden="true"
+                />
+              ))}
+              <ChevronDown size={14} />
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <DropdownMenuContent
+          align="start"
+          className="min-w-56 max-h-80 overflow-y-auto"
+        >
+          {items.map((t) => (
+            <DropdownMenuItem key={t.value} onSelect={() => onSelect(t)}>
+              {t.cls.map((cls) => (
+                <span
+                  key={cls}
+                  className={`gb-sprite gb-menu-item ${cls}`}
+                  aria-hidden="true"
+                />
+              ))}
+              <span>{t.name}</span>
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>

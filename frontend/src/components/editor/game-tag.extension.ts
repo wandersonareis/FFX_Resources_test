@@ -1,4 +1,8 @@
 import { Node } from '@tiptap/core';
+import {
+  buttonSpriteClasses,
+  extractChipLabel,
+} from '@/lib/ffx/game-text-tags';
 
 export interface GameTagAttrs {
   /** Tag original completa, ex: {MCR:s06:l3F:"Yevon"}. Serializada verbatim. */
@@ -54,6 +58,27 @@ export const GameTagExtension = Node.create<GameTagAttrs>({
     const label = node?.attrs['label'] ?? value;
     const locked = !!node?.attrs['locked'];
     const invalid = !!node?.attrs['invalid'];
+    // BUTTON mapeado e sem marcação: ícones direto no texto, sem chip —
+    // igual aos botões do jogo. O renderHTML de UM node atômico só aceita
+    // UM elemento raiz: o wrapper externo (data-game-tag) é o ponto de
+    // re-parse e os tiles ficam ANINHADOS dentro dele (irmãos no mesmo
+    // nível seriam empurrados para dentro do primeiro tile, que tem
+    // tamanho fixo — sobrepõem no editor). O title é derivado SEMPRE de
+    // extractChipLabel(value) — determinístico dos dois lados, pois o
+    // textContent do ícone é vazio. Estrutura byte-idêntica à do
+    // game-text-parser — a comparação com getHTML() é literal.
+    const btnClasses = buttonSpriteClasses(value);
+    if (btnClasses.length > 0 && !locked && !invalid) {
+      const chipLabel = extractChipLabel(value.replace(/^\{|\}$/g, ''));
+      return [
+        'span',
+        { 'data-game-tag': value },
+        ...btnClasses.map((cls) => [
+          'span',
+          { class: `gb-sprite ${cls}`, title: chipLabel },
+        ]),
+      ];
+    }
     const attrs: Record<string, string> = {
       'data-game-tag': value,
       class: `game-tag-chip${locked ? ' locked' : ''}${

@@ -40,6 +40,47 @@ describe('parseGameTextToHTML: chips', () => {
     expect(html).toContain('class="game-tag-chip locked"');
     expect(html).not.toContain('data-invalid');
   });
+
+  it('chip BUTTON com glifo vira o ícone direto no texto (sem chip)', () => {
+    const html = gameTextParser.parseGameTextToHTML('{BUTTON:31:X}');
+    expect(html).toBe(
+      '<p><span data-game-tag="{BUTTON:31:X}">' +
+        '<span class="gb-sprite gb-a" title="X"></span></span></p>'
+    );
+  });
+
+  it('chips de direção viram SEQUÊNCIA de setas aninhadas ao wrapper (sem chip)', () => {
+    const html = gameTextParser.parseGameTextToHTML('{BUTTON:43:Direcional Up+Right}');
+    expect(html).toBe(
+      '<p>' +
+        '<span data-game-tag="{BUTTON:43:Direcional Up+Right}">' +
+        '<span class="gb-sprite gb-arrow-up" title="Direcional Up+Right"></span>' +
+        '<span class="gb-sprite gb-arrow-right" title="Direcional Up+Right"></span>' +
+        '</span></p>'
+    );
+    // Triplas: 3 setas aninhadas na mesma ordem
+    const html3 = gameTextParser.parseGameTextToHTML('{BUTTON:4B:Direcional Up+Left+Right}');
+    expect((html3.match(/gb-arrow/g) ?? []).length).toBe(3);
+    expect(html3.indexOf('gb-arrow-up')).toBeLessThan(html3.indexOf('gb-arrow-left'));
+    expect(html3.indexOf('gb-arrow-left')).toBeLessThan(html3.indexOf('gb-arrow-right'));
+    expect(html3).not.toContain('game-tag-chip');
+  });
+
+  it('chips All e Direcional genérico usam o cursor ✛', () => {
+    for (const tag of ['{BUTTON:4F:Direcional All}', '{BUTTON:40:Direcional}']) {
+      const html = gameTextParser.parseGameTextToHTML(tag);
+      expect(html).toContain(
+        `<span data-game-tag="${tag}"><span class="gb-sprite gb-cursor"`
+      );
+      expect(html).not.toContain('game-tag-chip');
+    }
+  });
+
+  it('chip BUTTON sem glifo (Dummy) segue textual', () => {
+    const html = gameTextParser.parseGameTextToHTML('{BUTTON:2D:Dummy}');
+    expect(html).toContain('>Dummy</span>');
+    expect(html).not.toContain('gb-sprite');
+  });
 });
 
 describe('parseGameTextToHTML: escapamento', () => {
