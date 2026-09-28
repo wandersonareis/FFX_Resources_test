@@ -14,6 +14,31 @@ export async function saveAllDrafts(
   if (!editDraft.getSnapshot().hasDirty || isSaving()) return;
   setSaving(true);
   try {
+    // Gate de tags protegidas: restaura o que sumiu e aborta se ainda houver
+    // valor perdido ou `{…` aberto — o texto não vai ao binário quebrado.
+    const report = editDraft.restoreProtectedTags();
+    if (report.restored > 0) {
+      toast(
+        `Tags protegidas restauradas em ${report.restored} célula(s).`,
+        { duration: 4000 }
+      );
+    }
+    if (report.unresolved > 0 || report.unclosed > 0) {
+      const parts: string[] = [];
+      if (report.unresolved > 0) {
+        parts.push(
+          `${report.unresolved} célula(s) sem tag protegida obrigatória`
+        );
+      }
+      if (report.unclosed > 0) {
+        parts.push(`${report.unclosed} célula(s) com tag aberta ({…)`);
+      }
+      toast.error(
+        `Salvamento bloqueado: ${parts.join(' e ')}. Abra a linha e use Restaurar/Corrigir.`,
+        { duration: 8000 }
+      );
+      return;
+    }
     for (const [version, byKind] of editDraft.dirtyBatches()) {
       for (const kind of byKind.keys()) {
         const collection = editDraft.buildCollection(

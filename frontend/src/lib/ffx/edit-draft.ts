@@ -3,6 +3,11 @@ import { useSelector } from '@tanstack/react-store';
 import { dto } from '@/wailsjs/go/models';
 import { EntryKind } from './display-names';
 import type { GameVersionId } from './game-version';
+import {
+  missingProtectedTags,
+  newUnclosedFragment,
+  restoreProtectedTags as restoreTags,
+} from './protected-tags';
 
 /** Chave de linha no rascunho: mesma que o backend usa (Index + Name). */
 export function rowKey(row: Pick<dto.TextRow, 'index' | 'name'>): string {
@@ -23,6 +28,13 @@ const draftKey = (version: GameVersionId, kind: EntryKind, id: string): string =
 interface DraftSnapshot {
   hasDirty: boolean;
   revision: number;
+}
+
+/** Relatório do gate de tags no save-all (ver restoreProtectedTags). */
+export interface GateReport {
+  restored: number;
+  unresolved: number;
+  unclosed: number;
 }
 
 type ReloadListener = () => void;
@@ -153,6 +165,68 @@ class EditDraftStore {
   clearAll(): void {
     this.states.clear();
     this.touchAll();
+  }
+
+  /**
+   * Gate do save-all: restaura as tags protegidas que sumiram de todas as
+   * células editadas (reinserção alinhada) e relata o que ainda impede o
+   * salvamento:
+   *
+   *  - restored: células corrigidas automaticamente;
+   *  - unresolved: células que continuam sem tag protegida (restore falhou);
+   *  - unclosed: células com `{…` aberto que o original não tinha.
+   *
+   * `unresolved`/`unclosed` maiores que zero abortam o save — o texto não
+   * vai ao binário com valor perdido ou tag pela metade.
+   */
+  restoreProtectedTags(): GateReport {
+    let restored = 0;
+    let unresolved = 0;
+    let unclosed = 0;
+    let touched = false;
+
+    for (const state of this.states.values()) {
+      if (state.edits.size === 0) continue;
+      const rows = new Map<string, dto.TextRow>();
+      for (const row of state.entry.rows) rows.set(rowKey(row), row);
+
+      for (const [rKey, byLang] of state.edits) {
+        const row = rows.get(rKey);
+        if (!row) continue;
+        for (const [lang, text] of [...byLang]) {
+          const original = row.text?.[lang] ?? '';
+          let current = text;
+
+          if (missingProtectedTags(original, current).length > 0) {
+            const restoredText = restoreTags(original, current);
+            if (restoredText !== current) {
+              current = restoredText;
+              restored += 1;
+              touched = true;
+              if (current === original) byLang.delete(lang);
+              else byLang.set(lang, current);
+            }
+            if (missingProtectedTags(original, current).length > 0) {
+              unresolved += 1;
+            }
+          }
+          if (newUnclosedFragment(original, current) !== null) unclosed += 1;
+        }
+        if (byLang.size === 0) state.edits.delete(rKey);
+      }
+      if (state.edits.size === 0) touched = true;
+    }
+
+    if (touched) {
+      // Só o que resta no rascunho continua sujo (uma célula que virou o
+      // original deixa de exigir escrita no arquivo).
+      this.dirtyFiles.clear();
+      for (const [key, state] of this.states) {
+        if (state.edits.size > 0) this.dirtyFiles.add(key);
+      }
+      this.notify();
+    }
+    return { restored, unresolved, unclosed };
   }
 
   /**
