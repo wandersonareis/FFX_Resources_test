@@ -36,8 +36,6 @@ import {
 interface TemplateItem {
   /** Tag completa, ex: {BUTTON:31:X}. */
   value: string;
-  /** Nome canônico (buttonMap do backend). */
-  name: string;
   /** Classes CSS dos tiles na sprite public/pad_icon.png (sequência). */
   cls: string[];
 }
@@ -50,16 +48,16 @@ interface TemplateItem {
  * na sprite, e o chip deles continua textual.
  */
 const BUTTON_ITEMS: TemplateItem[] = [
-  { value: '{BUTTON:30:TRIANGLE}', name: 'TRIANGLE', cls: ['gb-y'] },
-  { value: '{BUTTON:31:X}', name: 'X', cls: ['gb-a'] },
-  { value: '{BUTTON:32:CIRCLE}', name: 'CIRCLE', cls: ['gb-b'] },
-  { value: '{BUTTON:33:SQUARE}', name: 'SQUARE', cls: ['gb-x'] },
-  { value: '{BUTTON:34:L1}', name: 'L1', cls: ['gb-lb'] },
-  { value: '{BUTTON:35:R1}', name: 'R1', cls: ['gb-rb'] },
-  { value: '{BUTTON:36:L2}', name: 'L2', cls: ['gb-lt'] },
-  { value: '{BUTTON:37:R2}', name: 'R2', cls: ['gb-rt'] },
-  { value: '{BUTTON:38:START}', name: 'START', cls: ['gb-start'] },
-  { value: '{BUTTON:39:SELECT}', name: 'SELECT', cls: ['gb-back'] },
+  { value: '{BUTTON:30:TRIANGLE}', cls: ['gb-y'] },
+  { value: '{BUTTON:31:X}', cls: ['gb-a'] },
+  { value: '{BUTTON:32:CIRCLE}', cls: ['gb-b'] },
+  { value: '{BUTTON:33:SQUARE}', cls: ['gb-x'] },
+  { value: '{BUTTON:34:L1}', cls: ['gb-lb'] },
+  { value: '{BUTTON:35:R1}', cls: ['gb-rb'] },
+  { value: '{BUTTON:36:L2}', cls: ['gb-lt'] },
+  { value: '{BUTTON:37:R2}', cls: ['gb-rt'] },
+  { value: '{BUTTON:38:START}', cls: ['gb-start'] },
+  { value: '{BUTTON:39:SELECT}', cls: ['gb-back'] },
 ];
 
 /**
@@ -68,22 +66,22 @@ const BUTTON_ITEMS: TemplateItem[] = [
  * "All" (0x4F) usam o cursor ✛ do pad.
  */
 const DPAD_ITEMS: TemplateItem[] = [
-  { value: '{BUTTON:40:Direcional}', name: 'Direcional', cls: ['gb-cursor'] },
-  { value: '{BUTTON:41:Direcional UP}', name: 'Direcional UP', cls: ['gb-arrow-up'] },
-  { value: '{BUTTON:42:Direcional RIGHT}', name: 'Direcional RIGHT', cls: ['gb-arrow-right'] },
-  { value: '{BUTTON:43:Direcional Up+Right}', name: 'Direcional Up+Right', cls: ['gb-arrow-up', 'gb-arrow-right'] },
-  { value: '{BUTTON:44:Direcional DOWN}', name: 'Direcional DOWN', cls: ['gb-arrow-down'] },
-  { value: '{BUTTON:45:Direcional Up+Down}', name: 'Direcional Up+Down', cls: ['gb-arrow-up', 'gb-arrow-down'] },
-  { value: '{BUTTON:46:Direcional Down+Right}', name: 'Direcional Down+Right', cls: ['gb-arrow-down', 'gb-arrow-right'] },
-  { value: '{BUTTON:47:Direcional Up+Right+Down}', name: 'Direcional Up+Right+Down', cls: ['gb-arrow-up', 'gb-arrow-right', 'gb-arrow-down'] },
-  { value: '{BUTTON:48:Direcional LEFT}', name: 'Direcional LEFT', cls: ['gb-arrow-left'] },
-  { value: '{BUTTON:49:Direcional Up+Left}', name: 'Direcional Up+Left', cls: ['gb-arrow-up', 'gb-arrow-left'] },
-  { value: '{BUTTON:4A:Direcional Left+Right}', name: 'Direcional Left+Right', cls: ['gb-arrow-left', 'gb-arrow-right'] },
-  { value: '{BUTTON:4B:Direcional Up+Left+Right}', name: 'Direcional Up+Left+Right', cls: ['gb-arrow-up', 'gb-arrow-left', 'gb-arrow-right'] },
-  { value: '{BUTTON:4C:Direcional Left+Down}', name: 'Direcional Left+Down', cls: ['gb-arrow-left', 'gb-arrow-down'] },
-  { value: '{BUTTON:4D:Direcional Up+Left+Down}', name: 'Direcional Up+Left+Down', cls: ['gb-arrow-up', 'gb-arrow-left', 'gb-arrow-down'] },
-  { value: '{BUTTON:4E:Direcional Left+Down+Right}', name: 'Direcional Left+Down+Right', cls: ['gb-arrow-left', 'gb-arrow-down', 'gb-arrow-right'] },
-  { value: '{BUTTON:4F:Direcional All}', name: 'Direcional All', cls: ['gb-cursor'] },
+  { value: '{BUTTON:40:Direcional}', cls: ['gb-cursor'] },
+  { value: '{BUTTON:41:Direcional UP}', cls: ['gb-arrow-up'] },
+  { value: '{BUTTON:42:Direcional RIGHT}', cls: ['gb-arrow-right'] },
+  { value: '{BUTTON:43:Direcional Up+Right}', cls: ['gb-arrow-up', 'gb-arrow-right'] },
+  { value: '{BUTTON:44:Direcional DOWN}', cls: ['gb-arrow-down'] },
+  { value: '{BUTTON:45:Direcional Up+Down}', cls: ['gb-arrow-up', 'gb-arrow-down'] },
+  { value: '{BUTTON:46:Direcional Down+Right}', cls: ['gb-arrow-down', 'gb-arrow-right'] },
+  { value: '{BUTTON:47:Direcional Up+Right+Down}', cls: ['gb-arrow-up', 'gb-arrow-right', 'gb-arrow-down'] },
+  { value: '{BUTTON:48:Direcional LEFT}', cls: ['gb-arrow-left'] },
+  { value: '{BUTTON:49:Direcional Up+Left}', cls: ['gb-arrow-up', 'gb-arrow-left'] },
+  { value: '{BUTTON:4A:Direcional Left+Right}', cls: ['gb-arrow-left', 'gb-arrow-right'] },
+  { value: '{BUTTON:4B:Direcional Up+Left+Right}', cls: ['gb-arrow-up', 'gb-arrow-left', 'gb-arrow-right'] },
+  { value: '{BUTTON:4C:Direcional Left+Down}', cls: ['gb-arrow-left', 'gb-arrow-down'] },
+  { value: '{BUTTON:4D:Direcional Up+Left+Down}', cls: ['gb-arrow-up', 'gb-arrow-left', 'gb-arrow-down'] },
+  { value: '{BUTTON:4E:Direcional Left+Down+Right}', cls: ['gb-arrow-left', 'gb-arrow-down', 'gb-arrow-right'] },
+  { value: '{BUTTON:4F:Direcional All}', cls: ['gb-cursor'] },
 ];
 
 interface IconTemplate {
@@ -300,7 +298,7 @@ export function GameTextEditor({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="h-[22px] w-[22px] cursor-pointer rounded border-2 p-0"
+                    className="h-5.5 w-5.5 cursor-pointer rounded border-2 p-0"
                     style={{
                       backgroundColor: c.hex,
                       borderColor: isActive ? 'currentColor' : 'transparent',
@@ -445,7 +443,7 @@ function SpriteTemplateDropdown({
         </TooltipTrigger>
         <DropdownMenuContent
           align="start"
-          className="min-w-56 max-h-80 overflow-y-auto"
+          className="max-h-85 overflow-y-auto"
         >
           {items.map((t) => (
             <DropdownMenuItem key={t.value} onSelect={() => onSelect(t)}>
@@ -453,10 +451,8 @@ function SpriteTemplateDropdown({
                 <span
                   key={cls}
                   className={`gb-sprite gb-menu-item ${cls}`}
-                  aria-hidden="true"
                 />
               ))}
-              <span>{t.name}</span>
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
