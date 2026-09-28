@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -100,6 +101,10 @@ func byteTableValues(prefix string, table map[byte]string) []TagSuggestion {
 	return out
 }
 
+// MCR hash pattern: conteúdo não traduzido/em falta vira o hash de 16 hex
+// ($c655a394619027cb) do placeholder — inútil como sugestão de texto.
+var mcrUnresolvedHash = regexp.MustCompile(`^\$[0-9a-fA-F]{16}$`)
+
 // mcrValues monta as sugestões de MCR a partir do macrodic em memória. A tag
 // reproduz o formato exato do decoder: {MCR:sXX:lYY:"texto"} com aspas quando
 // há macro e {MCR:sXX:lYY:<Missing>} sem aspas quando não há — assim o
@@ -132,6 +137,11 @@ func mcrValues(version common.GameVersion) []TagSuggestion {
 		}
 		// Texto com aspas/chaves quebraria o parse da tag; não sugere.
 		if strings.ContainsAny(text, `"{}`) {
+			return
+		}
+		// Hash não resolvido não serve de sugestão (texto de verdade existe
+		// em outra localization ou o slot é placeholder); fica fora.
+		if mcrUnresolvedHash.MatchString(strings.TrimSpace(text)) {
 			return
 		}
 		label := strings.TrimSpace(text)
@@ -168,7 +178,7 @@ func BuildTagCatalog(version common.GameVersion) (TagCatalog, error) {
 	freq := loadTagFrequency(version)
 	entries := []TagCatalogEntry{
 		{Tag: "PC", Prefix: "{PC:", Hint: "Personagem", Values: byteTableValues("PC", ffxencoding.PlayerCharTable(version))},
-		{Tag: "MCR", Prefix: "{MCR:", Hint: "Macro", Values: mcrValues(version)},
+		{Tag: "MCR", Prefix: "{MCR:", Hint: "Macro (NPC, nomes, locais — filtre por sXX ou texto)", Values: mcrValues(version)},
 		{Tag: "BUTTON", Prefix: "{BUTTON:", Hint: "Botão", Values: byteTableValues("BUTTON", ffxencoding.ButtonTable())},
 		{Tag: "ICON", Prefix: "{ICON:", Hint: "Ícone", Values: byteTableValues("ICON", ffxencoding.IconTable())},
 	}

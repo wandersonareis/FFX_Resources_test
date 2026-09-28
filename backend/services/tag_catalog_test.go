@@ -92,3 +92,61 @@ func TestTagCatalogRoundTrip(t *testing.T) {
 		}
 	}
 }
+
+// TestTagCatalogMCRCoverage garante que o MCR cobre TODAS as seções usadas
+// pelo jogo: o chunk 7 (personagens de blitzball) e o chunk 13 (cidades/
+// mapas — Zanarkand, Spira, Luca) fazem parte do mesmo espaço s01–s0F do
+// decoder. Regressão do sintoma de "só aparecem NPCs": sem filtro, a ordem
+// por índice lista primeiro o chunk 6 (NPCs), mas s07/s0D têm de estar
+// presentes, e nenhum valor pode carregar hash não resolvido.
+func TestTagCatalogMCRCoverage(t *testing.T) {
+	prevRoot := common.GameFilesRoot
+	t.Cleanup(func() { common.GameFilesRoot = prevRoot })
+
+	common.SetGameFilesRoot(filepath.Join(testcommon.GetTestDataRootDirectory(), "FFX", "binary"))
+	if err := reader.PrepareVersion(common.GameVersionFFX); err != nil {
+		t.Fatalf("PrepareVersion: %v", err)
+	}
+
+	catalog, err := services.BuildTagCatalog(common.GameVersionFFX)
+	if err != nil {
+		t.Fatalf("BuildTagCatalog: %v", err)
+	}
+
+	var mcr services.TagCatalogEntry
+	found := false
+	for _, entry := range catalog.Tags {
+		if entry.Tag == "MCR" {
+			mcr, found = entry, true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("catálogo sem a entrada MCR")
+	}
+
+	byKey := map[string]string{} // key -> label
+	for _, v := range mcr.Values {
+		byKey[v.Key] = v.Label
+		if strings.Contains(v.Tag, "$") {
+			t.Errorf("MCR sugere hash não resolvido: %s", v.Tag)
+		}
+		if strings.HasPrefix(v.Key, "s10") || strings.HasPrefix(v.Key, "s11") {
+			t.Errorf("MCR sugere seção inalcançável pelo decoder: %s", v.Tag)
+		}
+	}
+
+	// s06 = NPC, s07 = personagens de blitzball, s0D = locais/cidades.
+	for key, want := range map[string]string{
+		"s06:l01": "Gatta",
+		"s07:l02": "Datto",
+		"s0D:l01": "Zanarkand",
+		"s0D:l03": "Spira",
+	} {
+		if label, ok := byKey[key]; !ok {
+			t.Errorf("MCR sem a chave %s (valores no catálogo: %d)", key, len(mcr.Values))
+		} else if label != want {
+			t.Errorf("MCR %s = %q, quero %q", key, label, want)
+		}
+	}
+}
