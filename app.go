@@ -36,6 +36,13 @@ func NewApp() *App {
 
 // startup is called at application startup
 func (a *App) startup(ctx context.Context) {
+	// O arquivo de log nasce aqui: um por início de app, ao lado do
+	// executável (logs/ffx-<início>.log) — antes de qualquer mensagem.
+	// A linha abaixo garante conteúdo desde o primeiro instante (e deixa
+	// o caminho do log à vista no próprio arquivo).
+	loggingService.Init()
+	loggingService.Info("FFX Resources iniciado — log em %s", loggingService.LogDir())
+
 	// Perform your setup here
 	defer func() {
 		if err := recover(); err != nil {
@@ -282,7 +289,7 @@ func (a *App) ListLanguages() []common.Language {
 
 // WriteLog persiste um log enviado pelo frontend no MESMO sistema do
 // backend: console colorido pelo nível + arquivo em JSON
-// (logs/ffx-<data>.log, com source=frontend).
+// (logs/ffx-<início>.log, ao lado do executável, com source=frontend).
 // Nível: debug | info | warn | error.
 func (a *App) WriteLog(level, message string, fields map[string]any) error {
 	return loggingService.FromFrontend(level, message, fields)

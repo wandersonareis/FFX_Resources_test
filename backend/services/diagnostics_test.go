@@ -22,30 +22,17 @@ func diagnosticsRoot(t *testing.T) *MetadataService {
 	t.Cleanup(func() { event.ClearEvents(common.GameVersionFFX2) })
 	clearDedupViewCache()
 	t.Cleanup(clearDedupViewCache)
-	// Log de diagnóstico em arquivo dedicado (console silenciado).
+	// Log em UM arquivo por início de app (console silenciado).
 	loggingService.ResetForTest(t.TempDir())
 	t.Cleanup(func() { loggingService.ResetForTest(t.TempDir()) })
 	return NewMetadataService(nil)
 }
 
-func diagFileContent(t *testing.T) string {
-	entries, err := os.ReadDir(loggingService.LogDir())
-	if err != nil {
-		t.Fatalf("ler logs: %v", err)
-	}
-	for _, e := range entries {
-		if strings.HasPrefix(e.Name(), "diagnostico-") {
-			b, err := os.ReadFile(filepath.Join(loggingService.LogDir(), e.Name()))
-			if err != nil {
-				t.Fatalf("ler diagnóstico: %v", err)
-			}
-			return string(b)
-		}
-	}
-	return ""
-}
-
-func appFileContent(t *testing.T) string {
+// logFileContent devolve o conteúdo do arquivo único do diretório ativo —
+// log geral e diagnóstico (campo `key`) vivem no mesmo arquivo ("" quando
+// ausente).
+func logFileContent(t *testing.T) string {
+	t.Helper()
 	entries, err := os.ReadDir(loggingService.LogDir())
 	if err != nil {
 		t.Fatalf("ler logs: %v", err)
@@ -54,7 +41,7 @@ func appFileContent(t *testing.T) string {
 		if strings.HasPrefix(e.Name(), "ffx-") {
 			b, err := os.ReadFile(filepath.Join(loggingService.LogDir(), e.Name()))
 			if err != nil {
-				t.Fatalf("ler log geral: %v", err)
+				t.Fatalf("ler log: %v", err)
 			}
 			return string(b)
 		}
@@ -100,8 +87,9 @@ func TestTreeDiagCountsParallelDeterministic(t *testing.T) {
 		if _, err := svc.ListEntries(KindEvents, common.GameVersionFFX2); err != nil {
 			t.Fatalf("list: %v", err)
 		}
-		app := appFileContent(t)
-		return app, app
+		// Arquivo único: info e warn saem do mesmo lugar.
+		content := logFileContent(t)
+		return content, content
 	}
 
 	prevWorkers := diagWorkers
@@ -160,7 +148,7 @@ func TestNormalizeCollectionEmitsDivergenceInOrder(t *testing.T) {
 	}
 
 	// Diagnóstico: divergência com a key da entrada e a row só em data/.
-	diag := diagFileContent(t)
+	diag := logFileContent(t)
 	if !strings.Contains(diag, `"key":"events/zev001 (ffx2)"`) {
 		t.Fatalf("key ausente no diagnóstico:\n%s", diag)
 	}
@@ -199,7 +187,7 @@ func TestTreeDiagObjectsInventoriesLayouts(t *testing.T) {
 	presence := svc.diagPresenceResolve(KindObjects, common.GameVersionFFX2, []string{"inexistente"})
 	diag.add(presence[0], "inexistente", "")
 	diag.emit()
-	if c := appFileContent(t); strings.Contains(c, "inexistente") {
+	if c := logFileContent(t); strings.Contains(c, "inexistente") {
 		t.Fatalf("entrada fantasma no sumário: %s", c)
 	}
 }

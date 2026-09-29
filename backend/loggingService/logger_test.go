@@ -2,8 +2,11 @@ package loggingService_test
 
 import (
 	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"ffxresources/backend/loggingService"
 )
@@ -28,37 +31,27 @@ func readFile(t *testing.T, path string) string {
 	return string(b)
 }
 
-// diagLogContent devolve o conteúdo do log de diagnóstico ("" quando ausente).
-func diagLogContent(t *testing.T, dir string) string {
-	t.Helper()
-	_, diag := logFilesIn(dir)
-	if diag == "" {
-		return ""
-	}
-	return readFile(t, dir+"\\"+diag)
-}
-
-// appLogContent devolve o conteúdo do log geral ("" quando ausente).
-func appLogContent(t *testing.T, dir string) string {
-	t.Helper()
-	app, _ := logFilesIn(dir)
-	if app == "" {
-		return ""
-	}
-	return readFile(t, dir+"\\"+app)
-}
-
-func logFilesIn(dir string) (app, diag string) {
+// logFilesIn devolve o nome do ÚNICO arquivo de log do diretório ("" quando
+// ausente): um arquivo por início de app, com o diagnóstico FUNDIDO nele
+// (eventos DiagInfo/DiagWarn identificados pelo campo `key`).
+func logFilesIn(dir string) string {
 	entries, _ := os.ReadDir(dir)
 	for _, e := range entries {
 		if strings.HasPrefix(e.Name(), "ffx-") {
-			app = e.Name()
-		}
-		if strings.HasPrefix(e.Name(), "diagnostico-") {
-			diag = e.Name()
+			return e.Name()
 		}
 	}
-	return app, diag
+	return ""
+}
+
+// appLogContent devolve o conteúdo do arquivo único ("" quando ausente).
+func appLogContent(t *testing.T, dir string) string {
+	t.Helper()
+	name := logFilesIn(dir)
+	if name == "" {
+		return ""
+	}
+	return readFile(t, filepath.Join(dir, name))
 }
 
 // Info/Warn vão para console+arquivo; o arquivo é JSON com os campos.
@@ -82,8 +75,8 @@ func TestInfoAndWarnPersistToJSONFile(t *testing.T) {
 	}
 }
 
-// DiagWarn: console recebe a linha curta; o ARQUIVO de diagnóstico recebe
-// o JSON completo com os detalhes (listas, contagens).
+// DiagWarn: console recebe a linha curta; o MESMO arquivo do log recebe o
+// JSON completo com os detalhes (listas, contagens) e o campo `key`.
 func TestDiagWarnWritesFullDetailsToDiagnosticsFile(t *testing.T) {
 	dir := resetForTest(t)
 
@@ -99,9 +92,9 @@ func TestDiagWarnWritesFullDetailsToDiagnosticsFile(t *testing.T) {
 			},
 		})
 
-	content := diagLogContent(t, dir)
+	content := appLogContent(t, dir)
 	if content == "" {
-		t.Fatal("arquivo de diagnóstico ausente")
+		t.Fatal("arquivo de log ausente")
 	}
 	for _, want := range []string{
 		`"key":"objects/command.bin (ffx2)"`,
@@ -152,11 +145,10 @@ func TestFromFrontendValidationAndPersist(t *testing.T) {
 		t.Fatalf("write: %v", err)
 	}
 
-	app, _ := logFilesIn(dir)
-	if app == "" {
+	if logFilesIn(dir) == "" {
 		t.Fatal("arquivo de log geral ausente")
 	}
-	content := readFile(t, dir+"\\"+app)
+	content := appLogContent(t, dir)
 	if !strings.Contains(content, `"source":"frontend"`) ||
 		!strings.Contains(content, `"level":"warn"`) ||
 		!strings.Contains(content, `"arquivo":"command.bin"`) {
@@ -165,5 +157,118 @@ func TestFromFrontendValidationAndPersist(t *testing.T) {
 	// Campo com chave sanitizada gravado; chave inválida descartada.
 	if strings.Contains(content, `"chave@ruim"`) {
 		t.Fatalf("chave não sanitizada no arquivo:\n%s", content)
+	}
+}
+
+// Um início de app = UM arquivo, com o timestamp de início no nome.
+func TestSingleFilePerStart(t *testing.T) {
+	dir := resetForTest(t)
+
+	loggingService.Info("primeira mensagem")
+	loggingService.DiagWarn("k/divergencia", "aviso", map[string]any{"n": 1})
+
+	name := logFilesIn(dir)
+	if name == "" {
+		t.Fatal("nenhum arquivo de log gerado")
+	}
+	if !regexp.MustCompile(`^ffx-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.log$`).MatchString(name) {
+		t.Fatalf("nome fora do padrão ffx-<AAAA-MM-DD_HH-MM-SS>.log: %q", name)
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("ReadDir: %v", err)
+	}
+	if len(entries) != 1 {
+		var names []string
+		for _, e := range entries {
+			names = append(names, e.Name())
+		}
+		t.Fatalf("esperava 1 arquivo por início de app, achei %d: %v", len(entries), names)
+	}
+
+	// Diagnóstico FUNDIDO no mesmo arquivo: o campo `key` distingue.
+	if content := appLogContent(t, dir); !strings.Contains(content, `"key":"k/divergencia"`) {
+		t.Fatalf("diagnóstico fora do arquivo do app:\n%s", content)
+	}
+}
+
+// Sem override de teste, `logs/` nasce AO LADO DO EXECUTÁVEL e em caminho
+// absoluto — nunca relativo ao CWD (era o CWD que fazia a pasta nascer em
+// pastas diferentes do repositório).
+func TestLogDirAnchoredToExecutableDir(t *testing.T) {
+	loggingService.ResetForTest("") // sem override → âncora no executável
+	t.Cleanup(func() { loggingService.ResetForTest(t.TempDir()) })
+
+	dir := loggingService.LogDir()
+	if dir == "" {
+		t.Fatal("LogDir vazio")
+	}
+	if !filepath.IsAbs(dir) {
+		t.Fatalf("LogDir deveria ser absoluto: %q", dir)
+	}
+	if filepath.Base(dir) != "logs" {
+		t.Fatalf("esperava a pasta 'logs': %q", dir)
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatalf("os.Executable: %v", err)
+	}
+	if filepath.Dir(dir) != filepath.Dir(exe) {
+		t.Fatalf("logs fora do diretório do executável: %q vs %q", dir, filepath.Dir(exe))
+	}
+
+	// Primeira escrita: o arquivo nasce nesse diretório (e não no CWD —
+	// que em `go test` é o diretório do pacote, dentro do fonte).
+	loggingService.Info("smoke: primeira escrita")
+	loggingService.DiagWarn("smoke/chave", "evento", map[string]any{"n": 1})
+
+	name := logFilesIn(dir)
+	if name == "" {
+		t.Fatalf("nenhum arquivo de log em %s", dir)
+	}
+	b, err := os.ReadFile(filepath.Join(dir, name))
+	if err != nil {
+		t.Fatalf("ler %s: %v", name, err)
+	}
+	if !strings.Contains(string(b), `"key":"smoke/chave"`) {
+		t.Fatalf("diagnóstico ausente do arquivo %s:\n%s", name, b)
+	}
+	if _, err := os.Stat(filepath.Join(".", "logs")); err == nil {
+		t.Fatal("pasta logs/ nasceu no CWD (diretório do fonte)")
+	}
+}
+
+// O Init poda arquivos de execuções passadas além da retenção (30 dias);
+// o arquivo corrente e os recentes sobrevivem.
+func TestPruneOldLogsBeyondRetention(t *testing.T) {
+	dir := resetForTest(t)
+
+	stale := filepath.Join(dir, "ffx-2020-01-01_00-00-00.log")
+	recent := filepath.Join(dir, "ffx-2020-02-02_00-00-00.log")
+	for _, f := range []string{stale, recent} {
+		if err := os.WriteFile(f, []byte("conteúdo"), 0o644); err != nil {
+			t.Fatalf("criar %s: %v", f, err)
+		}
+	}
+	old := time.Now().Add(-40 * 24 * time.Hour)
+	fresh := time.Now().Add(-24 * time.Hour)
+	if err := os.Chtimes(stale, old, old); err != nil {
+		t.Fatalf("aging stale: %v", err)
+	}
+	if err := os.Chtimes(recent, fresh, fresh); err != nil {
+		t.Fatalf("aging recent: %v", err)
+	}
+
+	loggingService.ResetForTest(dir) // novo Init no MESMO dir → poda
+
+	if _, err := os.Stat(stale); !os.IsNotExist(err) {
+		t.Fatalf("arquivo além da retenção deveria ser podado (err=%v)", err)
+	}
+	if _, err := os.Stat(recent); err != nil {
+		t.Fatalf("arquivo recente não deveria ser podado: %v", err)
+	}
+	if logFilesIn(dir) == "" {
+		t.Fatal("arquivo da execução atual ausente após a poda")
 	}
 }

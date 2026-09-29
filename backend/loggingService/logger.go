@@ -3,10 +3,16 @@
 // JSON — cabe mais detalhe (caller, campos estruturados) do que a linha
 // curta do console; console e arquivo não precisam ser idênticos.
 //
-// Dois destinos de arquivo em logs/:
-//   - ffx-<data>.log         log geral (tudo);
-//   - diagnostico-<data>.log eventos de divergência/inventário com os
-//     detalhes completos (listas de rows, caminhos).
+// UM arquivo por início de app, em `logs/` ao lado do EXECUTÁVEL (nunca
+// relativo ao CWD — o destino não pode mudar dependendo de quem lança o
+// processo: app, `go test`, atalho com outro "Início em"):
+//
+//	logs/ffx-<AAAA-MM-DD_HH-MM-SS>.log
+//
+// O diagnóstico (DiagInfo/DiagWarn) está FUNDIDO neste mesmo arquivo: a
+// linha curta vai ao console e o JSON completo com os detalhes (listas de
+// rows, caminhos) vai ao arquivo, identificado pelo campo `key`. Arquivos
+// de execuções passadas além da retenção são podados no Init.
 package loggingService
 
 import (
@@ -30,9 +36,14 @@ var (
 	// log é o logger geral: console colorido + arquivo (JSON) — todo o app.
 	log zerolog.Logger
 
-	// diagLog persiste os eventos de diagnóstico em JSON detalhado; console
-	// recebe apenas a linha curta (via log).
+	// diagLog escreve os eventos de diagnóstico (DiagInfo/DiagWarn) com o
+	// JSON completo e detalhes — no MESMO arquivo de `log` (campo `key`);
+	// o console recebe só a linha curta (via consoleLog).
 	diagLog zerolog.Logger
+
+	// consoleLog emite a linha curta do diagnóstico SÓ no console: o
+	// arquivo já recebeu o evento completo, não precisa duplicar a linha.
+	consoleLog zerolog.Logger
 
 	logDirPath string
 
@@ -43,23 +54,30 @@ var (
 	// logDirOverride aponta os arquivos para outro diretório (ResetForTest).
 	logDirOverride string
 
-	// escritores ativos de arquivo — fechados no ResetForTest (Windows
+	// arquivo ativo desta execução — fechado no ResetForTest (Windows
 	// mantém o arquivo travado enquanto o handle existe).
-	activeAppFile  *lumberjack.Logger
-	activeDiagFile *lumberjack.Logger
+	activeAppFile *lumberjack.Logger
 )
 
 const (
 	diagVerboseEnv = "VERBOSE_MODE"
 	logLevelEnv    = "LOG_LEVEL"
+
+	// logFilePrefix prefixia todo arquivo gerado (inclusive os backups da
+	// rotação) — é o critério da poda de execuções antigas.
+	logFilePrefix = "ffx-"
+
+	// logRetention é a idade máxima de um arquivo de log de execução
+	// anterior; o Init apaga o que estiver além dela.
+	logRetention = 30 * 24 * time.Hour
 )
 
-// LogDir é o diretório onde os logs são persistidos.
+// LogDir é o diretório onde os logs são persistidos: absoluto (ao lado do
+// executável) no fluxo de app, o diretório de teste depois de ResetForTest.
+// Vazio quando não há persistência (só console).
 func LogDir() string {
-	if logDirPath != "" {
-		return logDirPath
-	}
-	return "logs"
+	Init()
+	return logDirPath
 }
 
 // Get devolve o logger geral (console colorido + arquivo). É o mesmo
@@ -77,13 +95,6 @@ func Init() {
 func initLoggers() {
 	zerolog.TimeFieldFormat = time.RFC3339Nano
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
-
-	dir := logDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		// Sem pasta de log: segue só no console — logging não pode derrubar
-		// a aplicação.
-		fmt.Fprintf(os.Stderr, "loggingService: não criou %s: %v\n", dir, err)
-	}
 
 	consoleWriter := zerolog.ConsoleWriter{
 		Out:        consoleOut(),
@@ -103,40 +114,71 @@ func initLoggers() {
 		PartsExclude: []string{zerolog.TimestampFieldName},
 	}
 
-	appFile := rollingFile(filepath.Join(dir, "ffx-"+today()+".log"))
-	diagFile := rollingFile(filepath.Join(dir, "diagnostico-"+today()+".log"))
+	// UM arquivo por início de app, em `logs/` ao lado do executável.
+	// Sem base resolvível ou sem pasta: segue só no console — logging não
+	// pode derrubar a aplicação.
+	dir := logDir()
+	if dir != "" {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			fmt.Fprintf(os.Stderr, "loggingService: não criou %s: %v\n", dir, err)
+		} else {
+			pruneOldLogs(dir)
+			activeAppFile = rollingFile(filepath.Join(dir, startFileName()))
+			logDirPath = dir
+		}
+	}
 
 	// Console re-renderiza o evento JSON (colorido por nível); o arquivo
 	// recebe o JSON cru — mesmos campos, formatos distintos.
-	log = zerolog.New(zerolog.MultiLevelWriter(consoleWriter, appFile)).
+	var sink io.Writer = consoleWriter
+	if activeAppFile != nil {
+		sink = zerolog.MultiLevelWriter(consoleWriter, activeAppFile)
+	}
+	log = zerolog.New(sink).
+		Level(resolveLevel()).
+		With().
+		Timestamp().
+		Logger()
+	consoleLog = zerolog.New(consoleWriter).
 		Level(resolveLevel()).
 		With().
 		Timestamp().
 		Logger()
 
-	// Diagnóstico: arquivo dedicado, sempre JSON, sem ruído no console.
-	diagLog = zerolog.New(diagFile).With().Timestamp().Logger()
-	activeAppFile = appFile
-	activeDiagFile = diagFile
-	logDirPath = dir
+	// Diagnóstico: MESMO arquivo do app (o campo `key` distingue), sem
+	// repetir a linha curta. Sem arquivo (pasta não criada) os detalhes vão
+	// ao console — nada se perde na degradação.
+	if activeAppFile != nil {
+		diagLog = zerolog.New(activeAppFile).With().Timestamp().Logger()
+	} else {
+		diagLog = zerolog.New(consoleWriter).With().Timestamp().Logger()
+	}
 }
 
-// closeFiles solta os handles de arquivo (Windows trava o arquivo aberto).
+// closeFiles solta o handle de arquivo (Windows trava o arquivo aberto).
 func closeFiles() {
 	if activeAppFile != nil {
 		_ = activeAppFile.Close()
 	}
-	if activeDiagFile != nil {
-		_ = activeDiagFile.Close()
-	}
-	activeAppFile, activeDiagFile = nil, nil
+	activeAppFile = nil
 }
 
+// logDir devolve o diretório de persistência: o override de teste ou
+// `logs/` ao lado do EXECUTÁVEL. NUNCA relativo ao CWD — o destino não
+// pode mudar dependendo de quem lança o processo (app, `go test`, atalho).
+// Vazio quando o executável não é resolvível (fica só o console).
+//
+// O cálculo de common.GetExecDir é local: não se importa backend/common
+// aqui, que é o pacote que importa este (fachada de log) — seria ciclo.
 func logDir() string {
 	if logDirOverride != "" {
 		return logDirOverride
 	}
-	return "logs"
+	exe, err := os.Executable()
+	if err != nil || exe == "" {
+		return ""
+	}
+	return filepath.Join(filepath.Dir(exe), "logs")
 }
 
 func consoleOut() io.Writer {
@@ -146,13 +188,15 @@ func consoleOut() io.Writer {
 	return os.Stdout
 }
 
-// rollingFile é a rotação padrão do log de aplicação.
+// rollingFile é a rotação padrão do log de aplicação: por segurança em
+// sessões muito longas — a retenção dos arquivos de execuções passadas é
+// da poda do Init (logRetention).
 func rollingFile(name string) *lumberjack.Logger {
 	return &lumberjack.Logger{
 		Filename:   name,
 		MaxSize:    5,
 		MaxBackups: 10,
-		MaxAge:     30,
+		MaxAge:     int(logRetention.Hours() / 24),
 		Compress:   true,
 	}
 }
@@ -181,8 +225,33 @@ func debugEnabled() bool {
 	return false
 }
 
-func today() string {
-	return time.Now().Format("02-01-2006")
+// startFileName é o nome do arquivo único DESTA execução: o timestamp de
+// início separa dois starts no mesmo dia (ordenável cronologicamente).
+func startFileName() string {
+	return logFilePrefix + time.Now().Format("2006-01-02_15-04-05") + ".log"
+}
+
+// pruneOldLogs apaga, em `dir`, os arquivos de log (do prefixo logFilePrefix,
+// inclusive backups da rotação) mais velhos que logRetention. Roda no Init,
+// antes de abrir o arquivo desta execução — o MaxAge do lumberjack só
+// cuida dos backups. Erros são ignorados: logging não pode derrubar a
+// aplicação.
+func pruneOldLogs(dir string) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	limit := time.Now().Add(-logRetention)
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasPrefix(e.Name(), logFilePrefix) {
+			continue
+		}
+		info, ierr := e.Info()
+		if ierr != nil || !info.ModTime().Before(limit) {
+			continue
+		}
+		_ = os.Remove(filepath.Join(dir, e.Name()))
+	}
 }
 
 // ResetForTest reinicializa o sistema de logs escrevendo em `dir` e

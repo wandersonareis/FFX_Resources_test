@@ -8,6 +8,9 @@ package.json.md5
 .vscode
 ffxhdbats
 *.log
+# Logs do app: um arquivo por início de app em logs/ ao lado do executável
+# (a rotação também deixa .gz aqui)
+logs/
 # If you prefer the allow list template instead of the deny list, see community template:
 # https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
 #

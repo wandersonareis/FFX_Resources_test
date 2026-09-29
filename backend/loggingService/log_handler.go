@@ -59,8 +59,8 @@ func emit(level zerolog.Level, format string, args ...any) {
 }
 
 // DiagInfo registra um evento de inventário: console recebe a linha curta
-// colorida; o arquivo de diagnóstico recebe o JSON completo com os detalhes
-// (listas de arquivos/rows, caminhos).
+// colorida; o ARQUIVO (o mesmo do log geral, com o campo `key`) recebe o
+// JSON completo com os detalhes (listas de arquivos/rows, caminhos).
 func DiagInfo(key, msg string, details map[string]any) {
 	diag(zerolog.InfoLevel, key, msg, details)
 }
@@ -78,8 +78,9 @@ func diag(level zerolog.Level, key, msg string, details map[string]any) {
 		ev = ev.Interface(k, details[k])
 	}
 	ev.Msg(msg)
-	// Console: linha curta colorida — o detalhe fica no arquivo.
-	emit(level, "%s: %s", key, msg)
+	// Console: linha curta colorida, SÓ no console — o arquivo já gravou o
+	// evento completo acima (campo `key`), não duplica a linha.
+	consoleLog.WithLevel(level).Msgf("%s: %s", key, msg)
 }
 
 func sortedKeys(m map[string]any) []string {
