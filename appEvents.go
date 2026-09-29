@@ -4,6 +4,7 @@ import (
 	"context"
 	"ffxresources/backend/common"
 	"ffxresources/backend/interactions"
+	"ffxresources/backend/services"
 	"fmt"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -120,6 +121,12 @@ func eventOnSetGameLocation(ctx context.Context) {
 		oldDefaultTranslate := common.DefaultTranslatedDir(oldGameDir)
 
 		service.GameLocation.SetTargetDirectory(data[0].(string))
+
+		// A árvore de gamefiles mudou: tudo que foi derivado dela (DTOs
+		// deduplicados, original pristine de data/ e os stores de formato)
+		// pertence ao diretório anterior — descarta, senão a view serviria
+		// texto de outro diretório.
+		services.InvalidateViewCaches()
 
 		// Se o translated ainda apontava para o default derivado do
 		// gamefiles anterior, acompanha o novo gamefiles.
