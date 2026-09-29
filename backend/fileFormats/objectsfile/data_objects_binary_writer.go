@@ -12,8 +12,10 @@ import (
 
 // SaveBinaryFile persists a ObjectBinaryFile's objects back to binary form.
 // It mirrors the lifecycle used in examples/main.go: objects already loaded
-// in memory are re-encoded for the default (us) localization, written to the
-// localized mods tree and finally to filePath itself.
+// in memory are re-encoded for the default (us) localization and written to
+// the localized mods tree. When filePath is absolute it is written as an
+// extra copy (rotina de teste/reimport); um caminho RELATIVO é ignorado —
+// gravar nele seria criar o arquivo no CWD do processo.
 func SaveBinaryFile(b *ObjectBinaryFile, filePath string) error {
 	var lastBuf []byte
 
@@ -33,7 +35,18 @@ func SaveBinaryFile(b *ObjectBinaryFile, filePath string) error {
 		lastBuf = buf.Bytes()
 	}
 
-	return common.WriteBytesToFile(filePath, lastBuf)
+	return writeExtraCopy(filePath, lastBuf)
+}
+
+// writeExtraCopy grava a cópia extra em filePath apenas quando o caminho é
+// absoluto. Caminho relativo (ex.: layout.PatternPath() vindo do service)
+// não tem raiz definida e cairia no diretório corrente do processo.
+func writeExtraCopy(filePath string, data []byte) error {
+	if filePath == "" || !filepath.IsAbs(filePath) {
+		common.LogVerbose("Skipping extra copy (non-absolute path): %q", filePath)
+		return nil
+	}
+	return common.WriteBytesToFile(filePath, data)
 }
 
 func encodeBinaryLanguage(b *ObjectBinaryFile, localizationKey string) (*bytes.Buffer, error) {
@@ -73,7 +86,7 @@ func collectBinaryKeyedStrings(b *ObjectBinaryFile, localizationKey string) []da
 			if ks != nil {
 				all = append(all, ks)
 			} else {
-				common.LogVerbose("Keyed string is nil for object at index %d", obj.GetName(common.DefaultLocalization))
+				common.LogVerbose("Keyed string is nil for object %q", obj.GetName(common.DefaultLocalization))
 			}
 		}
 	})

@@ -33,7 +33,7 @@ func SaveBinaryFileStore(b *ObjectBinaryFileStore, filePath string) error {
 		lastBuf = buf.Bytes()
 	}
 
-	return common.WriteBytesToFile(filePath, lastBuf)
+	return writeExtraCopy(filePath, lastBuf)
 }
 
 func encodeBinaryLanguageStore(b *ObjectBinaryFileStore, localizationKey string) (*bytes.Buffer, error) {
@@ -73,7 +73,7 @@ func collectBinaryKeyedStringsStore(b *ObjectBinaryFileStore, localizationKey st
 			if ks != nil {
 				all = append(all, ks)
 			} else {
-				common.LogVerbose("Keyed string is nil for object at index %d", obj.GetName(common.DefaultLocalization))
+				common.LogVerbose("Keyed string is nil for object %q", obj.GetName(common.DefaultLocalization))
 			}
 		}
 	})
