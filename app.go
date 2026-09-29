@@ -280,6 +280,14 @@ func (a *App) ListLanguages() []common.Language {
 	return a.MetadataService.ListLanguages()
 }
 
+// WriteLog persiste um log enviado pelo frontend no MESMO sistema do
+// backend: console colorido pelo nível + arquivo em JSON
+// (logs/ffx-<data>.log, com source=frontend).
+// Nível: debug | info | warn | error.
+func (a *App) WriteLog(level, message string, fields map[string]any) error {
+	return loggingService.FromFrontend(level, message, fields)
+}
+
 // ExportStrings escreve arquivos .strings ao lado dos .json.
 // kind: events, objects ou macro. ids vazio = tudo (aceita ids ou keys);
 // langs nil/vazio = todos os idiomas.
