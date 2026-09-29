@@ -236,14 +236,11 @@ func readFile(rel string, src common.FileSource) ([]byte, error) {
 	return os.ReadFile(accessor.ResolvedPath)
 }
 
-// writeFile grava um arquivo relativo ao GameFilesRoot, no mods quando
-// habilitado (para não sobrescrever o original) e no original caso contrário.
+// writeFile grava um arquivo relativo ao GameFilesRoot SEMPRE em mods/:
+// data/ é imutável pelo app (fonte da verdade do original), independente do
+// toggle EnableMods — igual aos demais formatos (events/macro/objects/help).
 func writeFile(rel string, data []byte) error {
-	base := common.GameFilesRoot
-	if common.AreModsEnabled() {
-		base = filepath.Join(base, common.ModsFolder)
-	}
-	full := filepath.Join(base, filepath.FromSlash(rel))
+	full := filepath.Join(common.GameFilesRoot, common.ModsFolder, filepath.FromSlash(rel))
 	if err := common.EnsurePathExists(full); err != nil {
 		return err
 	}
