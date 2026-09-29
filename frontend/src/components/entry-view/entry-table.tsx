@@ -125,10 +125,21 @@ export function EntryTable({ view }: { view: EntryView }) {
               }),
             ]
           : []),
-        columnHelper.accessor((row) => row.text?.[SOURCE_LANG] ?? '', {
+        columnHelper.accessor((row) => row.original?.[SOURCE_LANG], {
           id: 'original',
           header: 'Original',
-          cell: (info) => <GameTextView text={info.getValue()} />,
+          cell: (info) => {
+            const value = info.getValue();
+            // O original vem de data/ (fonte da verdade). Sem contraparte em
+            // data/ o valor é undefined → "—". NUNCA cai para row.text: seria
+            // exibir a tradução como se fosse o original.
+            return (
+              <GameTextView
+                text={value ?? ''}
+                fallback={value === undefined ? '—' : ''}
+              />
+            );
+          },
         }),
         columnHelper.accessor(
           (row) => {

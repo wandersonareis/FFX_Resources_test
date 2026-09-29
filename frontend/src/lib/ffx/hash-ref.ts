@@ -18,10 +18,12 @@ export const DEDUP_VIEW_KINDS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Linha é referência de dedup de `text` (repetição idêntica de outro
- * ponto/painel) no idioma dado? As refs chegam do backend no DTO dedupado
- * e ficam fora da tabela — o tradutor vê cada texto uma vez; o resolve/
- * propaga do texto editado é do backend no salvar.
+ * Linha é referência de dedup de `text` (repetição NÃO traduzida de um
+ * original definido em outro ponto) no idioma dado? As refs chegam do
+ * backend no DTO dedupado e ficam fora da tabela — o tradutor traduz cada
+ * original uma vez; as cópias herdam a tradução da def no salvar (o
+ * ponteiro é endereçado pelo ORIGINAL de data/, não pelo texto traduzido).
+ * Texto divergente da def é carga real de revisão e permanece literal.
  */
 export function isRefText(
   text: string | undefined | null,

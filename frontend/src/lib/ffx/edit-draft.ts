@@ -265,12 +265,22 @@ class EditDraftStore {
   private merge(state: DraftState): dto.FileEntry {
     const rows = state.entry.rows.map((row) => {
       const edits = state.edits.get(rowKey(row));
-      if (!edits || edits.size === 0) return new dto.TextRow(row);
-      const text = { ...(row.text ?? {}) };
-      for (const [lang, value] of edits) {
-        text[lang] = value;
+      let text = row.text;
+      if (edits && edits.size > 0) {
+        text = { ...(row.text ?? {}) };
+        for (const [lang, value] of edits) {
+          text[lang] = value;
+        }
       }
-      return new dto.TextRow({ ...row, text });
+      // Payload de apply: só o que o binário precisa (index/name/hash/text).
+      // `original` é exclusivo de EXIBIÇÃO (vem de data/) e não pode viajar
+      // no payload — o backend o ignora, mas o contrato é não enviá-lo.
+      return dto.TextRow.createFrom({
+        index: row.index,
+        name: row.name,
+        hash: row.hash,
+        text,
+      });
     });
     return dto.FileEntry.createFrom({ metadata: state.entry.metadata, rows });
   }

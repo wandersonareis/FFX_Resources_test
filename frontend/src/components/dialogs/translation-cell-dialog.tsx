@@ -72,17 +72,20 @@ export function TranslationCellDialog({
     setGate(null);
   }
 
-  const original = row?.text?.[SOURCE_LANG] ?? '';
-  const changed = text !== original;
+  // Base da edição (o que está salvo no binário atual = row.text). Não é o
+  // original pristine: os gates/`changed` comparam contra o salvo, para o
+  // rascunho saber o que mudou. O original de data/ está em row.original.
+  const baseText = row?.text?.[SOURCE_LANG] ?? '';
+  const changed = text !== baseText;
   const referenceLangs = languages.filter((l) => l.code !== SOURCE_LANG);
 
   const perform = (action: PendingAction, value: string): void => {
-    // value === original não gera rascunho (nada mudou em relação ao salvo).
+    // value === base não gera rascunho (nada mudou em relação ao salvo).
     if (action.kind === 'save') {
-      onClosed(value !== original ? value : undefined);
+      onClosed(value !== baseText ? value : undefined);
       return;
     }
-    onNavigate(action.direction, value !== original ? value : undefined);
+    onNavigate(action.direction, value !== baseText ? value : undefined);
   };
 
   /**
@@ -92,13 +95,13 @@ export function TranslationCellDialog({
    * `text` ainda não foi processado pelo React na hora da chamada).
    */
   const attempt = (action: PendingAction, value: string = text): void => {
-    if (value !== original) {
-      const fragment = newUnclosedFragment(original, value);
+    if (value !== baseText) {
+      const fragment = newUnclosedFragment(baseText, value);
       if (fragment) {
         setGate({ kind: 'unclosed', fragment, action });
         return;
       }
-      const missing = missingProtectedTags(original, value);
+      const missing = missingProtectedTags(baseText, value);
       if (missing.length > 0) {
         setGate({ kind: 'protected', missing, action });
         return;
@@ -109,7 +112,7 @@ export function TranslationCellDialog({
 
   const restoreAndContinue = (): void => {
     if (!gate || gate.kind !== 'protected') return;
-    const restored = restoreProtectedTags(original, text);
+    const restored = restoreProtectedTags(baseText, text);
     const action = gate.action;
     setGate(null);
     setText(restored);
@@ -120,7 +123,7 @@ export function TranslationCellDialog({
   const fixUnclosedAndContinue = (): void => {
     if (!gate || gate.kind !== 'unclosed') return;
     const action = gate.action;
-    const fixed = removeUnclosedFragment(text, original);
+    const fixed = removeUnclosedFragment(text, baseText);
     setGate(null);
     setText(fixed);
     attempt(action, fixed);
@@ -208,7 +211,7 @@ export function TranslationCellDialog({
                   </span>
                   <GameTextView
                     className="mt-0.5"
-                    text={row?.text?.[lang.code]}
+                    text={row?.original?.[lang.code] ?? ''}
                     fallback="—"
                   />
                 </div>
