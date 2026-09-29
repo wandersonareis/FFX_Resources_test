@@ -36,6 +36,40 @@ func SetModsEnabled(enabled bool) {
 	DisableMods = !enabled
 }
 
+// FileSource escolhe a árvore usada na LEITURA de um caminho relativo ao
+// GameFilesRoot. `data/` é imutável e é a fonte da verdade; `mods/` guarda
+// o binário traduzido do último save e só pode ser usado para a coluna
+// Traduzido (e para export/apply, que nunca escrevem em data/).
+type FileSource int
+
+const (
+	// SourcePreferred mantém o fluxo mods-first: mods/ quando EnableMods,
+	// senão a árvore original. É a leitura da TRADUÇÃO (estado do último
+	// save) e de tudo que alimenta export/apply.
+	SourcePreferred FileSource = iota
+
+	// SourceData lê SEMPRE a árvore original (data/), ignorando mods/ e o
+	// toggle EnableMods. É a fonte da verdade: coluna Original e presença
+	// de arquivo/linha/idioma.
+	SourceData
+
+	// SourceMods lê SEMPRE a árvore mods/ (para testes e conferência de
+	// presença do overlay).
+	SourceMods
+)
+
+// String devolve o rótulo da fonte (logs/diagnóstico).
+func (s FileSource) String() string {
+	switch s {
+	case SourceData:
+		return "data"
+	case SourceMods:
+		return "mods"
+	default:
+		return "preferred"
+	}
+}
+
 func SetGameFilesRoot(path string) {
 	if path == "" {
 		fmt.Println("Invalid path provided for GameFilesRoot")
@@ -108,7 +142,13 @@ type FileAccessor struct {
 //   - *FileAccessor: FileAccessor instance with file information
 //   - error: Error if path resolution fails (not if file doesn't exist)
 func NewFileAccessor(path string) (FileAccessor, error) {
-	resolvedPath, err := resolvePath(path)
+	return NewFileAccessorFrom(path, SourcePreferred)
+}
+
+// NewFileAccessorFrom cria um FileAccessor resolvido na árvore indicada
+// (ver FileSource). Caminhos absolutos passam direto (a fonte não se aplica).
+func NewFileAccessorFrom(path string, src FileSource) (FileAccessor, error) {
+	resolvedPath, err := resolvePathFrom(path, src)
 	if err != nil {
 		return FileAccessor{}, err
 	}
@@ -138,20 +178,7 @@ func (f *FileAccessor) ReadBytes() ([]byte, error) {
 // original mesmo com mods habilitado. A leitura por arquivo continua podendo
 // preferir mods via NewFileAccessor.
 func NewRealFileAccessor(path string) (FileAccessor, error) {
-	resolvedPath, err := getRealPath(path)
-	if err != nil {
-		return FileAccessor{}, err
-	}
-
-	fileInfo, exists := getFileInfo(resolvedPath)
-
-	return FileAccessor{
-		RootPath:     path,
-		ResolvedPath: resolvedPath,
-		Info:         fileInfo,
-		Size:         getFileSize(fileInfo),
-		Exists:       exists,
-	}, nil
+	return NewFileAccessorFrom(path, SourceData)
 }
 
 // getRealPath resolve o caminho absoluto na árvore original, sem mods.
@@ -163,15 +190,27 @@ func getRealPath(path string) (string, error) {
 }
 
 func resolvePath(path string) (string, error) {
+	return resolvePathFrom(path, SourcePreferred)
+}
+
+// resolvePathFrom resolve o caminho conforme a fonte pedida. Caminhos
+// absolutos são inalterados (a árvore só se aplica a caminhos relativos).
+func resolvePathFrom(path string, src FileSource) (string, error) {
 	if filepath.IsAbs(path) {
 		return filepath.Clean(path), nil
 	}
 
-	if DisableMods {
+	switch src {
+	case SourceData:
 		return getRealFile(path), nil
+	case SourceMods:
+		return getModdedFile(path), nil
+	default:
+		if DisableMods {
+			return getRealFile(path), nil
+		}
+		return resolveModdedPath(path), nil
 	}
-
-	return resolveModdedPath(path), nil
 }
 
 func resolveModdedPath(path string) string {
