@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"ffxresources/backend/common"
+	coreprogress "ffxresources/backend/core/progress"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/loggingService"
@@ -18,6 +19,8 @@ import (
 // App struct
 type App struct {
 	noticationService services.INotificationService
+
+	progressService services.IProgressService
 
 	MetadataService *services.MetadataService
 
@@ -145,6 +148,13 @@ func (a *App) initServices(ctx context.Context) {
 	notification := services.NewEventNotifier(ctx)
 
 	a.noticationService = notification
+
+	// Ponte de progresso: operações longas (carga de árvore, export) publicam
+	// contadores pelo canal neutro core/progress e esta ponte emite os
+	// eventos do wails (Progress/ShowProgress) para a barra do frontend.
+	progressSvc := services.NewProgressService(ctx, notification)
+	a.progressService = progressSvc
+	coreprogress.Set(progressSvc)
 
 	// Initialize services
 	a.MetadataService = services.NewMetadataService(notification)

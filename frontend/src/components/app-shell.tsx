@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useHotkey } from '@tanstack/react-hotkeys';
 import { toast } from 'sonner';
 import { ChevronDown, Download, Settings, Upload } from 'lucide-react';
@@ -29,6 +29,7 @@ import {
 } from '@/lib/ffx/export-selection';
 import { parseError } from '@/lib/ffx/error-handler';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -46,11 +47,39 @@ import { ConfigDialog } from '@/components/dialogs/config-dialog';
 import { ImportSummaryDialog } from '@/components/dialogs/import-summary-dialog';
 import { ProgressDialog } from '@/components/dialogs/progress-dialog';
 
-export function AppShell() {
-  const [selectedIndex, setSelectedIndex] = useState(0);
+/** Conteúdo do toast de export: rótulo + barra embutida + contagem. */
+function ExportToastContent({
+  label,
+  processed,
+  total,
+  value,
+}: {
+  label: string;
+  processed: number;
+  total: number;
+  value: number;
+}) {
+  const count = total > 0 ? ` ${processed}/${total}` : '';
+  return (
+    <div className="w-56">
+      <p className="text-sm">{label}</p>
+      <Progress value={value} className="mt-1.5 h-1.5" />
+      <p className="mt-1 text-xs opacity-70">{count.trim()}</p>
+    </div>
+  );
+}
+
+export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState(0);
   const [saving, setSaving] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
-  const [progress, setProgress] = useState({ open: false, value: 0 });
+  const [progress, setProgress] = useState({
+    open: false,
+    value: 0,
+    label: '',
+  });
+  // Guard do toast de export: só consome Progress enquanto um export roda
+  // (evita pegar progresso de carga de árvore alheia).
+  const exportProgress = useRef({ active: false, processed: 0, total: 0 });
   // Escopo de exportação por versão (kinds marcados no dropdown Exportar).
   const [scopes, setScopes] = useState<Record<string, EntryKind[]>>(() =>
     Object.fromEntries(GAME_VERSIONS.map((tab) => [tab.id, entryKindsFor(tab.id)]))
@@ -116,8 +145,30 @@ export function AppShell() {
   });
 
   useWailsEvent('Progress', (data) => {
-    const payload = data as { percentage?: number };
-    setProgress((p) => ({ ...p, value: payload?.percentage ?? 0 }));
+    const payload = data as {
+      label?: string;
+      percentage?: number;
+      processed?: number;
+      total?: number;
+    };
+    setProgress((p) => ({
+      ...p,
+      value: payload?.percentage ?? p.value,
+      label: payload?.label ?? p.label,
+    }));
+    // Toast de export com barra embutida: re-render a cada Progress com a
+    // contagem corrente (guard: só quando um export está ativo).
+    if (exportProgress.current.active) {
+      toast.loading(
+        <ExportToastContent
+          label={payload?.label ?? ''}
+          processed={payload?.processed ?? 0}
+          total={payload?.total ?? 0}
+          value={payload?.percentage ?? 0}
+        />,
+        { id: 'export' }
+      );
+    }
   });
 
   useWailsEvent('GameVersion', (data) => {
@@ -161,7 +212,11 @@ export function AppShell() {
       }
       const label = EXPORT_FORMAT_LABELS[format];
       const toastId = 'export';
-      toast.loading(`Exportando (${label})…`, { id: toastId });
+      exportProgress.current = { active: true, processed: 0, total: 0 };
+      toast.loading(
+        <ExportToastContent label={`Exportando (${label})…`} processed={0} total={0} value={0} />,
+        { id: toastId }
+      );
       try {
         let written = 0;
         const allPaths: string[] = [];
@@ -176,6 +231,7 @@ export function AppShell() {
           allPaths.push(...(paths ?? []));
           written += (paths ?? []).length;
         }
+        exportProgress.current.active = false;
         if (written === 0) {
           toast.info('Nada para exportar.', { id: toastId });
         } else {
@@ -187,6 +243,8 @@ export function AppShell() {
         }
       } catch (error) {
         toast.error(parseError(error), { id: toastId });
+      } finally {
+        exportProgress.current.active = false;
       }
     },
     [selectedIndex]
@@ -335,7 +393,7 @@ export function AppShell() {
       </Tabs>
 
       <ConfigDialog open={configOpen} onOpenChange={setConfigOpen} />
-      <ProgressDialog open={progress.open} value={progress.value} />
+      <ProgressDialog open={progress.open} value={progress.value} label={progress.label} />
       <ImportSummaryDialog
         summary={importSummary}
         open={importSummary !== null}

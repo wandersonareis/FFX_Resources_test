@@ -8,6 +8,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	ffxencoding "ffxresources/backend/core/encoding"
+	"ffxresources/backend/core/progress"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
@@ -106,13 +107,23 @@ func (b *EventsBinaryFile) LoadFromBinary() error {
 		first = false
 	}
 
+	// Barra de progresso do carregamento (o loop sincrono emite direto):
+	// o total vem da descoberta; falhas por evento são PULADAS com aviso
+	// individual (toast por erro + arquivo de diagnóstico) — a carga segue
+	// com o que deu certo.
+	progress.Begin("Carregando eventos…", loadedInfos.Len())
+	defer progress.End()
+
 	for _, info := range loadedInfos.Items() {
+		progress.Step(info.EventID)
 		eventFile, err := ReadCompleteEventFile(info)
 		if err != nil {
-			common.LogVerbose("failed to read event file %s: %v", info.EventID, err)
+			progress.Issue(info.EventID, fmt.Sprintf("evento pulado (falha de leitura): %s: %v", info.EventID, err))
+			common.LogWarning("failed to read event file %s: %v", info.EventID, err)
 			continue
 		}
 		if eventFile == nil {
+			progress.Issue(info.EventID, fmt.Sprintf("evento pulado (sem conteúdo): %s", info.EventID))
 			continue
 		}
 		if b.Objects == nil {

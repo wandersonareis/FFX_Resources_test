@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/progress"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/formatters/hash"
 )
@@ -56,6 +57,7 @@ func marshalCollectionLangs(c dto.Collection, langs []string) ([]byte, error) {
 	seen := make(map[string]string) // hashHex bare -> texto (só default lang)
 	ordered := make(map[string]dto.FileEntry, len(c))
 	for _, k := range c.SortedKeys() {
+		progress.Step(k)
 		entry := c[k]
 		rows := make([]dto.TextRow, 0, len(entry.Rows))
 		for _, row := range entry.Rows {

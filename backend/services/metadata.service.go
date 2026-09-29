@@ -10,6 +10,7 @@ import (
 
 	"ffxresources/backend/builders"
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/progress"
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/event"
@@ -323,6 +324,17 @@ func localizationPatternFromPath(slashAbs string) (string, bool) {
 	return strings.Join(segs[1:], "/"), true
 }
 
+// exportProgress emite o progresso do export por entrada: Begin com o
+// total de entradas da Collection e Step por key — os formatters chamam
+// progress.Step no loop de serialização; o defer fecha o ciclo.
+func exportProgress(kind string, version common.GameVersion, c dto.Collection) func() {
+	label := fmt.Sprintf("Exportando %s (%s)…", kind, version)
+	progress.Begin(label, len(c))
+	return func() {
+		progress.End()
+	}
+}
+
 // objectKeyForID procura nos layouts a key do basename (determinístico).
 func objectKeyForID(version common.GameVersion, id string) (string, bool) {
 	want := id + ".bin"
@@ -358,6 +370,7 @@ func (s *MetadataService) ExportEntry(kind string, version common.GameVersion, i
 	if err != nil {
 		return nil, err
 	}
+	defer exportProgress(kind, version, c)()
 
 	var paths []string
 	switch kind {

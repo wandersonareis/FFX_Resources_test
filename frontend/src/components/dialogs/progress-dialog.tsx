@@ -12,14 +12,16 @@ import { Progress } from '@/components/ui/progress';
 export interface ProgressDialogProps {
   open: boolean;
   value: number;
+  /** O que está processando (o rótulo vem do evento Progress do backend). */
+  label?: string;
 }
 
-export function ProgressDialog({ open, value }: ProgressDialogProps) {
+export function ProgressDialog({ open, value, label }: ProgressDialogProps) {
   return (
     <Dialog open={open}>
       <DialogContent className="sm:max-w-[320px]" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle>Processando…</DialogTitle>
+          <DialogTitle>{label?.trim() ? label.trim() : 'Processando…'}</DialogTitle>
           <DialogDescription className="sr-only">Aguarde</DialogDescription>
         </DialogHeader>
         <Progress value={value} />

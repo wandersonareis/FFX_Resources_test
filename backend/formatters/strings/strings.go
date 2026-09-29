@@ -27,6 +27,7 @@ import (
 	stdstrings "strings"
 
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/progress"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/formatters/hash"
 )
@@ -56,6 +57,7 @@ func MarshalLangs(c dto.Collection, langs []string) ([]byte, error) {
 	var out stdstrings.Builder
 	seen := make(map[string]string) // hashHex bare -> texto (só default lang)
 	for _, k := range c.SortedKeys() {
+		progress.Step(k)
 		entry := c[k]
 		out.WriteString("/*key=" + entry.Metadata.Key + " row_count=" + strconv.Itoa(len(entry.Rows)) + "*/\n")
 		rows := make([]dto.TextRow, len(entry.Rows))
