@@ -666,6 +666,11 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 		for _, id := range ids {
 			out = append(out, EntrySummary{ID: id, Key: dto.NewEventMetadata(id, version).Key})
 		}
+
+		// Inventário de arquivos em paralelo (stat por arquivo) + varredura
+		// dos sobras em mods/ (evento só em mods é invisível na árvore: a
+		// descoberta é data-driven — só o log denuncia).
+		s.emitTreeDiag(KindEvents, version, ids, modsOnlyFilesForEvents(version))
 		return out, nil
 	case KindObjects:
 		var keys []string
@@ -675,12 +680,22 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 			}
 		}
 		sort.Strings(keys)
+		allIDs := make([]string, 0, len(keys))
 		out := make([]EntrySummary, 0, len(keys))
 		for _, key := range keys {
 			layout := objectsfile.FileLayouts[key]
 			id := strings.TrimSuffix(layout.FileName, filepath.Ext(layout.FileName))
+			allIDs = append(allIDs, id)
+			if !originalExists(KindObjects, id, version) {
+				common.LogWarning(
+					"objects %s/%s: sem original em data/ — omitido da árvore (arquivo só em mods/)",
+					version, id,
+				)
+				continue
+			}
 			out = append(out, EntrySummary{ID: id, Key: key})
 		}
+		s.emitTreeDiag(KindObjects, version, allIDs, nil)
 		return out, nil
 	case KindMacro:
 		if version == common.GameVersionLastMiss {
@@ -688,9 +703,12 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 			// do macrodic de FFX-2 (apenas retorna vazio, sem erro).
 			return []EntrySummary{}, nil
 		}
-		c, err := builders.BuildMacroDTO(version)
+		// A árvore é definida por data/: o dicionário existe em data/ ou
+		// não existe. O que só estiver em mods/ não é exibido (regra 4).
+		c, err := builders.BuildMacroDTOFromSource(version, common.SourceData)
 		if err != nil {
-			return nil, err
+			common.LogWarning("macro %s: sem original em data/ — árvore vazia: %v", version, err)
+			return []EntrySummary{}, nil
 		}
 		out := make([]EntrySummary, 0, len(c))
 		for _, k := range c.SortedKeys() {
@@ -700,13 +718,24 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 			}
 			out = append(out, EntrySummary{ID: k, Key: c[k].Metadata.Key})
 		}
+		s.emitTreeDiag(KindMacro, version, c.SortedKeys(), nil)
 		return out, nil
 	case KindLockit:
 		layouts := lockit.LayoutsForVersion(version)
+		ids := make([]string, 0, len(layouts))
 		out := make([]EntrySummary, 0, len(layouts))
 		for _, l := range layouts {
+			ids = append(ids, l.ID())
+			if !originalExists(KindLockit, l.ID(), version) {
+				common.LogWarning(
+					"lockit %s/%s: sem original em data/ — omitido da árvore (arquivo só em mods/)",
+					version, l.ID(),
+				)
+				continue
+			}
 			out = append(out, EntrySummary{ID: l.ID(), Key: l.Key()})
 		}
+		s.emitTreeDiag(KindLockit, version, ids, nil)
 		return out, nil
 	case KindHelp:
 		// Painéis de ajuda são FFX-only: a árvore ffx2 (e a lastmiss, que
@@ -723,11 +752,23 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 			if helpfile.GetHelp(version, entry.Name) == nil {
 				continue
 			}
+			if !originalExists(KindHelp, entry.Name, version) {
+				common.LogWarning(
+					"help %s/%s: sem original em data/ — omitido da árvore (arquivo só em mods/)",
+					version, entry.Name,
+				)
+				continue
+			}
 			out = append(out, EntrySummary{
 				ID:  entry.Name,
 				Key: dto.NewHelpMetadata(entry.Name, "help/"+entry.Dir, version).Key,
 			})
 		}
+		names := make([]string, 0, len(helpfile.HelpEntries))
+		for _, entry := range helpfile.HelpEntries {
+			names = append(names, entry.Name)
+		}
+		s.emitTreeDiag(KindHelp, version, names, nil)
 		return out, nil
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
