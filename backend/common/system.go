@@ -1,9 +1,10 @@
 package common
 
 import (
-	"log"
 	"os"
 	"path/filepath"
+
+	"ffxresources/backend/loggingService"
 )
 
 func GetExecDir() string {
@@ -25,25 +26,26 @@ func IsVerboseMode() bool {
 	return verbose == "1"
 }
 
-const (
-	colorReset   = "\033[0m"
-	colorVerbose = "\033[33m"
-	colorInfo    = "\033[32m"
-	colorError   = "\033[31m"
-)
+// Façade de log: os helpers do common delegam ao loggingService — console
+// colorido pelo nível + persistência em arquivo (JSON). Logging não pode
+// derrubar a aplicação: erros de escrita são ignorados pelo zerolog.
 
 func LogVerbose(format string, args ...any) {
-	if IsVerboseMode() {
-		log.Printf(colorVerbose+format+colorReset, args...)
-	}
+	loggingService.Verbose(format, args...)
 }
 
 func LogInfo(format string, args ...any) {
-	log.Printf(colorInfo+format+colorReset, args...)
+	loggingService.Info(format, args...)
+}
+
+// LogWarning registra um aviso recuperável (entrada ignorada, divergência de
+// árvore, degradação controlada) — visível sempre, sem ser erro.
+func LogWarning(format string, args ...any) {
+	loggingService.Warn(format, args...)
 }
 
 func LogError(format string, args ...any) {
-	log.Printf(colorError+format+colorReset, args...)
+	loggingService.Error(format, args...)
 }
 
 func AreModsEnabled() bool {
