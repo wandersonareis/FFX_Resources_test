@@ -13,13 +13,13 @@ import (
 
 // parsedLine é uma linha de conteúdo decomposta.
 type parsedLine struct {
-	id      string
-	name    string
-	index   int
-	lang    string
-	hash    string // hex bare
-	ref     bool
-	value   string // literal (com escapes desfeitos) ou "" quando ref
+	id    string
+	name  string
+	index int
+	lang  string
+	hash  string // hex bare
+	ref   bool
+	value string // literal (com escapes desfeitos) ou "" quando ref
 }
 
 // Unmarshal parseia o formato Strings de volta para a Collection (DTO),

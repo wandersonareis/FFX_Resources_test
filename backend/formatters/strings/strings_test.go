@@ -261,7 +261,6 @@ func TestRightAnchorGrowth(t *testing.T) {
 	}
 }
 
-
 // TestStringsFormatPUARoundTrip valida o token {PUA:XX:CHAR} no formato
 // strings, que não dá uso especial a aspas ou caracteres de controle (só
 // escapa \, CR, LF e ║): o token cruza marshal/unmarshal intacto e o texto
