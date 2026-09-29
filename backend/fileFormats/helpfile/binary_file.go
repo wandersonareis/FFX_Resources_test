@@ -360,13 +360,19 @@ func ReadHelpBinary(data []byte, name, localization string, version common.GameV
 // ReadHelpFile lê o .sps2 do painel de ajuda para versão/localização (resolução
 // mods-first via NewFileAccessor) e parseia.
 func ReadHelpFile(version common.GameVersion, localization, name string) (*HelpBinaryFile, error) {
+	return ReadHelpFileFrom(version, localization, name, common.SourcePreferred)
+}
+
+// ReadHelpFileFrom é ReadHelpFile lendo da árvore indicada. SourceData
+// entrega o painel pristine de data/ (coluna Original).
+func ReadHelpFileFrom(version common.GameVersion, localization, name string, src common.FileSource) (*HelpBinaryFile, error) {
 	path := HelpPathForVersion(version, localization, name)
-	accessor, err := common.NewFileAccessor(path)
+	accessor, err := common.NewFileAccessorFrom(path, src)
 	if err != nil {
 		return nil, fmt.Errorf("helpfile: falha ao resolver %s: %w", path, err)
 	}
 	if !accessor.Exists {
-		return nil, fmt.Errorf("helpfile: arquivo não encontrado: %s", accessor.ResolvedPath)
+		return nil, fmt.Errorf("helpfile: arquivo não encontrado (%s): %s", src, accessor.ResolvedPath)
 	}
 	data, err := accessor.ReadBytes()
 	if err != nil {
@@ -378,4 +384,22 @@ func ReadHelpFile(version common.GameVersion, localization, name string) (*HelpB
 	}
 	f.SourcePath = accessor.ResolvedPath
 	return f, nil
+}
+
+// ReadHelpPanelFrom monta o painel completo (todas as localizações com
+// arquivo) lendo da árvore indicada, SEM registrar no store. É o caminho do
+// ORIGINAL: ReadHelpPanelFrom(version, name, common.SourceData).
+func ReadHelpPanelFrom(version common.GameVersion, name string, src common.FileSource) *HelpKeyedStringFile {
+	panel := NewHelpKeyedStringFile(name)
+	for _, loc := range sortedSupportedLocalizations() {
+		f, err := ReadHelpFileFrom(version, loc, name, src)
+		if err != nil {
+			continue
+		}
+		panel.Files[loc] = f
+	}
+	if len(panel.Files) == 0 {
+		return nil
+	}
+	return panel
 }

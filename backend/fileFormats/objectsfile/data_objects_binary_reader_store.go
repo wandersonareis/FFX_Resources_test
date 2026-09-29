@@ -18,6 +18,13 @@ import (
 // PopulateDataObjectLocalizationsWithIlistStore popula localizações de todos
 // os idiomas suportados nos objetos já carregados (idioma default).
 func PopulateDataObjectLocalizationsWithIlistStore(path string, objects components.IList[datastore.IGlobalLocalizedTextObject], creator func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error), version common.GameVersion) {
+	PopulateDataObjectLocalizationsFrom(path, objects, creator, version, common.SourcePreferred)
+}
+
+// PopulateDataObjectLocalizationsFrom é a variante com fonte de leitura
+// explícita: SourceData monta as localizações a partir de data/ (original),
+// sem cair em mods/.
+func PopulateDataObjectLocalizationsFrom(path string, objects components.IList[datastore.IGlobalLocalizedTextObject], creator func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error), version common.GameVersion, src common.FileSource) {
 	if objects == nil || objects.IsEmpty() {
 		return
 	}
@@ -27,9 +34,9 @@ func PopulateDataObjectLocalizationsWithIlistStore(path string, objects componen
 
 		var localizationData components.IList[datastore.IGlobalLocalizedTextObject]
 		if version == common.GameVersionFFX {
-			localizationData = ReadDataListWithIlistStore(fullPath, locKey, creator, version)
+			localizationData = ReadDataListWithIlistFrom(fullPath, locKey, creator, version, src)
 		} else {
-			localizationData = ReadDataListWithIlistV2Store(fullPath, locKey, creator)
+			localizationData = ReadDataListWithIlistV2From(fullPath, locKey, creator, src)
 		}
 		if localizationData != nil {
 			maxLen := min(localizationData.Len(), objects.Len())
@@ -47,14 +54,19 @@ func PopulateDataObjectLocalizationsWithIlistStore(path string, objects componen
 
 // ReadDataListWithIlistStore lê o arquivo e delega ao ParseDataListWithIlistStore.
 func ReadDataListWithIlistStore(filename string, languageCode string, creator func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error), version common.GameVersion) components.IList[datastore.IGlobalLocalizedTextObject] {
-	fileAccessor, err := common.NewFileAccessor(filename)
+	return ReadDataListWithIlistFrom(filename, languageCode, creator, version, common.SourcePreferred)
+}
+
+// ReadDataListWithIlistFrom é ReadDataListWithIlistStore na árvore indicada.
+func ReadDataListWithIlistFrom(filename string, languageCode string, creator func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error), version common.GameVersion, src common.FileSource) components.IList[datastore.IGlobalLocalizedTextObject] {
+	fileAccessor, err := common.NewFileAccessorFrom(filename, src)
 	if err != nil {
 		common.LogVerbose("Error accessing file: %v", err)
 		return components.NewList[datastore.IGlobalLocalizedTextObject](0)
 	}
 
 	if !fileAccessor.Exists {
-		common.LogVerbose("File does not exist: %s", filename)
+		common.LogVerbose("File does not exist (%s): %s", src, filename)
 		return components.NewList[datastore.IGlobalLocalizedTextObject](0)
 	}
 
@@ -137,14 +149,19 @@ func ParseDataListWithIlistStore(data []byte, languageCode string, creator func(
 
 // ReadDataListWithIlistV2Store é a contraparte V2 de ReadDataListWithIlistStore.
 func ReadDataListWithIlistV2Store(filename string, languageCode string, creator func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error)) components.IList[datastore.IGlobalLocalizedTextObject] {
-	fileAccessor, err := common.NewFileAccessor(filename)
+	return ReadDataListWithIlistV2From(filename, languageCode, creator, common.SourcePreferred)
+}
+
+// ReadDataListWithIlistV2From é ReadDataListWithIlistV2Store na árvore indicada.
+func ReadDataListWithIlistV2From(filename string, languageCode string, creator func([]byte, []byte, int, string) (datastore.IGlobalLocalizedTextObject, error), src common.FileSource) components.IList[datastore.IGlobalLocalizedTextObject] {
+	fileAccessor, err := common.NewFileAccessorFrom(filename, src)
 	if err != nil {
 		common.LogVerbose("Error accessing file: %v", err)
 		return components.NewList[datastore.IGlobalLocalizedTextObject](0)
 	}
 
 	if !fileAccessor.Exists {
-		common.LogVerbose("File does not exist: %s", filename)
+		common.LogVerbose("File does not exist (%s): %s", src, filename)
 		return components.NewList[datastore.IGlobalLocalizedTextObject](0)
 	}
 

@@ -28,20 +28,27 @@ func DefaultFirstLocalizations() []string {
 // localization first, then populates with the other available localizations.
 // A missing default file is an error; other missing files are skipped.
 func ReadMacroDictionaryContainers(version common.GameVersion) (map[string]*MacroDictionaryBinaryFile, error) {
+	return ReadMacroDictionaryContainersFrom(version, common.SourcePreferred)
+}
+
+// ReadMacroDictionaryContainersFrom é ReadMacroDictionaryContainers lendo da
+// árvore indicada. SourceData entrega o macrodic pristine de data/ (coluna
+// Original); o chamador NÃO deve publicar no datastore.
+func ReadMacroDictionaryContainersFrom(version common.GameVersion, src common.FileSource) (map[string]*MacroDictionaryBinaryFile, error) {
 	if err := ffxencoding.EnsureAllCharsetsLoaded(version); err != nil {
 		return nil, fmt.Errorf("charset maps not loaded: %w", err)
 	}
 	result := make(map[string]*MacroDictionaryBinaryFile)
 	for _, loc := range DefaultFirstLocalizations() {
 		path := filepath.Join(common.GetLocalizationRootForVersion(version, loc), "menu", "macrodic.dcp")
-		accessor, err := common.NewFileAccessor(path)
+		accessor, err := common.NewFileAccessorFrom(path, src)
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve macro dictionary file: %w", err)
 		}
 		data, err := accessor.ReadBytes()
 		if err != nil || len(data) == 0 {
 			if loc == common.DefaultLocalization {
-				return nil, fmt.Errorf("default macro dictionary not found: %s", path)
+				return nil, fmt.Errorf("default macro dictionary not found: %s (%s)", path, src)
 			}
 			common.LogVerbose("Skipping missing macro dictionary for localization: %s", loc)
 			continue
@@ -53,6 +60,12 @@ func ReadMacroDictionaryContainers(version common.GameVersion) (map[string]*Macr
 		result[loc] = c
 	}
 	return result, nil
+}
+
+// MacroRelPath devolve o caminho relativo do binário do dicionário de macros
+// (mesmo para todas as localizações — cada uma tem o seu sob a raiz dela).
+func MacroRelPath() string {
+	return filepath.Join("menu", "macrodic.dcp")
 }
 
 // SortedLocalizationKeys returns the sorted localization keys of the given

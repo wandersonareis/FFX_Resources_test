@@ -107,6 +107,13 @@ func (f *LockitFile) IndexesByKind() (game, utf8 []int) {
 // Load lê os arquivos de todos os idiomas disponíveis do layout e monta o
 // conjunto lógico de registros. Idiomas ausentes são simplesmente ignorados.
 func Load(l Layout) (*LockitFile, error) {
+	return LoadFrom(l, common.SourcePreferred)
+}
+
+// LoadFrom é Load lendo os binários da árvore indicada. SourceData entrega o
+// lockit pristine de data/ (coluna Original); o resultado NÃO é registrado
+// no DataStore.
+func LoadFrom(l Layout, src common.FileSource) (*LockitFile, error) {
 	if len(l.Languages) == 0 {
 		l.Languages = common.SupportedLanguageCodes()
 	}
@@ -120,7 +127,7 @@ func Load(l Layout) (*LockitFile, error) {
 	terminated := true
 
 	for _, lang := range l.Languages {
-		data, err := readFile(l.RelPath(lang))
+		data, err := readFile(l.RelPath(lang), src)
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue
@@ -216,10 +223,10 @@ func encodeRecord(text string, kind Kind, lang string, version common.GameVersio
 	return []byte(text), nil
 }
 
-// readFile lê um arquivo relativo ao GameFilesRoot, preferindo mods (igual ao
-// restante do fluxo). Retorna os.ErrNotExist quando o idioma não existe.
-func readFile(rel string) ([]byte, error) {
-	accessor, err := common.NewFileAccessor(filepath.FromSlash(rel))
+// readFile lê um arquivo relativo ao GameFilesRoot na árvore indicada.
+// Retorna os.ErrNotExist quando o idioma não existe.
+func readFile(rel string, src common.FileSource) ([]byte, error) {
+	accessor, err := common.NewFileAccessorFrom(filepath.FromSlash(rel), src)
 	if err != nil {
 		return nil, err
 	}

@@ -29,6 +29,10 @@ type ObjectBinaryFileStore struct {
 	languageCode string
 	patternPath  string
 	Version      common.GameVersion
+
+	// source escolhe a árvore de leitura (SourcePreferred = mods-first).
+	// SourceData monta o ORIGINAL de data/ sem cair em mods/.
+	source common.FileSource
 }
 
 // NewObjectBinaryFileStore constrói um ObjectBinaryFileStore.
@@ -39,7 +43,15 @@ func NewObjectBinaryFileStore(patternPath string, creator CreatorFunc, languageC
 		languageCode: languageCode,
 		creator:      creator,
 		Version:      version,
+		source:       common.SourcePreferred,
 	}
+}
+
+// WithFileSource aponta a leitura para uma árvore específica (deve vir antes
+// de LoadFromBinary).
+func (b *ObjectBinaryFileStore) WithFileSource(src common.FileSource) *ObjectBinaryFileStore {
+	b.source = src
+	return b
 }
 
 func (b *ObjectBinaryFileStore) resolveFilePath() string {
@@ -69,14 +81,14 @@ func (b *ObjectBinaryFileStore) readFile() ([]byte, error) {
 		}
 	}
 
-	fileAccessor, err := common.NewFileAccessor(b.resolveFilePath())
+	fileAccessor, err := common.NewFileAccessorFrom(b.resolveFilePath(), b.source)
 	if err != nil {
 		common.LogVerbose("Error accessing file: %v", err)
 		return nil, errors.New("failed to access file")
 	}
 
 	if !fileAccessor.Exists {
-		common.LogVerbose("File does not exist: %s", b.patternPath)
+		common.LogVerbose("File does not exist (%s): %s", b.source, b.patternPath)
 		return nil, errors.New("file does not exist")
 	}
 
@@ -88,14 +100,16 @@ func (b *ObjectBinaryFileStore) readFile() ([]byte, error) {
 	return data, nil
 }
 
+// readFileFromBase lê dentro da raiz (target directory) respeitando a fonte:
+// SourceData lê SÓ data/, SourceMods lê SÓ mods/ e SourcePreferred faz o
+// fluxo mods-first habitual (mods/ quando EnableMods, senão data/).
 func (b *ObjectBinaryFileStore) readFileFromBase(base string) ([]byte, error) {
 	rel := b.resolveFilePath()
-
-	if !common.AreModsEnabled() {
-		data, err := os.ReadFile(filepath.Join(base, rel))
+	readAt := func(p string) ([]byte, error) {
+		data, err := os.ReadFile(p)
 		if err != nil {
 			if os.IsNotExist(err) {
-				common.LogVerbose("File does not exist: %s", b.patternPath)
+				common.LogVerbose("File does not exist (%s): %s", b.source, b.patternPath)
 				return nil, err
 			}
 			common.LogVerbose("Error reading file: %v", err)
@@ -104,20 +118,21 @@ func (b *ObjectBinaryFileStore) readFileFromBase(base string) ([]byte, error) {
 		return data, nil
 	}
 
+	switch b.source {
+	case common.SourceData:
+		return readAt(filepath.Join(base, rel))
+	case common.SourceMods:
+		return readAt(filepath.Join(base, common.ModsFolder, rel))
+	}
+
+	if !common.AreModsEnabled() {
+		return readAt(filepath.Join(base, rel))
+	}
+
 	if data, err := os.ReadFile(filepath.Join(base, common.ModsFolder, rel)); err == nil {
 		return data, nil
 	}
-
-	data, err := os.ReadFile(filepath.Join(base, rel))
-	if err != nil {
-		if os.IsNotExist(err) {
-			common.LogVerbose("File does not exist: %s", b.patternPath)
-			return nil, err
-		}
-		common.LogVerbose("Error reading file: %v", err)
-		return nil, errors.New("failed to read file")
-	}
-	return data, nil
+	return readAt(filepath.Join(base, rel))
 }
 
 // LoadFromBinaryStore carrega header, chunks, strings e constrói os objetos.
@@ -144,7 +159,7 @@ func (b *ObjectBinaryFileStore) LoadFromBinary() error {
 
 	b.buildObjects(dataBytes)
 
-	PopulateDataObjectLocalizationsWithIlistStore(b.patternPath, b.Objects, b.creator, b.Version)
+	PopulateDataObjectLocalizationsFrom(b.patternPath, b.Objects, b.creator, b.Version, b.source)
 	return nil
 }
 

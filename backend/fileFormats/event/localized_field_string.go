@@ -97,10 +97,16 @@ func (obj *LocalizedFieldStringObject) String() string {
 //   - For directories: Recursively processes all non-hidden files in sorted order
 //   - For files: Resolves path, reads bytes, and parses as string data using appropriate charset
 func ReadStringFile(filename string, languageCode string, version common.GameVersion) []*FieldString {
-	resolvedPath, err := common.NewFileAccessor(filename)
+	return ReadStringFileFrom(filename, languageCode, version, common.SourcePreferred)
+}
+
+// ReadStringFileFrom é ReadStringFile lendo da árvore indicada. SourceData
+// é a leitura do original (data/) — nunca cai em mods/.
+func ReadStringFileFrom(filename string, languageCode string, version common.GameVersion, src common.FileSource) []*FieldString {
+	resolvedPath, err := common.NewFileAccessorFrom(filename, src)
 	if err != nil || !resolvedPath.Exists {
 		if common.IsVerboseMode() {
-			fmt.Printf("Error resolving file %s: %v\n", filename, err)
+			fmt.Printf("Error resolving file %s (%s): %v\n", filename, src, err)
 		}
 		return nil
 	}
@@ -144,11 +150,18 @@ func ReadStringFile(filename string, languageCode string, version common.GameVer
 //   - Merges all localized content into LocalizedFieldStringObject instances
 //   - Each index in the returned slice contains all localizations for that string
 func ReadLocalizedStringFiles(path string, version common.GameVersion) []*LocalizedFieldStringObject {
+	return ReadLocalizedStringFilesFrom(path, version, common.SourcePreferred)
+}
+
+// ReadLocalizedStringFilesFrom é ReadLocalizedStringFiles lendo da árvore
+// indicada. SourceData entrega o original pristine (data/); não registra
+// nada em store — quem monta o DTO original usa este retorno direto.
+func ReadLocalizedStringFilesFrom(path string, version common.GameVersion, src common.FileSource) []*LocalizedFieldStringObject {
 	localized := make([]*LocalizedFieldStringObject, 0)
 
 	for _, key := range SortedSupportedLocalizations() {
 		fullPath := filepath.Join(common.GetLocalizationRootForVersion(version, key), path)
-		localizedStrings := ReadStringFile(fullPath, key, version)
+		localizedStrings := ReadStringFileFrom(fullPath, key, version, src)
 
 		for i, fieldString := range localizedStrings {
 			for len(localized) <= i {
@@ -162,13 +175,29 @@ func ReadLocalizedStringFiles(path string, version common.GameVersion) []*Locali
 	return localized
 }
 
-func ReadLocalizedEventStrings(eventId string, version common.GameVersion) ([]*LocalizedFieldStringObject, error) {
+// EventRelPath devolve o caminho relativo do binário de strings do evento
+// (<xx>/<id>/<id>.bin dentro de event/obj_ps3/). Usado para montar o
+// caminho de presença em data/.
+func EventRelPath(eventId string) (string, error) {
 	if len(eventId) < 2 {
-		return nil, fmt.Errorf("invalid event ID: %s", eventId)
+		return "", fmt.Errorf("invalid event ID: %s", eventId)
 	}
-	shortened := eventId[:2]
-	midPath := filepath.Join(shortened, eventId, eventId)
-	localizedStrings := ReadLocalizedStringFiles("event/obj_ps3/"+midPath+".bin", version)
+	midPath := filepath.Join(eventId[:2], eventId, eventId)
+	return filepath.Join("event", "obj_ps3", midPath+".bin"), nil
+}
+
+func ReadLocalizedEventStrings(eventId string, version common.GameVersion) ([]*LocalizedFieldStringObject, error) {
+	return ReadLocalizedEventStringsFrom(eventId, version, common.SourcePreferred)
+}
+
+// ReadLocalizedEventStringsFrom lê as strings do evento direto da árvore
+// indicada, sem tocar no store global.
+func ReadLocalizedEventStringsFrom(eventId string, version common.GameVersion, src common.FileSource) ([]*LocalizedFieldStringObject, error) {
+	relPath, err := EventRelPath(eventId)
+	if err != nil {
+		return nil, err
+	}
+	localizedStrings := ReadLocalizedStringFilesFrom(relPath, version, src)
 	if localizedStrings == nil {
 		return nil, fmt.Errorf("failed to read localized strings for event %s", eventId)
 	}

@@ -90,7 +90,18 @@ func ResetObjectFileStoreForTest() {
 	populateDone = false
 }
 
+// LoadObjectFile carrega o binário de um layout (leitura mods-first) sem
+// registrar no ObjectFileDataStore.
 func LoadObjectFile(l FileLayout) (datastore.IBinaryFile, error) {
+	return LoadObjectFileFrom(l, common.SourcePreferred)
+}
+
+// LoadObjectFileFrom é LoadObjectFile lendo da árvore indicada.
+//
+// SourceData monta o ORIGINAL de data/ (coluna Original) e, por isso, não
+// toca em datastore.Commands: aquele global reflete o carregamento
+// traduzido/normal (SourcePreferred), não a cópia pristine.
+func LoadObjectFileFrom(l FileLayout, src common.FileSource) (datastore.IBinaryFile, error) {
 	patternPath := l.PatternPath()
 	if err := ffxencoding.EnsureAllCharsetsLoaded(l.Version); err != nil {
 		return nil, fmt.Errorf("charset maps not loaded: %w", err)
@@ -109,12 +120,14 @@ func LoadObjectFile(l FileLayout) (datastore.IBinaryFile, error) {
 		creator,
 		common.DefaultLocalization,
 		l.Version,
-	)
+	).WithFileSource(src)
 	if err := binaryDataFile.LoadFromBinary(); err != nil {
 		return nil, fmt.Errorf("failed to load %s: %w", patternPath, err)
 	}
-	if objects := binaryDataFile.GetObjects(); objects != nil && !objects.IsEmpty() {
-		datastore.Commands = objects
+	if src == common.SourcePreferred {
+		if objects := binaryDataFile.GetObjects(); objects != nil && !objects.IsEmpty() {
+			datastore.Commands = objects
+		}
 	}
 	return binaryDataFile, nil
 }
