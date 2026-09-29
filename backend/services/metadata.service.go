@@ -60,36 +60,100 @@ var dedupViewKinds = map[string]bool{
 	KindMacro:  true,
 }
 
-// Cache do view dedupado por (versão|kind): o dedup global exige construir
-// a versão inteira (events: 45MB no ffx2) — construído uma única vez por
-// carga e invalidado por qualquer escrita (apply/import altera o store).
+type rawView struct {
+	collection dto.Collection
+	order      *builders.HashOrder
+}
+
+// Cache do cru por (versão|kind): o dedup global exige construir a versão
+// inteira (events: 45MB no ffx2) — construído uma única vez por carga e
+// invalidado por qualquer escrita (apply/import altera o store).
+//
+// Guarda o estado CRU (sem refs) + a ordem global dos ponteiros (HashOrder):
+// o dedup de display acontece POR ENTRADA em GetEntry — depois do merge com
+// o original, que é quem decide "traduzido" (Text vs Original) e reescreve
+// o ponteiro.
 var (
 	dedupViewMu    sync.Mutex
-	dedupViewCache = map[string]dto.Collection{}
+	dedupViewCache = map[string]rawView{}
 )
 
-func (s *MetadataService) dedupView(kind string, version common.GameVersion) (dto.Collection, error) {
+func (s *MetadataService) rawViewOf(kind string, version common.GameVersion) (rawView, error) {
 	key := version.String() + "|" + kind
 	dedupViewMu.Lock()
 	defer dedupViewMu.Unlock()
-	if c, ok := dedupViewCache[key]; ok {
-		return c, nil
+	if v, ok := dedupViewCache[key]; ok {
+		return v, nil
 	}
 	full, err := s.GetCollection(kind, version, nil)
 	if err != nil {
-		return nil, err
+		return rawView{}, err
 	}
-	dedup := builders.DedupDTO(full)
-	dedupViewCache[key] = dedup
-	return dedup, nil
+	normalized := s.normalizeCollection(kind, version, full)
+	v := rawView{collection: normalized, order: builders.NewHashOrder(normalized)}
+	dedupViewCache[key] = v
+	return v, nil
 }
 
-// clearDedupViewCache invalida o view dedupado: o store mudou (apply ou
-// import), e os hashes/defs precisam ser reconstruídos na próxima entrega.
+// normalizeCollection devolve a Collection com os ponteiros normalizados
+// para o domínio display: entradas com binário em mods/ são merged com o
+// original (ponteiro = hash do original); as sem mods são não traduzidas
+// e o ponteiro de mods JÁ É o do original (mesmo conteúdo ⇒ mesmo XXH64).
+//
+// O trabalho é PARALELO a nível de arquivo: um worker por entrada executa
+// stat + leitura do original + merge + comparação de rows (todos os loops
+// internos sincronos), coletando o relatório de divergência; a emissão dos
+// avisos acontece DEPOIS do pool, em ordem canônica de chave.
+func (s *MetadataService) normalizeCollection(kind string, version common.GameVersion, c dto.Collection) dto.Collection {
+	keys := c.SortedKeys()
+	type normalized struct {
+		key   string
+		entry dto.FileEntry
+		diag  divergeDiag
+	}
+	results := make([]normalized, len(keys))
+	parallelFor(len(keys), func(i int) {
+		k := keys[i]
+		ref := entryRef{kind: kind, id: k, version: version}
+		entry := c[k]
+		if !hasModsFile(kind, k, version) {
+			results[i] = normalized{key: k, entry: entry}
+			return
+		}
+		if inData, _ := originalTrees(kind, k, version); !inData {
+			results[i] = normalized{key: k, entry: entry}
+			return
+		}
+		orig, exists, oerr := s.originalFor(kind, k, version)
+		if oerr != nil || !exists {
+			results[i] = normalized{key: k, entry: entry}
+			return
+		}
+		merged, diag := withOriginal(ref, entry, orig)
+		results[i] = normalized{key: k, entry: merged, diag: diag}
+	})
+
+	out := make(dto.Collection, len(c))
+	for i := range results {
+		out[results[i].key] = results[i].entry
+	}
+	// Emissão em ordem canônica: os workers apenas coletam; o arquivo de
+	// diagnóstico fica determinístico.
+	for i := range results {
+		logDivergence(results[i].diag)
+	}
+	return out
+}
+
+// clearDedupViewCache invalida o cru em cache: o store mudou (apply ou
+// import), e os ponteiros/ordem precisam ser reconstruídos na próxima
+// entrega. O original pristine (data/) acompanha: os dois caches descrevem
+// a MESMA árvore de gamefiles, então caem juntos.
 func clearDedupViewCache() {
 	dedupViewMu.Lock()
-	dedupViewCache = map[string]dto.Collection{}
+	dedupViewCache = map[string]rawView{}
 	dedupViewMu.Unlock()
+	clearOriginalCache()
 }
 
 func NewMetadataService(notifier INotificationService) *MetadataService {
@@ -776,47 +840,122 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 }
 
 // GetEntry devolve uma entrada completa (metadata + rows) por demanda.
-// Para kinds com dedup global (help, events), o DTO vem COM as refs
-// "$hash" (repetições idênticas ocultas na tabela): a def precisa da
-// visão global da versão, na mesma ordem e regra do bulk export.
 // GetCollection continua RAW (export, preview e validação de import).
+//
+// Fluxo display, em três fases:
+//  1. cru (ponteiro = hash do texto do arquivo, sem refs);
+//  2. merge com o original de data/ — quando TODAS as rows casam em
+//     (Index, Name), o ponteiro é reescrito para o hash do ORIGINAL
+//     (imutável) e `Original` é anexado.hash(Text)==hash(Original) ⇔
+//     célula ainda não traduzida;
+//  3. dedup de display: colapsa em ref o que é repetição de um original
+//     at e não é a 1ª ocorrência global do ponteiro. Dupe sobre texto já
+//     traduzido não acontece (o texto traduzido permanece literal).
+//
+// O que só existe em mods/ é ignorado com warning; falha de leitura de
+// data/ degrada (sem `original`) em vez de quebrar o view.
 func (s *MetadataService) GetEntry(kind, id string, version common.GameVersion) (dto.FileEntry, error) {
 	kind = strings.ToLower(strings.TrimSpace(kind))
-	if dedupViewKinds[kind] {
-		c, err := s.dedupView(kind, version)
-		if err != nil {
-			return dto.FileEntry{}, err
-		}
-		entry, ok := c[id]
-		if !ok {
-			return dto.FileEntry{}, fmt.Errorf("%s entry not found: %s", kind, id)
-		}
-		return entry, nil
-	}
-	if kind == KindObjects {
-		// Dedup com escopo do PRÓPRIO arquivo (refs não propagam entre
-		// objetos): a repetição massiva de kernel (ex.: "Attack" 400x em
-		// command.bin) sai como refs da 1ª ocorrência no view. Export por
-		// arquivo é igualmente self-contained — view e artefato alinhados.
-		c, err := s.GetCollection(kind, version, []string{id})
-		if err != nil {
-			return dto.FileEntry{}, err
-		}
-		entry, ok := builders.DedupDTO(c)[id]
-		if !ok {
-			return dto.FileEntry{}, fmt.Errorf("%s entry not found: %s", kind, id)
-		}
-		return entry, nil
-	}
-	c, err := s.GetCollection(kind, version, []string{id})
+	entry, base, order, err := s.currentEntry(kind, id, version)
 	if err != nil {
 		return dto.FileEntry{}, err
 	}
+
+	// Kinds sem dedup de display (lockit): entrega direta, sem collapse.
+	_ = base
+	_ = order
+
+	inData, inMods := originalTrees(kind, id, version)
+	if !inData {
+		if inMods {
+			// Regra 4: o que só existe em mods/ não é exibido — não há
+			// original contra o qual revisar.
+			common.LogWarning(
+				"sem original em data/: ignorando %s/%s/%s (arquivo presente apenas em mods/)",
+				version, kind, id,
+			)
+			return dto.FileEntry{}, fmt.Errorf("%s/%s não tem original em data/ (arquivo presente apenas em mods/)", kind, id)
+		}
+		// Nenhuma árvore tem o arquivo (store sem contraparte em disco).
+		// Nunca quebrar o view por ausência do original: entrega sem ele
+		// e SEM reescrever ponteiros — o colapso cai no ramo RAW do dedup
+		// de display (por texto).
+		common.LogWarning(
+			"sem original em data/ para %s/%s/%s — entregando a entrada sem a coluna Original",
+			version, kind, id,
+		)
+		return builders.DedupDisplayDTO(entry, base, order), nil
+	}
+
+	orig, exists, oerr := s.originalFor(kind, id, version)
+	if oerr != nil {
+		common.LogError(
+			"falha ao ler o original de %s/%s/%s: %v — entregando a entrada sem a coluna Original",
+			version, kind, id, oerr,
+		)
+		return builders.DedupDisplayDTO(entry, base, order), nil
+	}
+	if !exists {
+		common.LogWarning(
+			"original de %s/%s/%s sem rows em data/ — entregando a entrada sem a coluna Original",
+			version, kind, id,
+		)
+		return builders.DedupDisplayDTO(entry, base, order), nil
+	}
+	merged, diverged := withOriginal(entryRef{kind: kind, id: id, version: version}, entry, orig)
+	logDivergence(diverged)
+	return builders.DedupDisplayDTO(merged, base, order), nil
+}
+
+// currentEntry monta a entrada CRU (estado atual, ponteiro = hash do texto
+// do arquivo, sem refs): kinds com dedup global saem do cache de cru da
+// versão, objects saem do GetCollection do escopo pedido e os demais
+// passam pelo GetCollection direto. O dedup de display e o merge com o
+// original acontecem em GetEntry.
+func (s *MetadataService) currentEntry(kind, id string, version common.GameVersion) (dto.FileEntry, int, *builders.HashOrder, error) {
+	if dedupViewKinds[kind] {
+		raw, err := s.rawViewOf(kind, version)
+		if err != nil {
+			return dto.FileEntry{}, 0, nil, err
+		}
+		entry, ok := raw.collection[id]
+		if !ok {
+			return dto.FileEntry{}, 0, nil, fmt.Errorf("%s entry not found: %s", kind, id)
+		}
+		base, ok := raw.order.Offset(id)
+		if !ok {
+			base = 0
+		}
+		return entry, base, raw.order, nil
+	}
+	if kind == KindObjects {
+		// Escopo do PRÓPRIO arquivo (refs não propagam entre objetos): a
+		// ordem dos ponteiros cobre só este arquivo, self-contained como o
+		// export por arquivo.
+		c, err := s.GetCollection(kind, version, []string{id})
+		if err != nil {
+			return dto.FileEntry{}, 0, nil, err
+		}
+		entry, ok := c[id]
+		if !ok {
+			return dto.FileEntry{}, 0, nil, fmt.Errorf("%s entry not found: %s", kind, id)
+		}
+		order := builders.NewHashOrder(c)
+		base, ok := order.Offset(id)
+		if !ok {
+			base = 0
+		}
+		return entry, base, order, nil
+	}
+	c, err := s.GetCollection(kind, version, []string{id})
+	if err != nil {
+		return dto.FileEntry{}, 0, nil, err
+	}
 	entry, ok := c[id]
 	if !ok {
-		return dto.FileEntry{}, fmt.Errorf("%s entry not found: %s", kind, id)
+		return dto.FileEntry{}, 0, nil, fmt.Errorf("%s entry not found: %s", kind, id)
 	}
-	return entry, nil
+	return entry, 0, nil, nil
 }
 
 // ListLanguages devolve os idiomas disponíveis em formato chave/valor
