@@ -315,6 +315,14 @@ func ClearHelp(version common.GameVersion) {
 	delete(helpStore, version)
 }
 
+// ClearAllHelp limpa o store de todas as versões (troca de GameFilesLocation:
+// os painéis carregados pertencem à árvore anterior).
+func ClearAllHelp() {
+	helpStoreMu.Lock()
+	defer helpStoreMu.Unlock()
+	helpStore = map[common.GameVersion]map[string]*HelpKeyedStringFile{}
+}
+
 // EnsureHelpLoaded garante o store da versão (carga única, lazily).
 func EnsureHelpLoaded(version common.GameVersion) error {
 	if HasHelp(version) {
