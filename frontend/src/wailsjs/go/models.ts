@@ -36,6 +36,7 @@ export namespace dto {
 	    name?: string;
 	    hash?: Record<string, string>;
 	    text: Record<string, string>;
+	    original?: Record<string, string>;
 	
 	    static createFrom(source: any = {}) {
 	        return new TextRow(source);
@@ -47,6 +48,7 @@ export namespace dto {
 	        this.name = source["name"];
 	        this.hash = source["hash"];
 	        this.text = source["text"];
+	        this.original = source["original"];
 	    }
 	}
 	export class Metadata {
