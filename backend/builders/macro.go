@@ -43,7 +43,14 @@ func parseMacroChunkKey(key string) (int, bool) {
 // BuildMacroDTO monta a Collection pronta (texto + metadata + hash) lendo
 // os containers do disco para a versão dada.
 func BuildMacroDTO(version common.GameVersion) (dto.Collection, error) {
-	containers, err := macrodic.ReadMacroDictionaryContainers(version)
+	return BuildMacroDTOFromSource(version, common.SourcePreferred)
+}
+
+// BuildMacroDTOFromSource é BuildMacroDTO lendo os containers da árvore
+// indicada. SourceData entrega o dicionário pristine de data/ — é por ele
+// que se define a PRESENÇA dos chunks (árvore/coluna Original).
+func BuildMacroDTOFromSource(version common.GameVersion, src common.FileSource) (dto.Collection, error) {
+	containers, err := macrodic.ReadMacroDictionaryContainersFrom(version, src)
 	if err != nil {
 		return nil, err
 	}

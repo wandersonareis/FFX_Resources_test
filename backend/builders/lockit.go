@@ -24,6 +24,12 @@ func BuildLockitDTO(version common.GameVersion, ids []string) (dto.Collection, e
 	if err != nil {
 		return nil, err
 	}
+	return BuildLockitDTOFrom(files)
+}
+
+// BuildLockitDTOFrom monta a Collection a partir de LockitFile já carregados
+// (qualquer fonte). É o caminho do ORIGINAL: lockit.LoadFrom(layout, SourceData).
+func BuildLockitDTOFrom(files []*lockit.LockitFile) (dto.Collection, error) {
 	out := make(dto.Collection, len(files))
 	for _, f := range files {
 		rows := buildLockitRows(f)

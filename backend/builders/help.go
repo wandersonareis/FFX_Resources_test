@@ -64,31 +64,10 @@ func BuildHelpDTO(version common.GameVersion, ids []string) (dto.Collection, err
 		if panel == nil {
 			continue
 		}
-		segments := panel.LocalizedStrings()
-		entry := dto.FileEntry{
-			Metadata: dto.NewHelpMetadata(name, "help/"+helpfile.HelpEntryDir(name), version),
-			Rows:     make([]dto.TextRow, 0, len(segments)),
-		}
-		for i, seg := range segments {
-			if seg == nil {
-				continue
-			}
-			text := make(map[string]string, len(langs))
-			for _, lang := range langs {
-				text[lang] = seg.GetLocalizedString(lang)
-			}
-			entry.Rows = append(entry.Rows, dto.TextRow{
-				Index: i,
-				Hash:  hash.Texts(text),
-				Text:  text,
-			})
-		}
-		if len(entry.Rows) == 0 {
-			common.LogVerbose("No strings found for help %s, skipping", name)
+		entry, ok := buildHelpEntry(name, version, panel, langs)
+		if !ok {
 			continue
 		}
-		dto.SortRows(entry.Rows)
-		entry.Metadata = entry.Metadata.WithRowCount(len(entry.Rows))
 		out[name] = entry
 	}
 	if len(out) == 0 {
@@ -98,6 +77,48 @@ func BuildHelpDTO(version common.GameVersion, ids []string) (dto.Collection, err
 		return nil, err
 	}
 	return out, nil
+}
+
+// BuildHelpEntryDTOFrom monta UMA entrada de painel a partir de um painel já
+// montado de uma árvore explícita, sem tocar no store. É o caminho do
+// ORIGINAL: helpfile.ReadHelpPanelFrom(version, name, common.SourceData).
+// ok=false quando não há nenhuma row com texto.
+func BuildHelpEntryDTOFrom(name string, version common.GameVersion, panel *helpfile.HelpKeyedStringFile) (dto.FileEntry, bool) {
+	if panel == nil {
+		return dto.FileEntry{}, false
+	}
+	return buildHelpEntry(name, version, panel, SortedLocalizationKeys())
+}
+
+// buildHelpEntry converte os segmentos localizados do painel em rows do DTO.
+// O Index é a posição do ponteiro (reconstrução posicional).
+func buildHelpEntry(name string, version common.GameVersion, panel *helpfile.HelpKeyedStringFile, langs []string) (dto.FileEntry, bool) {
+	segments := panel.LocalizedStrings()
+	entry := dto.FileEntry{
+		Metadata: dto.NewHelpMetadata(name, "help/"+helpfile.HelpEntryDir(name), version),
+		Rows:     make([]dto.TextRow, 0, len(segments)),
+	}
+	for i, seg := range segments {
+		if seg == nil {
+			continue
+		}
+		text := make(map[string]string, len(langs))
+		for _, lang := range langs {
+			text[lang] = seg.GetLocalizedString(lang)
+		}
+		entry.Rows = append(entry.Rows, dto.TextRow{
+			Index: i,
+			Hash:  hash.Texts(text),
+			Text:  text,
+		})
+	}
+	if len(entry.Rows) == 0 {
+		common.LogVerbose("No strings found for help %s, skipping", name)
+		return dto.FileEntry{}, false
+	}
+	dto.SortRows(entry.Rows)
+	entry.Metadata = entry.Metadata.WithRowCount(len(entry.Rows))
+	return entry, true
 }
 
 // DedupHelpDTO é o wrapper de help para o DedupDTO compartilhado: escopo

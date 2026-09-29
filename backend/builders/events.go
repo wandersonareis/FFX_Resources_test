@@ -72,30 +72,10 @@ func BuildEventsDTO(version common.GameVersion, ids []string) (dto.Collection, e
 			common.LogVerbose("No strings found for event %s, skipping", id)
 			continue
 		}
-		entry := dto.FileEntry{
-			Metadata: dto.NewEventMetadata(id, version),
-			Rows:     make([]dto.TextRow, 0, len(ev.Strings)),
-		}
-		for i, str := range ev.Strings {
-			if str == nil {
-				continue
-			}
-			text := make(map[string]string, len(langs))
-			for _, lang := range langs {
-				text[lang] = str.GetLocalizedString(lang)
-			}
-			entry.Rows = append(entry.Rows, dto.TextRow{
-				Index: i,
-				Hash:  hash.Texts(text),
-				Text:  text,
-			})
-		}
-		if len(entry.Rows) == 0 {
-			common.LogVerbose("No strings found for event %s, skipping", id)
+		entry, ok := buildEventEntry(id, version, ev.Strings, langs)
+		if !ok {
 			continue
 		}
-		dto.SortRows(entry.Rows)
-		entry.Metadata = entry.Metadata.WithRowCount(len(entry.Rows))
 		out[id] = entry
 	}
 	if len(out) == 0 {
@@ -107,6 +87,47 @@ func BuildEventsDTO(version common.GameVersion, ids []string) (dto.Collection, e
 		return nil, err
 	}
 	return out, nil
+}
+
+// BuildEventEntryDTOFrom monta UMA entrada de evento a partir das strings
+// lidas direto dos arquivos (fonte explícita), sem tocar no store global.
+// É o caminho do ORIGINAL: event.ReadLocalizedEventStringsFrom(SourceData).
+// ok=false quando não há nenhuma row com texto.
+func BuildEventEntryDTOFrom(id string, version common.GameVersion, strings []*event.LocalizedFieldStringObject) (dto.FileEntry, bool) {
+	if len(strings) == 0 {
+		return dto.FileEntry{}, false
+	}
+	return buildEventEntry(id, version, strings, SortedLocalizationKeys())
+}
+
+// buildEventEntry converte as strings localizadas de um evento em rows do
+// DTO. O Index é a posição física no binário (reconstrução posicional).
+func buildEventEntry(id string, version common.GameVersion, strings []*event.LocalizedFieldStringObject, langs []string) (dto.FileEntry, bool) {
+	entry := dto.FileEntry{
+		Metadata: dto.NewEventMetadata(id, version),
+		Rows:     make([]dto.TextRow, 0, len(strings)),
+	}
+	for i, str := range strings {
+		if str == nil {
+			continue
+		}
+		text := make(map[string]string, len(langs))
+		for _, lang := range langs {
+			text[lang] = str.GetLocalizedString(lang)
+		}
+		entry.Rows = append(entry.Rows, dto.TextRow{
+			Index: i,
+			Hash:  hash.Texts(text),
+			Text:  text,
+		})
+	}
+	if len(entry.Rows) == 0 {
+		common.LogVerbose("No strings found for event %s, skipping", id)
+		return dto.FileEntry{}, false
+	}
+	dto.SortRows(entry.Rows)
+	entry.Metadata = entry.Metadata.WithRowCount(len(entry.Rows))
+	return entry, true
 }
 
 // ApplyEventsDTO aplica o DTO de volta no store/binário (parse DTO → binário).
