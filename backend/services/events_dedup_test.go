@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"ffxresources/backend/common"
+	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/event"
-	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/formatters/hash"
 )
 
