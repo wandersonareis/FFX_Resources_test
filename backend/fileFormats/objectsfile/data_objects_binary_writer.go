@@ -84,7 +84,7 @@ func writeBinaryLocalizedFile(b *ObjectBinaryFile, localizationKey string, data 
 	// A cópia na árvore de mods espelha a localização canônica do arquivo
 	// (patternPath) — nunca o filePath do chamador, que pode ser absoluto
 	// (ex.: testes gravando em temp dir) e não deve ser embutido no join.
-	localePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, common.GetLocalizationRoot(localizationKey), b.patternPath)
+	localePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, common.GetLocalizationRootForVersion(b.Version, localizationKey), b.patternPath)
 	localePath = filepath.FromSlash(localePath)
 
 	dir := filepath.Dir(localePath)

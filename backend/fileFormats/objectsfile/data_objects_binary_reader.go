@@ -31,7 +31,7 @@ func PopulateDataObjectLocalizationsWithIlist(path string, objects components.IL
 	}
 
 	for locKey := range common.SupportedLanguages {
-		fullPath := filepath.Join(common.GetLocalizationRoot(locKey), path)
+		fullPath := filepath.Join(common.GetLocalizationRootForVersion(version, locKey), path)
 
 		var localizationData components.IList[datastore.IGlobalLocalizedTextObject]
 		if version == common.GameVersionFFX {
