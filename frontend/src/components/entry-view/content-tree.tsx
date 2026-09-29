@@ -39,6 +39,7 @@ export function ContentTree({ view }: { view: EntryView }) {
   const roots = useSelector(store, (s) => s.roots);
   const expanded = useSelector(store, (s) => s.expanded);
   const selectedEntry = useSelector(store, (s) => s.selectedEntry);
+  const loading = useSelector(store, (s) => s.loading);
   const [ctxNode, setCtxNode] = useState<{ id: string; kind: EntryKind } | null>(
     null
   );
@@ -137,10 +138,11 @@ export function ContentTree({ view }: { view: EntryView }) {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => void actions.reload()}
+          disabled={loading}
+          onClick={() => void actions.coldReload()}
           aria-label="Recarregar"
         >
-          <RefreshCw size={20} />
+          <RefreshCw size={20} className={loading ? 'animate-spin' : undefined} />
         </Button>
       </div>
       <ContextMenu

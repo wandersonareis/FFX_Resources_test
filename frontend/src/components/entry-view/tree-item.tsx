@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, ChevronRight, FileText } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText, Loader2 } from 'lucide-react';
 import type { EntryKind } from '@/lib/ffx/display-names';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -60,7 +60,14 @@ export function TreeItem({
         data-node-id={node.id}
         data-node-kind={node.kind}
       >
-        {hasChildren ? (
+        {node.loading ? (
+          <span
+            className="w-8 shrink-0 grid place-items-center opacity-60"
+            aria-label={`Carregando ${node.label}`}
+          >
+            <Loader2 size={16} className="animate-spin" />
+          </span>
+        ) : hasChildren ? (
           <Button
             variant="ghost"
             size="icon"

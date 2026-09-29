@@ -10,6 +10,8 @@ export interface SideNode {
   kind?: EntryKind;
   entry?: EntryRow;
   children?: SideNode[];
+  /** Raiz de kind em carga: spinner no lugar do chevron, filhos a caminho. */
+  loading?: boolean;
 }
 
 export const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
