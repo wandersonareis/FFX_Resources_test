@@ -17,6 +17,8 @@ import {
 import { ContentTree } from '@/components/entry-view/content-tree';
 import { EntryTable } from '@/components/entry-view/entry-table';
 import { TranslationDialog } from '@/components/entry-view/translation-dialog';
+import { PreloadVersions } from '@/wailsjs/go/main/App';
+import { GAME_VERSIONS } from '@/lib/ffx/game-version';
 
 /**
  * Aba de uma versão do jogo: só orquestra. O estado compartilhado entre
@@ -38,9 +40,15 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
   }, [hasDirty]);
 
   useEffect(() => {
-    // Sincroniza com o backend ao montar/trocar de versão.
-    void view.actions.reload();
-  }, [view]);
+    // Sincroniza com o backend ao montar/trocar de versão. Ao concluir a
+    // carga da aba VISUALIZADA, pré-carrega as demais em background —
+    // trocar de aba depois cai no caminho rápido (cache do backend).
+    void view.actions.reload().then(() => {
+      void PreloadVersions(
+        GAME_VERSIONS.filter((t) => t.id !== version).map((t) => t.id)
+      );
+    });
+  }, [view, version]);
 
   useEffect(
     () => drafts.onSaved(() => void view.actions.reload()),

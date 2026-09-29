@@ -66,6 +66,10 @@ export function ListTextEntries(arg1, arg2) {
   return window['go']['main']['App']['ListTextEntries'](arg1, arg2);
 }
 
+export function PreloadVersions(arg1) {
+  return window['go']['main']['App']['PreloadVersions'](arg1);
+}
+
 export function PreviewImport(arg1, arg2) {
   return window['go']['main']['App']['PreviewImport'](arg1, arg2);
 }

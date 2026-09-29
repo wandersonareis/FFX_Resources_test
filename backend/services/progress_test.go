@@ -152,3 +152,24 @@ func TestProgressServiceCycle(t *testing.T) {
 	}
 	p.End() // idempotente
 }
+
+// PreloadVersions é idempotente e aborta quando a árvore muda no meio.
+func TestPreloadVersionsIdempotentAndInvalidated(t *testing.T) {
+
+	// Ambiente sem gamefiles válidos: a pré-carga falha por versão — mas o
+	// Set marca/consome igualmente (idempotência é sobre a fila, não sobre
+	// o sucesso).
+	version := common.GameVersionFFX2
+	if !markPreloaded(version) {
+		t.Fatal("primeira marca deveria ser nova")
+	}
+	if markPreloaded(version) {
+		t.Fatal("segunda marca deveria ser ignorada")
+	}
+
+	treeGeneration.Add(1)
+	InvalidateViewCaches() // geração nova zera o Set de pré-carga
+	if !markPreloaded(version) {
+		t.Fatal("invalidação deveria liberar a versão de novo")
+	}
+}

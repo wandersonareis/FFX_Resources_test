@@ -36,6 +36,8 @@ export function ListLanguages():Promise<Array<common.Language>>;
 
 export function ListTextEntries(arg1:string,arg2:common.GameVersion):Promise<Array<services.EntrySummary>>;
 
+export function PreloadVersions(arg1:Array<string>):Promise<void>;
+
 export function PreviewImport(arg1:string,arg2:common.GameVersion):Promise<dto.ImportSummary>;
 
 export function QuitApp():Promise<void>;

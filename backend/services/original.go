@@ -382,6 +382,10 @@ func clearOriginalCache() {
 // Chamado ao trocar GameFilesLocation: os binários carregados pertencem à
 // árvore anterior e sem isso a view serviria texto de outro diretório.
 func InvalidateViewCaches() {
+	treeGeneration.Add(1)
+	preloadMu.Lock()
+	preloadedVersions = map[string]bool{}
+	preloadMu.Unlock()
 	clearDedupViewCache()
 	event.ClearAllEvents()
 	helpfile.ClearAllHelp()

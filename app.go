@@ -305,6 +305,26 @@ func (a *App) WriteLog(level, message string, fields map[string]any) error {
 	return loggingService.FromFrontend(level, message, fields)
 }
 
+// PreloadVersions aquece as versões indicadas em background (uma goroutine
+// worker, versões uma a uma). Chamado pelo frontend após a carga da aba
+// visualizada concluir — trocar de aba cai no caminho rápido.
+// versões inválidas são ignoradas com aviso no log de arquivo.
+func (a *App) PreloadVersions(versions []string) {
+	if a.MetadataService == nil {
+		return
+	}
+	valid := make([]common.GameVersion, 0, len(versions))
+	for _, raw := range versions {
+		v, err := common.ParseGameVersionStrict(raw)
+		if err != nil {
+			loggingService.Warn("pré-carga: versão inválida %q", raw)
+			continue
+		}
+		valid = append(valid, v)
+	}
+	a.MetadataService.PreloadVersions(valid)
+}
+
 // ExportStrings escreve arquivos .strings ao lado dos .json.
 // kind: events, objects ou macro. ids vazio = tudo (aceita ids ou keys);
 // langs nil/vazio = todos os idiomas.
