@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"ffxresources/backend/builders"
 	"ffxresources/backend/common"
@@ -217,6 +218,72 @@ func TestLockitDTOExportGroupingAndImportUsOnly(t *testing.T) {
 	modDe := filepath.Join(tmp, "mods", filepath.FromSlash(l.RelPath("de")))
 	if _, err := os.Stat(modDe); err == nil {
 		t.Fatalf("de não deveria ter sido gravado no import (us-only)")
+	}
+}
+
+// TestLockitStoreReloadOnExternalChange cobre o auto-reload: LoadFromStore
+// reutiliza a instância enquanto o binário não muda, e recarrega quando o
+// arquivo em mods/ é substituído externamente (tradução copiada com o app
+// aberto). A reutilização é comprovada pela identidade do ponteiro.
+func TestLockitStoreReloadOnExternalChange(t *testing.T) {
+	tmp := setupTempData(t)
+
+	l, _ := lockit.LayoutForID(common.GameVersionFFX, "ffx_loc_kit_ps3")
+
+	f1, err := lockit.LoadFromStore(l)
+	if err != nil {
+		t.Fatalf("load 1: %v", err)
+	}
+	f2, err := lockit.LoadFromStore(l)
+	if err != nil {
+		t.Fatalf("load 2 (sem mudança): %v", err)
+	}
+	if f1 != f2 {
+		t.Fatal("sem mudança no disco: LoadFromStore devia reutilizar a instância")
+	}
+
+	// Substitui o binário us em mods/ externamente (mesma contagem de
+	// registros; conteúdo, tamanho e mtime novos).
+	modUs := filepath.Join(tmp, "mods", filepath.FromSlash(l.RelPath("us")))
+	data, err := os.ReadFile(filepath.Join(tmp, filepath.FromSlash(l.RelPath("us"))))
+	if err != nil {
+		t.Fatalf("ler original us: %v", err)
+	}
+	idx := bytes.Index(data, []byte("\r\n"))
+	altered := append([]byte("ALTERADO"), data[idx:]...)
+	future := time.Now().Add(2 * time.Second)
+	if err := os.MkdirAll(filepath.Dir(modUs), 0o755); err != nil {
+		t.Fatalf("mkdir mods lockit: %v", err)
+	}
+	if err := os.WriteFile(modUs, altered, 0o644); err != nil {
+		t.Fatalf("gravar mods us: %v", err)
+	}
+	if err := os.Chtimes(modUs, future, future); err != nil {
+		t.Fatalf("chtimes mods us: %v", err)
+	}
+
+	f3, err := lockit.LoadFromStore(l)
+	if err != nil {
+		t.Fatalf("load 3 (mudou): %v", err)
+	}
+	if f3 == f1 {
+		t.Fatal("binário mudou no disco: LoadFromStore devia recarregar")
+	}
+	game, _ := f3.IndexesByKind()
+	_ = game
+	// O primeiro registro físico mudou de conteúdo: a instância nova veio
+	// do mods alterado (o texto pode sair decodificado conforme o kind).
+	if f3.Records()[0].Text("us") == f1.Records()[0].Text("us") {
+		t.Fatalf("us recarregado não reflete o mods: %q", f3.Records()[0].Text("us"))
+	}
+
+	// De volta ao estado estável: a nova instância passa a ser reutilizada.
+	f4, err := lockit.LoadFromStore(l)
+	if err != nil {
+		t.Fatalf("load 4: %v", err)
+	}
+	if f4 != f3 {
+		t.Fatal("instância recarregada devia ser reutilizada")
 	}
 }
 

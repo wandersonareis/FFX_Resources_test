@@ -1,8 +1,10 @@
 package lockit
 
 import (
+	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"ffxresources/backend/common"
 )
@@ -11,17 +13,32 @@ import (
 // (<version>/<pattern>).
 type FileStore struct {
 	files map[string]*LockitFile
+	// stamps registra, por chave, o carimbo físico dos binários de cada
+	// idioma na carga (path/size/mtime). Permite detectar mudanças no disco
+	// (tradução copiada/manual para mods/) e recarregar na próxima leitura.
+	stamps map[string]map[string]fileStamp
 }
 
 // DataStore é o store global dos arquivos lockit.
 var DataStore = NewFileStore()
 
-// NewFileStore constrói um store vazio.
-func NewFileStore() *FileStore {
-	return &FileStore{files: map[string]*LockitFile{}}
+// fileStamp identifica o estado físico de um binário carregado.
+type fileStamp struct {
+	path    string
+	size    int64
+	modTime time.Time
 }
 
-// Register publica um arquivo carregado.
+// NewFileStore constrói um store vazio.
+func NewFileStore() *FileStore {
+	return &FileStore{
+		files:  map[string]*LockitFile{},
+		stamps: map[string]map[string]fileStamp{},
+	}
+}
+
+// Register publica um arquivo carregado. Sem carimbo: a entrada é confiada
+// (o chamador responde pela frescura) e LoadFromStore não a recarrega.
 func (s *FileStore) Register(key string, f *LockitFile) {
 	if s == nil || f == nil {
 		return
@@ -59,18 +76,77 @@ func (s *FileStore) Clear() {
 		return
 	}
 	clear(s.files)
+	clear(s.stamps)
+}
+
+// stampOf devolve o carimbo registrado para a chave (nil = sem carimbo).
+func (s *FileStore) stampOf(key string) map[string]fileStamp {
+	if s == nil {
+		return nil
+	}
+	return s.stamps[key]
+}
+
+// stampForResolve carimba o binário de cada idioma do layout na árvore
+// preferida (mesma resolução da leitura: mods-first). Idioma ausente no disco
+// não tem entrada no mapa — a carga o ignora da mesma forma.
+func stampFor(l Layout) map[string]fileStamp {
+	if len(l.Languages) == 0 {
+		l.Languages = common.SupportedLanguageCodes()
+	}
+	out := make(map[string]fileStamp, len(l.Languages))
+	for _, lang := range l.Languages {
+		acc, err := common.NewFileAccessorFrom(filepath.FromSlash(l.RelPath(lang)), common.SourcePreferred)
+		if err != nil || !acc.Exists {
+			continue
+		}
+		out[lang] = fileStamp{
+			path:    acc.ResolvedPath,
+			size:    acc.Size,
+			modTime: acc.Info.ModTime(),
+		}
+	}
+	return out
+}
+
+// stampsEqual compara dois carimbos por idioma (path + size + mtime).
+func stampsEqual(a, b map[string]fileStamp) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, sa := range a {
+		if sb, ok := b[k]; !ok || sa != sb {
+			return false
+		}
+	}
+	return true
 }
 
 // LoadFromStore carrega (ou reutiliza) o arquivo do layout e o registra.
+//
+// A reutilização é vigiada: o carimbo físico (path/size/mtime por idioma) é
+// recomparado a cada chamada — tradução copiada/editada manualmente em mods/
+// (ou qualquer mudança nos binários) recarrega o arquivo na próxima leitura,
+// sem reiniciar o app. O próprio save do app também muda o mods: a leitura
+// seguinte recai na recarga e serve exatamente o que foi gravado.
 func LoadFromStore(l Layout) (*LockitFile, error) {
+	stamp := stampFor(l)
 	if f, ok := DataStore.GetByLayout(l); ok && f != nil {
-		return f, nil
+		stored := DataStore.stampOf(l.Key())
+		// Sem carimbo (Register direto): entrada confiada, sem vigiação.
+		if stored == nil || stampsEqual(stored, stamp) {
+			return f, nil
+		}
+		// Binário mudou no disco (tradução copiada/editada em mods/):
+		// descarta a instância e recarrega.
+		common.LogVerbose("[lockit] %s: binário mudou no disco — recarregando", l.Stem)
 	}
 	f, err := Load(l)
 	if err != nil {
 		return nil, err
 	}
 	DataStore.Register(l.Key(), f)
+	DataStore.stamps[l.Key()] = stamp
 	return f, nil
 }
 
