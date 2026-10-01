@@ -43,6 +43,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { GameVersionTab } from '@/components/game-version-tab';
+import { StatusBar } from '@/components/status-bar/status-bar';
 import { ConfigDialog } from '@/components/dialogs/config-dialog';
 import { ImportSummaryDialog } from '@/components/dialogs/import-summary-dialog';
 import { ProgressDialog } from '@/components/dialogs/progress-dialog';
@@ -391,6 +392,8 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
           </TabsContent>
         ))}
       </Tabs>
+
+      <StatusBar />
 
       <ConfigDialog open={configOpen} onOpenChange={setConfigOpen} />
       <ProgressDialog open={progress.open} value={progress.value} label={progress.label} />

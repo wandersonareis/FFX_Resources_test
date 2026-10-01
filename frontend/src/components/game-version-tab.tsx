@@ -9,6 +9,7 @@ import type { GameVersionId } from '@/lib/ffx/game-version';
 import { useEditDraft } from '@/lib/ffx/edit-draft';
 import { useWailsEvent } from '@/lib/ffx/use-wails-event';
 import { saveAllDrafts } from '@/lib/ffx/save-all';
+import { setActiveFile } from '@/lib/ffx/active-file-store';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -40,6 +41,18 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
   useEffect(() => {
     void SetUnsavedEdits(hasDirty);
   }, [hasDirty]);
+
+  // Publica o arquivo ativo (progresso por row) para a barra de status.
+  // O progresso é fixo na abertura; troca de arquivo/aba atualiza aqui.
+  useEffect(() => {
+    setActiveFile({
+      version,
+      kind: activeKind,
+      entryId: selectedEntry?.id ?? null,
+      entryLabel: selectedEntry?.label ?? null,
+      progress,
+    });
+  }, [version, activeKind, selectedEntry, progress]);
 
   useEffect(() => {
     // Sincroniza com o backend ao montar/trocar de versão. Ao concluir a

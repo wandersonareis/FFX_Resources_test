@@ -76,7 +76,8 @@ func (d divergeDiag) empty() bool {
 }
 
 // logDivergence emite o aviso de divergência: console curto colorido,
-// arquivo com as listas completas (Index, Name, snippet).
+// arquivo com as listas completas (Index, Name, snippet) e PUSH para a
+// barra de status do frontend (mesmo desalinhamento, canal visual).
 func logDivergence(d divergeDiag) {
 	if d.empty() {
 		return
@@ -94,6 +95,28 @@ func logDivergence(d divergeDiag) {
 			"rows_somente_mods": d.onlyInMods,
 			"rows_somente_data": d.onlyInData,
 		})
+
+	// Barra de status: o desalinhamento chega à UI (rotação + alert com os
+	// detalhes). Sem ponte instalada (testes): só os logs de sempre.
+	if bridge := statusBarService(); bridge != nil {
+		bridge.PushWarning(StatusBarWarning{
+			ID:       d.ref.key(),
+			Kind:     d.ref.kind,
+			EntryID:  d.ref.id,
+			Version:  d.ref.version.String(),
+			Severity: "warn",
+			Message: fmt.Sprintf(
+				"Desalinhamento em %s/%s (%s): %d de %d linhas casaram (%d só em mods, %d só em data)",
+				d.ref.kind, d.ref.id, d.ref.version, matched, d.modsRows, len(d.onlyInMods), len(d.onlyInData),
+			),
+			Details: map[string]any{
+				"data_rows":         d.dataRows,
+				"mods_rows":         d.modsRows,
+				"rows_somente_mods": d.onlyInMods,
+				"rows_somente_data": d.onlyInData,
+			},
+		})
+	}
 }
 
 // parallelFor executa fn em paralelo sobre os índices 0..n-1 com pool

@@ -22,6 +22,8 @@ type App struct {
 
 	progressService services.IProgressService
 
+	statusBarService services.IStatusBarService
+
 	MetadataService *services.MetadataService
 
 	ctx          context.Context
@@ -155,6 +157,12 @@ func (a *App) initServices(ctx context.Context) {
 	progressSvc := services.NewProgressService(ctx, notification)
 	a.progressService = progressSvc
 	coreprogress.Set(progressSvc)
+
+	// Ponte da barra de status: desalinhamentos (original vs tradução)
+	// publicados pelos services chegam à barra de rodapé do frontend.
+	statusSvc := services.NewStatusBarService(ctx)
+	a.statusBarService = statusSvc
+	services.SetStatusBarService(statusSvc)
 
 	// Initialize services
 	a.MetadataService = services.NewMetadataService(notification)
