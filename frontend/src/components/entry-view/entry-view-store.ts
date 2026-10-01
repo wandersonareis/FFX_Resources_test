@@ -10,6 +10,7 @@ import {
   loadKindEntries,
 } from '@/lib/ffx/tree-data';
 import { editDraft } from '@/lib/ffx/edit-draft';
+import { entryProgress, type EntryProgress } from '@/lib/ffx/entry-progress';
 import { sendErrorNotification } from '@/lib/ffx/error-handler';
 import { isRefText } from '@/lib/ffx/hash-ref';
 import { SOURCE_LANG } from '@/lib/ffx/save-all';
@@ -25,6 +26,12 @@ export interface EntryViewState {
   selectedEntry: EntryRow | null;
   rows: dto.TextRow[];
   loading: boolean;
+  /**
+   * Progresso de tradução da entrada aberta (por row, todos os formatos):
+   * FIXA na abertura do arquivo — não acompanha rascunho em edição.
+   * null = sem arquivo aberto.
+   */
+  progress: EntryProgress | null;
   /** Estado de carga por item principal (árvore parcial). */
   kindStatus: Record<EntryKind, KindLoadStatus>;
   /** Geração do reload — patches de geração passada são descartados. */
@@ -105,6 +112,7 @@ function createEntryStore(version: GameVersionId) {
     selectedEntry: null,
     rows: [],
     loading: true,
+    progress: null,
     kindStatus: Object.fromEntries(kinds.map((k) => [k, 'loading' as const])) as Record<
       EntryKind,
       KindLoadStatus
@@ -146,6 +154,8 @@ export function createEntryView(version: GameVersionId): EntryView {
       patch({ activeKind: entry.kind, selectedEntry: entry });
       const full = await loadEntry(entry.kind, entry.id, version);
       editDraft.setBase(version, entry.kind, entry.id, full);
+      // Progresso por row: FIXO na abertura (não acompanha rascunho).
+      patch({ progress: entryProgress(full) });
       // Dedup: refs "$hash" (repetições idênticas) ficam fora da tabela —
       // o tradutor traduz cada texto uma vez. A base do rascunho guarda a
       // entry COMPLETA; o backend resolve refs e propaga o texto editado
@@ -156,7 +166,7 @@ export function createEntryView(version: GameVersionId): EntryView {
       patch({ rows });
     } catch (error) {
       sendErrorNotification(error);
-      patch({ selectedEntry: null, rows: [] });
+      patch({ selectedEntry: null, rows: [], progress: null });
     } finally {
       patch({ loading: false });
     }
@@ -218,7 +228,7 @@ export function createEntryView(version: GameVersionId): EntryView {
           if (current && current.kind === kind) {
             const found = entries.find((e) => e.id === current.id);
             if (!found) {
-              patch({ selectedEntry: null, rows: [] });
+              patch({ selectedEntry: null, rows: [], progress: null });
             } else {
               await selectEntry(found);
             }

@@ -9,6 +9,7 @@ import type { GameVersionId } from '@/lib/ffx/game-version';
 import { useEditDraft } from '@/lib/ffx/edit-draft';
 import { useWailsEvent } from '@/lib/ffx/use-wails-event';
 import { saveAllDrafts } from '@/lib/ffx/save-all';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   createEntryView,
@@ -31,6 +32,7 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
   const activeKind = useSelector(view.store, (s) => s.activeKind);
   const selectedEntry = useSelector(view.store, (s) => s.selectedEntry);
   const loading = useSelector(view.store, (s) => s.loading);
+  const progress = useSelector(view.store, (s) => s.progress);
   const [saving, setSaving] = useState(false);
 
   const hasDirty = snapshot.hasDirty;
@@ -68,10 +70,22 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
 
       <main className="flex-1 min-w-0 p-3 px-4 overflow-auto">
         <div className="flex items-center justify-between gap-4">
-          <h3 className="text-lg font-semibold">
+          <h3 className="text-lg font-semibold flex items-center gap-3">
             {KIND_LABELS[activeKind]}
             {selectedEntry ? (
               <span className="font-normal opacity-70"> · {selectedEntry.label}</span>
+            ) : null}
+            {progress ? (
+              <Badge
+                variant="outline"
+                className={
+                  progress.translated >= progress.total && progress.total > 0
+                    ? 'text-emerald-700 border-emerald-300 dark:text-emerald-400 dark:border-emerald-800'
+                    : 'text-muted-foreground'
+                }
+              >
+                {progress.translated}/{progress.total} linhas traduzidas ({progress.pct}%)
+              </Badge>
             ) : null}
           </h3>
           <Button disabled={!hasDirty || saving} onClick={() => void onSaveAll()}>
