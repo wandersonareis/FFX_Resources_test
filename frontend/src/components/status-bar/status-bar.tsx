@@ -108,7 +108,7 @@ export function StatusBar() {
                 setOpenPanel((p) => (p === 'progress' ? null : 'progress'));
               }
             }}
-            className="h-6 w-fit max-w-[min(45ch,50vw)] cursor-pointer items-center px-2 py-0 grid-cols-[auto_auto] shadow-none"
+            className="h-6 w-fit max-w-[min(45ch,50vw)] cursor-pointer items-center border-0 bg-transparent px-2 py-0 grid-cols-[auto_auto] shadow-none"
           >
             <Info className="shrink-0 opacity-70" />
             <span className="truncate">
@@ -140,7 +140,7 @@ export function StatusBar() {
               }
             }}
             className={cn(
-              'h-6 w-fit max-w-[min(70ch,55vw)] cursor-pointer items-center px-2 py-0 grid-cols-[auto_auto] shadow-none',
+              'h-6 w-fit max-w-[min(70ch,55vw)] cursor-pointer items-center border-0 bg-transparent px-2 py-0 grid-cols-[auto_auto] shadow-none',
               warningPanelOpen && 'font-medium'
             )}
           >
