@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
 	"ffxresources/backend/common"
 )
@@ -14,26 +13,19 @@ import (
 type FileStore struct {
 	files map[string]*LockitFile
 	// stamps registra, por chave, o carimbo físico dos binários de cada
-	// idioma na carga (path/size/mtime). Permite detectar mudanças no disco
-	// (tradução copiada/manual para mods/) e recarregar na próxima leitura.
-	stamps map[string]map[string]fileStamp
+	// idioma na carga. Permite detectar mudanças no disco (tradução
+	// copiada/manual para mods/) e recarregar na próxima leitura.
+	stamps map[string]map[string]common.FileStamp
 }
 
 // DataStore é o store global dos arquivos lockit.
 var DataStore = NewFileStore()
 
-// fileStamp identifica o estado físico de um binário carregado.
-type fileStamp struct {
-	path    string
-	size    int64
-	modTime time.Time
-}
-
 // NewFileStore constrói um store vazio.
 func NewFileStore() *FileStore {
 	return &FileStore{
 		files:  map[string]*LockitFile{},
-		stamps: map[string]map[string]fileStamp{},
+		stamps: map[string]map[string]common.FileStamp{},
 	}
 }
 
@@ -80,7 +72,7 @@ func (s *FileStore) Clear() {
 }
 
 // stampOf devolve o carimbo registrado para a chave (nil = sem carimbo).
-func (s *FileStore) stampOf(key string) map[string]fileStamp {
+func (s *FileStore) stampOf(key string) map[string]common.FileStamp {
 	if s == nil {
 		return nil
 	}
@@ -90,27 +82,21 @@ func (s *FileStore) stampOf(key string) map[string]fileStamp {
 // stampForResolve carimba o binário de cada idioma do layout na árvore
 // preferida (mesma resolução da leitura: mods-first). Idioma ausente no disco
 // não tem entrada no mapa — a carga o ignora da mesma forma.
-func stampFor(l Layout) map[string]fileStamp {
+func stampFor(l Layout) map[string]common.FileStamp {
 	if len(l.Languages) == 0 {
 		l.Languages = common.SupportedLanguageCodes()
 	}
-	out := make(map[string]fileStamp, len(l.Languages))
+	out := make(map[string]common.FileStamp, len(l.Languages))
 	for _, lang := range l.Languages {
-		acc, err := common.NewFileAccessorFrom(filepath.FromSlash(l.RelPath(lang)), common.SourcePreferred)
-		if err != nil || !acc.Exists {
-			continue
-		}
-		out[lang] = fileStamp{
-			path:    acc.ResolvedPath,
-			size:    acc.Size,
-			modTime: acc.Info.ModTime(),
+		if stamp, ok := common.StampFile(filepath.FromSlash(l.RelPath(lang))); ok {
+			out[lang] = stamp
 		}
 	}
 	return out
 }
 
 // stampsEqual compara dois carimbos por idioma (path + size + mtime).
-func stampsEqual(a, b map[string]fileStamp) bool {
+func stampsEqual(a, b map[string]common.FileStamp) bool {
 	if len(a) != len(b) {
 		return false
 	}

@@ -7,12 +7,19 @@ import (
 
 type ObjectFileStore struct {
 	files map[string]datastore.IBinaryFile
+	// stamps registra, por chave, o carimbo físico do binário na carga
+	// (path/size/mtime). Permite detectar binário modificado no disco
+	// (tradução copiada/manual para mods/) e recarregar na próxima leitura.
+	stamps map[string]common.FileStamp
 }
 
 var ObjectFileDataStore = NewObjectFileStore()
 
 func NewObjectFileStore() *ObjectFileStore {
-	return &ObjectFileStore{files: map[string]datastore.IBinaryFile{}}
+	return &ObjectFileStore{
+		files:  map[string]datastore.IBinaryFile{},
+		stamps: map[string]common.FileStamp{},
+	}
 }
 
 func (s *ObjectFileStore) Register(key string, f datastore.IBinaryFile) {
@@ -20,6 +27,24 @@ func (s *ObjectFileStore) Register(key string, f datastore.IBinaryFile) {
 		return
 	}
 	s.files[key] = f
+}
+
+// RegisterWithStamp publica o arquivo com o carimbo físico vigiado.
+func (s *ObjectFileStore) RegisterWithStamp(key string, f datastore.IBinaryFile, stamp common.FileStamp) {
+	if s == nil || f == nil {
+		return
+	}
+	s.files[key] = f
+	s.stamps[key] = stamp
+}
+
+// StampOf devolve o carimbo registrado (ok=false = sem carimbo/vigia).
+func (s *ObjectFileStore) StampOf(key string) (common.FileStamp, bool) {
+	if s == nil {
+		return common.FileStamp{}, false
+	}
+	stamp, ok := s.stamps[key]
+	return stamp, ok
 }
 
 func (s *ObjectFileStore) Get(key string) (datastore.IBinaryFile, bool) {
@@ -76,4 +101,5 @@ func (s *ObjectFileStore) Clear() {
 		return
 	}
 	clear(s.files)
+	clear(s.stamps)
 }

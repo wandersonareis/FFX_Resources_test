@@ -332,10 +332,16 @@ func EnsureHelpLoaded(version common.GameVersion) error {
 	if err := binFile.LoadFromBinary(); err != nil {
 		return fmt.Errorf("helpfile: falha ao carregar painéis de %s: %w", version, err)
 	}
+	names := make([]string, 0, binFile.GetObjects().Len())
 	for i := 0; i < binFile.GetObjects().Len(); i++ {
 		if obj, ok := binFile.GetObjects().Get(i).(*HelpKeyedStringFile); ok {
 			SetHelp(version, obj)
+			names = append(names, obj.Name)
 		}
 	}
+	// Vigia de frescura: carimbo físico de cada painel — binário modificado
+	// no disco (tradução copiada em mods/) recarrega na próxima leitura
+	// (EnsureHelpFresh).
+	StampAllPanels(version, names)
 	return nil
 }

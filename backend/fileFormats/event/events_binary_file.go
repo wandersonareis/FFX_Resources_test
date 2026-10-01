@@ -133,6 +133,14 @@ func (b *EventsBinaryFile) LoadFromBinary() error {
 	}
 
 	b.Infos = loadedInfos
+	// Vigia de frescura: carimbo físico de cada evento carregado — binário
+	// modificado no disco (tradução copiada em mods/) recarrega o evento
+	// na próxima leitura (EnsureEventFresh).
+	ids := make([]string, 0, loadedInfos.Len())
+	for _, info := range loadedInfos.Items() {
+		ids = append(ids, info.EventID)
+	}
+	stampAllEvents(b.Version, ids)
 	common.LogInfo("events loaded: %d", loadedInfos.Len())
 	return nil
 }

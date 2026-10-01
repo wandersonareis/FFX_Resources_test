@@ -16,6 +16,7 @@ import (
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/fileFormats/helpfile"
 	"ffxresources/backend/fileFormats/lockit"
+	"ffxresources/backend/fileFormats/macrodic"
 	"ffxresources/backend/fileFormats/objectsfile"
 	jsonfmt "ffxresources/backend/formatters/json"
 	strfmt "ffxresources/backend/formatters/strings"
@@ -869,6 +870,12 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 // data/ degrada (sem `original`) em vez de quebrar o view.
 func (s *MetadataService) GetEntry(kind, id string, version common.GameVersion) (dto.FileEntry, error) {
 	kind = strings.ToLower(strings.TrimSpace(kind))
+	// Frescura do store: binário modificado no disco (tradução copiada/
+	// editada em mods/) recarrega antes de servir. O store mudou → o view
+	// cru dedupado dos kinds dedupados também sai.
+	if s.refreshEntryStore(kind, id, version) {
+		clearDedupViewCache()
+	}
 	entry, base, order, err := s.currentEntry(kind, id, version)
 	if err != nil {
 		return dto.FileEntry{}, err
@@ -971,6 +978,42 @@ func (s *MetadataService) currentEntry(kind, id string, version common.GameVersi
 	return entry, 0, nil, nil
 }
 
+// refreshEntryStore vigia a frescura do store da entrada antes de servir:
+// binário modificado no disco (tradução copiada/editada manualmente em
+// mods/) recarrega — mesmo vigia do lockit, estendido aos demais formatos.
+// Devolve true quando o store foi atualizado (o chamador invalida caches
+// derivados).
+func (s *MetadataService) refreshEntryStore(kind, id string, version common.GameVersion) bool {
+	switch kind {
+	case KindEvents:
+		if version == common.GameVersionLastMiss {
+			// LastMiss divide a árvore do ffx2: os carimbos bulk foram
+			// tomados com a versão pedida (lm) — mesma régua.
+			return event.EnsureEventFresh(version, id)
+		}
+		return event.EnsureEventFresh(version, id)
+	case KindObjects:
+		// A reutilização vigiada roda em buildObjectsCollection (GetCollection);
+		// GetEntry objects passa por lá.
+		return false
+	case KindMacro:
+		if version == common.GameVersionLastMiss {
+			return false
+		}
+		return macrodic.EnsureMacrosFresh(version)
+	case KindLockit:
+		// Vigiado dentro de LoadFromStore (lockitFiles/ApplyLockitDTO).
+		return false
+	case KindHelp:
+		if version != common.GameVersionFFX {
+			return false
+		}
+		return helpfile.EnsureHelpFresh(version)
+	default:
+		return false
+	}
+}
+
 // ListLanguages devolve os idiomas disponíveis em formato chave/valor
 // (Code para arquivos, Name para exibição). Todas as versões usam
 // os mesmos idiomas.
@@ -1018,6 +1061,11 @@ func (s *MetadataService) GetCollection(kind string, version common.GameVersion,
 	case KindEvents:
 		if err := ensureEventsLoaded(version); err != nil {
 			return nil, err
+		}
+		// Frescura bulk (export/lote): binário modificado no disco
+		// recarrega antes de montar o DTO.
+		if event.EnsureAllEventsFresh(version, ids) {
+			clearDedupViewCache()
 		}
 		return builders.BuildEventsDTO(version, ids)
 	case KindObjects:
@@ -1146,14 +1194,13 @@ func (s *MetadataService) buildObjectsCollection(version common.GameVersion, ids
 	out := make(dto.Collection, len(layouts))
 	for _, layout := range layouts {
 		key := objectsfile.FileLayoutKey(version, layout.PatternPath())
-		binFile, ok := objectsfile.ObjectFileDataStore.Get(key)
-		if !ok {
-			var lerr error
-			binFile, lerr = objectsfile.LoadObjectFileFromStoreByLayout(layout)
-			if lerr != nil {
-				common.LogVerbose("skip objects %s: %v", key, lerr)
-				continue
-			}
+		// Sempre via LoadObjectFileFromStoreByLayout: a reutilização é
+		// vigiada pelo carimbo físico — binário modificado no disco
+		// (tradução copiada em mods/) recarrega na próxima leitura.
+		binFile, lerr := objectsfile.LoadObjectFileFromStoreByLayout(layout)
+		if lerr != nil {
+			common.LogVerbose("skip objects %s: %v", key, lerr)
+			continue
 		}
 		if binFile == nil || binFile.GetObjects() == nil || binFile.GetObjects().IsEmpty() {
 			continue

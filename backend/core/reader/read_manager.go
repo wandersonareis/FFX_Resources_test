@@ -21,6 +21,10 @@ func PrepareStringMacros(filename, localization string, version common.GameVersi
 		common.LogVerbose("Skipping unreadable macro dictionary file %s: %v", filename, err)
 		return nil
 	}
+	// Vigia de frescura: carimbo físico da localização carregada — binário
+	// modificado no disco república os macros na próxima leitura
+	// (macrodic.EnsureMacrosFresh).
+	macrodic.StampMacros(version, localization)
 	return nil
 }
 

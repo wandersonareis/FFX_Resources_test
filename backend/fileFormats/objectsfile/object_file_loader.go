@@ -2,6 +2,7 @@ package objectsfile
 
 import (
 	"fmt"
+	"path/filepath"
 	"sync"
 
 	"ffxresources/backend/common"
@@ -141,15 +142,42 @@ func LoadObjectFileFromStore(version common.GameVersion, patternPath string) (da
 	return LoadObjectFileFromStoreByLayout(layout)
 }
 
+// ObjectBinaryRelPath devolve o caminho relativo (à raiz de gamefiles) do
+// binário do layout na localização padrão — a mesma resolução da leitura.
+func ObjectBinaryRelPath(l FileLayout) string {
+	return filepath.Join(
+		common.GetLocalizationRootForVersion(l.Version, common.DefaultLocalization),
+		l.PatternPath(),
+	)
+}
+
 // LoadObjectFileFromStoreByLayout carrega o arquivo do layout e registra a
 // instância no ObjectFileDataStore. Recebe o layout (versão + dir + arquivo)
 // em vez das primitivas separadas.
+//
+// A reutilização é vigiada pelo carimbo físico (path/size/mtime): binário
+// modificado no disco (tradução copiada/manual em mods/) recarrega na próxima
+// leitura, sem reiniciar o app — mesmo vigia do lockit.
 func LoadObjectFileFromStoreByLayout(l FileLayout) (datastore.IBinaryFile, error) {
 	key := FileLayoutKey(l.Version, l.PatternPath())
+	if f, ok := ObjectFileDataStore.Get(key); ok && f != nil {
+		current, hasStamp := common.StampFile(ObjectBinaryRelPath(l))
+		stored, wasStamped := ObjectFileDataStore.StampOf(key)
+		// Registrado sem carimbo (Register direto): entrada confiada.
+		if !wasStamped || (hasStamp && current == stored) {
+			return f, nil
+		}
+		common.LogVerbose("[ObjectStore] %s: binário mudou no disco — recarregando", l.FileName)
+	}
 	binFile, err := LoadObjectFile(l)
 	if err != nil {
 		return nil, err
 	}
-	ObjectFileDataStore.Register(key, binFile)
+	key = FileLayoutKey(l.Version, l.PatternPath())
+	if stamp, ok := common.StampFile(ObjectBinaryRelPath(l)); ok {
+		ObjectFileDataStore.RegisterWithStamp(key, binFile, stamp)
+	} else {
+		ObjectFileDataStore.Register(key, binFile)
+	}
 	return binFile, nil
 }
