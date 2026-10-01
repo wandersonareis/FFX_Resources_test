@@ -39,7 +39,7 @@ func sampleCollection() dto.Collection {
 					Text: map[string]string{"us": "Potion"},
 				},
 				{
-					Index: 0, Name: "description",
+					Index: 0, Name: "desc",
 					Hash: hash.Texts(map[string]string{"us": "Restores HP"}),
 					Text: map[string]string{"us": "Restores HP"},
 				},
@@ -98,7 +98,7 @@ func TestMarshalShapesOutput(t *testing.T) {
 		"ffx:azit0000:0:us║$",
 		"ffx:azit0000:0:sp║$",
 		"ffx:command:name:0:us║$",
-		"ffx:command:description:0:us║$",
+		"ffx:command:desc:0:us║$",
 		"ffx:chunk_00:name:0:us║$",
 		"Tom & Jerry",
 	} {

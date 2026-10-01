@@ -12,13 +12,13 @@ import (
 func TestSortRowsKeepsFieldOrderForEqualIndex(t *testing.T) {
 	rows := []dto.TextRow{
 		{Index: 0, Name: "name"},
-		{Index: 0, Name: "simplifiedName"},
-		{Index: 0, Name: "description"},
-		{Index: 0, Name: "simplifiedDescription"},
+		{Index: 0, Name: "name_simplified"},
+		{Index: 0, Name: "desc"},
+		{Index: 0, Name: "desc_simplified"},
 	}
 	dto.SortRows(rows)
 
-	want := []string{"name", "simplifiedName", "description", "simplifiedDescription"}
+	want := []string{"name", "name_simplified", "desc", "desc_simplified"}
 	for i, w := range want {
 		if rows[i].Name != w {
 			t.Fatalf("position %d: got %q, want %q (%+v)", i, rows[i].Name, w, rows)
@@ -31,13 +31,13 @@ func TestSortRowsOrdersByIndex(t *testing.T) {
 	rows := []dto.TextRow{
 		{Index: 2, Name: "name"},
 		{Index: 1, Name: "name"},
-		{Index: 1, Name: "description"},
+		{Index: 1, Name: "desc"},
 		{Index: 0, Name: "name"},
 	}
 	dto.SortRows(rows)
 
 	wantIndexes := []int{0, 1, 1, 2}
-	wantNames := []string{"name", "name", "description", "name"}
+	wantNames := []string{"name", "name", "desc", "name"}
 	for i := range rows {
 		if rows[i].Index != wantIndexes[i] || rows[i].Name != wantNames[i] {
 			t.Fatalf("position %d: got (%d,%q), want (%d,%q)",

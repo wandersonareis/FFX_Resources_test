@@ -119,7 +119,7 @@ func (p *NameDescriptionEffectAbilityTextObject) GetKeyedString(title string) da
 	switch title {
 	case "name":
 		return p.Name
-	case "description":
+	case "help":
 		return p.Description
 	case "effect":
 		return p.Effect
@@ -137,7 +137,7 @@ func (p *NameDescriptionEffectAbilityTextObject) GetKeyedString(title string) da
 // name, description, ability1..N e effect (mesma ordem de ToBytes).
 func (p *NameDescriptionEffectAbilityTextObject) OrderedFieldKeys() []string {
 	keys := make([]string, 0, 3+len(p.Abilities))
-	keys = append(keys, "name", "description")
+	keys = append(keys, "name", "help")
 	for i := range p.Abilities {
 		keys = append(keys, fmt.Sprintf("ability%d", i+1))
 	}

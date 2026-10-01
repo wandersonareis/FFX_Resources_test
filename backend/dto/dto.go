@@ -27,8 +27,8 @@ import "sort"
 // string; objects: índice do objeto; macro: índice da string no chunk;
 // lockit: posição no grupo do tipo, game 0..G-1 e utf8 G..G+U-1).
 // Name qualifica a row quando um índice carrega vários campos
-// (objects: chave do segmento — "name", "ability1", ...; macro:
-// "name"/"simplifiedName"; lockit: codificação da linha — "game" ou
+// (objects: chave do segmento — "name", "desc"/"help", "ability1", ...; macro:
+// "name"/"name_simplified"; lockit: codificação da linha — "game" ou
 // "utf8"). Vazio para events e omitido no JSON.
 //
 // Original é EXCLUSIVO de exibição (GetEntry): o texto do binário em

@@ -127,7 +127,7 @@ func TestJSONObjectFormatterRoundTrip(t *testing.T) {
 				},
 				{
 					Index: 1,
-					Name:  "description",
+					Name:  "desc",
 					Hash:  hash.Texts(map[string]string{"us": "Restores HP"}),
 					Text:  map[string]string{"us": "Restores HP"},
 				},
@@ -152,7 +152,7 @@ func TestJSONObjectFormatterRoundTrip(t *testing.T) {
 	if got := entry.Rows[0].Text["us"]; got != "Potion & More" {
 		t.Fatalf("roundtrip text mismatch: %q", got)
 	}
-	if entry.Rows[0].Name != "name" || entry.Rows[1].Name != "description" {
+	if entry.Rows[0].Name != "name" || entry.Rows[1].Name != "desc" {
 		t.Fatalf("field names not preserved: %+v", entry.Rows)
 	}
 	if entry.Metadata.Key != "ffx/battle/kernel/command.bin" {
@@ -165,7 +165,7 @@ func TestJSONObjectFormatterRoundTrip(t *testing.T) {
 func TestJSONPreservesLayoutFieldOrder(t *testing.T) {
 	f := json.NewJSONObjectFormatter()
 	version := common.GameVersionFFX
-	order := []string{"name", "simplifiedName", "description", "simplifiedDescription"}
+	order := []string{"name", "name_simplified", "desc", "desc_simplified"}
 	rows := make([]dto.TextRow, 0, len(order))
 	for _, name := range order {
 		text := map[string]string{"us": name + " text"}
@@ -213,7 +213,7 @@ func TestJSONMacroFormatterRoundTrip(t *testing.T) {
 				},
 				{
 					Index: 0,
-					Name:  "simplifiedName",
+					Name:  "name_simplified",
 					Hash:  hash.Texts(map[string]string{"us": "Tom & Jerry!"}),
 					Text:  map[string]string{"us": "Tom & Jerry!"},
 				},

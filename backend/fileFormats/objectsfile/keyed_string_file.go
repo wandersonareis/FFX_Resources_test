@@ -132,15 +132,16 @@ func (f *KeyedStringFile) OrderedFieldKeys() []string {
 	return keys
 }
 
-// GetName retorna o campo "name" se existir; senão o primeiro campo não-vazio.
+// GetName retorna o campo "name" se existir; senão o PRIMEIRO campo do
+// layout (o mesmo fallback do fluxo mapeado — chunkmap/object.go — que usa
+// segments[0]; o fallback por "primeiro não-vazio" divergia dos renames:
+// help/command como primeira entrada).
 func (f *KeyedStringFile) GetName(languageCode string) string {
 	if seg := f.byName["name"]; seg != nil {
 		return seg.GetLocalizedString(languageCode)
 	}
-	for _, seg := range f.segments {
-		if s := seg.GetLocalizedString(languageCode); s != "" {
-			return s
-		}
+	if len(f.segments) > 0 {
+		return f.segments[0].GetLocalizedString(languageCode)
 	}
 	return ""
 }
@@ -224,4 +225,13 @@ func FieldString(f *KeyedStringFile, name, languageCode string) string {
 		return seg.GetLocalizedString(languageCode)
 	}
 	return ""
+}
+
+// FieldStringAt é FieldString por POSIÇÃO no layout (nil-safe).
+func FieldStringAt(f *KeyedStringFile, index int, languageCode string) string {
+	keys := f.OrderedFieldKeys()
+	if index < 0 || index >= len(keys) {
+		return ""
+	}
+	return FieldString(f, keys[index], languageCode)
 }

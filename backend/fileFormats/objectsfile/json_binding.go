@@ -7,24 +7,33 @@ import (
 
 // staticFields lista as chaves de segmento estáticas conhecidas, na ordem
 // determinística de extração. Usado por ExportFieldTexts (dto_bridge.go).
+// Chaves no padrão do fluxo novo (snake_case dos structs C#).
 var staticFields = []struct {
 	key   string
 	label string
 }{
 	{"name", "name"},
-	{"simplifiedName", "simplified name"},
-	{"description", "description"},
-	{"simplifiedDescription", "simplified description"},
+	{"name_simplified", "name simplified"},
+	{"desc", "desc"},
+	{"desc_simplified", "desc simplified"},
+	{"help", "help"},
+	{"help_simplified", "help simplified"},
+	{"command", "command"},
+	{"command_simplified", "command simplified"},
+	{"switch_text", "switch text"},
+	{"switch_text_simplified", "switch text simplified"},
 	{"effect", "effect"},
-	{"effectDescription", "effect description"},
-	{"bonus", "bonus"},
-	{"BonusIconA", "bonus icon A"},
-	{"BonusIconB", "bonus icon B"},
-	{"BonusReserve", "bonus reserve"},
-	{"sensorText", "sensor text"},
-	{"simplifiedSensorText", "simplified sensor text"},
-	{"scanText", "scan text"},
-	{"simplifiedScanText", "simplified scan text"},
+	{"effect_description", "effect description"},
+	{"information", "information"},
+	{"creature_data_help", "creature data help"},
+	{"messages_0", "message 0"},
+	{"messages_1", "message 1"},
+	{"messages_2", "message 2"},
+	{"messages_3", "message 3"},
+	{"sensor_text", "sensor text"},
+	{"sensor_text_simplified", "sensor text simplified"},
+	{"scan_text", "scan text"},
+	{"scan_text_simplified", "scan text simplified"},
 }
 
 // staticFieldKeys devolve as chaves de staticFields na ordem canônica.
