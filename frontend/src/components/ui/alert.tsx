@@ -3,16 +3,16 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 
 const alertVariants = cva(
-  "group/alert relative grid w-full grid-cols-[0_auto] items-start gap-y-0.5 rounded-4xl border px-3.5 py-2 text-xs has-[>svg]:grid-cols-[auto_auto] has-[>svg]:gap-x-2.5 [&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current",
+  "group/alert relative grid w-full grid-cols-[0_auto] items-start gap-y-0.5 rounded-md border px-3.5 py-2 text-xs has-[>svg]:grid-cols-[auto_auto] has-[>svg]:gap-x-2.5 [&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current",
   {
     variants: {
       variant: {
-        default: "bg-card text-card-foreground",
-        info: "bg-primary/10 text-primary dark:bg-primary/20 [border-color:color-mix(in_oklab,var(--primary)_35%,transparent)]",
+        default: "border-border bg-card text-card-foreground",
+        info: "border-primary bg-primary text-primary-foreground",
         warning:
-          "bg-amber-500/10 text-amber-700 dark:text-amber-400 [border-color:color-mix(in_oklab,var(--amber-500)_35%,transparent)]",
+          "border-amber-600 bg-amber-500 text-amber-950 dark:border-amber-500",
         destructive:
-          "bg-destructive/10 text-destructive dark:bg-destructive/20 [border-color:color-mix(in_oklab,var(--destructive)_35%,transparent)]",
+          "border-destructive bg-destructive text-white",
       },
     },
     defaultVariants: {
@@ -55,7 +55,7 @@ function AlertDescription({ className, ...props }: React.ComponentProps<"div">) 
     <div
       data-slot="alert-description"
       className={cn(
-        "col-start-2 grid justify-items-start gap-1 text-muted-foreground text-sm [&_p]:leading-relaxed",
+        "col-start-2 grid justify-items-start gap-1 text-sm opacity-80 [&_p]:leading-relaxed",
         className
       )}
       {...props}
