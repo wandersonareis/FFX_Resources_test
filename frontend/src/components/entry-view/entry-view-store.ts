@@ -1,7 +1,7 @@
 import { createStore } from '@tanstack/store';
 import { dto } from '@/wailsjs/go/models';
 import { KIND_LABELS, type EntryKind } from '@/lib/ffx/display-names';
-import { eventGroupLabel, shortenedOf } from '@/lib/ffx/event-group-names';
+import { resolveEventGroup, shortenedOf } from '@/lib/ffx/event-group-names';
 import type { GameVersionId } from '@/lib/ffx/game-version';
 import {
   type EntryRow,
@@ -76,21 +76,44 @@ export interface EntryView {
   readonly actions: EntryActions;
 }
 
-/** Agrupa os arquivos de events por fragmento do eventID (grupo nomeado + contagem). */
+/**
+ * Agrupa os arquivos de events por fragmento do eventID. Fragmentos com nome
+ * no dicionário viram nós próprios; sem nome, fundem-se no primeiro fragmento
+ * nomeado do mesmo shortened (azmm entra em azit = Al Bhed Home). Órfão sem
+ * irmão nomeado exibe o próprio fragmento, igual ao nome da pasta no disco.
+ */
 function eventGroups(version: GameVersionId, entries: EntryRow[]): SideNode[] {
-  const groups = new Map<string, EntryRow[]>();
+  const byFragment = new Map<string, EntryRow[]>();
   for (const entry of entries) {
-    const short = shortenedOf(entry.id);
-    const list = groups.get(short) ?? [];
+    const fragment = shortenedOf(entry.id);
+    const list = byFragment.get(fragment) ?? [];
     list.push(entry);
-    groups.set(short, list);
+    byFragment.set(fragment, list);
   }
+  const fragments = [...byFragment.keys()];
+
+  // Fragmentos do mesmo shortened podem fundir-se em um alvo comum.
+  const fragmentsByTarget = new Map<string, string[]>();
+  const targetNames = new Map<string, string>();
+  for (const fragment of fragments) {
+    const { target, name } = resolveEventGroup(version, fragment, fragments);
+    if (name) targetNames.set(target, name);
+    const list = fragmentsByTarget.get(target) ?? [];
+    list.push(fragment);
+    fragmentsByTarget.set(target, list);
+  }
+
   const nodes: SideNode[] = [];
-  for (const short of [...groups.keys()].sort()) {
-    const files = groups.get(short) ?? [];
+  for (const [target, frags] of [...fragmentsByTarget.entries()].sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
+    const files = frags.flatMap((fragment) => byFragment.get(fragment) ?? []);
+    const name = targetNames.get(target);
     nodes.push({
-      id: `group:events:${short}`,
-      label: `${eventGroupLabel(version, short)} (${files.length})`,
+      id: `group:events:${target}`,
+      label: name
+        ? `${name} (${target.slice(0, 2)}) - ${files.length}`
+        : `${target} - ${files.length}`,
       kind: 'events' as EntryKind,
       children: files.map((entry) => ({
         id: `leaf:events:${entry.id}`,

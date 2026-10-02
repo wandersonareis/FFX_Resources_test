@@ -92,7 +92,53 @@ const GROUPS_BY_VERSION: Record<GameVersionId, Record<string, string>> = {
   lastmiss: FFX2_GROUPS,
 };
 
-/** Label do grupo (fragmento do eventID) da versão; fallback = o próprio fragmento. */
-export function eventGroupLabel(version: GameVersionId, shortened: string): string {
-  return GROUPS_BY_VERSION[version]?.[shortened] ?? shortened;
+/**
+ * Nomes legados por shortened (2 letras): grupos do FFX-2 que tinham nome mas
+ * cujo fragmento exato é desconhecido. Só entra em cena quando o shortened não
+ * tem nenhum fragmento nomeado.
+ */
+const LEGACY_SHORT_GROUPS: Record<string, string> = {
+  au: 'Esfera do Auron',
+  ca: 'Cartas',
+  en: 'Final',
+  ev: 'Evento',
+  pa: 'Esfera da Dor',
+  sa: 'Sabotagem',
+};
+
+export interface EventGroupResolution {
+  /** Fragmento do nó alvo (onde os arquivos deste grupo moram). */
+  target: string;
+  /** Nome do local; vazio quando não nomeado (o nó exibe o próprio fragmento). */
+  name: string;
+}
+
+/**
+ * Resolve o nó de um fragmento de eventID:
+ * - fragmento nomeado → nó próprio com o nome;
+ * - sem nome → entra no PRIMEIRO fragmento nomeado do mesmo shortened
+ *   (2 letras, ordem alfabética): azmm → azit (Al Bhed Home), bsyt → bsil
+ *   (Besaid Island);
+ * - nenhum nomeado no shortened → nome legado do shortened (Cartas...);
+ * - senão → nó anônimo exibindo o próprio fragmento, igual ao nome da pasta
+ *   no disco, para ser achado na busca da árvore de arquivos.
+ */
+export function resolveEventGroup(
+  version: GameVersionId,
+  fragment: string,
+  siblings: string[],
+): EventGroupResolution {
+  const names = GROUPS_BY_VERSION[version] ?? {};
+  const self = names[fragment];
+  if (self) return { target: fragment, name: self };
+
+  const namedSibling = siblings
+    .filter((s) => s !== fragment && names[s])
+    .sort()[0];
+  if (namedSibling) return { target: namedSibling, name: names[namedSibling] };
+
+  const legacy = LEGACY_SHORT_GROUPS[fragment.slice(0, 2)];
+  if (legacy) return { target: fragment, name: legacy };
+
+  return { target: fragment, name: '' };
 }
