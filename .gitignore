@@ -7,6 +7,8 @@ package.json.md5
 .idea
 .vscode
 ffxhdbats
+dds-phyre-tool-master/*
+edits
 *.log
 # Logs do app: um arquivo por início de app em logs/ ao lado do executável
 # (a rotação também deixa .gz aqui)
