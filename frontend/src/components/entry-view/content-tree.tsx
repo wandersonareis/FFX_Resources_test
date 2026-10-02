@@ -92,9 +92,10 @@ export function ContentTree({ view }: { view: EntryView }) {
   );
 
   // Checkbox: folha = 1 id; grupo = todos os filhos (uma notificação só).
+  // Imagem não tem checkbox (não é exportável como JSON/.strings).
   const checkNode = useCallback(
     (node: SideNode, checked: boolean) => {
-      if (!node.kind) return;
+      if (!node.kind || node.kind === 'images') return;
       const ids = node.entry
         ? [node.entry.id]
         : (node.children ?? [])

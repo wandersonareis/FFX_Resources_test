@@ -2,7 +2,13 @@
 // Backend envia apenas sumário canônico {id, key}; os labels PT-BR vivem aqui.
 // Nomes dos GRUPOS de events (fragmento do eventID) vivem em event-group-names.ts.
 
-export type EntryKind = 'events' | 'objects' | 'macro' | 'lockit' | 'help';
+export type EntryKind =
+  | 'events'
+  | 'objects'
+  | 'macro'
+  | 'lockit'
+  | 'help'
+  | 'images';
 
 export const KIND_LABELS: Record<EntryKind, string> = {
   events: 'Eventos',
@@ -10,6 +16,7 @@ export const KIND_LABELS: Record<EntryKind, string> = {
   macro: 'Dicionário',
   lockit: 'Loc Kit',
   help: 'Painel de ajuda',
+  images: 'Imagens',
 };
 
 /** Tipo de armazenamento de um registro do lockit. */
@@ -81,6 +88,9 @@ export const HELP_ENTRY_LABELS: Record<string, string> = {
   dvdcopy_page: 'Cópia de DVD (páginas)',
 };
 
+/** Prefixo da raiz da árvore de texturas (o resto vira a categoria). */
+export const IMAGE_TREE_PREFIX = 'gamedata/ps3data/';
+
 export function resolveEntryLabel(kind: EntryKind, id: string): string {
   if (kind === 'objects') {
     return OBJECTS_LABELS[id] ?? id;
@@ -95,6 +105,11 @@ export function resolveEntryLabel(kind: EntryKind, id: string): string {
   }
   if (kind === 'help') {
     return HELP_ENTRY_LABELS[id] ?? id;
+  }
+  if (kind === 'images') {
+    // Id é o caminho da textura; o header mostra o caminho relativo à raiz
+    // da versão (a árvore lateral agrupa por categoria/diretório).
+    return id.startsWith(IMAGE_TREE_PREFIX) ? id.slice(IMAGE_TREE_PREFIX.length) : id;
   }
   return id;
 }

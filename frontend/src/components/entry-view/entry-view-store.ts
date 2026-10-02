@@ -1,11 +1,16 @@
 import { createStore } from '@tanstack/store';
 import { dto } from '@/wailsjs/go/models';
-import { KIND_LABELS, type EntryKind } from '@/lib/ffx/display-names';
+import {
+  KIND_LABELS,
+  IMAGE_TREE_PREFIX,
+  type EntryKind,
+} from '@/lib/ffx/display-names';
 import { resolveEventGroup, shortenedOf } from '@/lib/ffx/event-group-names';
 import type { GameVersionId } from '@/lib/ffx/game-version';
 import {
   type EntryRow,
-  entryKindsFor,
+  allKindsFor,
+  loadImage,
   loadEntry,
   loadKindEntries,
 } from '@/lib/ffx/tree-data';
@@ -25,6 +30,12 @@ export interface EntryViewState {
   activeKind: EntryKind;
   selectedEntry: EntryRow | null;
   rows: dto.TextRow[];
+  /**
+   * Textura aberta (kind=images). null = nenhum / kind de texto.
+   * Guardada aqui junto da seleção para o painel de imagem não precisar de
+   * estado próprio (e para sobreviver à troca de componente).
+   */
+  image: dto.ImageEntry | null;
   loading: boolean;
   /**
    * Progresso de tradução da entrada aberta (por row, todos os formatos):
@@ -127,13 +138,14 @@ function eventGroups(version: GameVersionId, entries: EntryRow[]): SideNode[] {
 }
 
 function createEntryStore(version: GameVersionId) {
-  const kinds = entryKindsFor(version);
+  const kinds = allKindsFor(version);
   return createStore<EntryViewState>({
     roots: kinds.map((kind) => loadingRootNode(kind)),
     expanded: new Set<string>(),
     activeKind: 'events',
     selectedEntry: null,
     rows: [],
+    image: null,
     loading: true,
     progress: null,
     kindStatus: Object.fromEntries(kinds.map((k) => [k, 'loading' as const])) as Record<
@@ -158,6 +170,68 @@ function loadingStatuses(kinds: EntryKind[]): Record<EntryKind, KindLoadStatus> 
   ) as Record<EntryKind, KindLoadStatus>;
 }
 
+/** Estado "sem arquivo aberto" — limpa tabela, progresso e imagem juntos. */
+const NO_SELECTION: Partial<EntryViewState> = {
+  selectedEntry: null,
+  rows: [],
+  progress: null,
+  image: null,
+};
+
+/**
+ * Árvore de imagens: categoria (1º segmento após gamedata/ps3data) →
+ * diretório da textura (o trecho antes de /d3d11, que é só a variante de
+ * renderizador) → folha com o nome do arquivo. Os ids são caminhos longos e
+ * repetitivos; agrupar assim deixa a árvore navegável sem perder o caminho.
+ */
+function imageTreeNodes(entries: EntryRow[]): SideNode[] {
+  const byCategory = new Map<string, Map<string, EntryRow[]>>();
+  for (const entry of entries) {
+    const rel = entry.id.startsWith(IMAGE_TREE_PREFIX)
+      ? entry.id.slice(IMAGE_TREE_PREFIX.length)
+      : entry.id;
+    const firstSlash = rel.indexOf('/');
+    const category = firstSlash < 0 ? rel : rel.slice(0, firstSlash);
+    const rest = firstSlash < 0 ? '' : rel.slice(firstSlash + 1);
+    const lastSlash = rest.lastIndexOf('/');
+    const dir =
+      lastSlash < 0
+        ? ''
+        : rest.slice(0, lastSlash).replace(/(^|\/)d3d11$/, '');
+    const byDir = byCategory.get(category) ?? new Map<string, EntryRow[]>();
+    const list = byDir.get(dir) ?? [];
+    list.push(entry);
+    byDir.set(dir, list);
+    byCategory.set(category, byDir);
+  }
+
+  const nodes: SideNode[] = [];
+  for (const [category, byDir] of [...byCategory.entries()].sort(([a], [b]) =>
+    a.localeCompare(b)
+  )) {
+    const count = [...byDir.values()].reduce((n, list) => n + list.length, 0);
+    nodes.push({
+      id: `group:images:${category}`,
+      label: `${category} (${count})`,
+      kind: 'images',
+      children: [...byDir.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([dir, list]) => ({
+          id: `group:images:${category}/${dir}`,
+          label: dir ? `${dir} (${list.length})` : `raiz (${list.length})`,
+          kind: 'images' as EntryKind,
+          children: list.map((entry) => ({
+            id: `leaf:images:${entry.id}`,
+            label: entry.label,
+            kind: entry.kind,
+            entry,
+          })),
+        })),
+    });
+  }
+  return nodes;
+}
+
 /**
  * Store por aba de versão (TanStack Store): concentra o estado compartilhado
  * entre árvore, tabela e diálogo de tradução, eliminando prop drilling entre
@@ -175,6 +249,13 @@ export function createEntryView(version: GameVersionId): EntryView {
     patch({ loading: true });
     try {
       patch({ activeKind: entry.kind, selectedEntry: entry });
+      if (entry.kind === 'images') {
+        // Textura: sem rows/progresso — só a imagem (data URL) + metadados.
+        const image = await loadImage(entry.id, version);
+        patch({ image, rows: [], progress: null });
+        return;
+      }
+      patch({ image: null });
       const full = await loadEntry(entry.kind, entry.id, version);
       editDraft.setBase(version, entry.kind, entry.id, full);
       // Progresso por row: FIXO na abertura (não acompanha rascunho).
@@ -189,7 +270,7 @@ export function createEntryView(version: GameVersionId): EntryView {
       patch({ rows });
     } catch (error) {
       sendErrorNotification(error);
-      patch({ selectedEntry: null, rows: [], progress: null });
+      patch({ ...NO_SELECTION });
     } finally {
       patch({ loading: false });
     }
@@ -202,12 +283,14 @@ export function createEntryView(version: GameVersionId): EntryView {
     children:
       kind === 'events'
         ? eventGroups(version, entries)
-        : entries.map((entry) => ({
-            id: `leaf:${kind}:${entry.id}`,
-            label: entry.label,
-            kind: entry.kind,
-            entry,
-          })),
+        : kind === 'images'
+          ? imageTreeNodes(entries)
+          : entries.map((entry) => ({
+              id: `leaf:${kind}:${entry.id}`,
+              label: entry.label,
+              kind: entry.kind,
+              entry,
+            })),
   });
 
   /** Contador de geração: patches de geração passada são descartados. */
@@ -220,7 +303,7 @@ export function createEntryView(version: GameVersionId): EntryView {
    * o que já está aberto (expansão em union).
    */
   const loadAllKinds = async (gen: number): Promise<void> => {
-    const kinds = entryKindsFor(version);
+    const kinds = allKindsFor(version);
     await Promise.allSettled(
       kinds.map(async (kind) => {
         try {
@@ -228,15 +311,20 @@ export function createEntryView(version: GameVersionId): EntryView {
           if (gen !== generationCounter.current) return;
           store.setState((prev) => {
             const byKind = new Map(prev.roots.map((r) => [r.kind!, r] as const));
-            byKind.set(kind, buildKindNode(kind, entries));
+            // Kind sem nada (ex.: images numa versão sem texturas) não vira
+            // raiz vazia "Imagens (0)" — a árvore só mostra o que existe.
+            if (entries.length === 0) byKind.delete(kind);
+            else byKind.set(kind, buildKindNode(kind, entries));
             const roots = kinds
               .map((k) => byKind.get(k))
               .filter((n): n is SideNode => Boolean(n));
             // Expansão em UNION: o que já está aberto não colapsa.
             const expanded = new Set(prev.expanded);
-            expanded.add(`kind:${kind}`);
-            for (const child of byKind.get(kind)?.children ?? []) {
-              expanded.add(child.id);
+            if (entries.length > 0) {
+              expanded.add(`kind:${kind}`);
+              for (const child of byKind.get(kind)?.children ?? []) {
+                expanded.add(child.id);
+              }
             }
             return {
               ...prev,
@@ -251,7 +339,7 @@ export function createEntryView(version: GameVersionId): EntryView {
           if (current && current.kind === kind) {
             const found = entries.find((e) => e.id === current.id);
             if (!found) {
-              patch({ selectedEntry: null, rows: [], progress: null });
+              patch({ ...NO_SELECTION });
             } else {
               await selectEntry(found);
             }
@@ -271,7 +359,7 @@ export function createEntryView(version: GameVersionId): EntryView {
   /** Carga da aba: marca todos os principais como loading e carrega. */
   const reload = async (): Promise<void> => {
     const gen = ++generationCounter.current;
-    const kinds = entryKindsFor(version);
+    const kinds = allKindsFor(version);
     patch({ loading: true, kindStatus: loadingStatuses(kinds) });
     await loadAllKinds(gen);
     if (gen === generationCounter.current) {
@@ -286,12 +374,13 @@ export function createEntryView(version: GameVersionId): EntryView {
    */
   const coldReload = async (): Promise<void> => {
     const gen = ++generationCounter.current;
-    const kinds = entryKindsFor(version);
+    const kinds = allKindsFor(version);
     patch({
       roots: kinds.map((kind) => loadingRootNode(kind)),
       expanded: new Set<string>(),
       selectedEntry: null,
       rows: [],
+      image: null,
       kindStatus: loadingStatuses(kinds),
       generation: gen,
       loading: true,

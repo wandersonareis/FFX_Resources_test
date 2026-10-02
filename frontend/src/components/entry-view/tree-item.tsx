@@ -1,6 +1,12 @@
 'use client';
 
-import { ChevronDown, ChevronRight, FileText, Loader2 } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  Image as ImageIcon,
+  Loader2,
+} from 'lucide-react';
 import type { EntryKind } from '@/lib/ffx/display-names';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -33,12 +39,14 @@ export function TreeItem({
   // Raiz de kind (Eventos/Sistema/Dicionário) não tem checkbox: "extrair o
   // kind inteiro" é papel do botão Exportar na linha das abas.
   const isKindRoot = node.id.startsWith('kind:');
+  // Imagem não é texto: não entra na seleção de exportação (JSON/.strings).
+  const isImage = node.kind === 'images';
   const selected = node.kind
     ? (selectedByKind.get(node.kind) ?? EMPTY_IDS)
     : EMPTY_IDS;
 
   let checked: boolean | 'indeterminate' = false;
-  if (!isKindRoot) {
+  if (!isKindRoot && !isImage) {
     if (node.entry) {
       checked = selected.has(node.entry.id);
     } else {
@@ -80,7 +88,7 @@ export function TreeItem({
         ) : (
           <span className="w-8 shrink-0" />
         )}
-        {isKindRoot ? null : (
+        {isKindRoot || isImage ? null : (
           <Checkbox
             className="mr-1"
             checked={checked}
@@ -98,7 +106,13 @@ export function TreeItem({
           onClick={() => onSelect(node)}
           onKeyDown={(event) => onNodeKeyDown(event, node)}
         >
-          {node.entry ? <FileText size={18} className="mr-2 shrink-0" /> : null}
+          {node.entry ? (
+            node.entry.kind === 'images' ? (
+              <ImageIcon size={18} className="mr-2 shrink-0" />
+            ) : (
+              <FileText size={18} className="mr-2 shrink-0" />
+            )
+          ) : null}
           <span className="truncate">{node.label}</span>
         </Button>
       </div>

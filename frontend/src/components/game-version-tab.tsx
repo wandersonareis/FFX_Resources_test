@@ -18,6 +18,7 @@ import {
 } from '@/components/entry-view/entry-view-store';
 import { ContentTree } from '@/components/entry-view/content-tree';
 import { EntryTable } from '@/components/entry-view/entry-table';
+import { ImagePanel } from '@/components/entry-view/image-panel';
 import { TranslationDialog } from '@/components/entry-view/translation-dialog';
 import { PreloadVersions } from '@/wailsjs/go/main/App';
 import { GAME_VERSIONS } from '@/lib/ffx/game-version';
@@ -108,7 +109,13 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
         </div>
 
         {selectedEntry ? (
-          <EntryTable view={view} />
+          // images não tem rows: ocupa o lugar da tabela a pré-visualização
+          // + ações (extrair/salvar/importar) da textura.
+          activeKind === 'images' ? (
+            <ImagePanel view={view} />
+          ) : (
+            <EntryTable view={view} />
+          )
         ) : loading ? (
           <p className="mt-8 opacity-70">Carregando…</p>
         ) : (

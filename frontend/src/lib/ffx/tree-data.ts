@@ -2,11 +2,19 @@ import {
   ExportEntry,
   ExportJSON,
   ExportStrings,
+  ExtractImage,
+  GetImageEntry,
   GetTextEntry,
   ImportEntry,
   ImportFile,
+  ImportImage,
+  ImportImageGroup,
   ListTextEntries,
   PreviewImport,
+  RefreshImageDuplicates,
+  SaveImage,
+  SelectImageFile,
+  SelectImageSavePath,
   SelectImportFile,
 } from '@/wailsjs/go/main/App';
 import { dto, services } from '@/wailsjs/go/models';
@@ -28,6 +36,24 @@ export function entryKindsFor(version: GameVersionId): EntryKind[] {
   if (version === 'lastmiss') return ['events', 'objects'];
   if (version === 'ffx') return ['events', 'objects', 'macro', 'lockit', 'help'];
   return ['events', 'objects', 'macro', 'lockit'];
+}
+
+/**
+ * Kinds de IMAGEM (.dds.phyre). Só ffx e ffx2: a Last Mission divide a
+ * árvore do ffx2 mas não tem texturas próprias.
+ *
+ * Fica separado de entryKindsFor de propósito — esse é o conjunto de kinds
+ * de TEXTO (escopo do Exportar/JSON, save-all e preload), e imagem não
+ * participa de nada disso.
+ */
+export function imageKindsFor(version: GameVersionId): EntryKind[] {
+  if (version === 'lastmiss') return [];
+  return ['images'];
+}
+
+/** Todos os kinds da árvore da versão (texto + imagem), em ordem canônica. */
+export function allKindsFor(version: GameVersionId): EntryKind[] {
+  return [...entryKindsFor(version), ...imageKindsFor(version)];
 }
 
 /**
@@ -63,6 +89,108 @@ export async function loadEntry(
     id,
     version as Parameters<typeof GetTextEntry>[2]
   );
+}
+
+// ---- Imagens (.dds.phyre) ----
+// kind=images não é texto: não tem rows, não participa de export/import de
+// texto. Cada chamada abaixo espelha um binding do App.
+
+/** Carrega a textura e devolve a pré-visualização (data URL) + metadados. */
+export async function loadImage(
+  id: string,
+  version: GameVersionId
+): Promise<dto.ImageEntry> {
+  return GetImageEntry(
+    'images',
+    id,
+    version as Parameters<typeof GetImageEntry>[2]
+  );
+}
+
+/** Grava .dds e .png em mods/edits/images (cópia de trabalho). */
+export async function extractImage(
+  id: string,
+  version: GameVersionId
+): Promise<string[]> {
+  return ExtractImage(
+    'images',
+    id,
+    version as Parameters<typeof ExtractImage>[2]
+  );
+}
+
+/** Reempacota um .dds sobre o container pristine e grava em mods/. */
+export function importImage(
+  id: string,
+  ddsPath: string,
+  version: GameVersionId
+): Promise<void> {
+  return ImportImage(
+    'images',
+    id,
+    ddsPath,
+    version as Parameters<typeof ImportImage>[3]
+  );
+}
+
+/**
+ * Reempacota o MESMO .dds na textura e nas cópias idênticas dela (payload
+ * original igual — as réplicas da otimização do DVD). O backend valida o
+ * lote antes de gravar: alvo fora do grupo é recusado inteiro.
+ */
+export function importImageGroup(
+  id: string,
+  ddsPath: string,
+  targets: string[],
+  version: GameVersionId
+): Promise<dto.ImageImportResult> {
+  return ImportImageGroup(
+    'images',
+    id,
+    ddsPath,
+    targets,
+    version as Parameters<typeof ImportImageGroup>[4]
+  );
+}
+
+/**
+ * Descarta o índice de duplicatas em cache (rebuild na próxima abertura da
+ * textura) — existe para edição EXTERNA em hex editor, que o cache não vê.
+ */
+export function refreshImageDuplicates(version: GameVersionId): Promise<void> {
+  return RefreshImageDuplicates(
+    'images',
+    version as Parameters<typeof RefreshImageDuplicates>[1]
+  );
+}
+
+/** Salva .dds ou .png no caminho escolhido pelo usuário. */
+export function saveImage(
+  id: string,
+  format: 'dds' | 'png',
+  destPath: string,
+  version: GameVersionId
+): Promise<void> {
+  return SaveImage(
+    'images',
+    id,
+    format,
+    destPath,
+    version as Parameters<typeof SaveImage>[4]
+  );
+}
+
+/** Seletor nativo para escolher um .dds a importar. "" = cancelado. */
+export function selectImageFile(): Promise<string> {
+  return SelectImageFile();
+}
+
+/** Diálogo "Salvar como" para .dds/.png. "" = cancelado. */
+export function selectImageSavePath(
+  format: 'dds' | 'png',
+  suggestedName: string
+): Promise<string> {
+  return SelectImageSavePath(format, suggestedName);
 }
 
 /** Exporta a entrada em JSON + .strings (mods/edits). */
