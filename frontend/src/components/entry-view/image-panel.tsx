@@ -1,15 +1,20 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
+import { useHotkey } from '@tanstack/react-hotkeys';
 import { useSelector } from '@tanstack/react-store';
 import { toast } from 'sonner';
 import {
+  ChevronDown,
   Copy,
   Download,
   FolderInput,
   FlipVertical,
+  Maximize2,
   RefreshCw,
   Save,
+  Trash2,
+  ZoomIn,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,6 +26,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { parseError } from '@/lib/ffx/error-handler';
 import { resolveEntryLabel } from '@/lib/ffx/display-names';
 import {
@@ -49,6 +60,12 @@ function bytesLabel(bytes: number): string {
   if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${bytes} B`;
 }
+
+/**
+ * Níveis discretos do ciclo da lupa: tamanho real (1×) até 4× — depois de
+ * 4× volta ao tamanho real. O slider permite valores intermediários.
+ */
+const ZOOM_LEVELS = [1, 2, 3, 4];
 
 /**
  * Painel da textura (kind=images): ocupa o lugar da tabela Original/
@@ -108,9 +125,52 @@ export function ImagePanel({ view }: { view: EntryView }) {
    */
   const [menuTarget, setMenuTarget] = useState<EntryMenuTarget | null>(null);
 
+  const zoomLevel = zoom && zoom.id === entry?.id ? zoom.level : 'fit';
+  /** Lupa: próximo nível do ciclo — depois de 4× volta ao tamanho real. */
+  const zoomIn = () => {
+    const current = zoomLevel === 'fit' ? 0 : zoomLevel;
+    setZoom({
+      id: entry?.id ?? '',
+      level: ZOOM_LEVELS.find((l) => l > current) ?? ZOOM_LEVELS[0],
+    });
+  };
+  /** Passo atrás no ciclo; sem efeito no ajuste automático. */
+  const zoomOut = () => {
+    if (zoomLevel === 'fit') return;
+    const prev = [...ZOOM_LEVELS].reverse().find((l) => l < zoomLevel);
+    if (prev) setZoom({ id: entry?.id ?? '', level: prev });
+  };
+
+  // Zoom por teclado (TanStack Hotkeys): Mod+= / Mod+- andam no ciclo e
+  // Mod+0 volta ao ajuste; 1–4 vão direto ao nível SEM Mod (Mod+1/2/3 já
+  // trocam de aba no app-shell). Dígito só dispara fora de inputs e com o
+  // painel de textura na frente.
+  const zoomKeysEnabled = entry !== null && pendingImport === null;
+  useHotkey('Mod+=', zoomIn, { enabled: zoomKeysEnabled, ignoreInputs: true });
+  useHotkey('Mod+-', zoomOut, { enabled: zoomKeysEnabled, ignoreInputs: true });
+  useHotkey('Mod+0', () => setZoom(null), {
+    enabled: zoomKeysEnabled,
+    ignoreInputs: true,
+  });
+  useHotkey('1', () => setZoom({ id: entry?.id ?? '', level: 1 }), {
+    enabled: zoomKeysEnabled,
+    ignoreInputs: true,
+  });
+  useHotkey('2', () => setZoom({ id: entry?.id ?? '', level: 2 }), {
+    enabled: zoomKeysEnabled,
+    ignoreInputs: true,
+  });
+  useHotkey('3', () => setZoom({ id: entry?.id ?? '', level: 3 }), {
+    enabled: zoomKeysEnabled,
+    ignoreInputs: true,
+  });
+  useHotkey('4', () => setZoom({ id: entry?.id ?? '', level: 4 }), {
+    enabled: zoomKeysEnabled,
+    ignoreInputs: true,
+  });
+
   if (!entry) return null;
   const flipped = flippedId === entry.id;
-  const zoomLevel = zoom?.id === entry.id ? zoom.level : 'fit';
   if (loading && !image) return <p className="mt-8 opacity-70">Carregando…</p>;
   if (!image) {
     return (
@@ -344,24 +404,31 @@ export function ImagePanel({ view }: { view: EntryView }) {
             <Download size={16} />
             Extrair .dds + .png
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy !== null}
-            onClick={() => void onSave('dds')}
-          >
-            <Save size={16} />
-            Salvar .dds
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy !== null}
-            onClick={() => void onSave('png')}
-          >
-            <Save size={16} />
-            Salvar .png
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busy !== null}
+                title="Salvar como — o .dds é o padrão (sem perda, volta no repack); o .png é só para visualizar/distribuir"
+              >
+                <Save size={16} />
+                Exportar
+                <ChevronDown size={12} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => void onSave('dds')}>
+                <Save size={14} />
+                .dds
+                <span className="ml-2 text-xs opacity-60">padrão</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => void onSave('png')}>
+                <Download size={14} />
+                .png
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             size="sm"
             disabled={busy !== null}
@@ -399,33 +466,13 @@ export function ImagePanel({ view }: { view: EntryView }) {
           </Button>
           <Button
             size="sm"
-            variant={zoomLevel === 'fit' ? 'default' : 'outline'}
-            aria-pressed={zoomLevel === 'fit'}
-            title="Encaixa a textura no painel (escala suave do navegador)"
-            onClick={() => setZoom(null)}
+            variant="outline"
+            disabled={busy !== null}
+            title="Apaga a textura conforme o escopo (data/mods/ambos) — o diálogo pede confirmação"
+            onClick={() => openAction('delete')}
           >
-            Ajustar
-          </Button>
-          {[1, 2, 4].map((level) => (
-            <Button
-              key={level}
-              size="sm"
-              variant={zoomLevel === level ? 'default' : 'outline'}
-              aria-pressed={zoomLevel === level}
-              title={`Zoom ${level}× — 1 pixel da textura = ${level} na tela. Em 1× o que se vê é exatamente o dado; nítido aqui = o embaçado no Ajustar era só a escala`}
-              onClick={() => setZoom({ id: entry.id, level })}
-            >
-              {level}×
-            </Button>
-          ))}
-          <Button
-            size="sm"
-            variant={pixelated ? 'default' : 'outline'}
-            aria-pressed={pixelated}
-            title="Renderização pixelada (nearest-neighbor) — cada pixel como é, sem suavização do navegador"
-            onClick={() => setPixelated(!pixelated)}
-          >
-            Pixelado
+            <Trash2 size={16} />
+            Deletar
           </Button>
           <Button
             size="sm"
@@ -440,7 +487,8 @@ export function ImagePanel({ view }: { view: EntryView }) {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <div className="flex min-h-40 items-center justify-center overflow-auto rounded-md border bg-muted/40 p-4">
+          <div className="relative">
+            <div className="flex min-h-40 items-center justify-center overflow-auto rounded-md border bg-muted/40 p-4">
             {image.pngData ? (
               // eslint-disable-next-line @next/next/no-img-element -- data URL gerado pelo Go (next/image não otimiza nem precisa)
               <img
@@ -465,6 +513,61 @@ export function ImagePanel({ view }: { view: EntryView }) {
             ) : (
               <p className="opacity-70">Sem pré-visualização disponível.</p>
             )}
+            </div>
+            {/* Controles de zoom flutuando sobre a imagem: a lupa anda no
+                ciclo 1× (tamanho real) → 4× e volta; ajuste fino no slider. */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col items-end gap-1 p-2">
+              <div className="pointer-events-auto flex items-center gap-1 rounded-md border bg-background/85 p-1 shadow-sm backdrop-blur">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="size-7"
+                  title="Lupa: tamanho real → 2× → 3× → 4× → tamanho real (teclado: Mod+= / Mod+-; Mod+0 volta ao ajuste)"
+                  onClick={zoomIn}
+                >
+                  <ZoomIn size={16} />
+                </Button>
+                <Button
+                  size="sm"
+                  variant={zoomLevel === 'fit' ? 'default' : 'ghost'}
+                  className="h-7 px-2 text-xs"
+                  title="Encaixa a textura no painel (escala suave do navegador)"
+                  onClick={() => setZoom(null)}
+                >
+                  <Maximize2 size={14} />
+                  Ajustar
+                </Button>
+                <Button
+                  size="sm"
+                  variant={pixelated ? 'default' : 'ghost'}
+                  className="h-7 px-2 text-xs"
+                  title="Pixelado (nearest-neighbor) — cada pixel como é; distingue embaçamento da exibição do embaçamento do dado"
+                  onClick={() => setPixelated(!pixelated)}
+                >
+                  Pixelado
+                </Button>
+              </div>
+              {zoomLevel !== 'fit' ? (
+                <div className="pointer-events-auto flex items-center gap-2 rounded-md border bg-background/85 px-2 py-1 shadow-sm backdrop-blur">
+                  <span className="text-xs opacity-60">real</span>
+                  <input
+                    type="range"
+                    min={1}
+                    max={4}
+                    step={0.25}
+                    value={zoomLevel}
+                    aria-label="Zoom da pré-visualização"
+                    className="w-36 accent-primary"
+                    onChange={(e) =>
+                      setZoom({ id: entry.id, level: Number(e.target.value) })
+                    }
+                  />
+                  <span className="w-9 text-right text-xs tabular-nums opacity-60">
+                    {zoomLevel}×
+                  </span>
+                </div>
+              ) : null}
+            </div>
           </div>
 
           <dl className="space-y-2 text-sm">

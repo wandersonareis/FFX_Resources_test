@@ -391,13 +391,14 @@ func (a *App) SaveImage(kind, id, format, destPath string, version common.GameVe
 }
 
 // SelectImageFile abre o seletor nativo para escolher um .dds a importar.
+// Só .dds: é o único formato aceito no importe (o repack usa os bytes crus —
+// um PNG/PDV teria de ser re-encodado para DXT, com perda e sem mips).
 // Devolve "" quando o usuário cancela.
 func (a *App) SelectImageFile() string {
 	selection, err := runtime.OpenFileDialog(interactions.NewInteractionService().Ctx, runtime.OpenDialogOptions{
 		Title: "Selecionar textura para importar",
 		Filters: []runtime.FileFilter{
 			{DisplayName: "DDS (*.dds)", Pattern: "*.dds"},
-			{DisplayName: "Todos os arquivos (*.*)", Pattern: "*.*"},
 		},
 	})
 	if err != nil {
