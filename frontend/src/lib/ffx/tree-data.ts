@@ -1,10 +1,12 @@
 import {
+  DeleteImages,
   ExportEntry,
   ExportJSON,
   ExportStrings,
-  ExtractImage,
+  ExtractImageGroup,
   GetImageEntry,
   GetTextEntry,
+  ImageDuplicates,
   ImportEntry,
   ImportFile,
   ImportImage,
@@ -12,6 +14,8 @@ import {
   ListTextEntries,
   PreviewImport,
   RefreshImageDuplicates,
+  ReplicateImage,
+  RevealEntryFile,
   SaveImage,
   SelectImageFile,
   SelectImageSavePath,
@@ -107,18 +111,6 @@ export async function loadImage(
   );
 }
 
-/** Grava .dds e .png em mods/edits/images (cópia de trabalho). */
-export async function extractImage(
-  id: string,
-  version: GameVersionId
-): Promise<string[]> {
-  return ExtractImage(
-    'images',
-    id,
-    version as Parameters<typeof ExtractImage>[2]
-  );
-}
-
 /** Reempacota um .dds sobre o container pristine e grava em mods/. */
 export function importImage(
   id: string,
@@ -161,6 +153,88 @@ export function refreshImageDuplicates(version: GameVersionId): Promise<void> {
   return RefreshImageDuplicates(
     'images',
     version as Parameters<typeof RefreshImageDuplicates>[1]
+  );
+}
+
+/**
+ * Cópias da textura SEM carregar a imagem (só o índice memoizado): é o que
+ * o menu de contexto e os diálogos de extrair/replicar/deletar pedem para
+ * agir sobre o NÓ CLICADO, que pode não ser a entry selecionada.
+ */
+export function imageDuplicates(
+  id: string,
+  version: GameVersionId
+): Promise<dto.ImageDuplicates> {
+  return ImageDuplicates(
+    'images',
+    id,
+    version as Parameters<typeof ImageDuplicates>[2]
+  );
+}
+
+/** Extrai .dds + .png desta textura e das cópias escolhidas (lote). */
+export function extractImageGroup(
+  id: string,
+  targets: string[],
+  version: GameVersionId
+): Promise<dto.BatchResult> {
+  return ExtractImageGroup(
+    'images',
+    id,
+    targets,
+    version as Parameters<typeof ExtractImageGroup>[3]
+  );
+}
+
+/**
+ * Reempacota a IMAGEM ABERTA em mods/ das cópias escolhidas (o "dupe"): a
+ * fonte é o próprio conteúdo servido ao painel, sem diálogo de arquivo.
+ */
+export function replicateImage(
+  id: string,
+  targets: string[],
+  version: GameVersionId
+): Promise<dto.BatchResult> {
+  return ReplicateImage(
+    'images',
+    id,
+    targets,
+    version as Parameters<typeof ReplicateImage>[3]
+  );
+}
+
+/**
+ * Apaga os containers escolhidos no escopo pedido e SEMPRE os artefatos
+ * derivados (.dds/.png extraídos). Escopo vem explícito do diálogo.
+ */
+export function deleteImages(
+  id: string,
+  targets: string[],
+  scope: 'data' | 'mods' | 'both',
+  version: GameVersionId
+): Promise<dto.BatchResult> {
+  return DeleteImages(
+    'images',
+    id,
+    targets,
+    scope,
+    version as Parameters<typeof DeleteImages>[4]
+  );
+}
+
+/**
+ * "Abrir até o arquivo": abre o explorador já com o arquivo da entrada
+ * selecionado, resolvido mods-first (o arquivo que está valendo).
+ */
+export function revealEntry(
+  kind: EntryKind,
+  id: string,
+  version: GameVersionId
+): Promise<void> {
+  return RevealEntryFile(
+    kind,
+    id,
+    version as Parameters<typeof RevealEntryFile>[2]
   );
 }
 

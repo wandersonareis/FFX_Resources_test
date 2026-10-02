@@ -24,6 +24,21 @@ import type { SideNode } from './types';
 /** Estado de carga de um item principal da árvore. */
 export type KindLoadStatus = 'loading' | 'ready' | 'error';
 
+/**
+ * Ação de imagem em curso — extrair / replicar / deletar sobre um id
+ * CLICADO na árvore ou no painel (que pode não ser a entry selecionada).
+ *
+ * Vive no store porque o diálogo é renderizado uma vez só, na aba: menu e
+ * painel só abrem. `duplicates` null = "buscar no backend" (o menu não sabe
+ * as cópias do nó sob o cursor); `label` é o nome exibido no título.
+ */
+export type ImageActionState = {
+  type: 'extract' | 'replicate' | 'delete';
+  id: string;
+  label: string;
+  duplicates: dto.ImageDuplicate[] | null;
+};
+
 export interface EntryViewState {
   roots: SideNode[];
   expanded: Set<string>;
@@ -50,6 +65,11 @@ export interface EntryViewState {
   /** Linha aberta no modal do editor. */
   translationRow: dto.TextRow | null;
   dialogOpen: boolean;
+  /**
+   * Diálogo de ação de imagem aberto (extrair/replicar/deletar) ou null.
+   * Um só por aba — menu e painel apenas abrem.
+   */
+  imageAction: ImageActionState | null;
   /**
    * Pedido de foco na 1ª linha da tabela (ArrowRight na folha da árvore).
    * Vive no store (igual ao antigo pendingTableFocusRef) para sobreviver ao
@@ -79,6 +99,10 @@ export interface EntryActions {
   navigateRow(direction: 'prev' | 'next', value?: string): void;
   /** Fechamento do modal (value != undefined aplica a edição). */
   commitRow(value?: string): void;
+  /** Abre o diálogo de ação de imagem (extrair/replicar/deletar). */
+  openImageAction(action: ImageActionState): void;
+  /** Fecha o diálogo de ação de imagem (cancelar/ao concluir). */
+  closeImageAction(): void;
 }
 
 export interface EntryView {
@@ -155,6 +179,7 @@ function createEntryStore(version: GameVersionId) {
     generation: 0,
     translationRow: null,
     dialogOpen: false,
+    imageAction: null,
     pendingTableFocus: false,
   });
 }
@@ -338,10 +363,15 @@ export function createEntryView(version: GameVersionId): EntryView {
           const current = store.state.selectedEntry;
           if (current && current.kind === kind) {
             const found = entries.find((e) => e.id === current.id);
-            if (!found) {
-              patch({ ...NO_SELECTION });
-            } else {
+            if (found) {
               await selectEntry(found);
+            } else if (kind === 'images' && entries.length > 0) {
+              // Cópia oculta do grupo: a árvore só guarda o representante,
+              // mas o id continua servível (a lista "Repetidas" navega até
+              // ele) — quem decide se ainda existe é a carga, não a lista.
+              await selectEntry(current);
+            } else {
+              patch({ ...NO_SELECTION });
             }
           }
         } catch (error) {
@@ -432,6 +462,8 @@ export function createEntryView(version: GameVersionId): EntryView {
       }
       patch({ dialogOpen: false, translationRow: null });
     },
+    openImageAction: (action) => patch({ imageAction: action }),
+    closeImageAction: () => patch({ imageAction: null }),
   };
 
   return { version, store, actions };

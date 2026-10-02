@@ -24,8 +24,6 @@ import {
 import { parseError } from '@/lib/ffx/error-handler';
 import { resolveEntryLabel } from '@/lib/ffx/display-names';
 import {
-  extractImage,
-  exportDestination,
   importImage,
   importImageGroup,
   refreshImageDuplicates,
@@ -34,6 +32,8 @@ import {
   selectImageSavePath,
   type EntryRow,
 } from '@/lib/ffx/tree-data';
+import { EntryActionsMenu, type EntryMenuTarget } from './entry-actions-menu';
+import { copyState } from './image-duplicates';
 import type { EntryView } from './entry-view-store';
 
 /** De onde veio a imagem servida (o backend decide, por preferência). */
@@ -42,12 +42,6 @@ const SOURCE_LABELS: Record<string, string> = {
   png: '.png em disco',
   phyre: 'decodificado do .dds.phyre',
 };
-
-/** Rótulo de estado de uma cópia, relativo à textura aberta. */
-function copyState(d: { identical: boolean; modded: boolean }): string {
-  if (d.identical) return 'idêntica';
-  return d.modded ? 'importada' : 'pristine';
-}
 
 /** Tamanho legível para o desperdício do grupo de cópias. */
 function bytesLabel(bytes: number): string {
@@ -76,9 +70,7 @@ export function ImagePanel({ view }: { view: EntryView }) {
   const entry = useSelector(store, (s) => s.selectedEntry);
   const image = useSelector(store, (s) => s.image);
   const loading = useSelector(store, (s) => s.loading);
-  const [busy, setBusy] = useState<
-    'extract' | 'import' | 'save' | 'refresh' | null
-  >(null);
+  const [busy, setBusy] = useState<'import' | 'save' | 'refresh' | null>(null);
   /**
    * Textura com o preview espelhado (id) — SÓ VISUAL, um transform no
    * <img>: nenhum byte muda e nada é mandado de volta ao backend, que já
@@ -92,6 +84,12 @@ export function ImagePanel({ view }: { view: EntryView }) {
    * (null = sem diálogo aberto). Só aparece quando a imagem tem cópias.
    */
   const [pendingImport, setPendingImport] = useState<string | null>(null);
+  /**
+   * Menu de contexto do painel (o mesmo da árvore). O alvo é SEMPRE a
+   * textura aberta — todo o painel é o nó — então o target é fixo quando
+   * aberto e null quando fechado.
+   */
+  const [menuTarget, setMenuTarget] = useState<EntryMenuTarget | null>(null);
 
   if (!entry) return null;
   const flipped = flippedId === entry.id;
@@ -117,19 +115,18 @@ export function ImagePanel({ view }: { view: EntryView }) {
     await actions.selectEntry(target);
   };
 
-  const onExtract = async () => {
-    setBusy('extract');
-    try {
-      const paths = await extractImage(entry.id, version);
-      toast.success(
-        `Textura extraída: ${exportDestination(paths) || `${paths.length} arquivo(s)`}.`
-      );
-      await actions.selectEntry(entry);
-    } catch (error) {
-      toast.error(parseError(error));
-    } finally {
-      setBusy(null);
-    }
+  /**
+   * Ações de imagem (extrair / replicar / deletar) abrem o diálogo único da
+   * aba (ImageActionDialogs) com a textura aberta como alvo — ali ficam a
+   * escolha de alcance, o aviso de irreversível e a contagem de cópias.
+   */
+  const openAction = (type: 'extract' | 'replicate' | 'delete') => {
+    actions.openImageAction({
+      type,
+      id: entry.id,
+      label: entry.label,
+      duplicates,
+    });
   };
 
   const onSave = async (format: 'dds' | 'png') => {
@@ -203,7 +200,8 @@ export function ImagePanel({ view }: { view: EntryView }) {
     try {
       await refreshImageDuplicates(version);
       toast.success('Duplicatas reanalisadas.');
-      await actions.selectEntry(entry);
+      // Árvore junto: o índice é quem decide quais cópias ficam ocultas.
+      await actions.reload();
     } catch (error) {
       toast.error(parseError(error));
     } finally {
@@ -296,168 +294,202 @@ export function ImagePanel({ view }: { view: EntryView }) {
 
   const copyTotal = duplicates.length + 1;
 
-  return (
-    <div className="mt-4 flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={busy !== null}
-          onClick={() => void onExtract()}
-        >
-          <Download size={16} />
-          {busy === 'extract' ? 'Extraindo…' : 'Extrair .dds + .png'}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={busy !== null}
-          onClick={() => void onSave('dds')}
-        >
-          <Save size={16} />
-          Salvar .dds
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={busy !== null}
-          onClick={() => void onSave('png')}
-        >
-          <Save size={16} />
-          Salvar .png
-        </Button>
-        <Button
-          size="sm"
-          disabled={busy !== null}
-          onClick={() => void onImport()}
-        >
-          <FolderInput size={16} />
-          {busy === 'import'
-            ? 'Importando…'
-            : duplicates.length > 0
-              ? `Importar .dds… (${copyTotal} idênticas)`
-              : 'Importar .dds…'}
-        </Button>
-        <Button
-          size="sm"
-          variant={flipped ? 'default' : 'outline'}
-          aria-pressed={flipped}
-          title="Espelha a pré-visualização — só na tela, não altera nem reenvia a imagem"
-          onClick={() => setFlippedId(flipped ? null : entry.id)}
-        >
-          <FlipVertical size={16} />
-          {flipped ? 'Flip (on)' : 'Flip'}
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={busy !== null}
-          title="Reconstrói o índice de duplicatas — para textura editada fora do app (hex editor)"
-          onClick={() => void onRefresh()}
-        >
-          <RefreshCw size={16} />
-          {busy === 'refresh' ? 'Reanalisando…' : 'Reanalisar'}
-        </Button>
-      </div>
+  // Alvo do menu de contexto: o painel inteiro é a textura aberta.
+  const panelTarget: EntryMenuTarget = {
+    kind: 'images',
+    id: entry.id,
+    label: entry.label,
+  };
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="flex min-h-40 items-center justify-center overflow-auto rounded-md border bg-muted/40 p-4">
-          {image.pngData ? (
-            // eslint-disable-next-line @next/next/no-img-element -- data URL gerado pelo Go (next/image não otimiza nem precisa)
-            <img
-              src={image.pngData}
-              alt={entry.label}
-              // Só visual: o backend já envia na orientação do jogo; este
-              // espelhamento não toca no dado nem gera chamada ao Go.
-              style={{
-                transform: flipped ? 'scaleY(-1)' : undefined,
-                transition: 'transform 120ms ease-out',
-              }}
-              className="max-h-[65vh] max-w-full object-contain"
-            />
-          ) : (
-            <p className="opacity-70">Sem pré-visualização disponível.</p>
-          )}
+  // Botão direito em QUALQUER ponto do painel abre o mesmo menu da árvore
+  // (Exportar / Abrir até o arquivo / Replicar / Deletar).
+  return (
+    <EntryActionsMenu
+      view={view}
+      target={menuTarget}
+      onOpenChange={(open) => setMenuTarget(open ? panelTarget : null)}
+      initialId={entry.id}
+      initialDuplicates={duplicates}
+    >
+      <div
+        className="mt-4 flex flex-col gap-4"
+        onContextMenuCapture={() => setMenuTarget(panelTarget)}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy !== null}
+            title="Gera .dds e .png em mods/edits/images — o diálogo pergunta se é só esta ou todas as cópias"
+            onClick={() => openAction('extract')}
+          >
+            <Download size={16} />
+            Extrair .dds + .png
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy !== null}
+            onClick={() => void onSave('dds')}
+          >
+            <Save size={16} />
+            Salvar .dds
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy !== null}
+            onClick={() => void onSave('png')}
+          >
+            <Save size={16} />
+            Salvar .png
+          </Button>
+          <Button
+            size="sm"
+            disabled={busy !== null}
+            onClick={() => void onImport()}
+          >
+            <FolderInput size={16} />
+            {busy === 'import'
+              ? 'Importando…'
+              : duplicates.length > 0
+                ? `Importar .dds… (${copyTotal} idênticas)`
+                : 'Importar .dds…'}
+          </Button>
+          {duplicates.length > 0 ? (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy !== null}
+              title="Reempacota a imagem aberta em mods/ de cada cópia idêntica — sem escolher arquivo"
+              onClick={() => openAction('replicate')}
+            >
+              <Copy size={16} />
+              Replicar para {duplicates.length} cópia
+              {duplicates.length > 1 ? 's' : ''}
+            </Button>
+          ) : null}
+          <Button
+            size="sm"
+            variant={flipped ? 'default' : 'outline'}
+            aria-pressed={flipped}
+            title="Espelha a pré-visualização — só na tela, não altera nem reenvia a imagem"
+            onClick={() => setFlippedId(flipped ? null : entry.id)}
+          >
+            <FlipVertical size={16} />
+            {flipped ? 'Flip (on)' : 'Flip'}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={busy !== null}
+            title="Reconstrói o índice de duplicatas — para textura editada fora do app (hex editor)"
+            onClick={() => void onRefresh()}
+          >
+            <RefreshCw size={16} />
+            {busy === 'refresh' ? 'Reanalisando…' : 'Reanalisar'}
+          </Button>
         </div>
 
-        <dl className="space-y-2 text-sm">
-          {meta.map(([label, value]) => (
-            <div key={label} className="flex flex-col gap-1">
-              <dt className="text-xs uppercase tracking-wide opacity-60">
-                {label}
-              </dt>
-              <dd className="min-w-0">{value}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="flex min-h-40 items-center justify-center overflow-auto rounded-md border bg-muted/40 p-4">
+            {image.pngData ? (
+              // eslint-disable-next-line @next/next/no-img-element -- data URL gerado pelo Go (next/image não otimiza nem precisa)
+              <img
+                src={image.pngData}
+                alt={entry.label}
+                // Só visual: o backend já envia na orientação do jogo; este
+                // espelhamento não toca no dado nem gera chamada ao Go.
+                style={{
+                  transform: flipped ? 'scaleY(-1)' : undefined,
+                  transition: 'transform 120ms ease-out',
+                }}
+                className="max-h-[65vh] max-w-full object-contain"
+              />
+            ) : (
+              <p className="opacity-70">Sem pré-visualização disponível.</p>
+            )}
+          </div>
 
-      <Dialog
-        open={pendingImport !== null}
-        onOpenChange={(open) => {
-          if (!open) setPendingImport(null);
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Importar em {copyTotal} texturas?</DialogTitle>
-            <DialogDescription>
-              Esta imagem tem {duplicates.length} cópias idênticas — a
-              otimização do DVD repetiu o mesmo conteúdo por caminho. O mesmo
-              .dds pode ser reempacotado sobre todas para mantê-las
-              sincronizadas. Cópias divergentes serão sobrescritas.
-            </DialogDescription>
-          </DialogHeader>
+          <dl className="space-y-2 text-sm">
+            {meta.map(([label, value]) => (
+              <div key={label} className="flex flex-col gap-1">
+                <dt className="text-xs uppercase tracking-wide opacity-60">
+                  {label}
+                </dt>
+                <dd className="min-w-0">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
 
-          <ul className="max-h-56 space-y-1 overflow-auto rounded border bg-muted/40 p-2 text-xs">
-            <li className="flex items-center gap-1.5">
-              <span className="min-w-0 flex-1 truncate">
-                {resolveEntryLabel('images', entry.id)}
-              </span>
-              <Badge variant="outline" className="text-[10px]">
-                esta
-              </Badge>
-            </li>
-            {duplicates.map((d) => (
-              <li key={d.id} className="flex items-center gap-1.5">
+        <Dialog
+          open={pendingImport !== null}
+          onOpenChange={(open) => {
+            if (!open) setPendingImport(null);
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Importar em {copyTotal} texturas?</DialogTitle>
+              <DialogDescription>
+                Esta imagem tem {duplicates.length} cópias idênticas — a
+                otimização do DVD repetiu o mesmo conteúdo por caminho. O mesmo
+                .dds pode ser reempacotado sobre todas para mantê-las
+                sincronizadas. Cópias divergentes serão sobrescritas.
+              </DialogDescription>
+            </DialogHeader>
+
+            <ul className="max-h-56 space-y-1 overflow-auto rounded border bg-muted/40 p-2 text-xs">
+              <li className="flex items-center gap-1.5">
                 <span className="min-w-0 flex-1 truncate">
-                  {resolveEntryLabel('images', d.id)}
+                  {resolveEntryLabel('images', entry.id)}
                 </span>
-                <Badge
-                  variant={d.identical ? 'outline' : 'secondary'}
-                  className="text-[10px]"
-                >
-                  {copyState(d)}
+                <Badge variant="outline" className="text-[10px]">
+                  esta
                 </Badge>
               </li>
-            ))}
-          </ul>
+              {duplicates.map((d) => (
+                <li key={d.id} className="flex items-center gap-1.5">
+                  <span className="min-w-0 flex-1 truncate">
+                    {resolveEntryLabel('images', d.id)}
+                  </span>
+                  <Badge
+                    variant={d.identical ? 'outline' : 'secondary'}
+                    className="text-[10px]"
+                  >
+                    {copyState(d)}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              disabled={busy !== null}
-              onClick={() => setPendingImport(null)}
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="outline"
-              disabled={busy !== null}
-              onClick={() => pendingImport && void runImport(pendingImport, false)}
-            >
-              Só nesta
-            </Button>
-            <Button
-              disabled={busy !== null}
-              onClick={() => pendingImport && void runImport(pendingImport, true)}
-            >
-              <Copy size={16} className="mr-1" />
-              Importar em {copyTotal}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                disabled={busy !== null}
+                onClick={() => setPendingImport(null)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="outline"
+                disabled={busy !== null}
+                onClick={() => pendingImport && void runImport(pendingImport, false)}
+              >
+                Só nesta
+              </Button>
+              <Button
+                disabled={busy !== null}
+                onClick={() => pendingImport && void runImport(pendingImport, true)}
+              >
+                <Copy size={16} className="mr-1" />
+                Importar em {copyTotal}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </EntryActionsMenu>
   );
 }

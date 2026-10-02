@@ -18,31 +18,30 @@ import {
   useExportSelection,
 } from '@/lib/ffx/export-selection';
 import { Button } from '@/components/ui/button';
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from '@/components/ui/context-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { EntryActionsMenu, menuTargetOf } from './entry-actions-menu';
 import type { EntryView } from './entry-view-store';
 import type { SideNode } from './types';
 import { TreeItem } from './tree-item';
 
 /**
  * Sidebar da aba: árvore de kinds/grupos/arquivos com expandir, seleção de
- * exportação (checkbox tri-state), menu de contexto Exportar e navegação por
- * teclado. Estado da árvore vive no store da view; ctxNode é local.
+ * exportação (checkbox tri-state), menu de contexto (Exportar / Abrir até o
+ * arquivo / Deletar) e navegação por teclado. Estado da árvore vive no store
+ * da view; ctxNode é local.
  */
 export function ContentTree({ view }: { view: EntryView }) {
   const { version, store, actions } = view;
   const roots = useSelector(store, (s) => s.roots);
   const expanded = useSelector(store, (s) => s.expanded);
   const selectedEntry = useSelector(store, (s) => s.selectedEntry);
+  const image = useSelector(store, (s) => s.image);
   const loading = useSelector(store, (s) => s.loading);
-  const [ctxNode, setCtxNode] = useState<{ id: string; kind: EntryKind } | null>(
-    null
-  );
+  const [ctxNode, setCtxNode] = useState<{
+    id: string;
+    kind: EntryKind;
+    label: string;
+  } | null>(null);
   // Container da árvore, para ordenar os nós visíveis no foco por setas.
   const treeRef = useRef<HTMLDivElement>(null);
 
@@ -55,7 +54,26 @@ export function ContentTree({ view }: { view: EntryView }) {
     }
     return out;
   }, [selection, version]);
-  const ctxCount = ctxNode ? (selectedByKind.get(ctxNode.kind)?.size ?? 0) : 0;
+  // Alvo do menu: o nó clicado (folha leva o id; grupo/raiz, não).
+  const ctxTarget = useMemo(() => menuTargetOf(ctxNode), [ctxNode]);
+
+  /**
+   * Nó realçado para a seleção. Em imagens a árvore só guarda o
+   * REPRESENTANTE do grupo de cópias — quando a seleção é uma cópia oculta
+   * (a lista "Repetidas" navega até ela), o realce salta para o
+   * representante em vez de sumir da árvore.
+   */
+  const selectedId = useMemo(() => {
+    if (!selectedEntry) return null;
+    const base = `leaf:${selectedEntry.kind}:${selectedEntry.id}`;
+    if (selectedEntry.kind !== 'images' || !image) return base;
+    if (image.metadata.id !== selectedEntry.id) return base;
+    const group = [
+      selectedEntry.id,
+      ...(image.duplicates ?? []).map((d) => d.id),
+    ].sort();
+    return `leaf:images:${group[0]}`;
+  }, [selectedEntry, image]);
 
   // ---- Teclado: sidebar — ↑/↓ movem o foco entre nós visíveis; Enter
   // alterna expandir/fechar (grupo/raiz) ou abre o arquivo na tabela (folha).
@@ -112,7 +130,10 @@ export function ContentTree({ view }: { view: EntryView }) {
     const kind = ctxNode?.kind;
     if (!kind) return;
     const ids = exportSelection.idsOf(version, kind);
-    if (ids.length === 0) return;
+    if (ids.length === 0) {
+      toast.message(`Nenhum arquivo marcado para exportar (${kind}).`);
+      return;
+    }
     const format = exportSelection.formatOf();
     const label = EXPORT_FORMAT_LABELS[format];
     const toastId = 'export';
@@ -146,57 +167,56 @@ export function ContentTree({ view }: { view: EntryView }) {
           <RefreshCw size={20} className={loading ? 'animate-spin' : undefined} />
         </Button>
       </div>
-      <ContextMenu
-        open={ctxNode !== null && ctxCount > 0}
+      <EntryActionsMenu
+        view={view}
+        target={ctxTarget}
         onOpenChange={(open) => {
           if (!open) setCtxNode(null);
         }}
+        onExport={() => void onCtxExport()}
       >
-        <ContextMenuTrigger asChild>
-          <ScrollArea
-            id="entry-tree"
-            ref={treeRef}
-            className="flex-1 min-h-0"
-            onContextMenuCapture={(event) => {
-              const row = (event.target as HTMLElement).closest(
-                '[data-node-id]'
-              );
-              if (!(row instanceof HTMLElement)) {
-                setCtxNode(null);
-                return;
-              }
-              const kind = row.getAttribute(
-                'data-node-kind'
-              ) as EntryKind | null;
-              setCtxNode(
-                kind
-                  ? { id: row.getAttribute('data-node-id') ?? '', kind }
-                  : null
-              );
-            }}
-          >
-            {roots.map((node) => (
-              <TreeItem
-                key={node.id}
-                node={node}
-                depth={0}
-                expanded={expanded}
-                selectedId={selectedEntry ? `leaf:${selectedEntry.kind}:${selectedEntry.id}` : null}
-                selectedByKind={selectedByKind}
-                onToggle={actions.toggleNode}
-                onSelect={(n) => void actions.selectNode(n)}
-                onCheck={checkNode}
-                onNodeKeyDown={onNodeKeyDown}
-              />
-            ))}
-          </ScrollArea>
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          <ContextMenuItem onSelect={() => void onCtxExport()}>
-            Exportar
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
+        <ScrollArea
+          id="entry-tree"
+          ref={treeRef}
+          className="flex-1 min-h-0"
+          onContextMenuCapture={(event) => {
+            const row = (event.target as HTMLElement).closest(
+              '[data-node-id]'
+            );
+            if (!(row instanceof HTMLElement)) {
+              setCtxNode(null);
+              return;
+            }
+            const kind = row.getAttribute(
+              'data-node-kind'
+            ) as EntryKind | null;
+            setCtxNode(
+              kind
+                ? {
+                    id: row.getAttribute('data-node-id') ?? '',
+                    kind,
+                    label: row.getAttribute('data-node-label') ?? '',
+                  }
+                : null
+            );
+          }}
+        >
+          {roots.map((node) => (
+            <TreeItem
+              key={node.id}
+              node={node}
+              depth={0}
+              expanded={expanded}
+              selectedId={selectedId}
+              selectedByKind={selectedByKind}
+              onToggle={actions.toggleNode}
+              onSelect={(n) => void actions.selectNode(n)}
+              onCheck={checkNode}
+              onNodeKeyDown={onNodeKeyDown}
+            />
+          ))}
+        </ScrollArea>
+      </EntryActionsMenu>
     </aside>
   );
 }

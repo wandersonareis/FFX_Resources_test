@@ -18,6 +18,7 @@ import {
 } from '@/components/entry-view/entry-view-store';
 import { ContentTree } from '@/components/entry-view/content-tree';
 import { EntryTable } from '@/components/entry-view/entry-table';
+import { ImageActionDialogs } from '@/components/entry-view/image-action-dialogs';
 import { ImagePanel } from '@/components/entry-view/image-panel';
 import { TranslationDialog } from '@/components/entry-view/translation-dialog';
 import { PreloadVersions } from '@/wailsjs/go/main/App';
@@ -124,6 +125,9 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
       </main>
 
       <TranslationDialog view={view} />
+      {/* Ações de imagem (extrair/replicar/deletar): um diálogo só, aberto
+          pelo menu da árvore ou pelos botões do painel. */}
+      <ImageActionDialogs view={view} />
     </div>
   );
 }

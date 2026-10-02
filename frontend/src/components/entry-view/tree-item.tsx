@@ -67,6 +67,7 @@ export function TreeItem({
         className="flex items-center pr-1 pb-1"
         data-node-id={node.id}
         data-node-kind={node.kind}
+        data-node-label={node.label}
       >
         {node.loading ? (
           <span
