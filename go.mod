@@ -8,6 +8,7 @@ require (
 	github.com/onsi/gomega v1.36.2
 	github.com/rs/zerolog v1.35.1
 	github.com/wailsapp/wails/v2 v2.16.0
+	github.com/woozymasta/bcn v0.7.0
 	golang.org/x/text v0.42.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
