@@ -76,7 +76,7 @@ export interface EntryView {
   readonly actions: EntryActions;
 }
 
-/** Agrupa os arquivos de events por shortened (grupo nomeado + contagem). */
+/** Agrupa os arquivos de events por fragmento do eventID (grupo nomeado + contagem). */
 function eventGroups(version: GameVersionId, entries: EntryRow[]): SideNode[] {
   const groups = new Map<string, EntryRow[]>();
   for (const entry of entries) {

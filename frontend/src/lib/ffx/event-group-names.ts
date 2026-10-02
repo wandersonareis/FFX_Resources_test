@@ -1,118 +1,89 @@
-// Nomes de exibição dos GRUPOS de events (prefixo eventID[:2]).
-// O backend envia só o id canônico; o label PT-BR mora aqui (view decide).
+// Nomes de exibição dos GRUPOS de events (fragmento eventID[:4]).
+// O backend envia só o id canônico; o label mora aqui (view decide).
 //
-// Os valores marcados com TODO são chutes/ainda não levantados: o fallback é
-// exibir o próprio prefixo — troque pelo nome verdadeiro quando souber.
+// Chaves = os 4 primeiros caracteres do eventID (o mesmo nome da pasta em
+// event/obj_ps3/<xx>/<fragmento>/<fragmento>####/). Fragmentos sem nome na
+// tabela caem no fallback: o próprio fragmento é exibido (ex.: azmm, bsyt,
+// gemm, isho, kamm...). Troque pelo nome verdadeiro quando souber.
 // Este arquivo é o único dono dos nomes de grupo, para não poluir o resto.
 
 import type { GameVersionId } from './game-version';
 
-/** Shortened do eventID: azit0000 → "az". */
+/** Fragmento do eventID: azit0000 → "azit" (mesmo nome da pasta no disco). */
 export function shortenedOf(id: string): string {
-  return id.slice(0, 2).toLowerCase();
+  return id.slice(0, 4).toLowerCase();
 }
 
-/** FFX (ffx/event/obj_ps3/<az>/...). */
+/** FFX (ffx/event/obj_ps3/<fragmento>/<id>/<id>.bin). */
 const FFX_GROUPS: Record<string, string> = {
-  az: 'az', // TODO: nome real (azit*/azmm*)
-  bi: 'Bikanel',
-  bj: 'bj', // TODO: nome real (bjyt*)
-  bl: 'Blitzball',
-  bs: 'Besaid',
-  bv: 'bv', // TODO: nome real (bvyt*/bvmm*)
-  cd: 'Cid',
-  cr: 'Créditos',
-  dj: 'Djose',
-  do: 'Dome',
-  ga: 'Game Over',
-  ge: 'ge', // TODO: nome real (genk*)
-  gu: 'Guadosalam',
-  hi: 'hi', // TODO: nome real (hiku*)
-  ik: 'ik', // TODO: nome real (ikai*)
-  is: 'is', // TODO: nome real (isho*)
-  ka: 'Kamari',
-  ki: 'ki', // TODO: nome real (kino*)
-  kl: 'kl', // TODO: nome real (klyt*)
-  lc: 'lc', // TODO: nome real (lchb*)
-  lm: 'lm', // TODO: nome real (lmyt*) — NÃO é Last Mission
-  lo: 'Demo',
-  lu: 'Luca',
-  ma: 'Macalania',
-  mc: 'mc', // TODO: nome real (mcfr*/mcyt*)
-  mi: "Mi'ihen",
-  mm: 'mm', // TODO: nome real (mmmc*)
-  ms: 'ms', // TODO: nome real (msmm*)
-  mt: 'Mt. Gagazet',
-  na: 'na', // TODO: nome real (nagi*)
-  om: 'Omega',
-  op: 'Abertura',
-  pt: 'pt', // TODO: nome real (ptkl*)
-  sa: 'Amostra',
-  sc: 'Cenas',
-  si: 'Sin',
-  sl: 'sl', // TODO: nome real (slik*)
-  ss: 'ss', // TODO: nome real (ssbt*)
-  st: 'st', // TODO: nome real (stbv*)
-  sw: 'sw', // TODO: nome real (swin*)
-  sy: 'Sistema',
-  te: 'Teste',
-  zk: 'Zanarkand (ruínas)',
-  zn: 'Zanarkand',
+  // Locais do jogo (nome por fragmento da pasta).
+  azit: 'Al Bhed Home',
+  bika: 'Bikanel Desert',
+  bjyt: 'Baaj Temple',
+  bltz: 'Blitzball Stadium',
+  bsil: 'Besaid Island',
+  bsmm: 'Besaid Beach (Flashback)',
+  bsvr: 'Besaid Village',
+  bvyt: 'Besaid Temple',
+  cdsp: 'Al Bhed Boat & Underwater Ruins',
+  djyt: 'Djose Temple',
+  dome: 'Zanarkand Dome',
+  dream: 'Unknown',
+  genk: 'Moonflow',
+  grid: 'Sphere Grid Plane',
+  guad: 'Guadosalam',
+  hiku: 'Airship & World Map',
+  ikai: 'Farplane',
+  kami: 'Thunder Plains',
+  kino: 'Mushroom Rock',
+  klyt: 'Kilika Woods & Temple',
+  lchb: 'Luca',
+  lmyt: 'Remiem Temple',
+  luca: 'Luca Square & Pre-Rendered Backgrounds',
+  maca: 'Lake Macalania',
+  mcfr: 'Macalania Forest',
+  mcyt: 'Macalania Temple',
+  mihn: "Mi'hen Highroad",
+  mmmc: 'Unknown',
+  msmm: 'Via Purifico (Maze)',
+  mtgz: 'Mt. Gagazet, Caves, Upper Zanarkand',
+  nagi: 'Calm Lands & Cavern of the Stolen Fayth',
+  omeg: 'Omega Ruins',
+  ptkl: 'Kilika Town',
+  sins: 'Inside Sin',
+  slik: 'SS Liki',
+  ssbt: 'Airship Model',
+  stbv: 'Bevelle Highbridge, Via Purifico (Sewer), FFX-2 Map',
+  swin: 'SS Winno',
+  titl: 'Main Menu',
+  zkrn: 'Zanarkand Ruins',
+  znkd: 'Dream Zanarkand',
+  zzzz: 'Unknown',
+
+  // Pastas utilitárias (sufixo não é código de local).
+  cred: 'Créditos',
+  game: 'Game Over',
+  loop: 'Demo',
+  open: 'Abertura',
+  samp: 'Amostra',
+  scen: 'Cenas',
+  sysf: 'Sistema',
+  test: 'Teste',
 };
 
 /**
- * FFX-2 (ffx2/event/obj_ps3/<az>/...). O grupo "lm" é o conteúdo da Last
- * Mission: fica oculto aqui na listagem e aparece na aba lastmiss.
+ * FFX-2 (ffx2/event/obj_ps3/<fragmento>/...). Usa os MESMOS fragmentos do FFX
+ * (hiku, stbv, ikai, klyt...) + os específicos abaixo. O grupo "lmhi" é o
+ * conteúdo da Last Mission: fica oculto na listagem do ffx2 e aparece na aba
+ * lastmiss.
  */
-const FFX2_GROUPS: Record<string, string> = {
-  ak: 'ak', // TODO: nome real (akagi*)
-  au: 'Esfera do Auron',
-  bi: 'Bikanel',
-  bl: 'Blitzball',
-  bs: 'Besaid',
-  bv: 'bv', // TODO: nome real (bvyt*)
-  ca: 'Cartas',
-  cr: 'cr', // TODO: nome real (credits/crsm*)
-  dj: 'Djose',
-  dn: 'Dungeon', // TODO: confirmar (dnfr*)
-  do: 'Dome',
-  en: 'Final',
-  ev: 'Evento',
-  ga: 'Game Over',
-  ge: 'ge', // TODO: nome real (genk*)
-  gu: 'Guadosalam',
-  hi: 'hi', // TODO: nome real (hiku*)
-  ik: 'ik', // TODO: nome real (ikai*/ikaisphere)
-  iw: 'iw', // TODO: nome real (iwatuto*)
-  ka: 'Kamari',
-  ki: 'ki', // TODO: nome real (kino*)
-  kl: 'kl', // TODO: nome real (klyt*)
-  lc: 'lc', // TODO: nome real (lchb*)
-  lm: 'Last Mission',
-  lu: 'Luca',
-  ma: 'Macalania',
-  mc: 'mc', // TODO: nome real (mcfr*)
-  mi: "Mi'ihen",
-  mo: 'mo', // TODO: nome real (monlist/movplay)
-  mt: 'Mt. Gagazet',
-  na: 'na', // TODO: nome real (nagi*)
-  nu: 'nu', // TODO: nome real (nujisphere)
-  op: 'Abertura',
-  pa: 'Esfera da Dor',
-  pt: 'pt', // TODO: nome real (ptkl*)
-  sa: 'Sabotagem',
-  sp: 'Esferas', // TODO: confirmar (spdn*/spheresel)
-  st: 'st', // TODO: nome real (stbv*)
-  su: 'su', // TODO: nome real (suka*)
-  sy: 'sy', // TODO: nome real (syuin*)
-  te: 'Teste',
-  tu: 'tu', // TODO: nome real (tusinsel)
-  we: 'we', // TODO: nome real (wegn*)
-  yd: 'yd', // TODO: nome real (ydng*)
-  yo: 'yo', // TODO: nome real (yougo*)
-  zk: 'Zanarkand (ruínas)',
-  zn: 'Zanarkand',
+const FFX2_EXTRA: Record<string, string> = {
+  dnfr: 'Dungeon', // TODO: confirmar (dnfr####)
+  lmhi: 'Last Mission', // lmhiku####
+  spdn: 'Esferas', // TODO: confirmar (spdn*/spheresel)
+  sphe: 'Esferas', // TODO: confirmar
 };
+const FFX2_GROUPS: Record<string, string> = { ...FFX_GROUPS, ...FFX2_EXTRA };
 
 // lastmiss é expansão do ffx2 e lê a MESMA árvore de events.
 const GROUPS_BY_VERSION: Record<GameVersionId, Record<string, string>> = {
@@ -121,7 +92,7 @@ const GROUPS_BY_VERSION: Record<GameVersionId, Record<string, string>> = {
   lastmiss: FFX2_GROUPS,
 };
 
-/** Label do grupo shortened da versão (fallback = o próprio prefixo). */
+/** Label do grupo (fragmento do eventID) da versão; fallback = o próprio fragmento. */
 export function eventGroupLabel(version: GameVersionId, shortened: string): string {
   return GROUPS_BY_VERSION[version]?.[shortened] ?? shortened;
 }

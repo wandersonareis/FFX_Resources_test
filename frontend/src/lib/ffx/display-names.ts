@@ -1,6 +1,6 @@
 // Dicionário de exibição (frontend decide a apresentação).
 // Backend envia apenas sumário canônico {id, key}; os labels PT-BR vivem aqui.
-// Nomes dos GRUPOS de events (shortened) vivem em event-group-names.ts.
+// Nomes dos GRUPOS de events (fragmento do eventID) vivem em event-group-names.ts.
 
 export type EntryKind = 'events' | 'objects' | 'macro' | 'lockit' | 'help';
 
