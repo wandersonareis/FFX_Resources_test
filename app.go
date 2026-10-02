@@ -333,6 +333,54 @@ func (a *App) RefreshImageDuplicates(kind string, version common.GameVersion) er
 	return a.MetadataService.RefreshImageDuplicates(kind, version)
 }
 
+// ImageDuplicates devolve só as cópias da textura (sem a imagem em base64):
+// é o que o menu de contexto e os diálogos pedem para montar os alvos de
+// extrair / replicar / deletar sobre o NÓ CLICADO, que pode não ser a entry
+// selecionada.
+func (a *App) ImageDuplicates(kind, id string, version common.GameVersion) (dto.ImageDuplicates, error) {
+	if a.MetadataService == nil {
+		return dto.ImageDuplicates{}, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ImageDuplicates(kind, id, version)
+}
+
+// ExtractImageGroup extrai .dds + .png de uma textura e das cópias
+// escolhidas (o "só esta ou todas as cópias" do diálogo de extração).
+func (a *App) ExtractImageGroup(kind, id string, targets []string, version common.GameVersion) (dto.BatchResult, error) {
+	if a.MetadataService == nil {
+		return dto.BatchResult{}, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ExtractImageGroup(kind, id, targets, version)
+}
+
+// ReplicateImage reempacota a imagem ABERTA em mods/ das cópias escolhidas
+// — o dupe sem diálogo de arquivo: fonte é o próprio conteúdo do painel.
+func (a *App) ReplicateImage(kind, id string, targets []string, version common.GameVersion) (dto.BatchResult, error) {
+	if a.MetadataService == nil {
+		return dto.BatchResult{}, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ReplicateImage(kind, id, targets, version)
+}
+
+// DeleteImages apaga a textura e das cópias confirmadas no escopo pedido
+// ("data" | "mods" | "both"), sempre com os artefatos derivados. O escopo e
+// as cópias vêm EXPLICITAMENTE do diálogo — nunca é cascata implícita.
+func (a *App) DeleteImages(kind, id string, targets []string, scope string, version common.GameVersion) (dto.BatchResult, error) {
+	if a.MetadataService == nil {
+		return dto.BatchResult{}, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.DeleteImages(kind, id, targets, scope, version)
+}
+
+// RevealEntryFile abre o explorador com o arquivo da entrada selecionado
+// ("Abrir até o arquivo"), resolvido mods-first como o app lê.
+func (a *App) RevealEntryFile(kind, id string, version common.GameVersion) error {
+	if a.MetadataService == nil {
+		return fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.RevealEntryFile(kind, id, version)
+}
+
 // SaveImage grava .dds ou .png no caminho escolhido pelo usuário (o
 // "salvar em disco" do painel de imagem).
 func (a *App) SaveImage(kind, id, format, destPath string, version common.GameVersion) error {

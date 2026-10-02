@@ -309,6 +309,18 @@ func Save(version common.GameVersion, id, format, destPath string) error {
 // Import reempacota um .dds editado sobre o container PRISTINE de data/ e
 // grava o resultado em mods/ (a árvore original nunca é alterada).
 func Import(version common.GameVersion, id, ddsPath string) error {
+	dds, err := os.ReadFile(ddsPath)
+	if err != nil {
+		return fmt.Errorf("lendo %s: %w", filepath.Base(ddsPath), err)
+	}
+	return ImportPayload(version, id, dds)
+}
+
+// ImportPayload é o núcleo do repack: monta container pristine de data/ +
+// dds e grava em mods/. Compartilhado entre Import (arquivo escolhido pelo
+// usuário) e Replicate (a imagem já ABERTA, sem arquivo externo) — os dois
+// fazem exatamente o mesmo trabalho por cópia.
+func ImportPayload(version common.GameVersion, id string, dds []byte) error {
 	rel := RelPath(version, id)
 	acc, err := common.NewFileAccessorFrom(rel, common.SourceData)
 	if err != nil {
@@ -321,15 +333,76 @@ func Import(version common.GameVersion, id, ddsPath string) error {
 	if err != nil {
 		return fmt.Errorf("lendo %s: %w", id, err)
 	}
-	dds, err := os.ReadFile(ddsPath)
-	if err != nil {
-		return fmt.Errorf("lendo %s: %w", filepath.Base(ddsPath), err)
-	}
 	packed, err := PackDDS(original, dds)
 	if err != nil {
 		return fmt.Errorf("%s: %w", id, err)
 	}
 	return writeFile(filepath.Join(common.GameFilesRoot, common.ModsFolder, rel), packed)
+}
+
+// Escopos aceitos por Delete.
+const (
+	// DeleteData apaga o pristine de data/ (a textura sai da árvore: sem
+	// original, a regra 4 deixa o id "só em mods/").
+	DeleteData = "data"
+	// DeleteMods apaga a substituição em mods/ (desfaz a importação).
+	DeleteMods = "mods"
+	// DeleteBoth apaga nas duas árvores.
+	DeleteBoth = "both"
+)
+
+// Delete apaga o container da textura conforme scope (data|mods|both) e
+// SEMPRE os artefatos derivados (.dds/.png extraídos em mods/edits/images) —
+// senão Resolve passaria a servir um .dds órfão, ou falharia no container
+// apagado.
+//
+// Devolve removed=false, err=nil quando nada existia (o chamador conta como
+// "pulado", não como falha); erro real = falha de disco/permissão.
+func Delete(version common.GameVersion, id, scope string) (removed bool, err error) {
+	if !ValidID(id) {
+		return false, fmt.Errorf("textura desconhecida: %s", id)
+	}
+	rel := RelPath(version, id)
+	remove := func(path string) error {
+		if !fileExists(path) {
+			return nil
+		}
+		if rerr := os.Remove(path); rerr != nil {
+			return fmt.Errorf("apagando %s: %w", filepath.Base(path), rerr)
+		}
+		removed = true
+		return nil
+	}
+
+	switch scope {
+	case DeleteData:
+		if err := remove(filepath.Join(common.GameFilesRoot, rel)); err != nil {
+			return removed, err
+		}
+	case DeleteMods:
+		if err := remove(filepath.Join(common.GameFilesRoot, common.ModsFolder, rel)); err != nil {
+			return removed, err
+		}
+	case DeleteBoth:
+		if err := remove(filepath.Join(common.GameFilesRoot, rel)); err != nil {
+			return removed, err
+		}
+		if err := remove(filepath.Join(common.GameFilesRoot, common.ModsFolder, rel)); err != nil {
+			return removed, err
+		}
+	default:
+		return false, fmt.Errorf("escopo %q inválido (esperado %s, %s ou %s)",
+			scope, DeleteData, DeleteMods, DeleteBoth)
+	}
+
+	ddsPath, pngPath := ExportPaths(version, id)
+	if err := remove(ddsPath); err != nil {
+		return removed, err
+	}
+	if err := remove(pngPath); err != nil {
+		return removed, err
+	}
+	return removed, nil
 }
 
 func writeFile(path string, payload []byte) error {

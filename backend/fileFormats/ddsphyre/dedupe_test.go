@@ -305,3 +305,41 @@ func TestIndexOnRealTree(t *testing.T) {
 		t.Errorf("grupo (%d) não ficou menor que o total de texturas (%d)", groups, len(ix.byID))
 	}
 }
+
+// O pareamento é ESTRITO em data/: só entra no índice id com pristine em
+// data/. Cópia que existe apenas em mods/ não agrupa (a regra 4 nem a
+// mostra na árvore) — é essa premissa que mantém grupo ⊆ árvore, de onde o
+// filtro de representantes do ListEntries tira o representante.
+func TestIndexPairsOnlyWithinData(t *testing.T) {
+	root, a, b, _, sample := withDupTree(t)
+
+	// Cópia de a gravada SÓ em mods/ (sem original em data/).
+	onlyMods := "gamedata/ps3data/dup/soemods"
+	modsPath := filepath.Join(root, common.ModsFolder, RelPath(common.GameVersionFFX, onlyMods))
+	if err := common.EnsurePathExists(modsPath); err != nil {
+		t.Fatalf("criando mods/: %v", err)
+	}
+	copied := mutateContainerName(t, append([]byte(nil), sample...))
+	if err := os.WriteFile(modsPath, copied, 0o644); err != nil {
+		t.Fatalf("gravando %s: %v", modsPath, err)
+	}
+
+	ix, err := BuildIndex(common.GameVersionFFX)
+	if err != nil {
+		t.Fatalf("BuildIndex: %v", err)
+	}
+	if _, ok := ix.byID[onlyMods]; ok {
+		t.Error("id só em mods/ entrou no pareamento")
+	}
+	group := ix.OriginalGroup(a)
+	if len(group) != 2 || group[0] != a || group[1] != b {
+		t.Errorf("grupo de %s = %v, esperado [%s %s] sem %s", a, group, a, b, onlyMods)
+	}
+	if len(ix.OriginalGroup(onlyMods)) != 0 {
+		t.Error("id fora de data/ agregou cópias")
+	}
+	// Nem vira representante: sem grupo, sem duplicatas reportadas.
+	if copies, payload := ix.Copies(onlyMods); len(copies) != 0 || payload != 0 {
+		t.Errorf("Copies(%s) = %+v/%d, esperado vazio", onlyMods, copies, payload)
+	}
+}

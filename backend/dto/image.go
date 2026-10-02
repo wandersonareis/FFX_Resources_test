@@ -43,8 +43,8 @@ type ImageEntry struct {
 	Modded bool `json:"modded"`
 
 	// Duplicates lista as OUTRAS texturas cujo payload original é idêntico
-	// (as cópias da otimização do DVD, em qualquer diretório — até entre
-	// FFX e FFX-2). Vazio = imagem única.
+	// (as cópias da otimização do DVD, pareadas em data/ e sempre dentro
+	// da mesma versão). Vazio = imagem única.
 	Duplicates []ImageDuplicate `json:"duplicates"`
 	// DupPayload é o tamanho do payload em bytes: o frontend mostra o
 	// desperdício do grupo como payload × (nº de cópias).
@@ -70,6 +70,24 @@ type ImageImportResult struct {
 	Updated []string `json:"updated"`
 	Failed  []string `json:"failed"`
 	Total   int      `json:"total"`
+}
+
+// BatchResult é o resultado genérico de uma operação em lote sobre imagens
+// (extrair / replicar / deletar): o que deu certo, o que falhou (id:
+// motivo) e o total considerado.
+type BatchResult struct {
+	Done   []string `json:"done"`
+	Failed []string `json:"failed"`
+	Total  int      `json:"total"`
+}
+
+// ImageDuplicates é o resultado do binding leve das cópias — sem a imagem
+// em base64, é o que os diálogos e o menu de contexto pedem para montar a
+// lista de alvos.
+type ImageDuplicates struct {
+	Duplicates []ImageDuplicate `json:"duplicates"`
+	// DupPayload é o tamanho do payload em bytes (desperdício do grupo).
+	DupPayload int64 `json:"dupPayload"`
 }
 
 // NewImageMetadata monta a metadata canônica de uma textura: a key segue o

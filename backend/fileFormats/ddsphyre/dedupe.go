@@ -29,9 +29,15 @@ var errMissing = errors.New("arquivo não encontrado")
 //
 //   - ORIGINAL (data/): o grupo "sempre foi igual" — é ele que define o
 //     alvo da propagação de import (as cópias de DVD voltam a ficar
-//     sincronizadas juntas);
+//     sincronizadas juntas). O pareamento é SEMPRE de data/: em mods/
+//     qualquer uma das cópias pode estar editada, então olhar mods/ para
+//     agrupar misturaria original com reimpressão. Id sem original em
+//     data/ (só em mods/, ou a árvore inteira em modo fallback) fica FORA
+//     do índice — nesses casos não há grupo confiável para agrupar.
 //   - EFETIVA (mods-first): o que o jogo realmente carrega — mostra quais
 //     cópias ainda estão idênticas depois de um import.
+//
+// O índice é por VERSÃO: os grupos nunca cruzam FFX ↔ FFX-2.
 //
 // Não há hard link nem dedupe em disco: o file loader do jogo e a cópia da
 // árvore para a library do Steam tornariam links frágeis. O índice é só
@@ -76,9 +82,13 @@ type Index struct {
 }
 
 // BuildIndex varre a árvore da versão e monta o índice do zero (sem cache).
-// Apenas ids com algum arquivo (data/ ou mods/) entram; ids sem original em
-// data/ usam o de mods/ como original — a propagação continua exigindo
-// pristine e o recusa depois, com o motivo.
+//
+// Só entram ids com original em data/ — o pareamento é decidido em data/,
+// como manda a regra do projeto; em mods/ qualquer cópia pode estar
+// editada, então agrupar por mods/ misturaria pristine com reimpressão. É
+// também o que desliga o recurso no modo fallback (data/ vazio: índice
+// vazio, árvore completa visível) e tira daqui ids só-mods, que a regra 4
+// nem mostra na árvore.
 func BuildIndex(version common.GameVersion) (*Index, error) {
 	ids, _, _, err := Scan(version)
 	if err != nil {
@@ -94,12 +104,8 @@ func BuildIndex(version common.GameVersion) (*Index, error) {
 
 		origRaw, origErr := readSource(rel, common.SourceData)
 		if origErr != nil {
-			// Árvore em fallback (data/ não extraído): o que há em mods/
-			// vira o "original" para o índice continuar útil na exibição.
-			origRaw, origErr = readSource(rel, common.SourceMods)
-			if origErr != nil {
-				continue
-			}
+			// Sem pristine em data/: este id não participa de grupo algum.
+			continue
 		}
 		origHash, payload, perr := PayloadHash(origRaw)
 		if perr != nil {

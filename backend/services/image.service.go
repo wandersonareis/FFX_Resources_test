@@ -26,8 +26,8 @@ import (
 //	2. .png em disco (idem);
 //	3. decode do próprio .dds.phyre EM MEMÓRIA (nada é gravado).
 //
-// Exportar (.dds + .png) é uma ação separada (ExtractImage) — abrir a
-// textura não suja mods/.
+// Exportar (.dds + .png) é uma ação separada (ExtractImage /
+// ExtractImageGroup) — abrir a textura não suja mods/.
 
 // GetImage carrega a textura e devolve a pré-visualização pronta (data URL
 // PNG) junto dos metadados do container e do DDS da fonte escolhida.
@@ -65,28 +65,127 @@ func (s *MetadataService) GetImage(kind, id string, version common.GameVersion) 
 }
 
 // fillDuplicates anexa o grupo de cópias de mesma imagem (payload original
-// igual — as cópias da otimização do DVD, em qualquer diretório).
+// igual — as cópias da otimização do DVD, pareadas em data/ e sempre dentro
+// da mesma versão).
 //
 // O índice é memoizado no pacote ddsphyre; a primeira consulta da versão
 // varre a árvore (~1-2 s) e as seguintes são O(1). Falha aqui não derruba a
 // textura: duplicatas são informação suplementar, loga e segue.
 func (s *MetadataService) fillDuplicates(entry *dto.ImageEntry, id string, version common.GameVersion) {
 	entry.Duplicates = []dto.ImageDuplicate{}
-	ix, err := ddsphyre.IndexFor(version)
+	dupes, err := duplicatesFor(id, version)
 	if err != nil {
 		common.LogWarning("images %s: índice de duplicatas indisponível: %v", version, err)
 		return
 	}
+	entry.Duplicates = dupes.Duplicates
+	entry.DupPayload = dupes.DupPayload
+}
+
+// duplicatesFor devolve as cópias da textura SEM decodificar imagem alguma
+// (só o índice memoizado) — é o que os diálogos de extrair/replicar/deletar
+// e o menu de contexto usam para montar os alvos.
+func duplicatesFor(id string, version common.GameVersion) (dto.ImageDuplicates, error) {
+	ix, err := ddsphyre.IndexFor(version)
+	if err != nil {
+		return dto.ImageDuplicates{Duplicates: []dto.ImageDuplicate{}}, err
+	}
 	copies, payload := ix.Copies(id)
-	entry.DupPayload = payload
+	out := dto.ImageDuplicates{
+		Duplicates: make([]dto.ImageDuplicate, 0, len(copies)),
+		DupPayload: payload,
+	}
 	for _, c := range copies {
-		entry.Duplicates = append(entry.Duplicates, dto.ImageDuplicate{
+		out.Duplicates = append(out.Duplicates, dto.ImageDuplicate{
 			ID:        c.ID,
 			Key:       dto.NewImageMetadata(c.ID, version).Key,
 			Modded:    c.InMods,
 			Identical: c.Identical,
 		})
 	}
+	return out, nil
+}
+
+// ImageDuplicates é o binding leve das cópias: idem fillDuplicates, mas sem
+// carregar a imagem. Existe porque o menu de contexto age sobre o nó
+// clicado, que pode NÃO ser a entry selecionada.
+func (s *MetadataService) ImageDuplicates(kind, id string, version common.GameVersion) (dto.ImageDuplicates, error) {
+	if !isImageKind(kind) {
+		return dto.ImageDuplicates{}, fmt.Errorf("kind desconhecido: %s", kind)
+	}
+	if err := ensureVersionReady(version); err != nil {
+		return dto.ImageDuplicates{}, err
+	}
+	if !ddsphyre.ValidID(id) {
+		return dto.ImageDuplicates{}, fmt.Errorf("textura desconhecida: %s", id)
+	}
+	out, err := duplicatesFor(id, version)
+	if err != nil {
+		return dto.ImageDuplicates{}, fmt.Errorf("índice de duplicatas: %w", err)
+	}
+	return out, nil
+}
+
+// hideImageDuplicates devolve só os REPRESENTANTES de cada grupo de cópias
+// — a árvore de imagens não enche de N linhas iguais: um grupo = uma linha,
+// e a lista "Repetidas" do painel é quem fala das cópias (e da propagação).
+//
+// Representante = 1º em ordem alfabética do grupo que esteja visível (o
+// índice pareia só data/, então grupo ⊆ árvore regra 4; o laço só se
+// protege de milagre fora disso). Id fora do índice passa direto — e se o
+// índice nem existir, a árvore sai COMPLETA com um WARN: nunca vazia.
+func hideImageDuplicates(entries []EntrySummary, version common.GameVersion) []EntrySummary {
+	ix, err := ddsphyre.IndexFor(version)
+	if err != nil {
+		common.LogWarning(
+			"images %s: índice de duplicatas indisponível — árvore exibindo TODAS as cópias: %v",
+			version, err,
+		)
+		return entries
+	}
+	visible := make(map[string]bool, len(entries))
+	for _, e := range entries {
+		visible[e.ID] = true
+	}
+	out := make([]EntrySummary, 0, len(entries))
+	for _, e := range entries {
+		leader := e.ID
+		for _, g := range ix.OriginalGroup(e.ID) {
+			if visible[g] {
+				// OriginalGroup devolve o grupo ordenado: o primeiro visível
+				// É o representante (1º alfabético do grupo).
+				leader = g
+				break
+			}
+		}
+		if e.ID == leader {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+// batchTargets monta a lista final de um lote e valida o grupo ANTES de
+// qualquer gravação: id primeiro, sem repetições, e todo alvo precisa ser
+// cópia de mesmo payload ORIGINAL (pareado em data/) de id.
+//
+// Id fora do índice ⇒ lote restrito ao próprio id: sem grupo confiável não
+// há cópias para tocar (modo fallback, data/ vazio — o seguro é não
+// propagar nada), e o log denuncia.
+func batchTargets(id string, targets []string, version common.GameVersion) ([]string, error) {
+	ix, err := ddsphyre.IndexFor(version)
+	if err != nil {
+		return nil, fmt.Errorf("índice de duplicatas: %w", err)
+	}
+	group := ix.OriginalGroup(id)
+	if len(group) == 0 {
+		common.LogWarning(
+			"images %s/%s: fora do índice de duplicatas (sem data/ ou payload ilegível) — lote restrito ao próprio id",
+			version, id,
+		)
+		group = []string{id}
+	}
+	return groupTargets(id, group, targets)
 }
 
 // ExtractImage grava .dds e .png em mods/edits/images (a cópia de trabalho
@@ -161,17 +260,7 @@ func (s *MetadataService) ImportImageGroup(kind, id, ddsPath string, targets []s
 	if !ddsphyre.ValidID(id) {
 		return dto.ImageImportResult{}, fmt.Errorf("textura desconhecida: %s", id)
 	}
-	ix, err := ddsphyre.IndexFor(version)
-	if err != nil {
-		return dto.ImageImportResult{}, fmt.Errorf("índice de duplicatas: %w", err)
-	}
-	group := ix.OriginalGroup(id)
-	if len(group) == 0 {
-		return dto.ImageImportResult{}, fmt.Errorf(
-			"textura %s fora do índice de duplicatas — clique em Reanalisar", id)
-	}
-
-	list, err := groupTargets(id, group, targets)
+	list, err := batchTargets(id, targets, version)
 	if err != nil {
 		return dto.ImageImportResult{}, err
 	}
@@ -200,6 +289,157 @@ func (s *MetadataService) ImportImageGroup(kind, id, ddsPath string, targets []s
 				"Imagem importada em %d de %d textura(s): %s",
 				len(res.Updated), res.Total, filepath.Base(ddsPath),
 			))
+		}
+	}
+	return res, nil
+}
+
+// ExtractImageGroup extrai .dds + .png de uma textura e das cópias
+// escolhidas — o diálogo de extração pergunta "só esta ou todas as cópias",
+// e o resultado sai com os arquivos lado a lado em mods/edits/images (é o
+// que confirma a duplicata, olhando os dois arquivos).
+//
+// Extração só grava artefatos derivados: não muda payload algum, então o
+// índice de duplicatas continua válido (sem invalidação).
+func (s *MetadataService) ExtractImageGroup(kind, id string, targets []string, version common.GameVersion) (dto.BatchResult, error) {
+	if !isImageKind(kind) {
+		return dto.BatchResult{}, fmt.Errorf("kind desconhecido: %s", kind)
+	}
+	if err := ensureVersionReady(version); err != nil {
+		return dto.BatchResult{}, err
+	}
+	if !ddsphyre.ValidID(id) {
+		return dto.BatchResult{}, fmt.Errorf("textura desconhecida: %s", id)
+	}
+	list, err := batchTargets(id, targets, version)
+	if err != nil {
+		return dto.BatchResult{}, err
+	}
+	res := dto.BatchResult{Done: []string{}, Failed: []string{}, Total: len(list)}
+	for _, t := range list {
+		if _, eerr := ddsphyre.Extract(version, t); eerr != nil {
+			res.Failed = append(res.Failed, t+": "+eerr.Error())
+			continue
+		}
+		res.Done = append(res.Done, t)
+	}
+	if len(res.Done) > 0 && s != nil && s.notifier != nil {
+		s.notifier.NotifyInfo(fmt.Sprintf(
+			"Imagem exportada em %d de %d textura(s)", len(res.Done), res.Total))
+	}
+	return res, nil
+}
+
+// ReplicateImage reempacota a IMAGEM ABERTA (o .dds efetivo, mods-first) em
+// mods/ de cada cópia do grupo — o "dupe" que o app faz sozinho, sem
+// diálogo de arquivo: a fonte é o próprio conteúdo servido ao painel.
+//
+// A origem NÃO é tocada: ela já mostra essa imagem (data/ ou mods/), só as
+// cópias recebem o arquivo — por isso Total = cópias, não o grupo inteiro.
+func (s *MetadataService) ReplicateImage(kind, id string, targets []string, version common.GameVersion) (dto.BatchResult, error) {
+	if !isImageKind(kind) {
+		return dto.BatchResult{}, fmt.Errorf("kind desconhecido: %s", kind)
+	}
+	if err := ensureVersionReady(version); err != nil {
+		return dto.BatchResult{}, err
+	}
+	if !ddsphyre.ValidID(id) {
+		return dto.BatchResult{}, fmt.Errorf("textura desconhecida: %s", id)
+	}
+	list, err := batchTargets(id, targets, version)
+	if err != nil {
+		return dto.BatchResult{}, err
+	}
+	// list[0] é sempre a origem (groupTargets a põe na frente) — replicar
+	// é só as cópias.
+	if len(list) < 2 {
+		return dto.BatchResult{}, fmt.Errorf("textura %s não tem cópias para replicar", id)
+	}
+	res := dto.BatchResult{Done: []string{}, Failed: []string{}, Total: len(list) - 1}
+
+	// Resolve é mods-first: a origem carrega a VERSÃO VISÍVEL (importada ou
+	// pristine). Pré-requisito do repack é o container pristine de data/,
+	// exigido por ImportPayload — nesse caso já vem embutido no erro.
+	r, err := ddsphyre.Resolve(version, id)
+	if err != nil {
+		return dto.BatchResult{}, fmt.Errorf("lendo imagem %s: %w", id, err)
+	}
+	dds := r.DDS
+	if dds == nil {
+		if r.Texture == nil {
+			return dto.BatchResult{}, fmt.Errorf("textura %s: sem .dds para replicar", id)
+		}
+		if dds, err = r.Texture.ExtractToDDS(); err != nil {
+			return dto.BatchResult{}, fmt.Errorf("textura %s: %w", id, err)
+		}
+	}
+
+	for _, t := range list[1:] {
+		if ierr := ddsphyre.ImportPayload(version, t, dds); ierr != nil {
+			res.Failed = append(res.Failed, t+": "+ierr.Error())
+			continue
+		}
+		// Mesmo cuidado do import: sem extrair agora, a próxima abertura
+		// serviria o .dds órfão ANTIGO de mods/edits/images.
+		if _, eerr := ddsphyre.Extract(version, t); eerr != nil {
+			common.LogWarning("images %s/%s: replicate ok, mas não atualizei os .dds/.png extraídos: %v", version, t, eerr)
+		}
+		res.Done = append(res.Done, t)
+	}
+	if len(res.Done) > 0 {
+		ddsphyre.InvalidateIndex(version)
+		if s != nil && s.notifier != nil {
+			s.notifier.NotifyInfo(fmt.Sprintf(
+				"Imagem replicada em %d de %d cópia(s)", len(res.Done), res.Total))
+		}
+	}
+	return res, nil
+}
+
+// DeleteImages apaga os containers da textura e das cópias confirmadas no
+// escopo escolhido (data|mods|both) e SEMPRE os artefatos derivados — sem
+// isso Resolve passaria a servir um .dds órfão.
+//
+// Nunca é cascata implícita: só o que o frontend confirmou (cópias entram
+// por targets, marcadas no diálogo).
+func (s *MetadataService) DeleteImages(kind, id string, targets []string, scope string, version common.GameVersion) (dto.BatchResult, error) {
+	if !isImageKind(kind) {
+		return dto.BatchResult{}, fmt.Errorf("kind desconhecido: %s", kind)
+	}
+	if err := ensureVersionReady(version); err != nil {
+		return dto.BatchResult{}, err
+	}
+	if !ddsphyre.ValidID(id) {
+		return dto.BatchResult{}, fmt.Errorf("textura desconhecida: %s", id)
+	}
+	switch scope {
+	case ddsphyre.DeleteData, ddsphyre.DeleteMods, ddsphyre.DeleteBoth:
+	default:
+		return dto.BatchResult{}, fmt.Errorf("escopo %q inválido (esperado data, mods ou both)", scope)
+	}
+	list, err := batchTargets(id, targets, version)
+	if err != nil {
+		return dto.BatchResult{}, err
+	}
+	res := dto.BatchResult{Done: []string{}, Failed: []string{}, Total: len(list)}
+	for _, t := range list {
+		_, derr := ddsphyre.Delete(version, t, scope)
+		if derr != nil {
+			res.Failed = append(res.Failed, t+": "+derr.Error())
+			continue
+		}
+		// "Já não existia neste escopo" também é estado desejado: conta
+		// como concluído (sem alarmar o usuário com falso negativo).
+		res.Done = append(res.Done, t)
+	}
+	if len(res.Done) > 0 {
+		// Apagar em data/ muda quem tem original: o índice e a própria
+		// árvore passam a enxergar grupos diferentes.
+		ddsphyre.InvalidateIndex(version)
+		if s != nil && s.notifier != nil {
+			s.notifier.NotifyInfo(fmt.Sprintf(
+				"Imagem(ns) apagada(s) em %d de %d no escopo %s",
+				len(res.Done), res.Total, scope))
 		}
 	}
 	return res, nil

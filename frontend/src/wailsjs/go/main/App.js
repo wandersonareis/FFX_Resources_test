@@ -10,6 +10,10 @@ export function CountChangedTexts(arg1, arg2) {
   return window['go']['main']['App']['CountChangedTexts'](arg1, arg2);
 }
 
+export function DeleteImages(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['DeleteImages'](arg1, arg2, arg3, arg4, arg5);
+}
+
 export function ExportEntry(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ExportEntry'](arg1, arg2, arg3, arg4);
 }
@@ -24,6 +28,10 @@ export function ExportStrings(arg1, arg2, arg3, arg4) {
 
 export function ExtractImage(arg1, arg2, arg3) {
   return window['go']['main']['App']['ExtractImage'](arg1, arg2, arg3);
+}
+
+export function ExtractImageGroup(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['ExtractImageGroup'](arg1, arg2, arg3, arg4);
 }
 
 export function GetEnableMods() {
@@ -56,6 +64,10 @@ export function GetTextEntry(arg1, arg2, arg3) {
 
 export function GetTranslateLocation() {
   return window['go']['main']['App']['GetTranslateLocation']();
+}
+
+export function ImageDuplicates(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ImageDuplicates'](arg1, arg2, arg3);
 }
 
 export function ImportEntry(arg1, arg2, arg3) {
@@ -100,6 +112,14 @@ export function ReadFileAsString(arg1) {
 
 export function RefreshImageDuplicates(arg1, arg2) {
   return window['go']['main']['App']['RefreshImageDuplicates'](arg1, arg2);
+}
+
+export function ReplicateImage(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['ReplicateImage'](arg1, arg2, arg3, arg4);
+}
+
+export function RevealEntryFile(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RevealEntryFile'](arg1, arg2, arg3);
 }
 
 export function SaveImage(arg1, arg2, arg3, arg4, arg5) {

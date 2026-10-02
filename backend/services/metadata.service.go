@@ -863,7 +863,9 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 			// ids já são o relatório legível (rel sem o sufixo).
 			s.emitTreeDiag(KindImages, version, kept, onlyMods)
 		}
-		return out, nil
+		// Cópias idênticas somem da árvore: um grupo = UMA linha (o
+		// representante), as cópias vivem na lista "Repetidas" do painel.
+		return hideImageDuplicates(out, version), nil
 	case KindHelp:
 		// Painéis de ajuda são FFX-only: a árvore ffx2 (e a lastmiss, que
 		// divide a árvore do ffx2) não tem a pasta help/. Sem erro — vazio,

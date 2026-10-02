@@ -8,6 +8,8 @@ export function ApplyTextCollection(arg1:string,arg2:common.GameVersion,arg3:dto
 
 export function CountChangedTexts(arg1:dto.Collection,arg2:dto.Collection):Promise<number>;
 
+export function DeleteImages(arg1:string,arg2:string,arg3:Array<string>,arg4:string,arg5:common.GameVersion):Promise<dto.BatchResult>;
+
 export function ExportEntry(arg1:string,arg2:string,arg3:common.GameVersion,arg4:Array<string>):Promise<Array<string>>;
 
 export function ExportJSON(arg1:string,arg2:common.GameVersion,arg3:Array<string>,arg4:Array<string>):Promise<Array<string>>;
@@ -15,6 +17,8 @@ export function ExportJSON(arg1:string,arg2:common.GameVersion,arg3:Array<string
 export function ExportStrings(arg1:string,arg2:common.GameVersion,arg3:Array<string>,arg4:Array<string>):Promise<Array<string>>;
 
 export function ExtractImage(arg1:string,arg2:string,arg3:common.GameVersion):Promise<Array<string>>;
+
+export function ExtractImageGroup(arg1:string,arg2:string,arg3:Array<string>,arg4:common.GameVersion):Promise<dto.BatchResult>;
 
 export function GetEnableMods():Promise<boolean>;
 
@@ -31,6 +35,8 @@ export function GetTextCollection(arg1:string,arg2:common.GameVersion,arg3:Array
 export function GetTextEntry(arg1:string,arg2:string,arg3:common.GameVersion):Promise<dto.FileEntry>;
 
 export function GetTranslateLocation():Promise<string>;
+
+export function ImageDuplicates(arg1:string,arg2:string,arg3:common.GameVersion):Promise<dto.ImageDuplicates>;
 
 export function ImportEntry(arg1:string,arg2:string,arg3:common.GameVersion):Promise<Array<string>>;
 
@@ -53,6 +59,10 @@ export function QuitApp():Promise<void>;
 export function ReadFileAsString(arg1:string):Promise<string>;
 
 export function RefreshImageDuplicates(arg1:string,arg2:common.GameVersion):Promise<void>;
+
+export function ReplicateImage(arg1:string,arg2:string,arg3:Array<string>,arg4:common.GameVersion):Promise<dto.BatchResult>;
+
+export function RevealEntryFile(arg1:string,arg2:string,arg3:common.GameVersion):Promise<void>;
 
 export function SaveImage(arg1:string,arg2:string,arg3:string,arg4:string,arg5:common.GameVersion):Promise<void>;
 
