@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSelector } from '@tanstack/react-store';
-import { toast } from 'sonner';
+import { loggedToast as toast } from '@/lib/ffx/toast-logged';
 import { AlertTriangle, Download, Info, Trash2 } from 'lucide-react';
 import type { dto } from '@/wailsjs/go/models';
 import { resolveEntryLabel } from '@/lib/ffx/display-names';

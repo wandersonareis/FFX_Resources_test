@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { loggedToast as toast } from '@/lib/ffx/toast-logged';
 import { RefreshCw } from 'lucide-react';
 import { useSelector } from '@tanstack/react-store';
 import type { EntryKind } from '@/lib/ffx/display-names';

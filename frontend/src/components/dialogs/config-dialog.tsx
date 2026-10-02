@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
+import { loggedToast as toast } from '@/lib/ffx/toast-logged';
 import { FolderOpen, X } from 'lucide-react';
 import {
   GetEnableMods,

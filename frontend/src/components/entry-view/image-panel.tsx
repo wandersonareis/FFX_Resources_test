@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { useHotkey } from '@tanstack/react-hotkeys';
 import { useSelector } from '@tanstack/react-store';
-import { toast } from 'sonner';
+import { loggedToast as toast } from '@/lib/ffx/toast-logged';
 import {
   ChevronDown,
   Copy,

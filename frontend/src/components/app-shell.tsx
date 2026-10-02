@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useHotkey } from '@tanstack/react-hotkeys';
-import { toast } from 'sonner';
+import { loggedToast as toast } from '@/lib/ffx/toast-logged';
 import { ChevronDown, Download, Settings, Upload } from 'lucide-react';
 import { QuitApp } from '@/wailsjs/go/main/App';
 import { EventsEmit } from '@/wailsjs/runtime/runtime';
@@ -135,7 +135,7 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
     const payload = data as { severity?: string; message?: string };
     const sticky = payload?.severity === 'error';
     if (sticky) {
-      toast.error(payload?.message ?? 'Notificação', { duration: Infinity });
+      toast.error(payload?.message ?? 'Notificação');
     } else {
       toast(payload?.message ?? 'Notificação', { duration: 4000 });
     }

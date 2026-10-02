@@ -1,5 +1,5 @@
 import { ApplyTextCollection } from '@/wailsjs/go/main/App';
-import { toast } from 'sonner';
+import { loggedToast as toast } from '@/lib/ffx/toast-logged';
 import { editDraft } from './edit-draft';
 import { sendErrorNotification } from './error-handler';
 import type { GameVersionId } from './game-version';
