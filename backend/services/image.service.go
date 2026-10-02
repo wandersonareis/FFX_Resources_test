@@ -458,6 +458,21 @@ func (s *MetadataService) RefreshImageDuplicates(kind string, version common.Gam
 	return nil
 }
 
+// ImageExists responde se a textura ainda existe (data/ OU mods/). O frontend
+// usa na revalidação da seleção: id apagado NÃO deve ser re-carregado — o
+// Resolve erroaria "não encontrada em data/ nem em mods/" para uma imagem
+// que o delete acabou de remover com sucesso (erro confuso).
+func (s *MetadataService) ImageExists(kind, id string, version common.GameVersion) (bool, error) {
+	if !isImageKind(kind) {
+		return false, fmt.Errorf("kind desconhecido: %s", kind)
+	}
+	if !ddsphyre.ValidID(id) {
+		return false, nil
+	}
+	inData, inMods := ddsphyre.Exists(version, id)
+	return inData || inMods, nil
+}
+
 // groupTargets monta a lista final do lote e valida o grupo ANTES de
 // qualquer gravação: id primeiro, sem repetições, preservando a ordem
 // escolhida pelo frontend — e recusando qualquer alvo que não seja cópia de

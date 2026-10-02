@@ -7,6 +7,7 @@ import {
   GetImageEntry,
   GetTextEntry,
   ImageDuplicates,
+  ImageExists,
   ImportEntry,
   ImportFile,
   ImportImage,
@@ -123,6 +124,23 @@ export function importImage(
     ddsPath,
     version as Parameters<typeof ImportImage>[3]
   );
+}
+
+/**
+ * A textura ainda existe (data/ OU mods/)? Usada na revalidação da seleção
+ * após reload: id apagado pelo delete NÃO deve ser re-carregado — o erro
+ * "não encontrada em data/ nem em mods/" só faria confusão. Falha de
+ * binding = não existe (não serve para exibição).
+ */
+export async function imageExists(
+  id: string,
+  version: GameVersionId
+): Promise<boolean> {
+  try {
+    return await ImageExists('images', id, version);
+  } catch {
+    return false;
+  }
 }
 
 /**

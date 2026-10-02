@@ -344,6 +344,16 @@ func (a *App) ImageDuplicates(kind, id string, version common.GameVersion) (dto.
 	return a.MetadataService.ImageDuplicates(kind, id, version)
 }
 
+// ImageExists responde se a textura ainda existe (data/ OU mods/). O frontend
+// usa na revalidação da seleção após reload (ex.: delete apagou o id — não
+// re-carregar).
+func (a *App) ImageExists(kind, id string, version common.GameVersion) (bool, error) {
+	if a.MetadataService == nil {
+		return false, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ImageExists(kind, id, version)
+}
+
 // ExtractImageGroup extrai .dds + .png de uma textura e das cópias
 // escolhidas (o "só esta ou todas as cópias" do diálogo de extração).
 func (a *App) ExtractImageGroup(kind, id string, targets []string, version common.GameVersion) (dto.BatchResult, error) {

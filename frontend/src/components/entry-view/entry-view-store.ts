@@ -10,6 +10,7 @@ import type { GameVersionId } from '@/lib/ffx/game-version';
 import {
   type EntryRow,
   allKindsFor,
+  imageExists,
   loadImage,
   loadEntry,
   loadKindEntries,
@@ -365,12 +366,20 @@ export function createEntryView(version: GameVersionId): EntryView {
             const found = entries.find((e) => e.id === current.id);
             if (found) {
               await selectEntry(found);
-            } else if (kind === 'images' && entries.length > 0) {
+            } else if (
+              kind === 'images' &&
+              entries.length > 0 &&
+              (await imageExists(current.id, version))
+            ) {
               // Cópia oculta do grupo: a árvore só guarda o representante,
               // mas o id continua servível (a lista "Repetidas" navega até
               // ele) — quem decide se ainda existe é a carga, não a lista.
               await selectEntry(current);
             } else {
+              // Não existe mais (ex.: imagem + cópias apagadas com escopo
+              // both): limpa em SILÊNCIO — o Resolve erroaria "não
+              // encontrada em data/ nem em mods/" para o id que o delete
+              // acabou de remover com sucesso.
               patch({ ...NO_SELECTION });
             }
           }
