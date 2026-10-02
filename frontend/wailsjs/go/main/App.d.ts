@@ -38,6 +38,8 @@ export function GetTranslateLocation():Promise<string>;
 
 export function ImageDuplicates(arg1:string,arg2:string,arg3:common.GameVersion):Promise<dto.ImageDuplicates>;
 
+export function ImageExists(arg1:string,arg2:string,arg3:common.GameVersion):Promise<boolean>;
+
 export function ImportEntry(arg1:string,arg2:string,arg3:common.GameVersion):Promise<Array<string>>;
 
 export function ImportFile(arg1:string,arg2:common.GameVersion):Promise<number>;

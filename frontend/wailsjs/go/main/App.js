@@ -70,6 +70,10 @@ export function ImageDuplicates(arg1, arg2, arg3) {
   return window['go']['main']['App']['ImageDuplicates'](arg1, arg2, arg3);
 }
 
+export function ImageExists(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ImageExists'](arg1, arg2, arg3);
+}
+
 export function ImportEntry(arg1, arg2, arg3) {
   return window['go']['main']['App']['ImportEntry'](arg1, arg2, arg3);
 }
