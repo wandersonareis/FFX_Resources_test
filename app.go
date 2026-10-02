@@ -286,6 +286,100 @@ func (a *App) GetTextCollection(kind string, version common.GameVersion, ids []s
 	return a.MetadataService.GetCollection(kind, version, ids)
 }
 
+// GetImageEntry carrega a textura kind=images e devolve a pré-visualização
+// (data URL PNG) com o DDS da fonte escolhida — ordem .dds em disco →
+// .png em disco → decode do .dds.phyre em memória.
+func (a *App) GetImageEntry(kind, id string, version common.GameVersion) (dto.ImageEntry, error) {
+	if a.MetadataService == nil {
+		return dto.ImageEntry{}, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.GetImage(kind, id, version)
+}
+
+// ExtractImage grava .dds e .png em mods/edits/images (cópia de trabalho) e
+// devolve os caminhos escritos.
+func (a *App) ExtractImage(kind, id string, version common.GameVersion) ([]string, error) {
+	if a.MetadataService == nil {
+		return nil, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ExtractImage(kind, id, version)
+}
+
+// ImportImage reempacota o .dds escolhido sobre o container pristine e grava
+// o resultado em mods/ (a árvore data/ nunca é alterada).
+func (a *App) ImportImage(kind, id, ddsPath string, version common.GameVersion) error {
+	if a.MetadataService == nil {
+		return fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ImportImage(kind, id, ddsPath, version)
+}
+
+// ImportImageGroup reempacota o mesmo .dds sobre a textura e as cópias
+// idênticas dela (payload original igual — as réplicas da otimização do
+// DVD). O lote é validado antes de gravar: alvo fora do grupo é recusado.
+func (a *App) ImportImageGroup(kind, id, ddsPath string, targets []string, version common.GameVersion) (dto.ImageImportResult, error) {
+	if a.MetadataService == nil {
+		return dto.ImageImportResult{}, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ImportImageGroup(kind, id, ddsPath, targets, version)
+}
+
+// RefreshImageDuplicates descarta o índice de duplicatas em cache (rebuild
+// na próxima consulta) — para edição externa em hex editor.
+func (a *App) RefreshImageDuplicates(kind string, version common.GameVersion) error {
+	if a.MetadataService == nil {
+		return fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.RefreshImageDuplicates(kind, version)
+}
+
+// SaveImage grava .dds ou .png no caminho escolhido pelo usuário (o
+// "salvar em disco" do painel de imagem).
+func (a *App) SaveImage(kind, id, format, destPath string, version common.GameVersion) error {
+	if a.MetadataService == nil {
+		return fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.SaveImage(kind, id, format, destPath, version)
+}
+
+// SelectImageFile abre o seletor nativo para escolher um .dds a importar.
+// Devolve "" quando o usuário cancela.
+func (a *App) SelectImageFile() string {
+	selection, err := runtime.OpenFileDialog(interactions.NewInteractionService().Ctx, runtime.OpenDialogOptions{
+		Title: "Selecionar textura para importar",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "DDS (*.dds)", Pattern: "*.dds"},
+			{DisplayName: "Todos os arquivos (*.*)", Pattern: "*.*"},
+		},
+	})
+	if err != nil {
+		return ""
+	}
+	return selection
+}
+
+// SelectImageSavePath abre o diálogo "Salvar como" para .dds/.png.
+// Devolve "" quando o usuário cancela.
+func (a *App) SelectImageSavePath(format string, suggestedName string) string {
+	pattern := "*.dds"
+	display := "DDS (*.dds)"
+	if format == "png" {
+		pattern, display = "*.png", "PNG (*.png)"
+	}
+	selection, err := runtime.SaveFileDialog(interactions.NewInteractionService().Ctx, runtime.SaveDialogOptions{
+		Title:           "Salvar imagem",
+		DefaultFilename: suggestedName,
+		Filters: []runtime.FileFilter{
+			{DisplayName: display, Pattern: pattern},
+			{DisplayName: "Todos os arquivos (*.*)", Pattern: "*.*"},
+		},
+	})
+	if err != nil {
+		return ""
+	}
+	return selection
+}
+
 // GetTagCatalog devolve o catálogo de tags nomeadas (PC/MCR/BUTTON/ICON) da
 // versão para o autocomplete do editor. Os valores são ordenados pelo uso
 // (mods/edits/tag_frequency_<v>.json), quando o ranking existe.

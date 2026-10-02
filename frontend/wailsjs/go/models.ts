@@ -101,6 +101,98 @@ export namespace dto {
 		    return a;
 		}
 	}
+	export class ImageDuplicate {
+	    id: string;
+	    key: string;
+	    modded: boolean;
+	    identical: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ImageDuplicate(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.key = source["key"];
+	        this.modded = source["modded"];
+	        this.identical = source["identical"];
+	    }
+	}
+	export class ImageEntry {
+	    metadata: Metadata;
+	    source: string;
+	    format: string;
+	    width: number;
+	    height: number;
+	    mipmapCount: number;
+	    maxMipmapLevel: number;
+	    pngData: string;
+	    flipped: boolean;
+	    ddsData: string;
+	    ddsPath?: string;
+	    pngPath?: string;
+	    modded: boolean;
+	    duplicates: ImageDuplicate[];
+	    dupPayload: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ImageEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.metadata = this.convertValues(source["metadata"], Metadata);
+	        this.source = source["source"];
+	        this.format = source["format"];
+	        this.width = source["width"];
+	        this.height = source["height"];
+	        this.mipmapCount = source["mipmapCount"];
+	        this.maxMipmapLevel = source["maxMipmapLevel"];
+	        this.pngData = source["pngData"];
+	        this.flipped = source["flipped"];
+	        this.ddsData = source["ddsData"];
+	        this.ddsPath = source["ddsPath"];
+	        this.pngPath = source["pngPath"];
+	        this.modded = source["modded"];
+	        this.duplicates = this.convertValues(source["duplicates"], ImageDuplicate);
+	        this.dupPayload = source["dupPayload"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ImageImportResult {
+	    updated: string[];
+	    failed: string[];
+	    total: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ImageImportResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.updated = source["updated"];
+	        this.failed = source["failed"];
+	        this.total = source["total"];
+	    }
+	}
 	export class ImportEntryInfo {
 	    id: string;
 	    key: string;

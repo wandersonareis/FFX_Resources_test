@@ -72,6 +72,8 @@ func (s *MetadataService) preloadVersion(version common.GameVersion, gen int64) 
 	if err := ensureEventsLoaded(version); err != nil {
 		return err
 	}
+	// KindImages fica de fora: não tem store nem coleção para aquecer — é
+	// um walk do disco por ListEntries, e o walk não é memoizado.
 	for _, kind := range []string{KindEvents, KindObjects, KindMacro, KindLockit, KindHelp} {
 		if treeGeneration.Load() != gen {
 			// A árvore mudou no meio da fila: os caches aquecidos serviam

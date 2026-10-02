@@ -22,12 +22,20 @@ export function ExportStrings(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ExportStrings'](arg1, arg2, arg3, arg4);
 }
 
+export function ExtractImage(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ExtractImage'](arg1, arg2, arg3);
+}
+
 export function GetEnableMods() {
   return window['go']['main']['App']['GetEnableMods']();
 }
 
 export function GetGameFilesLocation() {
   return window['go']['main']['App']['GetGameFilesLocation']();
+}
+
+export function GetImageEntry(arg1, arg2, arg3) {
+  return window['go']['main']['App']['GetImageEntry'](arg1, arg2, arg3);
 }
 
 export function GetMetadata(arg1) {
@@ -58,6 +66,14 @@ export function ImportFile(arg1, arg2) {
   return window['go']['main']['App']['ImportFile'](arg1, arg2);
 }
 
+export function ImportImage(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['ImportImage'](arg1, arg2, arg3, arg4);
+}
+
+export function ImportImageGroup(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['ImportImageGroup'](arg1, arg2, arg3, arg4, arg5);
+}
+
 export function ListLanguages() {
   return window['go']['main']['App']['ListLanguages']();
 }
@@ -82,8 +98,24 @@ export function ReadFileAsString(arg1) {
   return window['go']['main']['App']['ReadFileAsString'](arg1);
 }
 
+export function RefreshImageDuplicates(arg1, arg2) {
+  return window['go']['main']['App']['RefreshImageDuplicates'](arg1, arg2);
+}
+
+export function SaveImage(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['SaveImage'](arg1, arg2, arg3, arg4, arg5);
+}
+
 export function SelectDirectory(arg1) {
   return window['go']['main']['App']['SelectDirectory'](arg1);
+}
+
+export function SelectImageFile() {
+  return window['go']['main']['App']['SelectImageFile']();
+}
+
+export function SelectImageSavePath(arg1, arg2) {
+  return window['go']['main']['App']['SelectImageSavePath'](arg1, arg2);
 }
 
 export function SelectImportFile() {

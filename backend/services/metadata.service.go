@@ -13,6 +13,7 @@ import (
 	"ffxresources/backend/core/progress"
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/dto"
+	"ffxresources/backend/fileFormats/ddsphyre"
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/fileFormats/helpfile"
 	"ffxresources/backend/fileFormats/lockit"
@@ -22,13 +23,17 @@ import (
 	strfmt "ffxresources/backend/formatters/strings"
 )
 
-// Kinds lógicos de texto servidos ao frontend.
+// Kinds lógicos servidos ao frontend: textos e imagens (.dds.phyre).
 const (
 	KindEvents  = "events"
 	KindObjects = "objects"
 	KindMacro   = "macro"
 	KindLockit  = "lockit"
 	KindHelp    = "help"
+	// KindImages é a árvore de texturas .dds.phyre — um kind de IMAGEM:
+	// não tem rows de texto, não participa de export/import de texto e não
+	// entra no preload de coleções.
+	KindImages = "images"
 )
 
 // LastMissionShortened é o prefixo (eventID[:2]) do grupo de events da
@@ -814,6 +819,50 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 			out = append(out, EntrySummary{ID: l.ID(), Key: l.Key()})
 		}
 		s.emitTreeDiag(KindLockit, version, ids, nil)
+		return out, nil
+	case KindImages:
+		if version == common.GameVersionLastMiss {
+			// Last Mission não tem árvore própria: divide a do ffx2, mas os
+			// .dds.phyre vivem só no ffx2 — vazio, como macro/lockit.
+			return []EntrySummary{}, nil
+		}
+		ids, onlyMods, fallback, err := ddsphyre.Scan(version)
+		if err != nil {
+			return nil, err
+		}
+		if len(ids) == 0 {
+			return []EntrySummary{}, nil
+		}
+		if fallback {
+			// data/ não foi extraído do FFX_Data.vbf: a árvore saiu de
+			// mods/, então originalExists é sempre false — serve sem filtro
+			// e denuncia uma única vez, em vez de 2 mil WARNs (regra 4).
+			common.LogWarning(
+				"images %s: nenhum .dds.phyre em data/ — árvore montada com %d texturas de mods/ (extraia o FFX_Data.vbf)",
+				version, len(ids),
+			)
+		}
+		out := make([]EntrySummary, 0, len(ids))
+		kept := make([]string, 0, len(ids))
+		for _, id := range ids {
+			if !fallback && !originalExists(KindImages, id, version) {
+				common.LogWarning(
+					"images %s/%s: sem original em data/ — omitido da árvore (arquivo só em mods/)",
+					version, id,
+				)
+				continue
+			}
+			kept = append(kept, id)
+			out = append(out, EntrySummary{
+				ID:  id,
+				Key: dto.NewImageMetadata(id, version).Key,
+			})
+		}
+		if !fallback {
+			// Sobras em mods/ (textura nova ou só substituída) viram WARN —
+			// ids já são o relatório legível (rel sem o sufixo).
+			s.emitTreeDiag(KindImages, version, kept, onlyMods)
+		}
 		return out, nil
 	case KindHelp:
 		// Painéis de ajuda são FFX-only: a árvore ffx2 (e a lastmiss, que

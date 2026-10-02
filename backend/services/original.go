@@ -9,6 +9,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/dto"
+	"ffxresources/backend/fileFormats/ddsphyre"
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/fileFormats/helpfile"
 	"ffxresources/backend/fileFormats/lockit"
@@ -99,6 +100,11 @@ func originalRelPath(kind, id string, version common.GameVersion) (string, bool)
 			return "", false
 		}
 		return helpfile.HelpPathForVersion(version, loc, id), true
+	case KindImages:
+		if version == common.GameVersionLastMiss || !ddsphyre.ValidID(id) {
+			return "", false
+		}
+		return ddsphyre.RelPath(version, id), true
 	}
 	return "", false
 }

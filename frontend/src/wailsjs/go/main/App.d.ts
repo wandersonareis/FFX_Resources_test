@@ -14,9 +14,13 @@ export function ExportJSON(arg1:string,arg2:common.GameVersion,arg3:Array<string
 
 export function ExportStrings(arg1:string,arg2:common.GameVersion,arg3:Array<string>,arg4:Array<string>):Promise<Array<string>>;
 
+export function ExtractImage(arg1:string,arg2:string,arg3:common.GameVersion):Promise<Array<string>>;
+
 export function GetEnableMods():Promise<boolean>;
 
 export function GetGameFilesLocation():Promise<string>;
+
+export function GetImageEntry(arg1:string,arg2:string,arg3:common.GameVersion):Promise<dto.ImageEntry>;
 
 export function GetMetadata(arg1:string):Promise<dto.Metadata>;
 
@@ -32,6 +36,10 @@ export function ImportEntry(arg1:string,arg2:string,arg3:common.GameVersion):Pro
 
 export function ImportFile(arg1:string,arg2:common.GameVersion):Promise<number>;
 
+export function ImportImage(arg1:string,arg2:string,arg3:string,arg4:common.GameVersion):Promise<void>;
+
+export function ImportImageGroup(arg1:string,arg2:string,arg3:string,arg4:Array<string>,arg5:common.GameVersion):Promise<dto.ImageImportResult>;
+
 export function ListLanguages():Promise<Array<common.Language>>;
 
 export function ListTextEntries(arg1:string,arg2:common.GameVersion):Promise<Array<services.EntrySummary>>;
@@ -44,7 +52,15 @@ export function QuitApp():Promise<void>;
 
 export function ReadFileAsString(arg1:string):Promise<string>;
 
+export function RefreshImageDuplicates(arg1:string,arg2:common.GameVersion):Promise<void>;
+
+export function SaveImage(arg1:string,arg2:string,arg3:string,arg4:string,arg5:common.GameVersion):Promise<void>;
+
 export function SelectDirectory(arg1:string):Promise<string>;
+
+export function SelectImageFile():Promise<string>;
+
+export function SelectImageSavePath(arg1:string,arg2:string):Promise<string>;
 
 export function SelectImportFile():Promise<string>;
 
