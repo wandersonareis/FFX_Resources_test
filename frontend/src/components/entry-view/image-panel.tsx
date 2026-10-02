@@ -13,7 +13,6 @@ import {
   Maximize2,
   RefreshCw,
   Save,
-  Trash2,
   ZoomIn,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -86,6 +85,7 @@ export function ImagePanel({ view }: { view: EntryView }) {
   const { version, store, actions } = view;
   const entry = useSelector(store, (s) => s.selectedEntry);
   const image = useSelector(store, (s) => s.image);
+  const imageAction = useSelector(store, (s) => s.imageAction);
   const loading = useSelector(store, (s) => s.loading);
   const [busy, setBusy] = useState<'import' | 'save' | 'refresh' | null>(null);
   /**
@@ -141,31 +141,54 @@ export function ImagePanel({ view }: { view: EntryView }) {
     if (prev) setZoom({ id: entry?.id ?? '', level: prev });
   };
 
-  // Zoom por teclado (TanStack Hotkeys): Mod+= / Mod+- andam no ciclo e
+  // Painel sem overlay por cima (diálogo de escopo, diálogo de ação ou menu
+  // de contexto) — os atalhos só valem para a textura em exibição.
+  const panelIdle =
+    entry !== null &&
+    pendingImport === null &&
+    imageAction === null &&
+    menuTarget === null;
+
+  // Tecla Delete: exclusão da textura em exibição pelo teclado — abre o
+  // MESMO diálogo do menu de contexto (escopo data/mods/ambos + cópias, com
+  // confirmação); nada é apagado direto. Substitui o botão Deletar.
+  useHotkey(
+    'Delete',
+    () => {
+      if (!entry) return;
+      actions.openImageAction({
+        type: 'delete',
+        id: entry.id,
+        label: entry.label,
+        duplicates: image?.duplicates ?? [],
+      });
+    },
+    { enabled: panelIdle, ignoreInputs: true },
+  );
+
+  // Zoom por teclado (TanStack Hotkeys): Mod+= / Mod+- andam no ciclo,
   // Mod+0 volta ao ajuste; 1–4 vão direto ao nível SEM Mod (Mod+1/2/3 já
-  // trocam de aba no app-shell). Dígito só dispara fora de inputs e com o
-  // painel de textura na frente.
-  const zoomKeysEnabled = entry !== null && pendingImport === null;
-  useHotkey('Mod+=', zoomIn, { enabled: zoomKeysEnabled, ignoreInputs: true });
-  useHotkey('Mod+-', zoomOut, { enabled: zoomKeysEnabled, ignoreInputs: true });
+  // trocam de aba no app-shell).
+  useHotkey('Mod+=', zoomIn, { enabled: panelIdle, ignoreInputs: true });
+  useHotkey('Mod+-', zoomOut, { enabled: panelIdle, ignoreInputs: true });
   useHotkey('Mod+0', () => setZoom(null), {
-    enabled: zoomKeysEnabled,
+    enabled: panelIdle,
     ignoreInputs: true,
   });
   useHotkey('1', () => setZoom({ id: entry?.id ?? '', level: 1 }), {
-    enabled: zoomKeysEnabled,
+    enabled: panelIdle,
     ignoreInputs: true,
   });
   useHotkey('2', () => setZoom({ id: entry?.id ?? '', level: 2 }), {
-    enabled: zoomKeysEnabled,
+    enabled: panelIdle,
     ignoreInputs: true,
   });
   useHotkey('3', () => setZoom({ id: entry?.id ?? '', level: 3 }), {
-    enabled: zoomKeysEnabled,
+    enabled: panelIdle,
     ignoreInputs: true,
   });
   useHotkey('4', () => setZoom({ id: entry?.id ?? '', level: 4 }), {
-    enabled: zoomKeysEnabled,
+    enabled: panelIdle,
     ignoreInputs: true,
   });
 
@@ -463,16 +486,6 @@ export function ImagePanel({ view }: { view: EntryView }) {
           >
             <FlipVertical size={16} />
             {flipped ? 'Flip (on)' : 'Flip'}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy !== null}
-            title="Apaga a textura conforme o escopo (data/mods/ambos) — o diálogo pede confirmação"
-            onClick={() => openAction('delete')}
-          >
-            <Trash2 size={16} />
-            Deletar
           </Button>
           <Button
             size="sm"
