@@ -80,6 +80,23 @@ export function ImagePanel({ view }: { view: EntryView }) {
    */
   const [flippedId, setFlippedId] = useState<string | null>(null);
   /**
+   * Zoom manual do preview: id da textura + nível ('fit' = encaixar no
+   * painel). Guarda o id para cada textura voltar ao ajuste automático,
+   * no mesmo padrão do flippedId (sem useEffect). O nível é o multiplicador
+   * do tamanho NATIVO da textura (1× = 1 pixel da textura por pixel da tela).
+   */
+  const [zoom, setZoom] = useState<{ id: string; level: 'fit' | number } | null>(
+    null,
+  );
+  /**
+   * Renderização pixelada (nearest-neighbor) — preferência da sessão. É o
+   * jeito de distinguir embaçamento da EXIBIÇÃO (escala bilinear do browser
+   * ao encaixar texturas pequenas no painel) do embaçamento do DADO (DXT
+   * comprimido / arte de baixa resolução): em 1× com pixelado, o que se vê
+   * é exatamente o que o decoder do jogo produz.
+   */
+  const [pixelated, setPixelated] = useState(false);
+  /**
    * .dds já escolhido aguardando o usuário decidir o alcance do import
    * (null = sem diálogo aberto). Só aparece quando a imagem tem cópias.
    */
@@ -93,6 +110,7 @@ export function ImagePanel({ view }: { view: EntryView }) {
 
   if (!entry) return null;
   const flipped = flippedId === entry.id;
+  const zoomLevel = zoom?.id === entry.id ? zoom.level : 'fit';
   if (loading && !image) return <p className="mt-8 opacity-70">Carregando…</p>;
   if (!image) {
     return (
@@ -381,6 +399,36 @@ export function ImagePanel({ view }: { view: EntryView }) {
           </Button>
           <Button
             size="sm"
+            variant={zoomLevel === 'fit' ? 'default' : 'outline'}
+            aria-pressed={zoomLevel === 'fit'}
+            title="Encaixa a textura no painel (escala suave do navegador)"
+            onClick={() => setZoom(null)}
+          >
+            Ajustar
+          </Button>
+          {[1, 2, 4].map((level) => (
+            <Button
+              key={level}
+              size="sm"
+              variant={zoomLevel === level ? 'default' : 'outline'}
+              aria-pressed={zoomLevel === level}
+              title={`Zoom ${level}× — 1 pixel da textura = ${level} na tela. Em 1× o que se vê é exatamente o dado; nítido aqui = o embaçado no Ajustar era só a escala`}
+              onClick={() => setZoom({ id: entry.id, level })}
+            >
+              {level}×
+            </Button>
+          ))}
+          <Button
+            size="sm"
+            variant={pixelated ? 'default' : 'outline'}
+            aria-pressed={pixelated}
+            title="Renderização pixelada (nearest-neighbor) — cada pixel como é, sem suavização do navegador"
+            onClick={() => setPixelated(!pixelated)}
+          >
+            Pixelado
+          </Button>
+          <Button
+            size="sm"
             variant="ghost"
             disabled={busy !== null}
             title="Reconstrói o índice de duplicatas — para textura editada fora do app (hex editor)"
@@ -398,13 +446,21 @@ export function ImagePanel({ view }: { view: EntryView }) {
               <img
                 src={image.pngData}
                 alt={entry.label}
-                // Só visual: o backend já envia na orientação do jogo; este
-                // espelhamento não toca no dado nem gera chamada ao Go.
+                // Só visual: o backend já envia na orientação do jogo; o
+                // espelhamento, o zoom e o pixelado não tocam no dado nem
+                // geram chamada ao Go. No zoom o scroll do container navega.
                 style={{
                   transform: flipped ? 'scaleY(-1)' : undefined,
+                  width:
+                    zoomLevel === 'fit' ? undefined : `${image.width * zoomLevel}px`,
+                  imageRendering: pixelated ? 'pixelated' : undefined,
                   transition: 'transform 120ms ease-out',
                 }}
-                className="max-h-[65vh] max-w-full object-contain"
+                className={
+                  zoomLevel === 'fit'
+                    ? 'max-h-[65vh] max-w-full object-contain'
+                    : undefined
+                }
               />
             ) : (
               <p className="opacity-70">Sem pré-visualização disponível.</p>
