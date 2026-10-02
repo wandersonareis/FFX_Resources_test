@@ -506,10 +506,18 @@ export function ImagePanel({ view }: { view: EntryView }) {
                 // Só visual: o backend já envia na orientação do jogo; o
                 // espelhamento, o zoom e o pixelado não tocam no dado nem
                 // geram chamada ao Go. No zoom o scroll do container navega.
+                // Escala UNIFORME explícita: largura e altura multiplicadas
+                // pelo mesmo nível — o aspecto nunca muda, nem em 1× (tamanho
+                // real). maxWidth: 'none' anula o preflight do Tailwind
+                // (img { max-width: 100%; height: auto }), que reencaparía a
+                // imagem de volta ao container e quebraria a rolagem.
                 style={{
                   transform: flipped ? 'scaleY(-1)' : undefined,
                   width:
                     zoomLevel === 'fit' ? undefined : `${image.width * zoomLevel}px`,
+                  height:
+                    zoomLevel === 'fit' ? undefined : `${image.height * zoomLevel}px`,
+                  maxWidth: zoomLevel === 'fit' ? undefined : 'none',
                   imageRendering: pixelated ? 'pixelated' : undefined,
                   transition: 'transform 120ms ease-out',
                 }}
