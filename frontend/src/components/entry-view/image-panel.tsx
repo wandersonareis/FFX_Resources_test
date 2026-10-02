@@ -488,7 +488,16 @@ export function ImagePanel({ view }: { view: EntryView }) {
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <div className="relative">
-            <div className="flex min-h-40 items-center justify-center overflow-auto rounded-md border bg-muted/40 p-4">
+            {/* Área de exibição com altura fixa: no zoom a imagem cresce
+                além do container e rola em ambas as direções (comportamento
+                de visualizador de imagem na web), por escolha do usuário. */}
+            <div
+              className={
+                zoomLevel === 'fit'
+                  ? 'flex min-h-40 items-center justify-center overflow-auto rounded-md border bg-muted/40 p-4'
+                  : 'flex h-[65vh] overflow-auto rounded-md border bg-muted/40 p-4'
+              }
+            >
             {image.pngData ? (
               // eslint-disable-next-line @next/next/no-img-element -- data URL gerado pelo Go (next/image não otimiza nem precisa)
               <img
@@ -507,7 +516,10 @@ export function ImagePanel({ view }: { view: EntryView }) {
                 className={
                   zoomLevel === 'fit'
                     ? 'max-h-[65vh] max-w-full object-contain'
-                    : undefined
+                    : // m-auto centraliza quando cabe e zera quando estoura —
+                      // sem isso o flex centrado cortaria a rolagem; shrink-0
+                      // impede o flex de encolher a imagem de volta.
+                      'm-auto shrink-0'
                 }
               />
             ) : (
