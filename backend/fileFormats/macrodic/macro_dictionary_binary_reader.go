@@ -1,4 +1,4 @@
-﻿package macrodic
+package macrodic
 
 import "ffxresources/backend/common"
 
