@@ -39,7 +39,7 @@ func SaveBinaryFileStore(b *ObjectBinaryFileStore, filePath string) error {
 func encodeBinaryLanguageStore(b *ObjectBinaryFileStore, localizationKey string) (*bytes.Buffer, error) {
 	keyedStrings := collectBinaryKeyedStringsStore(b, localizationKey)
 	charset := ffxencoding.GetCharsetForLanguage(localizationKey)
-	stringBytes := RebuildKeyedStrings(keyedStrings, charset, b.Version)
+	stringBytes := RebuildKeyedStrings(keyedStrings, charset, b.Version, b.StringBytes)
 
 	buf := bytes.NewBuffer(make([]byte, 0, b.Header.GetDataLength()+len(stringBytes)+0x20))
 

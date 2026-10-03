@@ -147,19 +147,21 @@ var FileLayouts = map[string]FileLayout{
 		Fields:     MenuTextPairLayout[common.GameVersionFFX],
 		Formatter:  nameOnlyLegacyFmtStore,
 	},
+	// monmagic1/2.bin: o C# (FFX.Command) tem os 4 campos de texto
+	// (name + desc) — confirmados no binário; antes lia só o par name.
 	"ffx/battle/kernel/monmagic1.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "monmagic1.bin",
-		Fields:     NameOnlyLayout[common.GameVersionFFX],
-		Formatter:  nameOnlyLegacyFmtStore,
+		Fields:     CommandLayout[common.GameVersionFFX],
+		Formatter:  commandLegacyFmtStore,
 	},
 	"ffx/battle/kernel/monmagic2.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "monmagic2.bin",
-		Fields:     NameOnlyLayout[common.GameVersionFFX],
-		Formatter:  nameOnlyLegacyFmtStore,
+		Fields:     CommandLayout[common.GameVersionFFX],
+		Formatter:  commandLegacyFmtStore,
 	},
 	"ffx/battle/kernel/build_txt.bin": {
 		Version:    common.GameVersionFFX,
@@ -203,6 +205,7 @@ var FileLayouts = map[string]FileLayout{
 		Fields:     PlyRomPairLayout[common.GameVersionFFX],
 		Formatter:  nameOnlyLegacyFmtStore,
 	},
+
 	"ffx/battle/kernel/ply_save.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
@@ -293,25 +296,27 @@ var FileLayouts = map[string]FileLayout{
 		Fields:     MenuTextV2Layout[common.GameVersionFFX2],
 		Formatter:  nil,
 	},
+	// monmagic/monster/monster2: name + help (MCommand/Monster/Monster2 —
+	// confirmados no binário; antes lia só o name).
 	"ffx2/battle/kernel/monmagic.bin": {
 		Version:    common.GameVersionFFX2,
 		DirPattern: "battle/kernel",
 		FileName:   "monmagic.bin",
-		Fields:     NameOnlyV2Layout[common.GameVersionFFX2],
+		Fields:     CommandV2Layout[common.GameVersionFFX2],
 		Formatter:  nil,
 	},
 	"ffx2/battle/kernel/monster.bin": {
 		Version:    common.GameVersionFFX2,
 		DirPattern: "battle/kernel",
 		FileName:   "monster.bin",
-		Fields:     NameOnlyV2Layout[common.GameVersionFFX2],
+		Fields:     CommandV2Layout[common.GameVersionFFX2],
 		Formatter:  nil,
 	},
 	"ffx2/battle/kernel/monster2.bin": {
 		Version:    common.GameVersionFFX2,
 		DirPattern: "battle/kernel",
 		FileName:   "monster2.bin",
-		Fields:     NameOnlyV2Layout[common.GameVersionFFX2],
+		Fields:     CommandV2Layout[common.GameVersionFFX2],
 		Formatter:  nil,
 	},
 	"ffx2/battle/kernel/oversoul.bin": {

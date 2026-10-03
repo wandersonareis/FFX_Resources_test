@@ -71,20 +71,23 @@ var (
 	}
 
 	// MenuTextPairLayout: par command — ffx *_txt.bin de menu
-	// (NameHelpText: command @0x00..0x08; o par help @0x08..0x10 fica para
-	// o fluxo novo — aqui só o rename, sem expansão de cobertura).
+	// (NameHelpText: command @0x00, command_simplified @0x04,
+	// help @0x08, help_simplified @0x0C — confirmados no binário).
 	MenuTextPairLayout = LayoutSet{
 		common.GameVersionFFX: {
 			{"command", 0},
 			{"command_simplified", 0},
+			{"help", 0},
+			{"help_simplified", 0},
 		},
 	}
 
-	// MenuTextV2Layout: command (TextRef) — ffx2 menu_txt.bin/btlend_txt.bin
-	// (MenuTxt/BtlEndTxt: command@0x00; help@0x04 fica para o fluxo novo).
+	// MenuTextV2Layout: command + help — ffx2 menu_txt.bin/btlend_txt.bin
+	// (MenuTxt/BtlEndTxt: command@0x00, help@0x04).
 	MenuTextV2Layout = LayoutSet{
 		common.GameVersionFFX2: {
 			{"command", 0},
+			{"help", 0},
 		},
 	}
 
@@ -104,12 +107,15 @@ var (
 		},
 	}
 
-	// PlyRomPairLayout: par switch_text — ffx ply_rom.bin (PlyRom:
-	// SwitchText @0x00..0x08; o par scan_text @0x10.. fica para o fluxo novo).
+	// PlyRomPairLayout: pares switch_text + scan_text — ffx ply_rom.bin
+	// (PlyRom: SwitchText @0x00..0x08 e ScanText @0x08..0x10, confirmados
+	// no binário).
 	PlyRomPairLayout = LayoutSet{
 		common.GameVersionFFX: {
 			{"switch_text", 0},
 			{"switch_text_simplified", 0},
+			{"scan_text", 0},
+			{"scan_text_simplified", 0},
 		},
 	}
 
