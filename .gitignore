@@ -78,3 +78,4 @@ yarn-error.log*
 frontend/src/environments/*
 battle/*
 examples/*
+proj
