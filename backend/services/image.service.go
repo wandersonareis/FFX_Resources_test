@@ -32,6 +32,18 @@ import (
 // GetImage carrega a textura e devolve a pré-visualização pronta (data URL
 // PNG) junto dos metadados do container e do DDS da fonte escolhida.
 func (s *MetadataService) GetImage(kind, id string, version common.GameVersion) (dto.ImageEntry, error) {
+	return s.getImage(kind, id, version, common.SourceData, true)
+}
+
+// GetImageFrom é GetImage com a fonte do ORIGINAL explícita — SourceVbf
+// quando a textura está sendo aberta a partir da raiz do .vbf. Nesse caso o
+// índice de duplicatas NÃO é anexado: ele é montado varrendo a árvore data/,
+// que é justamente a que pode não existir por completo.
+func (s *MetadataService) GetImageFrom(kind, id string, version common.GameVersion, originalSrc common.FileSource) (dto.ImageEntry, error) {
+	return s.getImage(kind, id, version, originalSrc, false)
+}
+
+func (s *MetadataService) getImage(kind, id string, version common.GameVersion, originalSrc common.FileSource, withDupes bool) (dto.ImageEntry, error) {
 	if !isImageKind(kind) {
 		return dto.ImageEntry{}, fmt.Errorf("kind desconhecido: %s", kind)
 	}
@@ -41,7 +53,7 @@ func (s *MetadataService) GetImage(kind, id string, version common.GameVersion) 
 	if !ddsphyre.ValidID(id) {
 		return dto.ImageEntry{}, fmt.Errorf("textura desconhecida: %s", id)
 	}
-	r, err := ddsphyre.Resolve(version, id)
+	r, err := ddsphyre.ResolveFrom(version, id, originalSrc)
 	if err != nil {
 		return dto.ImageEntry{}, err
 	}
@@ -60,7 +72,9 @@ func (s *MetadataService) GetImage(kind, id string, version common.GameVersion) 
 		PNGPath:        r.PNGPath,
 		Modded:         r.InMods,
 	}
-	s.fillDuplicates(&entry, id, version)
+	if withDupes {
+		s.fillDuplicates(&entry, id, version)
+	}
 	return entry, nil
 }
 

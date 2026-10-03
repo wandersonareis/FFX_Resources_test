@@ -233,7 +233,9 @@ func readFile(rel string, src common.FileSource) ([]byte, error) {
 	if !accessor.Exists {
 		return nil, os.ErrNotExist
 	}
-	return os.ReadFile(accessor.ResolvedPath)
+	// Pelo accessor (nunca pelo ResolvedPath): fontes de .vbf resolvem para
+	// conteúdo em memória, sem arquivo em disco.
+	return accessor.ReadBytes()
 }
 
 // writeFile grava um arquivo relativo ao GameFilesRoot SEMPRE em mods/:

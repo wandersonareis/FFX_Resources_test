@@ -73,7 +73,9 @@ func interactionGameFilesDirStore() string {
 }
 
 func (b *ObjectBinaryFileStore) readFile() ([]byte, error) {
-	if base := interactionGameFilesDirStore(); base != "" {
+	// Fontes de .vbf não têm atalho em disco: o conteúdo vem do overlay em
+	// memória, direto pelo accessor.
+	if base := interactionGameFilesDirStore(); base != "" && !b.source.IsVbfSource() {
 		if data, err := b.readFileFromBase(base); err == nil {
 			return data, nil
 		} else if !errors.Is(err, os.ErrNotExist) {
@@ -92,7 +94,7 @@ func (b *ObjectBinaryFileStore) readFile() ([]byte, error) {
 		return nil, errors.New("file does not exist")
 	}
 
-	data, err := os.ReadFile(fileAccessor.ResolvedPath)
+	data, err := fileAccessor.ReadBytes()
 	if err != nil {
 		common.LogVerbose("Error reading file: %v", err)
 		return nil, errors.New("failed to read file")
@@ -123,6 +125,9 @@ func (b *ObjectBinaryFileStore) readFileFromBase(base string) ([]byte, error) {
 		return readAt(filepath.Join(base, rel))
 	case common.SourceMods:
 		return readAt(filepath.Join(base, common.ModsFolder, rel))
+	case common.SourceVbf, common.SourceVbfPreferred:
+		// Fonte de .vbf não tem atalho em disco: deixa o accessor resolver.
+		return nil, os.ErrNotExist
 	}
 
 	if !common.AreModsEnabled() {

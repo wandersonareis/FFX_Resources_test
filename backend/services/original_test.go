@@ -117,3 +117,88 @@ func TestWithOriginalDoesNotMutateInputRows(t *testing.T) {
 		t.Fatalf("hash de entrada mutado: %q", row.Hash[common.DefaultLocalization])
 	}
 }
+
+// A tabela é a UNIÃO dos dois lados: row que só existe na tradução fica sem
+// Original e marcada MissingInOriginal; row que só existe no original entra
+// ordenada, com Text vazio e marcada MissingInTranslated. O texto de um lado
+// nunca vaza para o outro.
+func TestWithOriginalMontaUniaoDasRows(t *testing.T) {
+	ref := entryRef{kind: KindEvents, id: "zev001", version: common.GameVersionFFX2}
+	current := dto.FileEntry{Rows: []dto.TextRow{
+		rawRow(0, "Traduzida"),
+		rawRow(2, "Só na tradução"),
+	}}
+	orig := dto.FileEntry{Rows: []dto.TextRow{
+		dataRow(0, "Original"),
+		dataRow(1, "Só no original"),
+	}}
+
+	out, diverged := withOriginal(ref, current, orig)
+
+	if len(out.Rows) != 3 {
+		t.Fatalf("união com %d rows, esperava 3: %+v", len(out.Rows), out.Rows)
+	}
+	// Ordenado por Index depois da união: 0 (casada), 1 (só original),
+	// 2 (só tradução).
+	if out.Rows[0].Index != 0 || out.Rows[1].Index != 1 || out.Rows[2].Index != 2 {
+		t.Fatalf("ordem pós-união: %d, %d, %d", out.Rows[0].Index, out.Rows[1].Index, out.Rows[2].Index)
+	}
+
+	// Row casada: ponteiro = hash do original, sem marcação de órfã.
+	casada := out.Rows[0]
+	if casada.Original[common.DefaultLocalization] != "Original" {
+		t.Fatalf("row casada sem Original: %v", casada.Original)
+	}
+	if casada.MissingInOriginal || casada.MissingInTranslated {
+		t.Fatal("row casada marcada como órfã")
+	}
+	if casada.Hash[common.DefaultLocalization] != hash.Sum64Hex("Original") {
+		t.Fatalf("ponteiro da row casada = %q, queria o do original", casada.Hash[common.DefaultLocalization])
+	}
+
+	// Só no original: Original preenchido, Traduzido vazio e marcado.
+	somOriginal := out.Rows[1]
+	if !somOriginal.MissingInTranslated {
+		t.Fatal("row só no original não marcada como ausente da tradução")
+	}
+	if somOriginal.MissingInOriginal {
+		t.Fatal("row só no original marcada como ausente do original")
+	}
+	if len(somOriginal.Text) != 0 {
+		t.Fatalf("texto do original vazou para a coluna Traduzido: %v", somOriginal.Text)
+	}
+	if somOriginal.Original == nil || somOriginal.Original[common.DefaultLocalization] != "Só no original" {
+		t.Fatalf("coluna Original da row órfã: %v", somOriginal.Original)
+	}
+
+	// Só na tradução: Original vazio e marcado; texto atual preservado.
+	somTraducao := out.Rows[2]
+	if !somTraducao.MissingInOriginal {
+		t.Fatal("row só na tradução não marcada como ausente do original")
+	}
+	if somTraducao.MissingInTranslated {
+		t.Fatal("row só na tradução marcada como ausente da tradução")
+	}
+	if somTraducao.Original != nil {
+		t.Fatalf("coluna Original preenchida para row sem contraparte: %v", somTraducao.Original)
+	}
+	if somTraducao.Text[common.DefaultLocalization] != "Só na tradução" {
+		t.Fatalf("texto atual perdido: %v", somTraducao.Text)
+	}
+
+	// O relatório de divergência continua descrevendo os dois lados.
+	if len(diverged.onlyInData) != 1 || diverged.onlyInData[0].Index != 1 {
+		t.Fatalf("só em data/: %+v", diverged.onlyInData)
+	}
+	if len(diverged.onlyInMods) != 1 || diverged.onlyInMods[0].Index != 2 {
+		t.Fatalf("só em mods/: %+v", diverged.onlyInMods)
+	}
+	if diverged.dataRows != 2 || diverged.modsRows != 2 {
+		t.Fatalf("contagens: data=%d mods=%d", diverged.dataRows, diverged.modsRows)
+	}
+
+	// Nada das entradas foi mutado.
+	if len(current.Rows) != 2 || current.Rows[1].MissingInOriginal {
+		t.Fatal("entradas mutadas pela união")
+	}
+}

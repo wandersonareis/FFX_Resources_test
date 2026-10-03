@@ -157,8 +157,16 @@ type Resolved struct {
 //
 // O .dds.phyre VISÍVEL é mods-first (a mesma semântica da coluna Traduzido):
 // se o translator já importou uma textura, é ela que se vê; sem import, o
-// pristine de data/.
+// pristine da fonte original (data/ no fluxo normal, o .vbf quando pedido
+// via ResolveFrom).
 func Resolve(version common.GameVersion, id string) (*Resolved, error) {
+	return ResolveFrom(version, id, common.SourceData)
+}
+
+// ResolveFrom é Resolve com a fonte ORIGINAL explícita: SourceData lê o
+// pristine de data/ (fluxo normal); SourceVbf lê o container — o caminho
+// usado quando a árvore data/ não foi extraída na íntegra.
+func ResolveFrom(version common.GameVersion, id string, originalSrc common.FileSource) (*Resolved, error) {
 	rel := RelPath(version, id)
 	acc, err := common.NewFileAccessorFrom(rel, common.SourceMods)
 	if err != nil {
@@ -166,11 +174,11 @@ func Resolve(version common.GameVersion, id string) (*Resolved, error) {
 	}
 	inMods := acc.Exists
 	if !inMods {
-		if acc, err = common.NewFileAccessorFrom(rel, common.SourceData); err != nil {
+		if acc, err = common.NewFileAccessorFrom(rel, originalSrc); err != nil {
 			return nil, err
 		}
 		if !acc.Exists {
-			return nil, fmt.Errorf("textura %s não encontrada em data/ nem em mods/", id)
+			return nil, fmt.Errorf("textura %s não encontrada em %s nem em mods/", id, originalSrc)
 		}
 	}
 	raw, err := acc.ReadBytes()

@@ -56,10 +56,17 @@ func originalCacheKey(kind string, version common.GameVersion, id string) string
 }
 
 // originalRelPath devolve o caminho (na raiz usada pelo respectivo leitor)
-// do binário pristine da entrada. ok=false significa "a entrada não tem
-// arquivo associado" (id desconhecido) — quem trata é o chamador.
+// do binário pristine da entrada na localização padrão. ok=false significa
+// "a entrada não tem arquivo associado" (id desconhecido) — quem trata é o
+// chamador.
 func originalRelPath(kind, id string, version common.GameVersion) (string, bool) {
-	loc := common.DefaultLocalization
+	return originalRelPathLoc(kind, id, version, common.DefaultLocalization)
+}
+
+// originalRelPathLoc é originalRelPath para UMA localização explícita. É o
+// que o escopo do .vbf usa para montar o overlay com todas as variantes
+// (eventos/help/macro têm um arquivo por localização).
+func originalRelPathLoc(kind, id string, version common.GameVersion, loc string) (string, bool) {
 	switch kind {
 	case KindEvents:
 		rel, err := event.EventRelPath(id)
@@ -161,6 +168,11 @@ func originalExists(kind, id string, version common.GameVersion) bool {
 // com cache. Inexistência é exists=false, sem erro; erro de leitura/parse
 // NÃO é memoizado (pode ser transitória) e o chamador degrada.
 func (s *MetadataService) originalFor(kind, id string, version common.GameVersion) (dto.FileEntry, bool, error) {
+	// Escopo do .vbf em curso: o cache guarda o pristine de data/ e o
+	// conteúdo do container é OUTRA coisa — nem lê nem grava aqui.
+	if common.VbfSourceActive() {
+		return s.loadOriginalFrom(kind, id, version, originalSource)
+	}
 	if kind == KindMacro {
 		return s.originalMacroEntry(id, version)
 	}
@@ -173,7 +185,7 @@ func (s *MetadataService) originalFor(kind, id string, version common.GameVersio
 	}
 	originalMu.Unlock()
 
-	entry, exists, err := s.loadOriginal(kind, id, version)
+	entry, exists, err := s.loadOriginalFrom(kind, id, version, originalSource)
 	if err == nil {
 		originalMu.Lock()
 		originalCache[key] = originalValue{exists: exists, entry: entry}
@@ -206,13 +218,28 @@ func (s *MetadataService) originalMacroEntry(id string, version common.GameVersi
 	return entry, found, nil
 }
 
-// loadOriginal monta a entrada pristine da árvore data/ para o kind dado,
+// macroEntryFrom monta a entrada de um chunk do dicionário lendo da fonte
+// indicada, SEM cache — é o caminho do .vbf, onde o binário vem do overlay
+// e varia a cada escopo (o cache é só do pristine de data/).
+func (s *MetadataService) macroEntryFrom(id string, version common.GameVersion, src common.FileSource) (dto.FileEntry, bool, error) {
+	c, err := builders.BuildMacroDTOFromSource(version, src)
+	if err != nil {
+		return dto.FileEntry{}, false, err
+	}
+	entry, found := c[id]
+	return entry, found, nil
+}
+
+// loadOriginalFrom monta a entrada pristine da FONTE dada para o kind,
 // sem registrar nada em store nenhum (os stores continuam refletindo a
-// visão traduzida/normal).
-func (s *MetadataService) loadOriginal(kind, id string, version common.GameVersion) (dto.FileEntry, bool, error) {
+// visão traduzida/normal). originalSource = coluna Original de data/.
+func (s *MetadataService) loadOriginalFrom(kind, id string, version common.GameVersion, src common.FileSource) (dto.FileEntry, bool, error) {
+	if kind == KindMacro {
+		return s.macroEntryFrom(id, version, src)
+	}
 	switch kind {
 	case KindEvents:
-		strs, err := event.ReadLocalizedEventStringsFrom(id, version, originalSource)
+		strs, err := event.ReadLocalizedEventStringsFrom(id, version, src)
 		if err != nil {
 			return dto.FileEntry{}, false, err
 		}
@@ -235,7 +262,7 @@ func (s *MetadataService) loadOriginal(kind, id string, version common.GameVersi
 		}
 		layout := layouts[0]
 		key := objectsfile.FileLayoutKey(version, layout.PatternPath())
-		binFile, err := objectsfile.LoadObjectFileFrom(layout, originalSource)
+		binFile, err := objectsfile.LoadObjectFileFrom(layout, src)
 		if err != nil {
 			return dto.FileEntry{}, false, fmt.Errorf("objects %s: %w", id, err)
 		}
@@ -257,7 +284,7 @@ func (s *MetadataService) loadOriginal(kind, id string, version common.GameVersi
 			if l.ID() != id {
 				continue
 			}
-			f, err := lockit.LoadFrom(l, originalSource)
+			f, err := lockit.LoadFrom(l, src)
 			if err != nil {
 				return dto.FileEntry{}, false, fmt.Errorf("lockit %s: %w", id, err)
 			}
@@ -274,7 +301,7 @@ func (s *MetadataService) loadOriginal(kind, id string, version common.GameVersi
 		return dto.FileEntry{}, false, nil
 
 	case KindHelp:
-		panel := helpfile.ReadHelpPanelFrom(version, id, originalSource)
+		panel := helpfile.ReadHelpPanelFrom(version, id, src)
 		if panel == nil {
 			return dto.FileEntry{}, false, nil
 		}
@@ -291,18 +318,28 @@ func (s *MetadataService) loadOriginal(kind, id string, version common.GameVersi
 // PONTEIRO de dupe (Hash) reescrito a partir de data/, casando as rows por
 // (Index, Name) — e devolve o relatório de divergência de estrutura.
 //
+// A tabela é a UNIÃO dos dois lados: row só na tradução fica sem `Original`
+// e marcada MissingInOriginal; row só no original entra no fim com Text
+// vazio e marcada MissingInTranslated. É o frontend quem pinta em vermelho
+// o lado que falta — o app não decide quem está "certo".
+//
 // O hash de exibição é o hash do ORIGINAL (imutável, criado uma vez na
 // leitura pristine): coluna Traduzido (Text) reusa o MESMO ponteiro, então
 // hash(Text) == hash(Original) ⇔ célula ainda não traduzida — a comparação
 // dos dois é o flag "pendente de revisão" e decide o dupe.
 //
-// Rows sem contraparte ficam sem `original` (o frontend exibe "—") e com o
-// hash de mods; o texto traduzido nunca vaza para a coluna Original. A
-// emissão do aviso é do CHAMADOR (logDivergence), em ordem — os workers
+// A emissão do aviso é do CHAMADOR (logDivergence), em ordem — os workers
 // paralelos apenas coletam.
 func withOriginal(ref entryRef, current, orig dto.FileEntry) (dto.FileEntry, divergeDiag) {
 	if len(current.Rows) == 0 || len(orig.Rows) == 0 {
-		return current, divergeDiag{ref: ref, dataRows: len(orig.Rows), modsRows: len(current.Rows)}
+		// Um dos lados sem rows: a união é o outro lado inteiro, marcado
+		// como ausente do lado que faltou (sem relatório — o chamador já
+		// decide o que fazer com um original inexistente).
+		return unionSingleSide(current, orig), divergeDiag{
+			ref:      ref,
+			dataRows: len(orig.Rows),
+			modsRows: len(current.Rows),
+		}
 	}
 
 	type rowKey struct {
@@ -324,6 +361,9 @@ func withOriginal(ref entryRef, current, orig dto.FileEntry) (dto.FileEntry, div
 		k := rowKey{rows[i].Index, rows[i].Name}
 		src, ok := byKey[k]
 		if !ok || len(src) == 0 {
+			// Só na tradução: coluna Original fica vazia e é ela que o
+			// frontend pinta em vermelho.
+			rows[i].MissingInOriginal = true
 			onlyInMods = append(onlyInMods, diagRowOf(k.index, k.name, rows[i].Text[common.DefaultLocalization]))
 			continue
 		}
@@ -343,12 +383,20 @@ func withOriginal(ref entryRef, current, orig dto.FileEntry) (dto.FileEntry, div
 			continue
 		}
 		onlyInData = append(onlyInData, diagRowOf(k.index, k.name, r.Text[common.DefaultLocalization]))
+		// Só no original: entra na união com a coluna Traduzido vazia.
+		// O ponteiro é preenchido adiante, junto das rows casadas.
+		rows = append(rows, dto.TextRow{
+			Index:               r.Index,
+			Name:                r.Name,
+			Original:            copyTextMap(r.Text),
+			MissingInTranslated: true,
+		})
 	}
 
 	diag := divergeDiag{
 		ref:        ref,
 		dataRows:   len(orig.Rows),
-		modsRows:   len(rows),
+		modsRows:   len(rows) - len(onlyInData),
 		onlyInMods: onlyInMods,
 		onlyInData: onlyInData,
 	}
@@ -356,6 +404,8 @@ func withOriginal(ref entryRef, current, orig dto.FileEntry) (dto.FileEntry, div
 	// Ponteiro estrutural por row casada: hash do original por idioma.
 	// Idioma sem texto original mantém o hash atual (nada para agrupar por
 	// ali). Idempotente: célula não traduzida já tem os hashes coincidentes.
+	// As rows acrescidas da união entram aqui também (Text vazio ⇒ o
+	// ponteiro é só o do original).
 	for i := range rows {
 		if rows[i].Original == nil {
 			continue
@@ -370,8 +420,53 @@ func withOriginal(ref entryRef, current, orig dto.FileEntry) (dto.FileEntry, div
 			rows[i].Hash[lang] = hash.Sum64Hex(o)
 		}
 	}
+	// A união pode ter acrescentado rows fora de ordem: ordenar AQUI, e não
+	// só no dedup de display, para que a ordem canônica (HashOrder) seja
+	// construída sobre a mesma sequência que a view serve.
+	dto.SortRows(rows)
 	current.Rows = rows
 	return current, diag
+}
+
+// unionSingleSide devolve a união quando um dos lados não tem rows: o lado
+// existente inteiro, marcado como ausente do outro.
+func unionSingleSide(current, orig dto.FileEntry) dto.FileEntry {
+	if len(current.Rows) == 0 && len(orig.Rows) == 0 {
+		return current
+	}
+	if len(current.Rows) == 0 {
+		rows := make([]dto.TextRow, 0, len(orig.Rows))
+		for _, r := range orig.Rows {
+			cp := r
+			cp.Original = copyTextMap(r.Text)
+			cp.Text = nil
+			cp.Hash = nil
+			cp.MissingInTranslated = true
+			rows = append(rows, cp)
+		}
+		orig.Rows = rows
+		return orig
+	}
+	rows := make([]dto.TextRow, len(current.Rows))
+	copy(rows, current.Rows)
+	for i := range rows {
+		rows[i].MissingInOriginal = true
+	}
+	current.Rows = rows
+	return current
+}
+
+// copyTextMap copia o mapa de texto de uma row: os entries vêm do cache do
+// original e não podem ser compartilhados com a view.
+func copyTextMap(src map[string]string) map[string]string {
+	if src == nil {
+		return nil
+	}
+	cp := make(map[string]string, len(src))
+	for k, v := range src {
+		cp[k] = v
+	}
+	return cp
 }
 
 // clearOriginalCache descarta o original em memória (a árvore data/ mudou —

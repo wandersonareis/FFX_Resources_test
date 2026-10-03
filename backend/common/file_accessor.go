@@ -56,7 +56,21 @@ const (
 	// SourceMods lê SEMPRE a árvore mods/ (para testes e conferência de
 	// presença do overlay).
 	SourceMods
+
+	// SourceVbf lê SEMPRE o overlay do .vbf em memória (coluna Original
+	// vinda do container). Só tem conteúdo dentro de WithVbfSource.
+	SourceVbf
+
+	// SourceVbfPreferred é o mods-first de SourcePreferred com data/ trocado
+	// pelo .vbf: mods/ quando existe, senão o container (estado atual da
+	// tradução para uma entrada que só existe no .vbf).
+	SourceVbfPreferred
 )
+
+// IsVbfSource informa se a fonte resolve pelo overlay do .vbf.
+func (s FileSource) IsVbfSource() bool {
+	return s == SourceVbf || s == SourceVbfPreferred
+}
 
 // String devolve o rótulo da fonte (logs/diagnóstico).
 func (s FileSource) String() string {
@@ -65,6 +79,10 @@ func (s FileSource) String() string {
 		return "data"
 	case SourceMods:
 		return "mods"
+	case SourceVbf:
+		return "vbf"
+	case SourceVbfPreferred:
+		return "mods>vbf"
 	default:
 		return "preferred"
 	}
@@ -130,6 +148,14 @@ type FileAccessor struct {
 	Info         os.FileInfo
 	Size         int64
 	Exists       bool
+
+	// source é a árvore/fonte resolvida (para leituras que precisam saber
+	// de onde veio — ex.: pular o atalho de disco quando é .vbf).
+	source FileSource
+	// mem/vbf marcam conteúdo vindo do overlay do .vbf: a leitura não toca
+	// o disco (ResolvedPath é um caminho-de-falsa-conta só para log).
+	mem []byte
+	vbf bool
 }
 
 // NewFileAccessor creates a new FileAccessor instance for the given path
@@ -146,8 +172,16 @@ func NewFileAccessor(path string) (FileAccessor, error) {
 }
 
 // NewFileAccessorFrom cria um FileAccessor resolvido na árvore indicada
-// (ver FileSource). Caminhos absolutos passam direto (a fonte não se aplica).
+// (ver FileSource). Caminhos absolutos passam direto (a fonte não se aplica)
+// — exceto as fontes de .vbf, que nunca trabalham com caminho absoluto.
 func NewFileAccessorFrom(path string, src FileSource) (FileAccessor, error) {
+	if src.IsVbfSource() {
+		if filepath.IsAbs(path) {
+			return FileAccessor{}, fmt.Errorf("fonte %s não aceita caminho absoluto: %s", src, path)
+		}
+		return newVbfAccessor(path, src)
+	}
+
 	resolvedPath, err := resolvePathFrom(path, src)
 	if err != nil {
 		return FileAccessor{}, err
@@ -161,10 +195,23 @@ func NewFileAccessorFrom(path string, src FileSource) (FileAccessor, error) {
 		Info:         fileInfo,
 		Size:         getFileSize(fileInfo),
 		Exists:       exists,
+		source:       src,
 	}, nil
 }
 
+// IsVbf informa se o arquivo resolvido veio do overlay do .vbf.
+func (f *FileAccessor) IsVbf() bool { return f.vbf }
+
+// Source devolve a árvore/fonte da qual o accessor foi resolvido.
+func (f *FileAccessor) Source() FileSource { return f.source }
+
 func (f *FileAccessor) ReadBytes() ([]byte, error) {
+	if f.vbf {
+		if f.mem == nil {
+			return nil, ErrVbfMissing
+		}
+		return f.mem, nil
+	}
 	data, err := os.ReadFile(f.ResolvedPath)
 	if err != nil {
 		return nil, err
@@ -205,6 +252,10 @@ func resolvePathFrom(path string, src FileSource) (string, error) {
 		return getRealFile(path), nil
 	case SourceMods:
 		return getModdedFile(path), nil
+	case SourceVbf, SourceVbfPreferred:
+		// Caminho-de-falsa-conta do overlay: o conteúdo só sai pelo
+		// FileAccessor.ReadBytes (os acessores VBF nem passam por aqui).
+		return vbfPathFor(path), nil
 	default:
 		if DisableMods {
 			return getRealFile(path), nil

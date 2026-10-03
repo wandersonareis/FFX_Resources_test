@@ -7,7 +7,6 @@ import (
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/models"
 	"fmt"
-	"os"
 	"path/filepath"
 )
 
@@ -165,7 +164,7 @@ func ReadDataListWithIlistV2From(filename string, languageCode string, creator f
 		return components.NewList[datastore.IGlobalLocalizedTextObject](0)
 	}
 
-	data, err := os.ReadFile(fileAccessor.ResolvedPath)
+	data, err := fileAccessor.ReadBytes()
 	if err != nil {
 		common.LogVerbose("Error reading file: %v", err)
 		return components.NewList[datastore.IGlobalLocalizedTextObject](0)

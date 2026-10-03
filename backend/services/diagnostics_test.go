@@ -139,12 +139,30 @@ func TestNormalizeCollectionEmitsDivergenceInOrder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get entry: %v", err)
 	}
-	if len(entry.Rows) != 1 {
+	// A tabela é a UNIÃO dos dois lados: a row que só existe no original
+	// entra marcada como ausente da tradução, com a coluna Traduzido vazia.
+	if len(entry.Rows) != 2 {
 		t.Fatalf("rows: %d", len(entry.Rows))
 	}
 	want := hash.Sum64Hex("Frase do zev001")
 	if got := entry.Rows[0].Hash[common.DefaultLocalization]; got != want {
 		t.Fatalf("ponteiro: %q != %q", got, want)
+	}
+	onlyOrig := entry.Rows[1]
+	if !onlyOrig.MissingInTranslated {
+		t.Fatal("row só no original não foi marcada como ausente da tradução")
+	}
+	if onlyOrig.MissingInOriginal {
+		t.Fatal("row que existe no original não pode marcar MissingInOriginal")
+	}
+	if len(onlyOrig.Text) != 0 {
+		t.Fatalf("texto do original vazou para a coluna Traduzido: %v", onlyOrig.Text)
+	}
+	if onlyOrig.Original == nil {
+		t.Fatal("row só no original veio sem a coluna Original")
+	}
+	if entry.Rows[0].MissingInTranslated {
+		t.Fatal("row casada não pode estar marcada como órfã")
 	}
 
 	// Diagnóstico: divergência com a key da entrada e a row só em data/.

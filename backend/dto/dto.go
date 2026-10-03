@@ -35,12 +35,26 @@ import "sort"
 // data/, que é a fonte da verdade. Text continua sendo o estado atual
 // (mods-first = último save). O campo nunca entra em apply/export — o
 // payload de apply leva só index/name/hash/text.
+//
+// A tabela é a UNIÃO das rows dos dois lados; os dois flags dizem em qual
+// lado a row falta e é ele que o frontend pinta em vermelho:
+//
+//	MissingInOriginal  → só existe na tradução (a coluna Original é vazia);
+//	MissingInTranslated → só existe no original (a coluna Traduzido é vazia,
+//	                       Text fica nil — o texto nunca vaza de um lado
+//	                       para o outro).
+//
+// Como Original, os flags são de exibição e nunca entram em apply/export.
 type TextRow struct {
 	Index    int               `json:"index"`
 	Name     string            `json:"name,omitempty"`
 	Hash     map[string]string `json:"hash,omitempty"`
 	Text     map[string]string `json:"text"`
 	Original map[string]string `json:"original,omitempty"`
+	// MissingInOriginal/MissingInTranslated marcam a row órfã de um dos
+	// lados da comparação (união da tabela).
+	MissingInOriginal   bool `json:"missingInOriginal,omitempty"`
+	MissingInTranslated bool `json:"missingInTranslated,omitempty"`
 }
 
 // FileEntry é um arquivo sem extensão como chave da Collection:
