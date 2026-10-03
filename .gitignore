@@ -5,6 +5,7 @@ frontend/out
 package-lock.json
 package.json.md5
 .idea
+.kilo
 .vscode
 ffxhdbats
 dds-phyre-tool-master/*
