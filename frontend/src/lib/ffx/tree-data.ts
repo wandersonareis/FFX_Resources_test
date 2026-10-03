@@ -31,6 +31,13 @@ export interface EntryRow {
   id: string;
   key: string;
   label: string;
+  /**
+   * Presente quando a entrada veio do navegador de .vbf (não da árvore
+   * data/): `root` é o container absoluto e `path` o caminho interno do
+   * arquivo. É o que muda a carga para os bindings VBF e mantém a entrada
+   * SOMENTE LEITURA (nada aqui escreve no .vbf).
+   */
+  vbf?: { root: string; path: string };
 }
 
 // Kinds servidos por versão na sidebar. lastmiss é expansão do ffx2 e não tem

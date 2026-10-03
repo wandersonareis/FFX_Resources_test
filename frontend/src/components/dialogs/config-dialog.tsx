@@ -5,13 +5,16 @@ import { loggedToast as toast } from '@/lib/ffx/toast-logged';
 import { FolderOpen, X } from 'lucide-react';
 import {
   GetEnableMods,
+  GetGameExeLocation,
   GetGameFilesLocation,
   GetTranslateLocation,
   SelectDirectory,
+  SelectGameExeFile,
   SetEnableMods,
 } from '@/wailsjs/go/main/App';
 import { EventsEmit } from '@/wailsjs/runtime/runtime';
 import { useWailsEvent } from '@/lib/ffx/use-wails-event';
+import { invalidateVbfCache } from '@/lib/ffx/vbf';
 import {
   Dialog,
   DialogContent,
@@ -53,10 +56,12 @@ export function ConfigDialog({
 }) {
   const [gameDirectory, setGameDirectory] = useState('');
   const [translatedDirectory, setTranslatedDirectory] = useState('');
+  const [gameExe, setGameExe] = useState('');
   const [enableMods, setEnableMods] = useState(true);
 
   useWailsEvent('GameFilesLocation', (data) => setGameDirectory((data as string) ?? ''));
   useWailsEvent('TranslateLocation', (data) => setTranslatedDirectory((data as string) ?? ''));
+  useWailsEvent('GameExeLocation', (data) => setGameExe((data as string) ?? ''));
 
   useEffect(() => {
     if (!open) return;
@@ -65,6 +70,9 @@ export function ConfigDialog({
       .catch(notify);
     GetTranslateLocation()
       .then((v) => setTranslatedDirectory(v ?? ''))
+      .catch(notify);
+    GetGameExeLocation()
+      .then((v) => setGameExe(v ?? ''))
       .catch(notify);
     GetEnableMods()
       .then((v) => setEnableMods(Boolean(v)))
@@ -124,15 +132,73 @@ export function ConfigDialog({
     }
   };
 
+  /**
+   * O executável é um ARQUIVO (fica fora do map de Locations) e é dele que
+   * saem as raízes dos .vbf (pasta do exe e pasta data/). Commite só no
+   * Enter/blur/seletor: gravar a cada tecla fecharia os containers abertos
+   * a cada passo. O backend re-emite o valor e recarrega a árvore.
+   */
+  const commitExe = (raw: string) => {
+    const path = (raw ?? '').trim();
+    if (path === gameExe) return;
+    setGameExe(path);
+    // O executável mudou: o cache local de diretórios/entradas do .vbf
+    // aponta para containers que podem nem existir mais.
+    invalidateVbfCache();
+    try {
+      EventsEmit('GameExeLocationChanged', path);
+    } catch (error) {
+      notify(error);
+    }
+  };
+
+  const selectExe = async () => {
+    try {
+      const path = await SelectGameExeFile();
+      if (path) commitExe(path);
+    } catch (error) {
+      notify(error);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[640px]">
+      <DialogContent className="sm:max-w-160">
         <DialogHeader>
           <DialogTitle>Configurações</DialogTitle>
           <DialogDescription className="sr-only">Diretórios usados pelo app</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-3 pt-2 min-w-0">
+          <div className="flex items-center gap-2 pt-2">
+          <div className="grid flex-1 gap-1.5">
+            <Label htmlFor="GameExeLocation">Executável do jogo</Label>
+            <Input
+              id="GameExeLocation"
+              value={gameExe}
+              placeholder="FFX.exe ou FFX-2.exe"
+              onChange={(e) => setGameExe(e.target.value)}
+              onBlur={() => commitExe(gameExe)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commitExe(gameExe);
+              }}
+            />
+            <p className="text-xs text-muted-foreground">
+              Dele saem as raízes dos containers{' '}
+              <code>.vbf</code> (pasta do exe e pasta{' '}
+              <code>data/</code>) exibidos no fim da árvore.
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => void selectExe()}
+            aria-label="Selecionar o executável do jogo"
+            title="Procurar arquivo"
+          >
+            <FolderOpen size={20} />
+          </Button>
+        </div>
           {inputs.map((item) => (
             <div key={item.key} className="flex items-center gap-2">
               <div className="grid flex-1 gap-1.5">

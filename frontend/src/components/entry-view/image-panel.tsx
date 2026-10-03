@@ -194,6 +194,21 @@ export function ImagePanel({ view }: { view: EntryView }) {
 
   if (!entry) return null;
   const flipped = flippedId === entry.id;
+  /**
+   * Textura aberta pelo navegador de .vbf: pré-visualização, zoom e
+   * pixelado funcionam (são só leitura/visualização), mas extrair, importar
+   * e deletar agem sobre data/ + mods/ — isso só faz sentido a partir da
+   * árvore de data/. O container nunca é alvo de escrita.
+   */
+  const readOnly = Boolean(entry.vbf);
+  const refuseVbf = (): boolean => {
+    if (!readOnly) return false;
+    toast.message(
+      'Este arquivo veio do .vbf (somente leitura) — use a árvore de data/ para extrair ou importar.',
+      { duration: 4000 }
+    );
+    return true;
+  };
   if (loading && !image) return <p className="mt-8 opacity-70">Carregando…</p>;
   if (!image) {
     return (
@@ -222,6 +237,7 @@ export function ImagePanel({ view }: { view: EntryView }) {
    * escolha de alcance, o aviso de irreversível e a contagem de cópias.
    */
   const openAction = (type: 'extract' | 'replicate' | 'delete') => {
+    if (refuseVbf()) return;
     actions.openImageAction({
       type,
       id: entry.id,
@@ -231,6 +247,7 @@ export function ImagePanel({ view }: { view: EntryView }) {
   };
 
   const onSave = async (format: 'dds' | 'png') => {
+    if (refuseVbf()) return;
     setBusy('save');
     try {
       const dest = await selectImageSavePath(format, `${name}.${format}`);
@@ -281,6 +298,7 @@ export function ImagePanel({ view }: { view: EntryView }) {
   };
 
   const onImport = async () => {
+    if (refuseVbf()) return;
     try {
       const path = await selectImageFile();
       if (!path) return;
@@ -395,12 +413,15 @@ export function ImagePanel({ view }: { view: EntryView }) {
 
   const copyTotal = duplicates.length + 1;
 
-  // Alvo do menu de contexto: o painel inteiro é a textura aberta.
-  const panelTarget: EntryMenuTarget = {
-    kind: 'images',
-    id: entry.id,
-    label: entry.label,
-  };
+  // Alvo do menu de contexto: o painel inteiro é a textura aberta. Textura
+  // vinda do .vbf não tem menu (as ações são sobre data/ + mods/).
+  const panelTarget: EntryMenuTarget | null = readOnly
+    ? null
+    : {
+        kind: 'images',
+        id: entry.id,
+        label: entry.label,
+      };
 
   // Botão direito em QUALQUER ponto do painel abre o mesmo menu da árvore
   // (Exportar / Abrir até o arquivo / Replicar / Deletar).
@@ -414,7 +435,9 @@ export function ImagePanel({ view }: { view: EntryView }) {
     >
       <div
         className="mt-4 flex flex-col gap-4"
-        onContextMenuCapture={() => setMenuTarget(panelTarget)}
+        onContextMenuCapture={() =>
+          setMenuTarget(readOnly ? null : panelTarget)
+        }
       >
         <div className="flex flex-wrap items-center gap-2">
           <Button

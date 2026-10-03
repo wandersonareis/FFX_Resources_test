@@ -53,6 +53,8 @@ export namespace dto {
 	    hash?: Record<string, string>;
 	    text: Record<string, string>;
 	    original?: Record<string, string>;
+	    missingInOriginal?: boolean;
+	    missingInTranslated?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new TextRow(source);
@@ -65,6 +67,8 @@ export namespace dto {
 	        this.hash = source["hash"];
 	        this.text = source["text"];
 	        this.original = source["original"];
+	        this.missingInOriginal = source["missingInOriginal"];
+	        this.missingInTranslated = source["missingInTranslated"];
 	    }
 	}
 	export class Metadata {
@@ -337,6 +341,55 @@ export namespace dto {
 	}
 	
 	
+	
+	export class VbfNode {
+	    name: string;
+	    path: string;
+	    isDir: boolean;
+	    size?: number;
+	    kind?: string;
+	    id?: string;
+	    version?: string;
+	    macro?: boolean;
+	    image?: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new VbfNode(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.isDir = source["isDir"];
+	        this.size = source["size"];
+	        this.kind = source["kind"];
+	        this.id = source["id"];
+	        this.version = source["version"];
+	        this.macro = source["macro"];
+	        this.image = source["image"];
+	    }
+	}
+	export class VbfRoot {
+	    name: string;
+	    path: string;
+	    version: string;
+	    size: number;
+	    entries: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new VbfRoot(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.version = source["version"];
+	        this.size = source["size"];
+	        this.entries = source["entries"];
+	    }
+	}
 
 }
 

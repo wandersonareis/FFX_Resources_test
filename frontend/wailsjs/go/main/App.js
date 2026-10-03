@@ -38,6 +38,10 @@ export function GetEnableMods() {
   return window['go']['main']['App']['GetEnableMods']();
 }
 
+export function GetGameExeLocation() {
+  return window['go']['main']['App']['GetGameExeLocation']();
+}
+
 export function GetGameFilesLocation() {
   return window['go']['main']['App']['GetGameFilesLocation']();
 }
@@ -64,6 +68,14 @@ export function GetTextEntry(arg1, arg2, arg3) {
 
 export function GetTranslateLocation() {
   return window['go']['main']['App']['GetTranslateLocation']();
+}
+
+export function GetVbfImageEntry(arg1, arg2) {
+  return window['go']['main']['App']['GetVbfImageEntry'](arg1, arg2);
+}
+
+export function GetVbfTextEntry(arg1, arg2, arg3) {
+  return window['go']['main']['App']['GetVbfTextEntry'](arg1, arg2, arg3);
 }
 
 export function ImageDuplicates(arg1, arg2, arg3) {
@@ -96,6 +108,18 @@ export function ListLanguages() {
 
 export function ListTextEntries(arg1, arg2) {
   return window['go']['main']['App']['ListTextEntries'](arg1, arg2);
+}
+
+export function ListVbfDir(arg1, arg2) {
+  return window['go']['main']['App']['ListVbfDir'](arg1, arg2);
+}
+
+export function ListVbfMacroChunks(arg1, arg2) {
+  return window['go']['main']['App']['ListVbfMacroChunks'](arg1, arg2);
+}
+
+export function ListVbfRoots() {
+  return window['go']['main']['App']['ListVbfRoots']();
 }
 
 export function PreloadVersions(arg1) {
@@ -134,6 +158,10 @@ export function SelectDirectory(arg1) {
   return window['go']['main']['App']['SelectDirectory'](arg1);
 }
 
+export function SelectGameExeFile() {
+  return window['go']['main']['App']['SelectGameExeFile']();
+}
+
 export function SelectImageFile() {
   return window['go']['main']['App']['SelectImageFile']();
 }
@@ -148,6 +176,10 @@ export function SelectImportFile() {
 
 export function SetEnableMods(arg1) {
   return window['go']['main']['App']['SetEnableMods'](arg1);
+}
+
+export function SetGameExeLocation(arg1) {
+  return window['go']['main']['App']['SetGameExeLocation'](arg1);
 }
 
 export function SetUnsavedEdits(arg1) {

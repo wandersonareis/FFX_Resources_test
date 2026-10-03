@@ -18,6 +18,7 @@ func EventsOnStartup(ctx context.Context) {
 func emitLocationsEvents(ctx context.Context) {
 	emitGameVersion(ctx)
 	emitGameLocation(ctx)
+	emitGameExeLocation(ctx)
 	emitExtractLocation(ctx)
 	emitTranslateLocation(ctx)
 	emitimportLocation(ctx)
@@ -26,6 +27,7 @@ func emitLocationsEvents(ctx context.Context) {
 func eventsOnLocations(ctx context.Context) {
 	eventOnSetGameVersion(ctx)
 	eventOnSetGameLocation(ctx)
+	eventOnSetGameExeLocation(ctx)
 	eventOnSetExtractLocation(ctx)
 	eventOnSetTranslateLocation(ctx)
 	eventOnSetImportLocation(ctx)
@@ -55,6 +57,13 @@ func emitGameLocation(ctx context.Context) {
 	}
 	
 	runtime.EventsEmit(ctx, "GameFilesLocation", gameLocation)
+}
+
+// emitGameExeLocation devolve o executável do jogo escolhido ("") — é dele
+// que o navegador de .vbf deriva a pasta de busca dos containers.
+func emitGameExeLocation(ctx context.Context) {
+	runtime.EventsEmit(ctx, "GameExeLocation",
+		interactions.NewInteractionService().FFXAppConfig().GetGameExeLocation())
 }
 
 func emitExtractLocation(ctx context.Context) {
@@ -139,6 +148,24 @@ func eventOnSetGameLocation(ctx context.Context) {
 		emitGameLocation(ctx)
 		// Aplica imediatamente: config já foi persistido por
 		// SetTargetDirectory; avisa o frontend para recarregar a árvore.
+		runtime.EventsEmit(ctx, "Refresh_Tree")
+	})
+}
+
+// eventOnSetGameExeLocation grava o executável do jogo (caminho de ARQUIVO,
+// fora do map Locations) e recarrega a árvore VBF.
+func eventOnSetGameExeLocation(ctx context.Context) {
+	runtime.EventsOn(ctx, "GameExeLocationChanged", func(data ...any) {
+		fmt.Println("GameExeLocationChanged", data[0])
+
+		interactions.NewInteractionService().FFXAppConfig().
+			SetGameExeLocation(data[0].(string))
+
+		// A pasta de busca dos .vbf mudou: os containers abertos seguram
+		// handle de leitura do caminho anterior — fecha; a próxima listagem
+		// reabre os da nova pasta.
+		services.CloseVbfArchives()
+		emitGameExeLocation(ctx)
 		runtime.EventsEmit(ctx, "Refresh_Tree")
 	})
 }

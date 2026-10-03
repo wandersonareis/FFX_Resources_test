@@ -143,7 +143,8 @@ func (a *App) QuitApp() {
 
 // shutdown is called at application termination
 func (a *App) shutdown(ctx context.Context) {
-	// Perform your teardown here
+	// Os .vbf abertos seguram handle de leitura: solta antes de sair.
+	services.CloseVbfArchives()
 }
 
 func (a *App) initServices(ctx context.Context) {
@@ -219,6 +220,107 @@ func (a *App) GetEnableMods() bool {
 func (a *App) SetEnableMods(enabled bool) error {
 	interactions.NewInteractionService().FFXAppConfig().SetEnableMods(enabled)
 	return nil
+}
+
+// GetGameExeLocation devolve o executável do jogo configurado — é dele que
+// sai a pasta onde os .vbf do container moram (FFX_Data.vbf, FFX2_Data.vbf).
+// "" = o usuário ainda não escolheu (sem raízes VBF na sidebar).
+func (a *App) GetGameExeLocation() string {
+	return interactions.NewInteractionService().FFXAppConfig().GetGameExeLocation()
+}
+
+// SetGameExeLocation persiste o caminho do executável do jogo. Os containers
+// abertos são fechados: a pasta de busca mudou e os handles antigos não são
+// mais alcançáveis (a próxima ListVbfRoots reabre os da nova pasta).
+func (a *App) SetGameExeLocation(path string) {
+	interactions.NewInteractionService().FFXAppConfig().SetGameExeLocation(path)
+	services.CloseVbfArchives()
+}
+
+// SelectGameExeFile abre o seletor nativo para escolher o executável do
+// jogo. O filtro é LITERAL — só FFX.exe e FFX-2.exe, sem curinga *.exe —
+// e a escolha é conferida de novo aqui: o diálogo do sistema aceita digitar
+// qualquer nome no campo de arquivo. Devolve "" no cancelamento e numa
+// escolha inválida.
+func (a *App) SelectGameExeFile() string {
+	selection, err := runtime.OpenFileDialog(interactions.NewInteractionService().Ctx, runtime.OpenDialogOptions{
+		Title: "Selecionar o executável do jogo (FFX.exe ou FFX-2.exe)",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Executável do jogo (FFX.exe; FFX-2.exe)", Pattern: "FFX.exe;FFX-2.exe"},
+		},
+	})
+	if err != nil {
+		return ""
+	}
+	if selection == "" {
+		return ""
+	}
+	normalized, ok := interactions.NormalizeGameExe(selection)
+	if !ok {
+		// Só o caminho vai para o diagnóstico — nunca conteúdo de arquivo.
+		loggingService.DiagWarn("vbf",
+			"executável fora de FFX.exe/FFX-2.exe recusado",
+			map[string]any{"path": selection})
+		if a.noticationService != nil {
+			a.noticationService.NotifyWarn(
+				"Escolha um dos executáveis do jogo: FFX.exe ou FFX-2.exe.")
+		}
+		return ""
+	}
+	return normalized
+}
+
+// ---- navegador de .vbf (SOMENTE LEITURA) ---------------------------------
+//
+// O container nunca é lido inteiro nem extraído: a árvore sai do índice
+// (cabeçalho) e só o arquivo clicado é decodificado, em memória. Nenhum
+// binding abaixo escreve no .vbf — export e import continuam em mods/.
+
+// ListVbfRoots devolve os .vbf encontrados ao lado do executável do jogo
+// (raízes da sidebar), com o total de arquivos do índice. Lista vazia =
+// executável não configurado.
+func (a *App) ListVbfRoots() ([]dto.VbfRoot, error) {
+	if a.MetadataService == nil {
+		return nil, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ListVbfRoots()
+}
+
+// ListVbfDir devolve os filhos imediatos de um diretório do .vbf — diretórios
+// primeiro, depois arquivos, cada um com kind/id quando o app sabe servi-lo.
+func (a *App) ListVbfDir(vbfPath, dir string) ([]dto.VbfNode, error) {
+	if a.MetadataService == nil {
+		return nil, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ListVbfDir(vbfPath, dir)
+}
+
+// ListVbfMacroChunks devolve os filhos virtuais de macrodic.dcp (chunk_00,
+// chunk_01, …): o dicionário é um arquivo por localização e o app o trata
+// como um grupo.
+func (a *App) ListVbfMacroChunks(vbfPath, macroPath string) ([]dto.VbfNode, error) {
+	if a.MetadataService == nil {
+		return nil, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ListVbfMacroChunks(vbfPath, macroPath)
+}
+
+// GetVbfTextEntry decodifica um arquivo de TEXTO do .vbf e devolve a tabela
+// (rows + coluna Original). id é exigido só para macro (o chunk).
+func (a *App) GetVbfTextEntry(vbfPath, innerPath, id string) (dto.FileEntry, error) {
+	if a.MetadataService == nil {
+		return dto.FileEntry{}, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.GetVbfTextEntry(vbfPath, innerPath, id)
+}
+
+// GetVbfImageEntry decodifica uma textura (.dds.phyre) do .vbf e devolve a
+// pré-visualização PNG em data URL.
+func (a *App) GetVbfImageEntry(vbfPath, innerPath string) (dto.ImageEntry, error) {
+	if a.MetadataService == nil {
+		return dto.ImageEntry{}, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.GetVbfImageEntry(vbfPath, innerPath)
 }
 
 // GetMetadata expõe a metadata nova (key, row_count, id, is_dir) ao frontend.

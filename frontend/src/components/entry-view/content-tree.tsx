@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { EntryActionsMenu, menuTargetOf } from './entry-actions-menu';
 import type { EntryView } from './entry-view-store';
-import type { SideNode } from './types';
+import { entryNodeId, type SideNode } from './types';
 import { TreeItem } from './tree-item';
 
 /**
@@ -33,6 +33,7 @@ import { TreeItem } from './tree-item';
 export function ContentTree({ view }: { view: EntryView }) {
   const { version, store, actions } = view;
   const roots = useSelector(store, (s) => s.roots);
+  const vbfRoots = useSelector(store, (s) => s.vbfRoots);
   const expanded = useSelector(store, (s) => s.expanded);
   const selectedEntry = useSelector(store, (s) => s.selectedEntry);
   const image = useSelector(store, (s) => s.image);
@@ -65,6 +66,9 @@ export function ContentTree({ view }: { view: EntryView }) {
    */
   const selectedId = useMemo(() => {
     if (!selectedEntry) return null;
+    // Folha de .vbf é identificada pelo caminho no container: o mesmo id de
+    // data/ pode existir dos dois lados (e em dois containers).
+    if (selectedEntry.vbf) return entryNodeId(selectedEntry);
     const base = `leaf:${selectedEntry.kind}:${selectedEntry.id}`;
     if (selectedEntry.kind !== 'images' || !image) return base;
     if (image.metadata.id !== selectedEntry.id) return base;
@@ -92,13 +96,16 @@ export function ContentTree({ view }: { view: EntryView }) {
         buttons[idx - 1]?.focus();
       } else if (event.key === 'Enter') {
         event.preventDefault();
-        if (node.entry) void actions.selectNode(node);
+        // Folha abre; arquivo fora do escopo avisa; grupo/raiz alterna.
+        if (node.entry || node.unsupported) void actions.selectNode(node);
         else actions.toggleNode(node);
       } else if (event.key === 'ArrowRight') {
         event.preventDefault();
         if (node.entry) {
           // Folha: abre o arquivo e já leva o foco para a tabela (↑/↓ direto).
           actions.requestTableFocus();
+          void actions.selectNode(node);
+        } else if (node.unsupported) {
           void actions.selectNode(node);
         } else if (!expanded.has(node.id)) {
           // Grupo/raiz: expande se colapsado (convenção de treeview).
@@ -113,7 +120,9 @@ export function ContentTree({ view }: { view: EntryView }) {
   // Imagem não tem checkbox (não é exportável como JSON/.strings).
   const checkNode = useCallback(
     (node: SideNode, checked: boolean) => {
-      if (!node.kind || node.kind === 'images') return;
+      // Nós do .vbf não participam da seleção de exportação: o export lê de
+      // data/ + mods/, nunca do container (somente leitura).
+      if (node.vbf || !node.kind || node.kind === 'images') return;
       const ids = node.entry
         ? [node.entry.id]
         : (node.children ?? [])
@@ -190,8 +199,11 @@ export function ContentTree({ view }: { view: EntryView }) {
             const kind = row.getAttribute(
               'data-node-kind'
             ) as EntryKind | null;
+            // Nós do .vbf não têm menu de contexto: exportar/deletar agem
+            // sobre data/ + mods/, e o container é somente leitura.
+            const isVbf = row.getAttribute('data-node-vbf') === 'true';
             setCtxNode(
-              kind
+              kind && !isVbf
                 ? {
                     id: row.getAttribute('data-node-id') ?? '',
                     kind,
@@ -201,6 +213,32 @@ export function ContentTree({ view }: { view: EntryView }) {
             );
           }}
         >
+          {/* Os containers .vbf vêm PRIMEIRO: são a fonte da verdade e a
+              árvore de data/ (imutável) é o espelho já extraído. */}
+          {vbfRoots.length > 0 ? (
+            <div className="px-2 pt-1 pb-1 text-xs font-medium text-muted-foreground">
+              Containers .vbf · somente leitura
+            </div>
+          ) : null}
+          {vbfRoots.map((node) => (
+            <TreeItem
+              key={node.id}
+              node={node}
+              depth={0}
+              expanded={expanded}
+              selectedId={selectedId}
+              selectedByKind={selectedByKind}
+              onToggle={actions.toggleNode}
+              onSelect={(n) => void actions.selectNode(n)}
+              onCheck={checkNode}
+              onNodeKeyDown={onNodeKeyDown}
+            />
+          ))}
+          {roots.length > 0 && vbfRoots.length > 0 ? (
+            <div className="px-2 pt-3 pb-1 text-xs font-medium text-muted-foreground border-t mt-1">
+              Arquivos de data/
+            </div>
+          ) : null}
           {roots.map((node) => (
             <TreeItem
               key={node.id}

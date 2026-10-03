@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTable } from '@tanstack/react-table';
 import { useSelector } from '@tanstack/react-store';
 import { dto } from '@/wailsjs/go/models';
-import { useEditDraft } from '@/lib/ffx/edit-draft';
+import { useEditDraft, rowKey } from '@/lib/ffx/edit-draft';
 import { SOURCE_LANG } from '@/lib/ffx/save-all';
 import { resolveSegmentLabel } from '@/lib/ffx/display-names';
 import { DEDUP_VIEW_KINDS } from '@/lib/ffx/hash-ref';
@@ -18,7 +18,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { EntryView } from './entry-view-store';
-import { columnHelper, features } from './types';
+import { columnHelper, entryNodeId, features } from './types';
+
+/**
+ * Célula de uma linha que SÓ EXISTE num dos dois lados (união da tabela):
+ * o traço vermelho diz "falta aqui" sem exibir conteúdo do outro lado.
+ */
+const MISSING_SIDE = 'text-red-600 dark:text-red-400';
 
 /**
  * Tabela de linhas do arquivo selecionado: colunas (Original/Traduzido),
@@ -43,39 +49,49 @@ export function EntryTable({ view }: { view: EntryView }) {
     (
       event: React.KeyboardEvent<HTMLTableRowElement>,
       row: dto.TextRow,
-      rowKey: string
+      key: string
     ) => {
-      const idx = rows.findIndex((r) => r.index === row.index);
+      // A união da tabela pode ter duas rows com o MESMO índice (uma em
+      // cada lado) — a posição sai da chave index+nome, não do índice só.
+      const idx = rows.findIndex((r) => rowKey(r) === rowKey(row));
       if (event.key === 'ArrowDown') {
         event.preventDefault();
         const next = rows[idx + 1];
         if (next) {
-          const key = String(next.index);
-          setFocusedRowId(key);
-          rowRefs.current.get(key)?.focus();
+          const nextKey = rowKey(next);
+          setFocusedRowId(nextKey);
+          rowRefs.current.get(nextKey)?.focus();
         }
       } else if (event.key === 'ArrowUp') {
         event.preventDefault();
         const prev = rows[idx - 1];
         if (prev) {
-          const key = String(prev.index);
-          setFocusedRowId(key);
-          rowRefs.current.get(key)?.focus();
+          const prevKey = rowKey(prev);
+          setFocusedRowId(prevKey);
+          rowRefs.current.get(prevKey)?.focus();
         }
       } else if (event.key === 'Enter') {
         event.preventDefault();
-        setFocusedRowId(rowKey);
+        setFocusedRowId(key);
         actions.openDialog(row);
       } else if (event.key === 'ArrowLeft') {
         event.preventDefault();
         // Volta o foco para o nó selecionado na árvore (fecha o ciclo de
         // navegação árvore ↔ tabela). Se o nó estiver desmontado (grupo
-        // colapsado), cai no primeiro botão visível da árvore.
+        // colapsado), cai no primeiro botão visível da árvore. O id de uma
+        // folha do .vbf leva caminho absoluto de Windows (barra invertida),
+        // então a comparação é pelo atributo — nunca por seletor CSS.
         const tree = document.getElementById('entry-tree');
+        const nodeId = selectedEntry ? entryNodeId(selectedEntry) : '';
+        const buttons = Array.from(
+          tree?.querySelectorAll<HTMLElement>('[data-node-button]') ?? []
+        );
         const node =
-          tree?.querySelector<HTMLElement>(
-            `[data-node-id="leaf:${selectedEntry?.kind}:${selectedEntry?.id}"] [data-node-button]`
-          ) ?? tree?.querySelector<HTMLElement>('[data-node-button]');
+          buttons.find(
+            (button) =>
+              button.closest('[data-node-id]')?.getAttribute('data-node-id') ===
+              nodeId
+          ) ?? buttons[0];
         node?.focus();
       }
     },
@@ -91,7 +107,7 @@ export function EntryTable({ view }: { view: EntryView }) {
       const k = r.name ?? '';
       const n = (counters.get(k) ?? 0) + 1;
       counters.set(k, n);
-      map.set(`${k}:${r.index}`, n);
+      map.set(rowKey(r), n);
     }
     return map;
   }, [rows]);
@@ -104,7 +120,7 @@ export function EntryTable({ view }: { view: EntryView }) {
           cell: (info) => {
             const r = info.row.original;
             if (activeKind === 'lockit') {
-              const n = lockitSeq.get(`${r.name ?? ''}:${r.index}`) ?? '';
+              const n = lockitSeq.get(rowKey(r)) ?? '';
               return <span className="text-muted-foreground">{n}</span>;
             }
             return <span className="text-muted-foreground">{info.getValue()}</span>;
@@ -130,13 +146,16 @@ export function EntryTable({ view }: { view: EntryView }) {
           header: 'Original',
           cell: (info) => {
             const value = info.getValue();
-            // O original vem de data/ (fonte da verdade). Sem contraparte em
-            // data/ o valor é undefined → "—". NUNCA cai para row.text: seria
-            // exibir a tradução como se fosse o original.
+            // União: linha que só existe na tradução fica sem Original e é
+            // marcada — o traço vermelho diz "falta aqui" sem mostrar texto
+            // do outro lado. Sem contraparte o valor é undefined → "—".
+            // NUNCA cai para row.text: seria exibir a tradução como original.
+            const missing = info.row.original.missingInOriginal === true;
             return (
               <GameTextView
                 text={value ?? ''}
                 fallback={value === undefined ? '—' : ''}
+                className={missing ? MISSING_SIDE : undefined}
               />
             );
           },
@@ -144,9 +163,12 @@ export function EntryTable({ view }: { view: EntryView }) {
         columnHelper.accessor(
           (row) => {
             const entry = selectedEntry;
-            const edited = entry
-              ? drafts.editOf(version, entry.kind, entry.id, row, SOURCE_LANG)
-              : undefined;
+            // Entrada aberta pelo .vbf é somente leitura: o rascunho de
+            // edição não entra na visualização.
+            const edited =
+              entry && !entry.vbf
+                ? drafts.editOf(version, entry.kind, entry.id, row, SOURCE_LANG)
+                : undefined;
             return edited ?? row.text?.[SOURCE_LANG] ?? '';
           },
           {
@@ -154,15 +176,31 @@ export function EntryTable({ view }: { view: EntryView }) {
             header: 'Traduzido',
             cell: (info) => {
               const row = info.row.original;
+              // União: linha que só existe no original tem o texto vazio e a
+              // marcação — nada a traduzir, então o diálogo não abre.
+              const missing = row.missingInTranslated === true;
               const entry = selectedEntry;
-              const edited = entry
-                ? drafts.editOf(version, entry.kind, entry.id, row, SOURCE_LANG) !==
-                  undefined
-                : false;
+              const readOnly = Boolean(entry?.vbf);
+              const edited =
+                !missing &&
+                !readOnly &&
+                entry
+                  ? drafts.editOf(version, entry.kind, entry.id, row, SOURCE_LANG) !==
+                    undefined
+                  : false;
+              if (missing) {
+                return (
+                  <div className="text-cell translated-cell" title="Linha inexistente no arquivo traduzido">
+                    <span className={MISSING_SIDE}>—</span>
+                  </div>
+                );
+              }
               return (
                 <div
                   className={`text-cell translated-cell${edited ? ' edited' : ''}`}
-                  onClick={() => actions.openDialog(row)}
+                  onClick={
+                    readOnly ? undefined : () => actions.openDialog(row)
+                  }
                 >
                   <GameTextView text={info.getValue()} />
                 </div>
@@ -179,6 +217,9 @@ export function EntryTable({ view }: { view: EntryView }) {
     features,
     columns,
     data: rows,
+    // A união da tabela pode ter duas rows com o mesmo índice (uma em cada
+    // lado) — o id da row precisa do nome junto para não colidir no React.
+    getRowId: (row) => rowKey(row),
   });
 
   const pendingTableFocus = useSelector(store, (s) => s.pendingTableFocus);
@@ -188,7 +229,7 @@ export function EntryTable({ view }: { view: EntryView }) {
   useEffect(() => {
     if (!pendingTableFocus || !selectedEntry || rows.length === 0) return;
     actions.consumeTableFocus();
-    rowRefs.current.get(String(rows[0].index))?.focus();
+    rowRefs.current.get(rowKey(rows[0]))?.focus();
   }, [pendingTableFocus, selectedEntry, rows, actions]);
 
   // Painel 100% deduplicado: todas as linhas deste arquivo são refs de
@@ -231,19 +272,19 @@ export function EntryTable({ view }: { view: EntryView }) {
         <TableBody>
           {table.getRowModel().rows.map((tRow) => {
             const r = tRow.original;
-            const rowKey = String(r.index);
+            const key = rowKey(r);
             return (
               <TableRow
                 key={tRow.id}
                 ref={(el) => {
-                  if (el) rowRefs.current.set(rowKey, el);
-                  else rowRefs.current.delete(rowKey);
+                  if (el) rowRefs.current.set(key, el);
+                  else rowRefs.current.delete(key);
                 }}
                 tabIndex={0}
-                onKeyDown={(event) => onRowKeyDown(event, r, rowKey)}
-                onFocus={() => setFocusedRowId(rowKey)}
+                onKeyDown={(event) => onRowKeyDown(event, r, key)}
+                onFocus={() => setFocusedRowId(key)}
                 className={
-                  focusedRowId === rowKey
+                  focusedRowId === key
                     ? 'bg-sky-100 outline outline-sky-400'
                     : 'outline-none focus-visible:bg-muted/40'
                 }

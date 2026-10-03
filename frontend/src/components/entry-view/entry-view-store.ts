@@ -3,6 +3,7 @@ import { dto } from '@/wailsjs/go/models';
 import {
   KIND_LABELS,
   IMAGE_TREE_PREFIX,
+  resolveEntryLabel,
   type EntryKind,
 } from '@/lib/ffx/display-names';
 import { resolveEventGroup, shortenedOf } from '@/lib/ffx/event-group-names';
@@ -15,11 +16,23 @@ import {
   loadEntry,
   loadKindEntries,
 } from '@/lib/ffx/tree-data';
-import { editDraft } from '@/lib/ffx/edit-draft';
+import { editDraft, rowKey } from '@/lib/ffx/edit-draft';
 import { entryProgress, type EntryProgress } from '@/lib/ffx/entry-progress';
-import { sendErrorNotification } from '@/lib/ffx/error-handler';
+import {
+  sendErrorNotification,
+  sendErrorNotificationWithMessage,
+} from '@/lib/ffx/error-handler';
 import { isRefText } from '@/lib/ffx/hash-ref';
 import { SOURCE_LANG } from '@/lib/ffx/save-all';
+import {
+  invalidateVbfCache,
+  loadVbfDir,
+  loadVbfEntry,
+  loadVbfImage,
+  loadVbfMacroChunks,
+  loadVbfRoots,
+  type VbfNode,
+} from '@/lib/ffx/vbf';
 import type { SideNode } from './types';
 
 /** Estado de carga de um item principal da árvore. */
@@ -42,6 +55,13 @@ export type ImageActionState = {
 
 export interface EntryViewState {
   roots: SideNode[];
+  /**
+   * Raízes dos containers .vbf descobertos perto do executável do jogo
+   * (somente leitura). Vindas do backend, não dos kinds de data/ — por isso
+   * um campo próprio: os kinds são montados e unidos em `roots`, e o
+   * carregamento deles é independente desta lista.
+   */
+  vbfRoots: SideNode[];
   expanded: Set<string>;
   activeKind: EntryKind;
   selectedEntry: EntryRow | null;
@@ -166,6 +186,7 @@ function createEntryStore(version: GameVersionId) {
   const kinds = allKindsFor(version);
   return createStore<EntryViewState>({
     roots: kinds.map((kind) => loadingRootNode(kind)),
+    vbfRoots: [],
     expanded: new Set<string>(),
     activeKind: 'events',
     selectedEntry: null,
@@ -194,6 +215,70 @@ function loadingStatuses(kinds: EntryKind[]): Record<EntryKind, KindLoadStatus> 
   return Object.fromEntries(
     kinds.map((k) => [k, 'loading' as const])
   ) as Record<EntryKind, KindLoadStatus>;
+}
+
+/**
+ * Id de um nó do navegador de .vbf. Caminho interno identifica arquivo e
+ * diretório dentro do container; `id` extra cobre os chunks virtuais do
+ * macrodic (todos com o mesmo caminho do dicionário).
+ */
+function vbfNodeId(root: string, node: Pick<VbfNode, 'path' | 'id'>): string {
+  return `vbf:${root}|${node.path}|${node.id ?? ''}`;
+}
+
+/**
+ * Converte um nó do índice do .vbf em SideNode.
+ *
+ * - diretório → grupo expansível (filhos vão pro backend na expansão);
+ * - macrodic.dcp → grupo com filhos chunk_XX (o app trata dicionário assim);
+ * - arquivo com kind servível (evento, lockit, textura, …) → folha com
+ *   `entry.vbf`, que é o que troca a carga para os bindings VBF;
+ * - o resto (áudio, vídeo, .exe…) → folha sem entry: o clique avisa que o
+ *   formato está fora do escopo do app, sem tentar decodificar.
+ *
+ * Nada aqui escreve no container: é só o espelho do índice.
+ */
+function vbfSideNode(root: string, node: VbfNode): SideNode {
+  const id = vbfNodeId(root, node);
+  if (node.isDir) {
+    return {
+      id,
+      label: node.name,
+      vbf: true,
+      vbfRoot: root,
+      vbfPath: node.path,
+      expandable: true,
+    };
+  }
+  if (node.macro) {
+    return {
+      id,
+      label: node.name,
+      vbf: true,
+      vbfRoot: root,
+      vbfPath: node.path,
+      macro: true,
+      expandable: true,
+    };
+  }
+  if (!node.kind) {
+    return { id, label: node.name, vbf: true, unsupported: true };
+  }
+  const kind = node.kind as EntryKind;
+  const label = resolveEntryLabel(kind, node.id);
+  return {
+    id,
+    label,
+    kind,
+    vbf: true,
+    entry: {
+      kind,
+      id: node.id,
+      key: node.id,
+      label,
+      vbf: { root, path: node.path },
+    },
+  };
 }
 
 /** Estado "sem arquivo aberto" — limpa tabela, progresso e imagem juntos. */
@@ -271,19 +356,84 @@ export function createEntryView(version: GameVersionId): EntryView {
     store.setState((prev) => ({ ...prev, ...partial }));
   };
 
+  /**
+   * Atualiza UM nó da árvore em qualquer profundidade (raízes de kind e
+   * raízes VBF são caminhos separados, por isso os dois no mesmo passe).
+   */
+  const patchNode = (id: string, partial: Partial<SideNode>): void => {
+    const walk = (list: SideNode[]): SideNode[] =>
+      list.map((node) =>
+        node.id === id
+          ? { ...node, ...partial }
+          : node.children
+            ? { ...node, children: walk(node.children) }
+            : node
+      );
+    store.setState((prev) => ({
+      ...prev,
+      roots: walk(prev.roots),
+      vbfRoots: walk(prev.vbfRoots),
+    }));
+  };
+
+  /**
+   * Expansão preguiçosa de um nó do .vbf: o container nunca é indexado de
+   * uma vez — só o diretório clicado é consultado (e o macrodic quebra em
+   * chunk_XX). Guardado por id para um duplo clique não disparar duas buscas.
+   */
+  const loadingVbf = new Set<string>();
+  const loadVbfChildren = async (node: SideNode): Promise<void> => {
+    const root = node.vbfRoot ?? node.entry?.vbf?.root;
+    if (!root || loadingVbf.has(node.id)) return;
+    loadingVbf.add(node.id);
+    patchNode(node.id, { loading: true });
+    try {
+      const path = node.vbfPath ?? '';
+      const list = node.macro
+        ? await loadVbfMacroChunks(root, path)
+        : await loadVbfDir(root, path);
+      const children = list.map((child) => vbfSideNode(root, child));
+      patchNode(node.id, {
+        children,
+        loading: false,
+        expandable: children.length > 0,
+      });
+      if (children.length > 0) {
+        store.setState((prev) => ({
+          ...prev,
+          expanded: new Set(prev.expanded).add(node.id),
+        }));
+      }
+    } catch (error) {
+      patchNode(node.id, { loading: false, expandable: false });
+      sendErrorNotification(error);
+    } finally {
+      loadingVbf.delete(node.id);
+    }
+  };
+
   const selectEntry = async (entry: EntryRow): Promise<void> => {
     patch({ loading: true });
     try {
       patch({ activeKind: entry.kind, selectedEntry: entry });
       if (entry.kind === 'images') {
         // Textura: sem rows/progresso — só a imagem (data URL) + metadados.
-        const image = await loadImage(entry.id, version);
+        const image = entry.vbf
+          ? await loadVbfImage(entry.vbf.root, entry.vbf.path)
+          : await loadImage(entry.id, version);
         patch({ image, rows: [], progress: null });
         return;
       }
       patch({ image: null });
-      const full = await loadEntry(entry.kind, entry.id, version);
-      editDraft.setBase(version, entry.kind, entry.id, full);
+      const full = entry.vbf
+        ? await loadVbfEntry(entry.vbf.root, entry.vbf.path, entry.id)
+        : await loadEntry(entry.kind, entry.id, version);
+      // Entrada aberta a partir do .vbf é VISUALIZAÇÃO: não alimenta o
+      // rascunho de edição (salvar gravaria em mods/ contra um original que
+      // pode nem estar extraído em data/) e nem registra a base do rascunho.
+      if (!entry.vbf) {
+        editDraft.setBase(version, entry.kind, entry.id, full);
+      }
       // Progresso por row: FIXO na abertura (não acompanha rascunho).
       patch({ progress: entryProgress(full) });
       // Dedup: refs "$hash" (repetições idênticas) ficam fora da tabela —
@@ -344,25 +494,23 @@ export function createEntryView(version: GameVersionId): EntryView {
             const roots = kinds
               .map((k) => byKind.get(k))
               .filter((n): n is SideNode => Boolean(n));
-            // Expansão em UNION: o que já está aberto não colapsa.
-            const expanded = new Set(prev.expanded);
-            if (entries.length > 0) {
-              expanded.add(`kind:${kind}`);
-              for (const child of byKind.get(kind)?.children ?? []) {
-                expanded.add(child.id);
-              }
-            }
+            // A árvore nasce FECHADA, inclusive a de data/: nada é expandido
+            // automaticamente. O expanded que já está aqui guarda só o que
+            // o USUÁRIO abriu, e sobrevive ao reload (união) — quem quer ver
+            // os filhos expande o nó.
             return {
               ...prev,
               roots,
-              expanded,
               kindStatus: { ...prev.kindStatus, [kind]: 'ready' as const },
             };
           });
           // Revalida a seleção quando o KIND dela completa (não no fim de
-          // tudo): entrada removida por import limpa a tabela.
+          // tudo): entrada removida por import limpa a tabela. Seleção que
+          // veio do .vbf fica de fora — a árvore de data/ não tem como
+          // revalidá-la (o arquivo pode nem estar extraído ali); se o
+          // container sumir, a própria carga da entrada avisa.
           const current = store.state.selectedEntry;
-          if (current && current.kind === kind) {
+          if (current && !current.vbf && current.kind === kind) {
             const found = entries.find((e) => e.id === current.id);
             if (found) {
               await selectEntry(found);
@@ -395,11 +543,56 @@ export function createEntryView(version: GameVersionId): EntryView {
     );
   };
 
+  /** Tamanho humano do container — só informativo na raiz da árvore. */
+  const formatVbfSize = (bytes: number): string => {
+    if (!Number.isFinite(bytes) || bytes <= 0) return '';
+    const gb = bytes / 1024 ** 3;
+    if (gb >= 1) return `${gb.toFixed(1)} GB`;
+    const mb = bytes / 1024 ** 2;
+    if (mb >= 1) return `${mb.toFixed(0)} MB`;
+    return `${bytes} B`;
+  };
+
+  /**
+   * Raízes dos containers .vbf descobertos perto do executável do jogo. O
+   * backend varre a pasta uma vez (promessa compartilhada em vbf.ts) e cada
+   * aba só espelha a lista na própria árvore. Sem executível configurado ele
+   * devolve lista vazia — a árvore de data/ continua normal.
+   */
+  const loadVbfRootNodes = async (gen: number): Promise<void> => {
+    try {
+      const all = await loadVbfRoots();
+      if (gen !== generationCounter.current) return;
+      // UM container por versão: FFX_Data.vbf na aba FFX, FFX2_Data.vbf na
+      // FFX-2 e NENHUM na Last Mission (que reusa a árvore do FFX-2 sem
+      // container próprio). Nomes sem a extensão — a seção acima da árvore
+      // já diz que é .vbf.
+      const list = all.filter((root) => root.version === version);
+      patch({
+        vbfRoots: list.map((root) => ({
+          // Mesmo formato de vbfNodeId com path/id vazios = a RAIZ do
+          // container (é o que a expansão usa como diretório inicial).
+          id: vbfNodeId(root.path, { path: '', id: '' }),
+          label: `${root.name.replace(/\.vbf$/i, '')} · ${formatVbfSize(root.size)}`,
+          vbf: true,
+          vbfRoot: root.path,
+          vbfPath: '',
+          expandable: true,
+        })),
+      });
+    } catch (error) {
+      if (gen !== generationCounter.current) return;
+      patch({ vbfRoots: [] });
+      sendErrorNotification(error);
+    }
+  };
+
   /** Carga da aba: marca todos os principais como loading e carrega. */
   const reload = async (): Promise<void> => {
     const gen = ++generationCounter.current;
     const kinds = allKindsFor(version);
     patch({ loading: true, kindStatus: loadingStatuses(kinds) });
+    void loadVbfRootNodes(gen);
     await loadAllKinds(gen);
     if (gen === generationCounter.current) {
       patch({ loading: false });
@@ -414,8 +607,13 @@ export function createEntryView(version: GameVersionId): EntryView {
   const coldReload = async (): Promise<void> => {
     const gen = ++generationCounter.current;
     const kinds = allKindsFor(version);
+    // Recomeça do zero também o lado do .vbf: cache de diretórios/entradas
+    // descartado e as raízes re-descobertas (executável do jogo pode ter
+    // mudado no diálogo de configuração).
+    invalidateVbfCache();
     patch({
       roots: kinds.map((kind) => loadingRootNode(kind)),
+      vbfRoots: [],
       expanded: new Set<string>(),
       selectedEntry: null,
       rows: [],
@@ -424,10 +622,29 @@ export function createEntryView(version: GameVersionId): EntryView {
       generation: gen,
       loading: true,
     });
+    void loadVbfRootNodes(gen);
     await loadAllKinds(gen);
     if (gen === generationCounter.current) {
       patch({ loading: false });
     }
+  };
+
+  /**
+   * Alterna expandir/colapsar. Um nó do .vbf ainda sem filhos busca no
+   * backend ANTES de abrir (expansão preguiçosa, com spinner no chevron) —
+   * o container nunca é indexado de uma vez.
+   */
+  const toggleNode = (node: SideNode): void => {
+    if (node.vbf && node.expandable && !node.children) {
+      void loadVbfChildren(node);
+      return;
+    }
+    store.setState((prev) => {
+      const next = new Set(prev.expanded);
+      if (next.has(node.id)) next.delete(node.id);
+      else next.add(node.id);
+      return { ...prev, expanded: next };
+    });
   };
 
   const actions: EntryActions = {
@@ -435,30 +652,44 @@ export function createEntryView(version: GameVersionId): EntryView {
     coldReload,
     selectEntry,
     selectNode: async (node) => {
+      if (node.vbf && node.unsupported) {
+        // Fora do escopo do app (áudio, vídeo, .exe…): avisa SEM tentar
+        // decodificar — só o caminho do arquivo aparece, nunca conteúdo.
+        sendErrorNotificationWithMessage(
+          `Formato fora do escopo do app: ${node.label}`
+        );
+        return;
+      }
+      if (node.vbf && !node.entry) {
+        // Raiz/diretório do .vbf: o clique alterna a expansão.
+        toggleNode(node);
+        return;
+      }
       if (node.entry && node.kind) {
         await selectEntry(node.entry);
       } else if (node.kind) {
         patch({ activeKind: node.kind });
       }
     },
-    toggleNode: (node) => {
-      store.setState((prev) => {
-        const next = new Set(prev.expanded);
-        if (next.has(node.id)) next.delete(node.id);
-        else next.add(node.id);
-        return { ...prev, expanded: next };
-      });
-    },
+    toggleNode,
     requestTableFocus: () => patch({ pendingTableFocus: true }),
     consumeTableFocus: () => patch({ pendingTableFocus: false }),
-    openDialog: (row) => patch({ translationRow: row, dialogOpen: true }),
+    openDialog: (row) => {
+      // Entrada aberta pelo .vbf é somente leitura: não existe edição para
+      // abrir (o salvar sairia de mods/ contra um original que pode nem estar
+      // extraído em data/).
+      if (store.state.selectedEntry?.vbf) return;
+      patch({ translationRow: row, dialogOpen: true });
+    },
     navigateRow: (direction, value) => {
       const { selectedEntry: entry, translationRow: row } = store.state;
       if (value !== undefined && entry && row) {
         editDraft.setCell(version, entry.kind, entry.id, row, SOURCE_LANG, value);
         patch({ rows: [...store.state.rows] });
       }
-      const idx = store.state.rows.findIndex((r) => r.index === row?.index);
+      const idx = store.state.rows.findIndex(
+        (r) => rowKey(r) === (row ? rowKey(row) : null)
+      );
       const next =
         store.state.rows[idx + (direction === 'next' ? 1 : -1)];
       if (next) patch({ translationRow: next });
@@ -471,7 +702,17 @@ export function createEntryView(version: GameVersionId): EntryView {
       }
       patch({ dialogOpen: false, translationRow: null });
     },
-    openImageAction: (action) => patch({ imageAction: action }),
+    openImageAction: (action) => {
+      // Ações de imagem agem sobre data/ + mods/: a partir do .vbf o id
+      // pode nem existir lá, e o container não é alvo de escrita.
+      if (store.state.selectedEntry?.vbf) {
+        sendErrorNotificationWithMessage(
+          'Ações de imagem estão disponíveis na árvore de data/ — o .vbf é somente leitura.'
+        );
+        return;
+      }
+      patch({ imageAction: action });
+    },
     closeImageAction: () => patch({ imageAction: null }),
   };
 

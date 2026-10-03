@@ -3,14 +3,17 @@
 import {
   ChevronDown,
   ChevronRight,
+  File as FileIcon,
   FileText,
+  Folder,
+  FolderOpen,
   Image as ImageIcon,
   Loader2,
 } from 'lucide-react';
 import type { EntryKind } from '@/lib/ffx/display-names';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { EMPTY_IDS, type SideNode } from './types';
+import { EMPTY_IDS, entryNodeId, type SideNode } from './types';
 
 export function TreeItem({
   node,
@@ -33,20 +36,26 @@ export function TreeItem({
   onCheck: (node: SideNode, checked: boolean) => void;
   onNodeKeyDown: (event: React.KeyboardEvent<HTMLElement>, node: SideNode) => void;
 }) {
-  const hasChildren = !!node.children && node.children.length > 0;
+  // Diretório do .vbf ainda sem filhos (ou grupo de macrodic) também é
+  // expansível: o chevron aparece ANTES da listagem chegar.
+  const hasChildren =
+    (!!node.children && node.children.length > 0) || (node.expandable ?? false);
   const isExpanded = expanded.has(node.id);
-  const isSelected = node.entry ? selectedId === `leaf:${node.entry.kind}:${node.entry.id}` : false;
+  const isSelected = node.entry ? selectedId === entryNodeId(node.entry) : false;
   // Raiz de kind (Eventos/Sistema/Dicionário) não tem checkbox: "extrair o
   // kind inteiro" é papel do botão Exportar na linha das abas.
   const isKindRoot = node.id.startsWith('kind:');
   // Imagem não é texto: não entra na seleção de exportação (JSON/.strings).
   const isImage = node.kind === 'images';
+  // Nó do .vbf é somente leitura: sem checkbox de exportação e sem menu de
+  // contexto (o export lê de data/ + mods/, nunca do container).
+  const isVbf = node.vbf === true;
   const selected = node.kind
     ? (selectedByKind.get(node.kind) ?? EMPTY_IDS)
     : EMPTY_IDS;
 
   let checked: boolean | 'indeterminate' = false;
-  if (!isKindRoot && !isImage) {
+  if (!isKindRoot && !isImage && !isVbf) {
     if (node.entry) {
       checked = selected.has(node.entry.id);
     } else {
@@ -68,6 +77,7 @@ export function TreeItem({
         data-node-id={node.id}
         data-node-kind={node.kind}
         data-node-label={node.label}
+        data-node-vbf={isVbf ? 'true' : undefined}
       >
         {node.loading ? (
           <span
@@ -89,7 +99,7 @@ export function TreeItem({
         ) : (
           <span className="w-8 shrink-0" />
         )}
-        {isKindRoot || isImage ? null : (
+        {isKindRoot || isImage || isVbf ? null : (
           <Checkbox
             className="mr-1"
             checked={checked}
@@ -107,18 +117,27 @@ export function TreeItem({
           onClick={() => onSelect(node)}
           onKeyDown={(event) => onNodeKeyDown(event, node)}
         >
+          {/* Ícone do nó: diretório FECHADO quando colapsado e ABERTO quando
+              expandido; arquivo de texto para binário com texto; imagem para
+              .dds.phyre; arquivo genérico para formato fora do escopo. */}
           {node.entry ? (
             node.entry.kind === 'images' ? (
               <ImageIcon size={18} className="mr-2 shrink-0" />
             ) : (
               <FileText size={18} className="mr-2 shrink-0" />
             )
-          ) : null}
+          ) : node.unsupported ? (
+            <FileIcon size={18} className="mr-2 shrink-0 opacity-70" />
+          ) : isExpanded ? (
+            <FolderOpen size={18} className="mr-2 shrink-0" />
+          ) : (
+            <Folder size={18} className="mr-2 shrink-0" />
+          )}
           <span className="truncate">{node.label}</span>
         </Button>
       </div>
       {hasChildren && isExpanded
-        ? node.children!.map((child) => (
+        ? (node.children ?? []).map((child) => (
             <TreeItem
               key={child.id}
               node={child}

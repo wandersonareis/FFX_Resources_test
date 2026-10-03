@@ -53,6 +53,10 @@ export namespace dto {
 	    hash?: Record<string, string>;
 	    text: Record<string, string>;
 	    original?: Record<string, string>;
+	    // União dos dois lados da tabela: a row existe só no original (o
+	    // arquivo traduzido tem menos linhas) ou só na tradução.
+	    missingInOriginal?: boolean;
+	    missingInTranslated?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new TextRow(source);
@@ -65,6 +69,8 @@ export namespace dto {
 	        this.hash = source["hash"];
 	        this.text = source["text"];
 	        this.original = source["original"];
+	        this.missingInOriginal = source["missingInOriginal"];
+	        this.missingInTranslated = source["missingInTranslated"];
 	    }
 	}
 	export class Metadata {
@@ -281,6 +287,58 @@ export namespace dto {
 	        this.used = source["used"];
 	        this.limit = source["limit"];
 	        this.over = source["over"];
+	    }
+	}
+	// VbfRoot é uma raiz de árvore da sidebar: um .vbf encontrado perto do
+	// executável do jogo.
+	export class VbfRoot {
+	    name: string;
+	    path: string;
+	    version: string;
+	    size: number;
+	    entries: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new VbfRoot(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.version = source["version"];
+	        this.size = source["size"];
+	        this.entries = source["entries"];
+	    }
+	}
+	// VbfNode é um filho imediato de um diretório do .vbf — ou um chunk do
+	// macrodic. kind/id/vazios = formato fora do escopo do app.
+	export class VbfNode {
+	    name: string;
+	    path: string;
+	    isDir: boolean;
+	    size: number;
+	    kind: string;
+	    id: string;
+	    version: string;
+	    macro: boolean;
+	    image: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new VbfNode(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.isDir = source["isDir"];
+	        this.size = source["size"];
+	        this.kind = source["kind"];
+	        this.id = source["id"];
+	        this.version = source["version"];
+	        this.macro = source["macro"];
+	        this.image = source["image"];
 	    }
 	}
 	export class ImportSummary {
