@@ -139,9 +139,13 @@ func TestGetEntryHelpDedupsDTO(t *testing.T) {
 	}
 }
 
-// Compat: artefatos help antigos carregavam name (text_%04d); sem a
-// normalização, o rowKey (index\x00name) não casa com a store nova e o
-// import seria bloqueado.
+// Compat: artefatos help antigos carregavam name (text_%04d); a store nova
+// não tem name.
+//
+// O casamento é pelo hash, então o name não atrapalha uma row de hash
+// único — mas dedup põe duas rows com o MESMO texto no mesmo grupo de hash,
+// e aí só a coordenada (index\x00name) desempata. É a normalização que alinha
+// as duas chaves.
 func TestStripHelpRowNamesImportCompat(t *testing.T) {
 	text := map[string]string{common.DefaultLocalization: "Directional Button"}
 	h := hash.Texts(text)
@@ -151,29 +155,44 @@ func TestStripHelpRowNamesImportCompat(t *testing.T) {
 	store := dto.Collection{
 		"now_help": dto.FileEntry{
 			Metadata: metadata(),
-			Rows:     []dto.TextRow{{Index: 3, Hash: h, Text: text}},
+			Rows: []dto.TextRow{
+				{Index: 3, Hash: h, Text: text},
+				{Index: 7, Hash: h, Text: text}, // mesmo texto ⇒ mesmo hash
+			},
 		},
 	}
 	legacy := dto.Collection{
 		"now_help": dto.FileEntry{
 			Metadata: metadata(),
-			Rows:     []dto.TextRow{{Index: 3, Name: "text_0003", Hash: h, Text: text}},
+			Rows: []dto.TextRow{
+				{Index: 3, Name: "text_0003", Hash: h, Text: text},
+				{Index: 7, Name: "text_0007", Hash: h, Text: text},
+			},
 		},
 	}
 
-	if _, errs := validateImportEntry(legacy["now_help"], store["now_help"]); len(errs) == 0 {
-		t.Fatal("artefato legado sem normalização deveria falhar no rowKey")
+	// Sem normalização o grupo de hash não desempata: nada casa, mas
+	// também não é erro — as duas rows saem como hash não encontrado.
+	m := matchImportEntry(legacy["now_help"], store["now_help"], nil)
+	if m.inserted != 0 || len(m.unmatched) != 2 {
+		t.Fatalf("sem normalização: inserted=%d unmatched=%d, queria 0 e 2",
+			m.inserted, len(m.unmatched))
 	}
 
 	stripHelpRowNames(legacy)
 	if legacy["now_help"].Rows[0].Name != "" {
 		t.Fatalf("name legado não removido: %q", legacy["now_help"].Rows[0].Name)
 	}
-	changed, errs := validateImportEntry(legacy["now_help"], store["now_help"])
-	if len(errs) > 0 {
-		t.Fatalf("após normalizar: %v", errs)
+
+	m = matchImportEntry(legacy["now_help"], store["now_help"], nil)
+	if len(m.unmatched) != 0 {
+		t.Fatalf("após normalizar: %d unmatched, queria 0", len(m.unmatched))
 	}
-	if changed != 0 {
-		t.Fatalf("changed = %d, queria 0 (mesmo texto)", changed)
+	if m.inserted != 2 || m.candidates != 2 {
+		t.Fatalf("após normalizar: inserted=%d candidates=%d, queria 2 e 2",
+			m.inserted, m.candidates)
+	}
+	if m.changed != 0 {
+		t.Fatalf("changed = %d, queria 0 (mesmo texto)", m.changed)
 	}
 }

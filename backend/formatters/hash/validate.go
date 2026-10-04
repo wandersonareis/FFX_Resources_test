@@ -48,8 +48,10 @@ func ValidateNoCollision(c dto.Collection) error {
 }
 
 // DedupIndex agrupa índices por hash para um idioma, dentro de um arquivo/lote.
-// Permite dedup máximo por arquivo por lote e, no import, localizar a frase
-// original pelo hash para comparar tags de controle.
+// Permite dedup máximo por arquivo por lote e, no import, desempatar o grupo
+// de hash pela coordenada (index\x00name): o casamento é Hash == Hash, então
+// o hash é a identidade do texto no momento do export — a ferramenta nunca o
+// reescreve, e hash divergente (store mudou desde o export) é log, não erro.
 func DedupIndex(rows []dto.TextRow, lang string) map[string][]int {
 	out := make(map[string][]int)
 	for _, row := range rows {

@@ -10,7 +10,6 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/lockit"
-	"ffxresources/backend/formatters/hash"
 	jsonfmt "ffxresources/backend/formatters/json"
 	strfmt "ffxresources/backend/formatters/strings"
 	"ffxresources/backend/interactions"
@@ -164,12 +163,14 @@ var _ = Describe("MetadataService", Ordered, func() {
 		Expect(entry.Metadata.Key).NotTo(BeEmpty())
 
 		// Encurta um texto 'us' (capacity-safe) para gerar uma alteração.
+		// O Hash NÃO é re-derivado: o artefato carrega o hash do texto no
+		// momento do export, e é ele que casa com a store. Um tradutor mexe
+		// só no valor — re-derivar o hash faria a row casar com nada.
 		changed := false
 		for i := range entry.Rows {
 			if t := entry.Rows[i].Text[common.DefaultLocalization]; len(t) > 1 {
 				newText := t[:len(t)-1]
 				entry.Rows[i].Text[common.DefaultLocalization] = newText
-				entry.Rows[i].Hash[common.DefaultLocalization] = hash.Sum64Hex(newText)
 				changed = true
 				break
 			}
@@ -262,13 +263,35 @@ var _ = Describe("MetadataService", Ordered, func() {
 		entry, err := metadataService.GetEntry(services.KindLockit, id, common.GameVersionFFX2)
 		Expect(err).NotTo(HaveOccurred())
 
-		// Edita uma row do grupo game (índice 2) mantendo a tag intacta.
-		target := entry.Rows[2]
-		Expect(target.Name).To(Equal("game"))
+		// Edita uma row do grupo game com texto 'us' ÚNICO no arquivo.
+		// Row 2 deste arquivo compartilha o texto com outra linha — dedup
+		// colapsa as duas em $hash no artefato e editar o dono da ref
+		// propagaria a edição para a gêmea (2 changes). Para validar a
+		// intenção "mexer só na linha editada", o alvo não pode ter gêmeo.
+		ti := -1
+		for i, r := range entry.Rows {
+			if r.Name != "game" || len(r.Text[common.DefaultLocalization]) <= 1 {
+				continue
+			}
+			orig := r.Text[common.DefaultLocalization]
+			n := 0
+			for _, o := range entry.Rows {
+				if o.Text[common.DefaultLocalization] == orig {
+					n++
+				}
+			}
+			if n == 1 {
+				ti = i
+				break
+			}
+		}
+		Expect(ti).To(BeNumerically(">=", 0), "deve haver row game com texto 'us' único")
+		target := entry.Rows[ti]
 		const newText = "LOCKIT EDITADO"
 		Expect(target.Text[common.DefaultLocalization]).NotTo(Equal(newText))
+		// Hash fica como no export — é a chave de casamento e o sinal de
+		// staleness, não um derivado do texto editado.
 		target.Text[common.DefaultLocalization] = newText
-		target.Hash[common.DefaultLocalization] = hash.Sum64Hex(newText)
 
 		raw, err := jsonfmt.NewJSONObjectFormatter().Marshal(dto.Collection{id: entry})
 		Expect(err).NotTo(HaveOccurred())
@@ -320,18 +343,30 @@ var _ = Describe("MetadataService", Ordered, func() {
 		entry, err := metadataService.GetEntry(services.KindLockit, id, common.GameVersionFFX2)
 		Expect(err).NotTo(HaveOccurred())
 
-		// Edita a primeira row do grupo utf8 com texto 'us'.
-		target := -1
+		// Edita a primeira row do grupo utf8 com texto 'us' ÚNICO no
+		// arquivo — row com texto compartilhado vira ref no dedup do
+		// artefato e a edição resolve para o texto do dono anterior.
+		ti := -1
 		for i := range entry.Rows {
-			if entry.Rows[i].Name == "utf8" && entry.Rows[i].Text[common.DefaultLocalization] != "" {
-				target = i
+			if entry.Rows[i].Name != "utf8" || entry.Rows[i].Text[common.DefaultLocalization] == "" {
+				continue
+			}
+			orig := entry.Rows[i].Text[common.DefaultLocalization]
+			n := 0
+			for _, o := range entry.Rows {
+				if o.Text[common.DefaultLocalization] == orig {
+					n++
+				}
+			}
+			if n == 1 {
+				ti = i
 				break
 			}
 		}
-		Expect(target).To(BeNumerically(">=", 0), "deve haver row utf8 com texto 'us'")
+		Expect(ti).To(BeNumerically(">=", 0), "deve haver row utf8 com texto 'us' único")
+		target := ti
 		const newText = "LOCKIT UTF8 EDITADO"
 		entry.Rows[target].Text[common.DefaultLocalization] = newText
-		entry.Rows[target].Hash[common.DefaultLocalization] = hash.Sum64Hex(newText)
 
 		raw, err := strfmt.Marshal(dto.Collection{id: entry})
 		Expect(err).NotTo(HaveOccurred())
