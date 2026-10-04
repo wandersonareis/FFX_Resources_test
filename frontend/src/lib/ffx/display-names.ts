@@ -8,6 +8,10 @@ export type EntryKind =
   | 'macro'
   | 'lockit'
   | 'help'
+  | 'battletext'
+  | 'cloud'
+  | 'tutorial'
+  | 'menumain'
   | 'images';
 
 export const KIND_LABELS: Record<EntryKind, string> = {
@@ -16,6 +20,10 @@ export const KIND_LABELS: Record<EntryKind, string> = {
   macro: 'Dicionário',
   lockit: 'Loc Kit',
   help: 'Painel de ajuda',
+  battletext: 'Textos de batalha',
+  cloud: 'Cloud',
+  tutorial: 'Tutorial',
+  menumain: 'Texto menu principal',
   images: 'Imagens',
 };
 

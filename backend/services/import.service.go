@@ -40,6 +40,7 @@ import (
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/fileFormats/eventtable"
 	"ffxresources/backend/fileFormats/helpfile"
 	"ffxresources/backend/fileFormats/lockit"
 	"ffxresources/backend/fileFormats/objectsfile"
@@ -75,13 +76,48 @@ func usText(r dto.TextRow) string {
 	return r.Text[common.DefaultLocalization]
 }
 
-// isBlankText diz se um texto não é traduzível: vazio, só espaço, ou o "-"
-// que é o próprio texto do jogo (mais da metade do data/ pristine). O filtro
-// é de casamento e de export — a store nunca é filtrada, porque é ela que
-// guarda a posição da row no binário e o rebuild posicional.
+// isBlankText diz se um texto não é traduzível: vazio, só espaço, o "-" que
+// é o próprio texto do jogo (mais da metade do data/ pristine) ou só tags de
+// formatação ({TEXT_NEWLINE}, {TEXT_ITALIC}, color…) — linha que o tradutor
+// não teria o que editar. O filtro é de casamento e de export — a store
+// nunca é filtrada, porque é ela que guarda a posição da row no binário e o
+// rebuild posicional.
 func isBlankText(t string) bool {
-	s := strings.TrimSpace(t)
+	s := strings.TrimSpace(stripTextTags(t))
 	return s == "" || s == "-"
+}
+
+// stripTextTags remove do texto todas as tags classificadas como text-tag
+// (ausência/quantidade delas % não é conteúdo). Chave
+// explícita: tags de CONTROLE (icone, pausa…) NÃO saem — elas preservam
+// significado no segmento. As duas regras batem: tag sem fechamento não é
+// tag, vira texto literal.
+func stripTextTags(t string) string {
+	runes := []rune(t)
+	out := make([]rune, 0, len(runes))
+	for i := 0; i < len(runes); i++ {
+		if runes[i] != '{' {
+			out = append(out, runes[i])
+			continue
+		}
+		end := -1
+		for j := i + 1; j < len(runes); j++ {
+			if runes[j] == '}' {
+				end = j
+				break
+			}
+		}
+		if end < 0 {
+			out = append(out, runes[i])
+			continue
+		}
+		if converter.IsTextTag(string(runes[i+1 : end])) {
+			i = end
+			continue
+		}
+		out = append(out, runes[i])
+	}
+	return string(out)
 }
 
 // usHash devolve o hash 'us' da row, calculando-o quando a row não trouxer
@@ -386,6 +422,18 @@ func kindFromKey(key string) string {
 	if lockit.IsLockitKey(key) {
 		return KindLockit
 	}
+	if strings.Contains(lower, "/battle/btl/") {
+		return KindBattleText
+	}
+	if strings.Contains(lower, "/cloudsave/") {
+		return KindCloud
+	}
+	if strings.HasSuffix(lower, "tutorial.msb") {
+		return KindTutorial
+	}
+	if strings.HasSuffix(lower, "/menu/menumain.bin") {
+		return KindMenuMain
+	}
 	if strings.Contains(lower, "/help/") && strings.HasSuffix(lower, ".sps2") {
 		return KindHelp
 	}
@@ -475,6 +523,12 @@ func (s *MetadataService) importKnownIDs(kind string, version common.GameVersion
 				known[id] = true
 			}
 		}
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		for _, id := range imported.SortedKeys() {
+			if _, ok := eventtable.RelPath(kind, id); ok && originalExists(kind, id, version) {
+				known[id] = true
+			}
+		}
 	case KindHelp:
 		if err := ensureHelpLoaded(version); err != nil {
 			return nil, nil, err
@@ -553,6 +607,55 @@ func importEventsUsage(version common.GameVersion, id string, imp dto.FileEntry)
 	}
 	content := event.RebuildFieldStrings(copies, charset, version)
 	header := len(copies) * 8 // first = count*8, precisa caber em uint16
+	usage.Used = header + len(content)
+	over := header > 65535 || header+len(content) > importUint16Limit
+	for _, c := range copies {
+		if c.RegularOffset > 65535 || c.SimplifiedOffset > 65535 {
+			over = true
+			break
+		}
+	}
+	usage.Over = over
+	return usage, nil
+}
+
+// importEventTableUsage é o importEventsUsage das famílias eventtable (btl,
+// cloud/cloudv, tutorial.msb): mesma tabela dos events → mesma régua uint16.
+func importEventTableUsage(kind string, version common.GameVersion, id string, imp dto.FileEntry) (dto.ImportUsage, error) {
+	usage := dto.ImportUsage{ID: id, Kind: kind, Limit: importUint16Limit}
+	f := eventtable.Get(kind, version, id)
+	if f == nil {
+		return usage, fmt.Errorf("%s: %s não encontrado", kind, id)
+	}
+	charset := ffxencoding.GetCharsetForLanguage(common.DefaultLocalization)
+	importUS := make(map[int]string, len(imp.Rows))
+	for _, r := range imp.Rows {
+		if r.Name != "" {
+			continue
+		}
+		if t := r.Text[common.DefaultLocalization]; t != "" {
+			importUS[r.Index] = t
+		}
+	}
+	copies := make([]*event.FieldString, 0, len(f.Strings))
+	for i, obj := range f.Strings {
+		if obj == nil {
+			continue
+		}
+		var c *event.FieldString
+		if fs := obj.GetLocalizedContent(common.DefaultLocalization); fs != nil {
+			cp := *fs
+			c = &cp
+		} else {
+			c = event.NewEmptyFieldString(charset, version)
+		}
+		if t, ok := importUS[i]; ok {
+			c.SetRegularString(t)
+		}
+		copies = append(copies, c)
+	}
+	content := event.RebuildFieldStrings(copies, charset, version)
+	header := len(copies) * 8
 	usage.Used = header + len(content)
 	over := header > 65535 || header+len(content) > importUint16Limit
 	for _, c := range copies {
@@ -816,9 +919,12 @@ func (s *MetadataService) prepareImport(path string, version common.GameVersion)
 		for _, id := range merged.SortedKeys() {
 			var usage dto.ImportUsage
 			var uerr error
-			if kind == KindEvents {
+			switch {
+			case kind == KindEvents:
 				usage, uerr = importEventsUsage(version, id, merged[id])
-			} else {
+			case kind == KindBattleText || kind == KindCloud || kind == KindTutorial || kind == KindMenuMain:
+				usage, uerr = importEventTableUsage(kind, version, id, merged[id])
+			default:
 				usage, uerr = importObjectsUsage(version, id, merged[id])
 			}
 			if uerr != nil {
@@ -928,6 +1034,8 @@ func (s *MetadataService) ExportJSON(kind string, version common.GameVersion, id
 			return nil, jerr
 		}
 		return paths, nil
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		return jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}

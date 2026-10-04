@@ -176,6 +176,36 @@ func matchVbfPath(vbfName, inner string) (vbfTarget, bool) {
 		// painéis secundários (…_page em subpasta) não são entradas.
 		kind, id = KindHelp, stem
 
+	case strings.Contains(lower, "/battle/btl/"):
+		// battletext: <raiz de localização>/battle/btl/<id>/<id>.bin.
+		// O id é o nome do DIRETÓRIO (o .bin dentro tem o mesmo stem).
+		kind = KindBattleText
+		if dir := path.Base(path.Dir(slash)); dir != "" && dir != "btl" {
+			id = dir
+		} else {
+			id = stem
+		}
+
+	case strings.Contains(lower, "/cloudsave/"):
+		// cloud: <raiz de localização>/cloudsave/cloud.bin | cloudv.bin.
+		// v  cloud.bin e cloudv.bin são um ÚNICO artefato ("cloud", par).
+		kind = KindCloud
+		id = "cloud"
+
+	case base == "tutorial.msb":
+		// tutorial: <raiz de localização>/menu/tutorial.msb.
+		kind = KindTutorial
+		id = "tutorial"
+
+	case base == "menumain.bin":
+		// FFX: menu/menumain.bin é a tabela events do menu principal
+		// (o battle/btl/menumain/ tem o mesmo stem em outro lugar do binário,
+		// então o SUFIXO do caminho separa: menu/... → menumain).
+		if strings.Contains(lower, "/menu/") {
+			kind = KindMenuMain
+			id = "menumain"
+		}
+
 	case isKnownObject(version, stem):
 		// objects: <raiz de localização>/<pattern>, id = stem do arquivo.
 		kind, id = KindObjects, stem

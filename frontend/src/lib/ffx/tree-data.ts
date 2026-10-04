@@ -45,9 +45,12 @@ export interface EntryRow {
 // (kit de localização do menu/launcher) existe em FFX e FFX-2. Os painéis de
 // ajuda (.sps2 em help/) são FFX-only: a árvore do ffx2 não tem a pasta help/.
 export function entryKindsFor(version: GameVersionId): EntryKind[] {
+  // battletext (battle/btl) e cloud (cloudsave) existem em FFX e FFX-2;
+  // tutorial (menu/tutorial.msb) é só FFX-2. lastmiss divide a árvore do
+  // ffx2 mas não tem essas folhas próprias.
   if (version === 'lastmiss') return ['events', 'objects'];
-  if (version === 'ffx') return ['events', 'objects', 'macro', 'lockit', 'help'];
-  return ['events', 'objects', 'macro', 'lockit'];
+  if (version === 'ffx') return ['events', 'objects', 'macro', 'lockit', 'help', 'battletext', 'cloud', 'menumain'];
+  return ['events', 'objects', 'macro', 'lockit', 'battletext', 'cloud', 'tutorial'];
 }
 
 /**

@@ -15,6 +15,7 @@ import (
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/ddsphyre"
 	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/fileFormats/eventtable"
 	"ffxresources/backend/fileFormats/helpfile"
 	"ffxresources/backend/fileFormats/lockit"
 	"ffxresources/backend/fileFormats/macrodic"
@@ -25,11 +26,15 @@ import (
 
 // Kinds lógicos servidos ao frontend: textos e imagens (.dds.phyre).
 const (
-	KindEvents  = "events"
-	KindObjects = "objects"
-	KindMacro   = "macro"
-	KindLockit  = "lockit"
-	KindHelp    = "help"
+	KindEvents     = "events"
+	KindObjects    = "objects"
+	KindMacro      = "macro"
+	KindLockit     = "lockit"
+	KindHelp       = "help"
+	KindBattleText = "battletext"
+	KindCloud      = "cloud"
+	KindTutorial   = "tutorial"
+	KindMenuMain   = "menumain"
 	// KindImages é a árvore de texturas .dds.phyre — um kind de IMAGEM:
 	// não tem rows de texto, não participa de export/import de texto e não
 	// entra no preload de coleções.
@@ -62,9 +67,13 @@ type MetadataService struct {
 // em um artefato). objects é extração 1:1 por arquivo — dedup intra-arquivo
 // no GetEntry, refs não propagam entre objetos.
 var dedupViewKinds = map[string]bool{
-	KindHelp:   true,
-	KindEvents: true,
-	KindMacro:  true,
+	KindHelp:       true,
+	KindEvents:     true,
+	KindMacro:      true,
+	KindBattleText: true,
+	KindCloud:      true,
+	KindTutorial:   true,
+	KindMenuMain:   true,
 }
 
 type rawView struct {
@@ -441,6 +450,16 @@ func (s *MetadataService) ExportEntry(kind string, version common.GameVersion, i
 			return paths, serr
 		}
 		paths = append(append(paths, jps...), sps...)
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		jps, jerr := jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
+		if jerr != nil {
+			return paths, jerr
+		}
+		sps, serr := strfmt.NewStringsFormatter().WriteObjects(c, version, langs)
+		if serr != nil {
+			return paths, serr
+		}
+		paths = append(append(paths, jps...), sps...)
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
@@ -546,6 +565,20 @@ func (s *MetadataService) ImportEntry(kind string, version common.GameVersion, i
 		}
 		return []string{path}, nil
 
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		path, err := jsonfmt.ObjectsJSONPath(id, version)
+		if err != nil {
+			return nil, err
+		}
+		read, err := jsonfmt.NewJSONObjectFormatter().ReadObjects(path)
+		if err != nil {
+			return nil, err
+		}
+		if err := builders.ApplyTableDTO(kind, version, read); err != nil {
+			return nil, err
+		}
+		return []string{path}, nil
+
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
@@ -584,6 +617,11 @@ func (s *MetadataService) ApplyEntry(kind string, version common.GameVersion, id
 			return err
 		}
 		return builders.ApplyHelpDTO(version, dto.Collection{id: entry}, []string{id})
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		if !eventtableKindUsable(kind, version) {
+			return nil
+		}
+		return builders.ApplyTableDTO(kind, version, dto.Collection{id: entry})
 	default:
 		return fmt.Errorf("unknown kind: %s", kind)
 	}
@@ -681,6 +719,12 @@ func (s *MetadataService) ApplyTextCollection(kind string, version common.GameVe
 			return err
 		}
 		return builders.ApplyHelpDTO(version, c, c.SortedKeys())
+
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		if !eventtableKindUsable(kind, version) {
+			return nil
+		}
+		return builders.ApplyTableDTO(kind, version, c)
 
 	default:
 		return fmt.Errorf("unknown kind: %s", kind)
@@ -903,6 +947,30 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 			names = append(names, entry.Name)
 		}
 		s.emitTreeDiag(KindHelp, version, names, nil)
+		return out, nil
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		// eventtable: mesma régua dos demais kinds — a árvore é definida
+		// por data/; o que só existe em mods/ não é exibido (regra 4).
+		if !eventtableKindUsable(kind, version) {
+			return []EntrySummary{}, nil
+		}
+		ids := eventtable.List(kind, version)
+		out := make([]EntrySummary, 0, len(ids))
+		for _, id := range ids {
+			if !originalExists(kind, id, version) {
+				common.LogWarning(
+					"%s %s/%s: sem original em data/ — omitido da árvore (arquivo só em mods/)",
+					kind, version, id,
+				)
+				continue
+			}
+			key, ok := eventtable.Key(version, kind, id)
+			if !ok {
+				continue
+			}
+			out = append(out, EntrySummary{ID: id, Key: key})
+		}
+		s.emitTreeDiag(kind, version, ids, nil)
 		return out, nil
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
@@ -1165,6 +1233,11 @@ func (s *MetadataService) GetCollection(kind string, version common.GameVersion,
 			return dto.Collection{}, nil
 		}
 		return builders.BuildHelpDTO(version, ids)
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		if !eventtableKindUsable(kind, version) {
+			return dto.Collection{}, nil
+		}
+		return builders.BuildTableDTO(kind, version, ids)
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
@@ -1236,6 +1309,8 @@ func (s *MetadataService) ExportStrings(kind string, version common.GameVersion,
 		return f.WriteObjects(c, version, langs)
 	case KindHelp:
 		return f.WriteHelp(c, version, langs)
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		return f.WriteObjects(c, version, langs)
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
@@ -1329,4 +1404,20 @@ func ensureEventsLoaded(version common.GameVersion) error {
 // ensureHelpLoaded garante os painéis de ajuda em memória (carga única).
 func ensureHelpLoaded(version common.GameVersion) error {
 	return helpfile.EnsureHelpLoaded(version)
+}
+
+// eventtableKindUsable informa se a família eventtable tem binário nesta
+// versão: battletext e cloud existem em FFX e FFX-2; tutorial.msb é FFX-2
+// only. LastMiss divide a árvore do FFX-2 — os artefatos seguem a régua:
+// essa aba não exibe estas folhas (ficar no ffx2).
+func eventtableKindUsable(kind string, version common.GameVersion) bool {
+	switch kind {
+	case KindBattleText, KindCloud:
+		return version == common.GameVersionFFX || version == common.GameVersionFFX2
+	case KindTutorial:
+		return version == common.GameVersionFFX2
+	case KindMenuMain:
+		return version == common.GameVersionFFX
+	}
+	return false
 }

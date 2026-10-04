@@ -23,7 +23,11 @@ func TestKindFromKeyHelp(t *testing.T) {
 		{"ffx/help/dvdcopy/dvdcopy_page.sps2", KindHelp},
 		{"ffx/event/obj_ps3/az/azit0000/azit0000.bin", KindEvents},
 		{"ffx/menu/macrodic.dcp", KindMacro},
-		{"ffx/battle/btl/btl_txt.bin", KindObjects},
+		{"ffx/battle/kernel/btl_txt.bin", KindObjects},
+		{"ffx/battle/btl/bika00_10/bika00_10.bin", KindBattleText},
+		{"ffx2/cloudsave/cloud.bin", KindCloud},
+		{"ffx2/menu/tutorial.msb", KindTutorial},
+		{"ffx/menu/menumain.bin", KindMenuMain},
 	}
 	for _, tc := range cases {
 		if got := kindFromKey(tc.key); got != tc.want {

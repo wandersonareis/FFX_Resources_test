@@ -21,7 +21,7 @@ import (
 // N18   ordem trocada,
 // N-hf  hash não encontrado é log, não erro do resumo.
 
-var hTestMeta = func() dto.Metadata { return dto.Metadata{Key: "ffx/battle/btl/btl_txt.bin", ID: "btl"} }
+var hTestMeta = func() dto.Metadata { return dto.Metadata{Key: "ffx/battle/kernel/btl_txt.bin", ID: "btl"} }
 
 func hRow(index int, name, text string) dto.TextRow {
 	return dto.TextRow{
@@ -211,7 +211,7 @@ func TestBlankImportRowNeverCandidate(t *testing.T) {
 func TestFilterExportRowsUsOnly(t *testing.T) {
 	c := dto.Collection{
 		"btl": dto.FileEntry{
-			Metadata: dto.Metadata{Key: "ffx/battle/btl/btl_txt.bin", ID: "btl", RowCount: 5},
+			Metadata: dto.Metadata{Key: "ffx/battle/kernel/btl_txt.bin", ID: "btl", RowCount: 5},
 			Rows: []dto.TextRow{
 				// us vazio, pt preenchido ⇒ SAI (padrão 'us'; sem 'us' os
 				// outros idiomas não interessam).

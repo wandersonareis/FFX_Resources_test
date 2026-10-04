@@ -11,6 +11,7 @@ import (
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/ddsphyre"
 	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/fileFormats/eventtable"
 	"ffxresources/backend/fileFormats/helpfile"
 	"ffxresources/backend/fileFormats/lockit"
 	"ffxresources/backend/fileFormats/macrodic"
@@ -107,6 +108,14 @@ func originalRelPathLoc(kind, id string, version common.GameVersion, loc string)
 			return "", false
 		}
 		return helpfile.HelpPathForVersion(version, loc, id), true
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		if !eventtableKindUsable(kind, version) {
+			return "", false
+		}
+		if rel, ok := eventtable.RelPathLoc(version, loc, kind, id); ok {
+			return rel, true
+		}
+		return "", false
 	case KindImages:
 		if version == common.GameVersionLastMiss || !ddsphyre.ValidID(id) {
 			return "", false
@@ -310,6 +319,17 @@ func (s *MetadataService) loadOriginalFrom(kind, id string, version common.GameV
 			return dto.FileEntry{}, false, nil
 		}
 		return entry, true, nil
+
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		strs, err := eventtable.ReadLocalizedStringsFrom(kind, id, version, src)
+		if err != nil {
+			return dto.FileEntry{}, false, err
+		}
+		entry, ok := builders.BuildTableEntryDTOFrom(kind, id, version, strs)
+		if !ok {
+			return dto.FileEntry{}, false, nil
+		}
+		return entry, true, nil
 	}
 	return dto.FileEntry{}, false, fmt.Errorf("unknown kind: %s", kind)
 }
@@ -492,6 +512,7 @@ func InvalidateViewCaches() {
 	helpfile.ClearAllHelp()
 	objectsfile.ObjectFileDataStore.Clear()
 	lockit.DataStore.Clear()
+	eventtable.ClearStore()
 	datastore.Instance.ClearAllMacros()
 	// A preparação por versão (charsets + macros) leu a árvore anterior:
 	// zera para que a próxima chamada recarregue do novo diretório.
