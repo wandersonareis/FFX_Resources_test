@@ -160,6 +160,13 @@ func convertEventStringsToBytes(localizedStrings []*LocalizedFieldStringObject, 
 	return buildEventStringsBinaryData(fieldStrings)
 }
 
+// EncodeLocalizedStrings é o codec compartilhado com os formatos da mesma
+// tabela (battle/btl, cloudsave, tutorial.msb — ver backend/fileFormats/
+// eventtable): header de 8B por entrada + RebuildFieldStrings.
+func EncodeLocalizedStrings(localizedStrings []*LocalizedFieldStringObject, languageCode string, version common.GameVersion) ([]byte, error) {
+	return convertEventStringsToBytes(localizedStrings, languageCode, version)
+}
+
 // extractFieldStringsForLanguage extracts FieldString objects for a specific language
 // from LocalizedFieldStringObject instances. This function handles the conversion from
 // localized objects to the field string format used in binary files.
