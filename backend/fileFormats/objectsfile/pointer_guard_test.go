@@ -30,9 +30,11 @@ texto jamais vira frase. Aqui se fixa o que o resto do app depende:
      texto anterior);
   2. export   — o ref quebrado não contribui linha de texto no idioma
      primário (sem linha não há diálogo, sem diálogo não há edição);
-  3. base — só entra quando o arquivo TEM ref quebrado. Com ref quebrado
-     e sem edição o save é BYTE-IDÊNTICO ao original; sem ref quebrado a
-     base é rejeitada de propósito e o rebuild dedup de sempre roda.
+  3. splice — a base entra em QUALQUER arquivo que reproduza os refs (não
+     só nos quebrados). Sem edição o delta é zero em todo ponto e o save é
+     BYTE-IDÊNTICO ao original. Editado, o bloco é trocado no lugar e todo
+     offset depois desloca junto; os refs quebrados RECEBEM esse
+     deslocamento sem CAUSAR (não têm bytes) e jamais viram ponteiro válido.
 */
 
 // legacyPointer é o contrato observável de um ref lido (KeyedString).
@@ -182,15 +184,10 @@ var _ = Describe("Pointer guard (fluxo legado)", Ordered, func() {
 			fmt.Printf("POINTER %-42s refs=%-5d quebrados=%-4d tipos=%v chaves=%v hist=%v\n",
 				c.pattern, visited, broken, kinds, keysSeen, hist)
 
-			// Sem ref quebrado a string table original é REJEITADA de
-			// propósito: a guarda fica desligada e o rebuild dedup de
-			// sempre roda, como antes da mudança.
-			if broken == 0 {
-				return
-			}
-
-			// Com ref quebrado a base é aceita: sem edição não há texto
-			// novo, então o arquivo salvo tem que sair byte-idêntico.
+			// A base é aceita em qualquer arquivo que reproduza os refs
+			// (não só nos quebrados): sem edição o splice troca nada, o
+			// delta é zero em todo ponto e o save tem que sair
+			// byte-idêntico — arquivo limpo ou não.
 			outPath := filepath.Join(tmpRoot, "reimported", filepath.Base(c.pattern))
 			Expect(binFile.SaveToBinary(outPath)).To(Succeed())
 			outBytes, err := os.ReadFile(outPath)

@@ -127,12 +127,15 @@ func TestPointerStatusIsBrokenSomenteMidEOOB(t *testing.T) {
 	}
 }
 
-// TestUsableStringTableBaseSoEntraComRefQuebrado fixa o auto-gating da base
-// do rebuild: a string table original só é aceita quando ela (a) reproduz
-// TODOS os refs lidos e (b) ainda PROVA pelo menos um ref quebrado. Sem
-// prova, a base é rejeitada e o rebuild dedup de sempre roda — a guarda
-// fica desligada onde não há problema.
-func TestUsableStringTableBaseSoEntraComRefQuebrado(t *testing.T) {
+// TestUsableStringTableBaseValidaReproducao fixa o contrato da base do
+// rebuild: a string table original só é aceita quando ela reproduz TODOS
+// os refs lidos — mesmo offset, mesmos bytes e mesma classificação,
+// inclusive os MID/OOB, que têm que continuar quebrados contra ela.
+//
+// NÃO depende de haver ref quebrado: o splice usa a base no arquivo limpo
+// também (sem edição o delta é zero em todo ponto e a saída é o próprio
+// base byte a byte). O que rejeita a base é ela NÃO reproduzir os refs.
+func TestUsableStringTableBaseValidaReproducao(t *testing.T) {
 	if err := ffxencoding.PrepareVersionCharsets(common.GameVersionFFX); err != nil {
 		t.Fatalf("prepare charsets: %v", err)
 	}
@@ -156,10 +159,11 @@ func TestUsableStringTableBaseSoEntraComRefQuebrado(t *testing.T) {
 		t.Errorf("a tabela do próprio arquivo tem que ser aceita quando há ref quebrado (got %d bytes)", len(got))
 	}
 
-	// Arquivo limpo: nada prova quebra — a base é rejeitada de propósito.
+	// Arquivo limpo: a base também é aceita — é ela que garante o
+	// deslocamento global e a saída byte idêntica sem edição.
 	clean := read(base, 0, 2, 3)
-	if got := objectsfile.UsableStringTableBase(clean, base); got != nil {
-		t.Errorf("base aceita num arquivo sem ref quebrado: a guarda ficaria ligada sem problema")
+	if got := objectsfile.UsableStringTableBase(clean, base); !bytes.Equal(got, base) {
+		t.Errorf("a tabela do próprio arquivo foi rejeitada num arquivo limpo (got %d bytes)", len(got))
 	}
 
 	// Sem candidato não há base.
@@ -174,15 +178,16 @@ func TestUsableStringTableBaseSoEntraComRefQuebrado(t *testing.T) {
 	}
 
 	// Candidato que não reproduz a fronteira de um ref EMPTY: o offset 6
-	// deixou de cair em terminador. O ref OK continua idêntico — só a
-	// classificação muda, e a base cai mesmo assim.
-	shifted := []byte("Hi\x00Bye\x00X\x00Go\x00")
+	// deixou de cair em terminador (o byte virou 'X'). O ref OK continua
+	// idêntico — só a classificação muda, e a base cai mesmo assim.
+	shifted := []byte("Hi\x00ByeX\x00Go\x00")
 	emptyRef := read(base, 0, 6)
 	if got := objectsfile.UsableStringTableBase(emptyRef, shifted); got != nil {
 		t.Errorf("base que não reproduz a fronteira do ref EMPTY foi aceita")
 	}
 
-	// Tabela de outro arquivo, só que maior: o OOB vira Mid e a prova cai.
+	// Tabela de outro arquivo, só que maior: o OOB deixa de ser OOB e a
+	// base não reproduz mais a classificação.
 	foreign := append(append([]byte{}, base...), "extra\x00"...)
 	if got := objectsfile.UsableStringTableBase(broken, foreign); got != nil {
 		t.Errorf("base estranha (OOB deixou de ser OOB) foi aceita")

@@ -7,6 +7,7 @@ import (
 	"ffxresources/backend/core/converter"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/models"
+	"sort"
 )
 
 // PointerStatus classifica um ref (offset na string table).
@@ -91,8 +92,8 @@ type KeyedString struct {
 	Bytes   []byte
 	Text    string
 	// Status é a classificação do Segment.Offset contra a tabela lida.
-	// Refs com Status quebrado ficam SEM texto (Bytes vazio) e mantêm o
-	// Segmento original no save.
+	// Refs com Status quebrado ficam SEM texto (Bytes vazio) e no save só
+	// acompanham o deslocamento do splice — nunca são reescritos.
 	Status PointerStatus
 	// edited marca texto trocado depois da leitura (SetString).
 	edited bool
@@ -210,14 +211,17 @@ func (ks *KeyedString) SetString(str, newCharset string) {
 }
 
 // RebuildKeyedStrings compila os textos na string table e devolve os bytes
-// dela, recalculando os offsets dos refs com texto.
+// dela, recalculando os offsets dos refs.
 //
-// `base` é a string table ORIGINAL do arquivo. Quando ela reproduz os refs
-// do arquivo, o resultado é montado como BASE + APPEND: os offsets
-// originais continuam apontando para o mesmo lugar e os refs sem texto
-// (MID/OOB/EMPTY) mantêm o segmento cru byte a byte. Quando a base não
-// serve, o rebuild dedup de sempre roda intocado — nada muda onde não há
-// problema.
+// `base` é a string table ORIGINAL do arquivo, e é ela a fonte da ordem: o
+// rebuild faz SPLICE do texto editado no próprio bloco e desloca todo
+// offset situado depois pela soma das crescidas anteriores (deslocamento
+// global). Refs MID/OOB/EMPTY não têm bytes — recebem deslocamento sem
+// causar deslocamento. Sem edição o delta é zero em todo ponto e a saída é
+// o base byte a byte.
+//
+// A base só é usada quando reproduz os refs lidos (UsableStringTableBase);
+// sem candidato utilizável cai no rebuild dedup de sempre.
 //
 // Serve os dois domínios (KeyedString legado e chunkmap.TextContent): a
 // distinção está no contrato tableRef, não no tipo.
@@ -229,17 +233,20 @@ func RebuildKeyedStrings(list []datastore.IGlobalKeyedString, charset string, ve
 }
 
 // UsableStringTableBase decide se `candidate` pode servir de base do
-// rebuild. A base só é aceita quando reproduz todos os refs LIDOS (mesmo
-// offset, mesmos bytes / mesma ausência de texto) e ainda prova pelo menos
-// UM ref quebrado — é a prova de que ela é a tabela da qual os offsets
-// vieram. Refs editados ou criados em memória não provam nem refutam.
-// Arquivo limpo devolve nil.
+// rebuild. A base só é aceita quando reproduz todos os refs LIDOS: mesmo
+// offset, mesmos bytes e mesma classificação (inclusive os MID/OOB, que
+// têm que continuar quebrados contra ela). É a prova de que `candidate` é
+// a tabela da qual os offsets vieram. Refs editados ou criados em memória
+// não participam da validação.
+//
+// NÃO depende de haver ref quebrado: o splice usa a base no arquivo limpo
+// também — sem texto editado o delta é zero em todo ponto e a saída é o
+// próprio base byte a byte. Sem candidato, devolve nil.
 func UsableStringTableBase(list []datastore.IGlobalKeyedString, candidate []byte) []byte {
 	if len(candidate) == 0 {
 		return nil
 	}
 
-	proved := false
 	for _, ks := range list {
 		if ks == nil {
 			continue
@@ -275,11 +282,7 @@ func UsableStringTableBase(list []datastore.IGlobalKeyedString, candidate []byte
 			if PointerStatusAt(candidate, off) != status {
 				return nil
 			}
-			proved = true
 		}
-	}
-	if !proved {
-		return nil
 	}
 	return candidate
 }
@@ -292,85 +295,204 @@ type appendedRef struct {
 	tail int
 }
 
-// rebuildOnStringTableBase monta a tabela como base + cauda. Nada que já está
-// no arquivo é reescrito: o offset original só muda quando o texto do ref
-// mudou (e mesmo assim reaproveita bytes já presentes quando pode).
+// splicePoint descreve a substituição de UM bloco da string table original:
+// o trecho [off, off+oldLen) sai e `newRaw` + terminador entra no lugar.
+type splicePoint struct {
+	off    int
+	oldLen int
+	newRaw []byte
+}
+
+// originalBlockLen devolve o tamanho do bloco (texto + terminador) que
+// começa em `off` na tabela original.
+//
+// É de onde vem o tamanho que o splice substitui: SetString apaga os bytes
+// originais do ref, mas a tabela original ainda traz o bloco inteiro.
+func originalBlockLen(base []byte, off int) int {
+	if off < 0 || off >= len(base) {
+		return 0
+	}
+	end := bytes.IndexByte(base[off:], 0x00)
+	if end < 0 {
+		return len(base) - off
+	}
+	return end + 1 // inclui o terminador
+}
+
+// rebuildOnStringTableBase monta a string table por SPLICE sobre o base
+// original — um caminho só, para arquivo limpo e para arquivo com ref
+// quebrado.
+//
+// Regras:
+//
+//   - ref PointerOK EDITADO    -> o próprio bloco é substituído no lugar;
+//     o delta (len(novo) - len(velho)) passa a valer a partir dali.
+//   - ref PointerOK intocado   -> só desloca.
+//   - ref MID / OOB / EMPTY    -> só deslocam. Não têm bytes nem texto:
+//     RECEBEM deslocamento sem CAUSAR deslocamento.
+//   - ref criado em memória (ou editado a partir de um offset que não é o
+//     seu bloco) -> vai para a cauda: não existe posição no original.
+//
+// Todo offset situado depois de um splice desloca pela soma das crescidas
+// anteriores a ele — deslocamento global, não só do ref editado. Um MID
+// dentro do bloco spliceado cai junto com ele, e um OOB (>= len(base)) soma
+// o delta total, de modo que len_novo - off_novo = len_base - off_base: ele
+// continua fora da tabela sem precisar de guarda extra.
+//
+// Sem texto editado o delta é 0 em todo ponto e a saída É o base, byte a
+// byte.
 func rebuildOnStringTableBase(list []datastore.IGlobalKeyedString, base []byte, charset string, version common.GameVersion) []byte {
-	baseLen := len(base)
-	baseIndex := indexStringTable(base)
+	// Fotografia dos offsets ORIGINAIS: os SetOffset do fim não podem
+	// influenciar a própria contagem de deslocamento.
+	type placement struct {
+		ks      datastore.IGlobalKeyedString
+		origOff int
+	}
 
 	var (
-		tail         bytes.Buffer
-		tailIndex    = make(map[string]models.Offset)
-		appended     []appendedRef
-		preservedOOB []int
+		shift       []placement
+		cauda       []datastore.IGlobalKeyedString
+		grupos      = map[int][]datastore.IGlobalKeyedString{}
+		naoEditados = map[int]bool{}
 	)
 
 	for _, ks := range list {
 		if ks == nil {
 			continue
 		}
+		ref, ok := ks.(tableRef)
+		if !ok {
+			continue // base não teria sido aceita, mas não se arrisca
+		}
 		off := int(ks.GetOffset())
-
-		// Ref sem texto fora de uma fronteira de bloco (MID/OOB) ou apontando
-		// para um terminador (EMPTY): o ponteiro original É o valor do
-		// arquivo, e é ele que o jogo lê como "não tem texto". Não recalcula.
-		if ks.GetString() == "" {
-			if status := PointerStatusAt(base, off); status != PointerOK {
-				if status == PointerOOB {
-					preservedOOB = append(preservedOOB, off)
-				}
-				continue
-			}
+		switch st := ref.PointerStatus(); {
+		case st == PointerCreated:
+			cauda = append(cauda, ks)
+		case !ref.Edited():
+			// Todo offset ocupado por um ref intocado é intocável: o
+			// splice mudaria o texto dele sem querer.
+			naoEditados[off] = true
+			shift = append(shift, placement{ks: ks, origOff: off})
+		case st == PointerOK:
+			// Dedup: vários refs podem apontar o MESMO bloco — ele é
+			// substituído uma vez só.
+			grupos[off] = append(grupos[off], ks)
+		default:
+			// Editado partindo de um offset que não é o seu bloco:
+			// nunca se splica no meio do texto de outro.
+			cauda = append(cauda, ks)
 		}
+	}
 
+	ordem := make([]int, 0, len(grupos))
+	for off := range grupos {
+		ordem = append(ordem, off)
+	}
+	sort.Ints(ordem)
+
+	var (
+		splices   []splicePoint
+		splicados []placement
+	)
+	for _, off := range ordem {
+		refs := grupos[off]
+		oldLen := originalBlockLen(base, off)
+		if naoEditados[off] || oldLen == 0 {
+			// Há um ref NÃO editado apontando o mesmo bloco (o splice
+			// mudaria o texto dele sem querer), ou o offset não delimita
+			// bloco: os editados vão para a cauda.
+			cauda = append(cauda, refs...)
+			continue
+		}
+		raw := storedBytesOf(refs[0], charset, version)
+		splices = append(splices, splicePoint{off: off, oldLen: oldLen, newRaw: raw})
+		for _, ks := range refs {
+			splicados = append(splicados, placement{ks: ks, origOff: off})
+		}
+	}
+
+	// Delta acumulado ANTES de cada splice: prefixo[i] soma os deltas de
+	// splices[0..i-1], então deltaAntes(p) soma os de off < p.
+	spliceOffs := make([]int, len(splices))
+	prefix := make([]int, len(splices)+1)
+	for i, s := range splices {
+		spliceOffs[i] = s.off
+		prefix[i+1] = prefix[i] + (len(s.newRaw) + 1 - s.oldLen)
+	}
+	deltaAntes := func(p int) int {
+		return prefix[sort.SearchInts(spliceOffs, p)]
+	}
+
+	// O corpo: base com cada bloco editado trocado no lugar.
+	var out bytes.Buffer
+	out.Grow(len(base))
+	cursor := 0
+	for _, s := range splices {
+		if s.off < cursor {
+			continue // sobreposição não ocorre: blocos são disjuntos
+		}
+		out.Write(base[cursor:s.off])
+		out.Write(s.newRaw)
+		out.WriteByte(0x00)
+		cursor = s.off + s.oldLen
+	}
+	out.Write(base[cursor:])
+
+	// Reposiciona tudo: o que vem depois de um splice desloca pelo delta
+	// acumulado das crescidas anteriores.
+	for _, p := range shift {
+		p.ks.SetOffset(models.Offset(p.origOff + deltaAntes(p.origOff)))
+	}
+	for _, p := range splicados {
+		p.ks.SetOffset(models.Offset(p.origOff + deltaAntes(p.origOff)))
+	}
+
+	// Cauda só para quem não tem posição no original.
+	var (
+		tail         bytes.Buffer
+		tailIndex    = make(map[string]models.Offset)
+		appended     []appendedRef
+		preservedOOB []int
+	)
+	for _, ks := range cauda {
 		raw := storedBytesOf(ks, charset, version)
-
-		// Texto já gravado exatamente onde o ref aponta: offset intocado.
-		if len(raw) > 0 && bytes.Equal(converter.GetStringBytesAtLookupOffset(base, off), raw) {
-			continue
-		}
-
-		// Reaproveita o que já existe — primeiro na base, depois na cauda.
 		key := string(raw)
-		if shared, exists := baseIndex[key]; exists {
-			ks.SetOffset(shared)
-			continue
-		}
 		if shared, exists := tailIndex[key]; exists {
 			appended = append(appended, appendedRef{ks: ks, tail: int(shared)})
 			continue
 		}
-
 		tailPos := tail.Len()
 		tailIndex[key] = models.Offset(tailPos)
 		tail.Write(raw)
 		tail.WriteByte(0x00)
 		appended = append(appended, appendedRef{ks: ks, tail: tailPos})
 	}
-
-	// O arquivo só cresce quando há texto novo, e um ref OOB preservado
-	// (>= baseLen) é justamente o que o crescimento ameaça: se ele cair
-	// numa fronteira de bloco novo vira ponteiro VÁLIDO e o jogo passa a
-	// exibir texto onde o arquivo original não tinha. O padding de 0x00
-	// resolve sem reescrever byte nenhum — a posição vira terminador ou cai
-	// no meio de um bloco; nos dois casos, sem texto.
-	padding := 0
-	if tail.Len() > 0 && len(preservedOOB) > 0 {
-		padding = safeTailPadding(base, preservedOOB, tail.Bytes())
+	for _, p := range shift {
+		if r, ok := p.ks.(tableRef); ok && r.PointerStatus() == PointerOOB {
+			preservedOOB = append(preservedOOB, p.origOff+deltaAntes(p.origOff))
+		}
 	}
 
-	var out bytes.Buffer
-	out.Grow(baseLen + padding + tail.Len())
-	out.Write(base)
-	out.Write(make([]byte, padding))
-	out.Write(tail.Bytes())
+	// A cauda é a única região que cresce SEM que o offset OOB acompanhe
+	// (ele já está deslocado até o fim do corpo): se cair na fronteira de
+	// um bloco novo vira ponteiro VÁLIDO. O padding de 0x00 resolve — a
+	// posição vira terminador ou cai no meio de um bloco; sem texto nos
+	// dois casos.
+	padding := 0
+	if tail.Len() > 0 && len(preservedOOB) > 0 {
+		padding = safeTailPadding(out.Bytes(), preservedOOB, tail.Bytes())
+	}
 
-	start := baseLen + padding
+	start := out.Len() + padding
+	result := make([]byte, 0, out.Len()+padding+tail.Len())
+	result = append(result, out.Bytes()...)
+	result = append(result, make([]byte, padding)...)
+	result = append(result, tail.Bytes()...)
+
 	for _, a := range appended {
 		a.ks.SetOffset(models.Offset(start + a.tail))
 	}
-	return out.Bytes()
+	return result
 }
 
 // safeTailPadding devolve quantos 0x00 inserir entre a base e a cauda para
