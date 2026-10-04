@@ -107,15 +107,14 @@ func (b *EventsBinaryFile) LoadFromBinary() error {
 		first = false
 	}
 
-	// Barra de progresso do carregamento (o loop sincrono emite direto):
-	// o total vem da descoberta; falhas por evento são PULADAS com aviso
-	// individual (toast por erro + arquivo de diagnóstico) — a carga segue
-	// com o que deu certo.
-	progress.Begin("Carregando eventos…", loadedInfos.Len())
-	defer progress.End()
+	// Sem barra de progresso: a carga é implícita (boot/carga de árvore),
+	// à frente dela já existem os indicadores próprios da árvore — um modal
+	// aqui aparecia DOIS no boot (a pré-carga das outras versões dispara
+	// outra carga em background). Falhas por evento são PULADAS com aviso
+	// individual (Issue → toast com cap + arquivo de diagnóstico) e a carga
+	// segue com o que deu certo.
 
 	for _, info := range loadedInfos.Items() {
-		progress.Step(info.EventID)
 		eventFile, err := ReadCompleteEventFile(info)
 		if err != nil {
 			progress.Issue(info.EventID, fmt.Sprintf("evento pulado (falha de leitura): %s: %v", info.EventID, err))

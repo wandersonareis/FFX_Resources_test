@@ -30,9 +30,11 @@ func (f *fakeReporter) Step(item string)              { f.record("step %s", item
 func (f *fakeReporter) Issue(item, message string)    { f.record("issue %s: %s", item, message) }
 func (f *fakeReporter) End()                          { f.record("end") }
 
-// TestLoadFromBinaryEmitsProgress: a carga de eventos emite Begin com o
-// total da descoberta, um Step por evento e End — pelo canal neutro.
-func TestLoadFromBinaryEmitsProgress(t *testing.T) {
+// TestLoadFromBinarySilentProgress: a carga de eventos é IMPLÍCITA
+// (boot/carga de árvore) e não abre a barra de "Processando" — dois modais
+// seguidos no boot (a pré-carga das outras versões em background dispara
+// outra carga). Com o reporter fake, uma carga feliz emite ZERO eventos.
+func TestLoadFromBinarySilentProgress(t *testing.T) {
 	fake := &fakeReporter{}
 	progress.Set(fake)
 	t.Cleanup(func() { progress.Set(nil) })
@@ -56,15 +58,8 @@ func TestLoadFromBinaryEmitsProgress(t *testing.T) {
 		t.Fatalf("load: %v", err)
 	}
 
-	joined := strings.Join(fake.events, "\n")
-	if !strings.Contains(joined, "begin Carregando eventos… total=2") {
-		t.Fatalf("begin com o total da descoberta ausente:\n%s", joined)
-	}
-	if got := strings.Count(joined, "step "); got != 2 {
-		t.Fatalf("esperava 2 steps, achei %d:\n%s", got, joined)
-	}
-	if !strings.Contains(joined, "\nend") || !strings.HasSuffix(joined, "end") {
-		t.Fatalf("end ausente:\n%s", joined)
+	if joined := strings.Join(fake.events, "\n"); joined != "" {
+		t.Fatalf("carga de eventos deve ser silenciosa, emitiu:\n%s", joined)
 	}
 }
 
@@ -114,12 +109,11 @@ func TestLoadFromBinarySkipsBrokenEvent(t *testing.T) {
 	}
 
 	joined := strings.Join(fake.events, "\n")
-	t.Logf("DEBUG fake.events=%#v objects=%d", fake.events, b.Objects.Len())
 	if !strings.Contains(joined, "issue zev002") {
 		t.Fatalf("issue do arquivo corrompido ausente:\n%s", joined)
 	}
-	if !strings.Contains(joined, "step zev001") {
-		t.Fatalf("evento válido deveria continuar carregando:\n%s", joined)
+	if strings.Contains(joined, "begin") || strings.Contains(joined, "end") {
+		t.Fatalf("carga de eventos não abre ciclo de progresso:\n%s", joined)
 	}
 	if b.Objects == nil || b.Objects.Len() != 1 {
 		t.Fatalf("a carga deveria seguir com o evento válido: %v", b.Objects)
