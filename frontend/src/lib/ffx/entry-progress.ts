@@ -1,5 +1,6 @@
 import type { dto } from '@/wailsjs/go/models';
 import { isRefText } from './hash-ref';
+import { isBlankText } from './blank-us';
 import { SOURCE_LANG } from './save-all';
 
 /** Progresso de tradução por row da entrada aberta — todos os formatos
@@ -21,6 +22,10 @@ export interface EntryProgress {
  * vive na def (em outro ponto) — o progresso do arquivo é sobre o que ele
  * mesmo carrega.
  *
+ * Rows em branco no 'us' (vazio/espaço/"-") também ficam FORA: não são
+ * traduzíveis (o próprio export as descarta) — não podem minguar o
+ * percentual como "nunca traduzidas".
+ *
  * A comparação é TEXTE vs ORIGINAL: o hash da row vem do original após o
  * merge (ponteiro do domínio display), então não serve para detectar o
  * estado da célula.
@@ -33,6 +38,7 @@ export function entryProgress(entry: dto.FileEntry | null | undefined): EntryPro
     const original = row.original?.[SOURCE_LANG] ?? '';
     if (original === '') continue;
     if (isRefText(row.text?.[SOURCE_LANG], row.hash?.[SOURCE_LANG])) continue;
+    if (isBlankText(row.text?.[SOURCE_LANG])) continue;
     total++;
     const text = row.text?.[SOURCE_LANG] ?? '';
     if (text !== '' && text !== original) translated++;

@@ -376,6 +376,11 @@ func (s *MetadataService) ExportEntry(kind string, version common.GameVersion, i
 	if err != nil {
 		return nil, err
 	}
+	// Menu de contexto exportou com hifen: o filtro de rows em branco
+	// ('us' vazio/espaço/"-") vale para TODO artefato — mesmo contrato de
+	// ExportJSON/ExportStrings. Antes do exportProgress: a barra conta só
+	// o que sai.
+	c = filterExportRows(c)
 	defer exportProgress(kind, version, c)()
 
 	var paths []string
@@ -1189,6 +1194,7 @@ func (s *MetadataService) ExportStrings(kind string, version common.GameVersion,
 	if err != nil {
 		return nil, err
 	}
+	c = filterExportRows(c)
 	f := strfmt.NewStringsFormatter()
 	switch kind {
 	case KindEvents:

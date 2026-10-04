@@ -23,6 +23,7 @@ import {
   sendErrorNotificationWithMessage,
 } from '@/lib/ffx/error-handler';
 import { isRefText } from '@/lib/ffx/hash-ref';
+import { isBlankSourceRow } from '@/lib/ffx/blank-us';
 import { SOURCE_LANG } from '@/lib/ffx/save-all';
 import {
   invalidateVbfCache,
@@ -440,8 +441,13 @@ export function createEntryView(version: GameVersionId): EntryView {
       // o tradutor traduz cada texto uma vez. A base do rascunho guarda a
       // entry COMPLETA; o backend resolve refs e propaga o texto editado
       // para todas as cópias no salvar (UI e import).
+      // Blank: rows sem 'us' utilizável (vazio/espaço/"-") seguem o mesmo
+      // contrato do export — o tradutor nunca vê o que o artefato
+      // exportado não traria.
       const rows = (full.rows ?? []).filter(
-        (r) => !isRefText(r.text?.[SOURCE_LANG], r.hash?.[SOURCE_LANG])
+        (r) =>
+          !isRefText(r.text?.[SOURCE_LANG], r.hash?.[SOURCE_LANG]) &&
+          !isBlankSourceRow(r.text?.[SOURCE_LANG])
       );
       patch({ rows });
     } catch (error) {
