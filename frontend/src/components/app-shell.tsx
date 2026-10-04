@@ -48,6 +48,27 @@ import { ConfigDialog } from '@/components/dialogs/config-dialog';
 import { ImportSummaryDialog } from '@/components/dialogs/import-summary-dialog';
 import { ProgressDialog } from '@/components/dialogs/progress-dialog';
 
+/**
+ * Histerese de fecho do modal de progresso: o export do topo roda um
+ * Begin/End por kind — sem intervalo de fechamento o modal piscaria a cada
+ * ciclo. ShowProgress(false) agenda o fecho; um ciclo novo cancela e
+ * mantém aberto.
+ */
+const PROGRESS_CLOSE_DELAY_MS = 400;
+/** Cap da fila de toasts de ciclo aberto (descarta o mais antigo). */
+const NOTIFY_QUEUE_CAP = 50;
+
+type NotifyPayload = { severity?: string; message?: string };
+
+/** Rende uma notificação por severidade (error: sticky; demais: 4 s). */
+function emitNotify(payload: NotifyPayload): void {
+  if (payload?.severity === 'error') {
+    toast.error(payload?.message ?? 'Notificação');
+  } else {
+    toast(payload?.message ?? 'Notificação', { duration: 4000 });
+  }
+}
+
 /** Conteúdo do toast de export: rótulo + barra embutida + contagem. */
 function ExportToastContent({
   label,
@@ -81,6 +102,13 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
   // Guard do toast de export: só consome Progress enquanto um export roda
   // (evita pegar progresso de carga de árvore alheia).
   const exportProgress = useRef({ active: false, processed: 0, total: 0 });
+  // Modal de progresso aberto bloqueia interação fora do diálogo (o radix
+  // modal põe pointer-events: none no body): notificações que chegarem
+  // durante um ciclo vão para a fila e estouram empilhadas quando o
+  // processo termina e o app volta a ficar disponível.
+  const progressOpen = useRef(false);
+  const notifyQueue = useRef<NotifyPayload[]>([]);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Escopo de exportação por versão (kinds marcados no dropdown Exportar).
   const [scopes, setScopes] = useState<Record<string, EntryKind[]>>(() =>
     Object.fromEntries(GAME_VERSIONS.map((tab) => [tab.id, entryKindsFor(tab.id)]))
@@ -132,17 +160,42 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
   });
 
   useWailsEvent('Notify', (data) => {
-    const payload = data as { severity?: string; message?: string };
-    const sticky = payload?.severity === 'error';
-    if (sticky) {
-      toast.error(payload?.message ?? 'Notificação');
-    } else {
-      toast(payload?.message ?? 'Notificação', { duration: 4000 });
+    const payload = data as NotifyPayload;
+    // Processando em andamento: acumula (o overlay bloqueia interação) e
+    // aparece sobreposto quando o ciclo termina.
+    if (progressOpen.current) {
+      if (notifyQueue.current.length >= NOTIFY_QUEUE_CAP) {
+        notifyQueue.current.shift();
+      }
+      notifyQueue.current.push(payload ?? { message: 'Notificação' });
+      return;
     }
+    emitNotify(payload);
   });
 
   useWailsEvent('ShowProgress', (visible) => {
-    setProgress((p) => ({ ...p, open: Boolean(visible) }));
+    if (Boolean(visible)) {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+      progressOpen.current = true;
+      setProgress((p) => ({ ...p, open: true }));
+      return;
+    }
+    // Fecho com histerese: passou o intervalo sem ciclo novo, fecha,
+    // reseta o estado e solta a fila de toasts acumulados.
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => {
+      closeTimer.current = null;
+      progressOpen.current = false;
+      setProgress(() => ({ open: false, value: 0, label: '' }));
+      if (notifyQueue.current.length > 0) {
+        const pending = notifyQueue.current;
+        notifyQueue.current = [];
+        for (const q of pending) {
+          emitNotify(q);
+        }
+      }
+    }, PROGRESS_CLOSE_DELAY_MS);
   });
 
   useWailsEvent('Progress', (data) => {
