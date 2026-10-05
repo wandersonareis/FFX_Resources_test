@@ -414,6 +414,9 @@ func Delete(version common.GameVersion, id, scope string) (removed bool, err err
 }
 
 func writeFile(path string, payload []byte) error {
+	if err := common.CheckWritablePath(path); err != nil {
+		return fmt.Errorf("destino recusado para %s: %w", filepath.Base(path), err)
+	}
 	if err := common.EnsurePathExists(path); err != nil {
 		return fmt.Errorf("criando diretório de %s: %w", filepath.Base(path), err)
 	}

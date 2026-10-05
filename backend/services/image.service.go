@@ -244,9 +244,10 @@ func (s *MetadataService) ImportImage(kind, id, ddsPath string, version common.G
 	// O payload efetivo desta textura mudou: o índice de duplicatas em
 	// cache está desatualizado (as cópias deixaram de ser idênticas).
 	ddsphyre.InvalidateIndex(version)
-	// Mantém os artefatos de trabalho em sincronia com o container recém-
-	// gravado: sem isso a próxima abertura serviria o .dds extraído ANTIGO
-	// (Resolve prefere .dds em disco), mascarando a textura importada.
+	// Mantém os artefatos de trabalho em sincronia com o .dds.phyre recém-
+	// gravado em mods/: sem isso a próxima abertura serviria o .dds
+	// extraído ANTIGO (Resolve prefere .dds em disco), mascarando a textura
+	// importada. Nada disso toca no .vbf nem em data/ — só mods/.
 	if _, err := ddsphyre.Extract(version, id); err != nil {
 		common.LogWarning("images %s/%s: import ok, mas não atualizei os .dds/.png extraídos: %v", version, id, err)
 	}
@@ -527,6 +528,11 @@ func (s *MetadataService) SaveImage(kind, id, format, destPath string, version c
 	}
 	if !ddsphyre.ValidID(id) {
 		return fmt.Errorf("textura desconhecida: %s", id)
+	}
+	// Trava de gravação: export escolhido pelo usuário, mas nunca por cima
+	// do .vbf (fonte somente leitura) nem em data/ dentro da árvore.
+	if err := common.CheckWritablePath(destPath); err != nil {
+		return err
 	}
 	return ddsphyre.Save(version, id, format, destPath)
 }

@@ -107,7 +107,14 @@ func getModdedFile(path string) string {
 
 // WriteBytesToFile writes a slice of integers as bytes to a file
 // Creates necessary directories before writing
+//
+// Todo escritor de binário/texto do app passa por aqui, então é também o
+// ponto único da trava de gravação: alvo .vbf ou fora de mods/ é recusado
+// antes de criar diretório (ver CheckWritablePath).
 func WriteBytesToFile(path string, bytes []byte) error {
+	if err := CheckWritablePath(path); err != nil {
+		return err
+	}
 	CreateDirectories(path)
 
 	err := os.WriteFile(path, bytes, 0644)
