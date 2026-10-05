@@ -7,7 +7,10 @@
 // Nenhum formatter importa pacotes de domínio concretos.
 package dto
 
-import "sort"
+import (
+	"fmt"
+	"sort"
+)
 
 // TextRow é uma frase com seus textos por idioma e o PONTEIRO de dupe
 // (xxHash64 hex 16 chars) por idioma. O hash NUNCA valida texto: é o
@@ -57,11 +60,35 @@ type TextRow struct {
 	MissingInTranslated bool `json:"missingInTranslated,omitempty"`
 }
 
+// RefLink é a anotação de EXIBIÇÃO de uma row de referência dedupada
+// (Text[us] == "$hash"): o texto atual da def, o pristine dela e onde ela
+// vive (arquivo + Index/Name da row). É o que alimenta o texto linkado na
+// UI (cor própria), o tooltip "repetição de" e o editor aberto na def
+// através do link. Como Original, é exclusivo de exibição e nunca entra em
+// apply/export (payload de apply leva só index/name/hash/text).
+type RefLink struct {
+	Text        string `json:"text"`
+	Original    string `json:"original,omitempty"`
+	SourceID    string `json:"sourceId,omitempty"`
+	SourceIndex int    `json:"sourceIndex"`
+	SourceName  string `json:"sourceName,omitempty"`
+}
+
+// RowKey devolve a chave estável da row (index:name) — a mesma que o
+// frontend usa para rascunho e que o map Refs usa para achar a anotação.
+func RowKey(r TextRow) string {
+	return fmt.Sprintf("%d:%s", r.Index, r.Name)
+}
+
 // FileEntry é um arquivo sem extensão como chave da Collection:
 // metadata (mesmos campos dos geradores legados) + rows (ex-strings do JSON).
+// Refs é a anotação de EXIBIÇÃO das rows de ref dedupada (rowKey → def);
+// só existe na entrega GetEntry/GetVbfTextEntry — o payload de apply
+// nunca a carrega.
 type FileEntry struct {
-	Metadata Metadata  `json:"metadata"`
-	Rows     []TextRow `json:"rows"`
+	Metadata Metadata           `json:"metadata"`
+	Rows     []TextRow          `json:"rows"`
+	Refs     map[string]RefLink `json:"refs,omitempty"`
 }
 
 // Collection é o documento textual completo: chave = nome do arquivo

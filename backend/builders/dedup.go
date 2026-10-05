@@ -137,39 +137,145 @@ func refBare(row dto.TextRow, text string) (string, bool) {
 // não poluem grupos — colisão exigiria duas frases com o mesmo conteúdo,
 // e o ponteiro é endereçado por conteúdo.
 type HashOrder struct {
-	first map[string]int    // ponteiro bare -> posição global da 1ª ocorrência
-	text  map[string]string // texto da 1ª ocorrência (dedup RAW: def literal)
+	first map[string]defRef // ponteiro bare -> def (1ª ocorrência)
 	base  map[string]int    // key -> nº de rows antes dela na ordem canônica
+	owner []string          // id da entrada dona de cada posição global
+	// pointerAt marca o ponteiro registrado em cada posição ("" = row sem
+	// texto/hash): o que Replace usa para liberar defs que saíram da
+	// posição.
+	pointerAt []string
+}
+
+// defRef é a def registrada de um ponteiro: a posição na ordem, o texto
+// atual dela, o pristine (Original — para o editor aberto através do link)
+// e a identidade da row (Index/Name — o que o payload/rascunho endereça).
+type defRef struct {
+	pos   int
+	text  string
+	orig  string
+	index int
+	name  string
 }
 
 // NewHashOrder percorre a Collection RAW em ordem canônica (SortedKeys →
 // SortRows) e registra a 1ª ocorrência de cada ponteiro.
 func NewHashOrder(c dto.Collection) *HashOrder {
 	ho := &HashOrder{
-		first: map[string]int{},
-		text:  map[string]string{},
+		first: map[string]defRef{},
 		base:  map[string]int{},
 	}
-	seq := 0
 	for _, k := range c.SortedKeys() {
-		ho.base[k] = seq
-		entry := c[k]
-		rows := make([]dto.TextRow, len(entry.Rows))
-		copy(rows, entry.Rows)
-		dto.SortRows(rows)
-		for _, r := range rows {
-			t := r.Text[common.DefaultLocalization]
-			h := r.Hash[common.DefaultLocalization]
-			if t != "" && h != "" {
-				if _, seen := ho.first[h]; !seen {
-					ho.first[h] = seq
-					ho.text[h] = t
-				}
-			}
-			seq++
-		}
+		ho.Extend(k, entryRows(c[k]))
 	}
 	return ho
+}
+
+// entryRows devolve cópia ordenada das rows (a ordem canônica das posições
+// é a estável por Index — a mesma que a view serve).
+func entryRows(entry dto.FileEntry) []dto.TextRow {
+	rows := make([]dto.TextRow, len(entry.Rows))
+	copy(rows, entry.Rows)
+	dto.SortRows(rows)
+	return rows
+}
+
+// Extend registra uma entrada nova no FIM da ordem e devolve o offset (base)
+// dela. É a régua do store de sessão do .vbf: inserção append-only — a 1ª
+// ocorrência de cada ponteiro é a def, e o que já foi servido não muda.
+func (ho *HashOrder) Extend(id string, rows []dto.TextRow) int {
+	base := len(ho.owner)
+	ho.base[id] = base
+	sorted := make([]dto.TextRow, len(rows))
+	copy(sorted, rows)
+	dto.SortRows(sorted)
+	for _, r := range sorted {
+		t := r.Text[common.DefaultLocalization]
+		h := r.Hash[common.DefaultLocalization]
+		pos := len(ho.owner)
+		ho.owner = append(ho.owner, id)
+		ho.pointerAt = append(ho.pointerAt, "")
+		if t != "" && h != "" {
+			ho.pointerAt[pos] = h
+			if _, seen := ho.first[h]; !seen {
+				ho.first[h] = defRef{
+					pos:   pos,
+					text:  t,
+					orig:  r.Original[common.DefaultLocalization],
+					index: r.Index,
+					name:  r.Name,
+				}
+			}
+		}
+	}
+	return base
+}
+
+// Replace reposiciona os registros de uma entrada que JÁ está na ordem
+// (mesma quantidade de rows — a estrutura do binário não muda) para o
+// estado novo dela. No domínio DISPLAY o ponteiro é do ORIGINAL e não
+// muda quando a def é traduzida — o que muda é o texto: se a posição é a
+// 1ª ocorrência, o texto da def é atualizado (o link das cópias passa a
+// mostrar a tradução). No domínio RAW (row sem Original) o ponteiro É o
+// hash do texto atual: célula traduzida sob outro ponteiro perde a def
+// antiga e as cópias deixam de colapsar — conservador e previsível.
+func (ho *HashOrder) Replace(id string, rows []dto.TextRow) {
+	base, ok := ho.base[id]
+	if !ok {
+		ho.Extend(id, rows)
+		return
+	}
+	sorted := make([]dto.TextRow, len(rows))
+	copy(sorted, rows)
+	dto.SortRows(sorted)
+	for i := range sorted {
+		pos := base + i
+		if pos >= len(ho.owner) {
+			break // encolheu além do registrado: defesa estrutural
+		}
+		old := ho.pointerAt[pos]
+		t := sorted[i].Text[common.DefaultLocalization]
+		h := sorted[i].Hash[common.DefaultLocalization]
+		if t == "" {
+			h = ""
+		}
+		if old != "" && old != h && ho.first[old].pos == pos {
+			delete(ho.first, old)
+		}
+		ho.owner[pos] = id
+		ho.pointerAt[pos] = ""
+		if t != "" && h != "" {
+			ho.pointerAt[pos] = h
+			if _, seen := ho.first[h]; !seen {
+				ho.first[h] = defRef{
+					pos:   pos,
+					text:  t,
+					orig:  sorted[i].Original[common.DefaultLocalization],
+					index: sorted[i].Index,
+					name:  sorted[i].Name,
+				}
+			} else if ho.first[h].pos == pos {
+				// Mesma def, texto novo (tradução aplicada): o link das
+				// cópias passa a mostrar o estado atual.
+				ref := ho.first[h]
+				ref.text = t
+				ref.orig = sorted[i].Original[common.DefaultLocalization]
+				ref.index = sorted[i].Index
+				ref.name = sorted[i].Name
+				ho.first[h] = ref
+			}
+		}
+	}
+}
+
+// Resolve localiza a def de um ponteiro: (id da entrada, Index/Name da
+// row dela). É o que a anotação de ref linkada usa para indicar onde vive
+// a def e resgatar o texto atual.
+func (ho *HashOrder) Resolve(h string) (id string, index int, name string, ok bool) {
+	ref, found := ho.first[h]
+	if !found || ref.pos >= len(ho.owner) {
+		return "", 0, "", false
+	}
+	return ho.owner[ref.pos], ref.index, ref.name, true
 }
 
 // Offset devolve o nº de rows que antecedem a entrada `key` na ordem
@@ -179,17 +285,17 @@ func (ho *HashOrder) Offset(key string) (int, bool) {
 	return off, ok
 }
 
-// firstOf devolve a posição global da 1ª ocorrência do ponteiro, se existe.
+// RawFirst devolve a posição global da 1ª ocorrência do ponteiro, se existe.
 func (ho *HashOrder) RawFirst(h string) (int, bool) {
-	first, ok := ho.first[h]
-	return first, ok
+	ref, ok := ho.first[h]
+	return ref.pos, ok
 }
 
 // defText devolve o texto da 1ª ocorrência do ponteiro (o estado no build
 // do RAW), para o modo RAW comparar o texto atual da twin contra a def.
 func (ho *HashOrder) defText(h string) (string, bool) {
-	t, ok := ho.text[h]
-	return t, ok
+	ref, ok := ho.first[h]
+	return ref.text, ok
 }
 
 // collapseInto escreve a ref "$h" no texto 'us' da row (cópia do map).
@@ -243,7 +349,7 @@ func DedupDisplayDTO(entry dto.FileEntry, base int, ho *HashOrder) dto.FileEntry
 		elegivel := false
 		if origUS != "" {
 			elegivel = t == origUS && utf8.RuneCountInString(origUS) >= hash.MinDedupRunes
-		} else if def, ok := ho.text[h]; ok {
+		} else if def, ok := ho.defText(h); ok {
 			elegivel = def == t && utf8.RuneCountInString(t) >= hash.MinDedupRunes
 		}
 		if !elegivel {
@@ -256,6 +362,20 @@ func DedupDisplayDTO(entry dto.FileEntry, base int, ho *HashOrder) dto.FileEntry
 			continue
 		}
 		collapseInto(r, h)
+		// Anotação de link para a UI: o texto atual da def, o pristine dela
+		// e onde ela vive (arquivo + Index/Name da row). Refs nunca colapsam
+		// sem def registrada — o ponteiro está em first, então a def existe.
+		if entry.Refs == nil {
+			entry.Refs = make(map[string]dto.RefLink, 1)
+		}
+		ref := ho.first[h]
+		entry.Refs[dto.RowKey(*r)] = dto.RefLink{
+			Text:        ref.text,
+			Original:    ref.orig,
+			SourceID:    ho.owner[ref.pos],
+			SourceIndex: ref.index,
+			SourceName:  ref.name,
+		}
 	}
 	entry.Rows = rows
 	return entry
