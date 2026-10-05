@@ -12,6 +12,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/progress"
 	"ffxresources/backend/core/reader"
+	"ffxresources/backend/datastore"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/ddsphyre"
 	"ffxresources/backend/fileFormats/event"
@@ -165,11 +166,18 @@ func (s *MetadataService) normalizeCollection(kind string, version common.GameVe
 // import), e os ponteiros/ordem precisam ser reconstruídos na próxima
 // entrega. O original pristine (data/) acompanha: os dois caches descrevem
 // a MESMA árvore de gamefiles, então caem juntos.
+//
+// A sessão de .vbf cai também: uma escrita em mods/ muda o texto que a
+// sessão serviu (cópia traduzida vira literal na próxima carga) — o
+// carimbo por arquivo pegaria o arquivo próprio, mas o def de outro
+// arquivo carregado seguiria velho. Perder o decode cache é o preço da
+// frescura; re-decodificar é o comportamento original do fluxo por clique.
 func clearDedupViewCache() {
 	dedupViewMu.Lock()
 	dedupViewCache = map[string]rawView{}
 	dedupViewMu.Unlock()
 	clearOriginalCache()
+	vbfSessionResetAll()
 }
 
 func NewMetadataService(notifier INotificationService) *MetadataService {
@@ -663,40 +671,9 @@ func (s *MetadataService) ApplyTextCollection(kind string, version common.GameVe
 	case KindObjects:
 		// Aplica as rows de todas as entradas antes de salvar cada binário:
 		// entradas repetidas (mesmo arquivo) recebem todas as suas rows.
-		byKey := make(map[string][]dto.FileEntry, len(c))
-		order := make([]string, 0, len(c))
-		for _, id := range c.SortedKeys() {
-			key, ok := objectKeyForID(version, id)
-			if !ok {
-				return fmt.Errorf("unknown object id: %s", id)
-			}
-			if _, seen := byKey[key]; !seen {
-				order = append(order, key)
-			}
-			byKey[key] = append(byKey[key], c[id])
-		}
-		for _, key := range order {
-			layout, ok := objectsfile.FileLayouts[key]
-			if !ok {
-				layout, ok = objectsfile.FileLayoutFor(version, key)
-				if !ok {
-					return fmt.Errorf("no object layout for key: %s", key)
-				}
-			}
-			binFile, err := objectsfile.LoadObjectFileFromStoreByLayout(layout)
-			if err != nil {
-				return err
-			}
-			for _, entry := range byKey[key] {
-				if err := builders.ApplyObjectsEntry(binFile.GetObjects(), version, key, entry); err != nil {
-					return err
-				}
-			}
-			if err := binFile.SaveToBinary(layout.PatternPath()); err != nil {
-				return err
-			}
-		}
-		return nil
+		return applyObjectsCollection(version, c, func(layout objectsfile.FileLayout) (datastore.IBinaryFile, error) {
+			return objectsfile.LoadObjectFileFromStoreByLayout(layout)
+		})
 
 	case KindMacro:
 		// Aplica sobre o DTO completo para não perder os outros chunks.
@@ -704,12 +681,7 @@ func (s *MetadataService) ApplyTextCollection(kind string, version common.GameVe
 		if err != nil {
 			return err
 		}
-		for id, entry := range c {
-			full[id] = entry
-		}
-		// Refs "$hash" do payload (view dedupado) resolvem contra as defs
-		// do dicionário inteiro — nunca são gravadas literais no rebuild.
-		return builders.ApplyMacroDTO(version, builders.ResolveDedupRefs(full))
+		return applyMacroCollection(version, full, c)
 
 	case KindLockit:
 		return builders.ApplyLockitDTO(version, c)
@@ -729,6 +701,71 @@ func (s *MetadataService) ApplyTextCollection(kind string, version common.GameVe
 	default:
 		return fmt.Errorf("unknown kind: %s", kind)
 	}
+}
+
+// applyObjectsCollection agrupa o lote por binário, aplica as rows de cada
+// entrada e salva cada binário tocado em mods/ (o pattern path do layout é
+// relativo: o SaveToBinary só grava a árvore mods).
+//
+// loadBin escolhe de onde vem o binário EM MEMÓRIA: o store de data/
+// (mods-first) no fluxo normal, ou o objeto decodificado da sessão quando o
+// arquivo veio do .vbf. A fonte é o único ponto que muda — a gravação é
+// sempre em mods/.
+func applyObjectsCollection(version common.GameVersion, c dto.Collection, loadBin func(layout objectsfile.FileLayout) (datastore.IBinaryFile, error)) error {
+	byKey := make(map[string][]dto.FileEntry, len(c))
+	order := make([]string, 0, len(c))
+	for _, id := range c.SortedKeys() {
+		key, ok := objectKeyForID(version, id)
+		if !ok {
+			return fmt.Errorf("unknown object id: %s", id)
+		}
+		if _, seen := byKey[key]; !seen {
+			order = append(order, key)
+		}
+		byKey[key] = append(byKey[key], c[id])
+	}
+	for _, key := range order {
+		layout, ok := objectsfile.FileLayouts[key]
+		if !ok {
+			layout, ok = objectsfile.FileLayoutFor(version, key)
+			if !ok {
+				return fmt.Errorf("no object layout for key: %s", key)
+			}
+		}
+		binFile, err := loadBin(layout)
+		if err != nil {
+			return err
+		}
+		for _, entry := range byKey[key] {
+			if err := builders.ApplyObjectsEntry(binFile.GetObjects(), version, key, entry); err != nil {
+				return err
+			}
+		}
+		if err := binFile.SaveToBinary(layout.PatternPath()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// applyMacroCollection sobrepõe o lote no dicionário COMPLETO e reconstrói
+// os binários (→ mods/). full vem da fonte da sessão: o dicionário inteiro
+// do .vbf no fluxo de container, o do store em data/. Refs "$hash" do
+// payload (view dedupado) resolvem contra as defs do dicionário inteiro —
+// nunca são gravadas literais no rebuild.
+//
+// A base entra em uma cópia rasa: ela pode ser o dicionário GUARDADO na
+// sessão de .vbf, e um rebuild que falhe no meio não pode deixar sujeira
+// no estado (a próxima carga pegaria um dicionário pela metade).
+func applyMacroCollection(version common.GameVersion, full, c dto.Collection) error {
+	base := make(dto.Collection, len(full)+len(c))
+	for id, entry := range full {
+		base[id] = entry
+	}
+	for id, entry := range c {
+		base[id] = entry
+	}
+	return builders.ApplyMacroDTO(version, builders.ResolveDedupRefs(base))
 }
 
 // applyObjectsEntry carrega o binário do layout, aplica a entrada e salva.

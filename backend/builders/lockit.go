@@ -80,15 +80,38 @@ func buildLockitRows(f *lockit.LockitFile) []dto.TextRow {
 	return rows
 }
 
+// LockitApplyScope decide DE ONDE vem o arquivo do lockit a aplicar: o
+// store de data/ (mods-first) ou a sessão do .vbf (objeto decodificado do
+// container). O escopo é o único ponto que conhece a fonte.
+type LockitApplyScope struct {
+	Load func(id string) (*lockit.LockitFile, error)
+}
+
+// StoreLockitScope monta o escopo do store de data/.
+func StoreLockitScope(version common.GameVersion) LockitApplyScope {
+	return LockitApplyScope{
+		Load: func(id string) (*lockit.LockitFile, error) {
+			l, ok := lockit.LayoutForID(version, id)
+			if !ok {
+				return nil, fmt.Errorf("unknown lockit id: %s", id)
+			}
+			return lockit.LoadFromStore(l)
+		},
+	}
+}
+
 // ApplyLockitDTO aplica as rows editadas de volta nos registros e persiste.
 func ApplyLockitDTO(version common.GameVersion, c dto.Collection) error {
+	return ApplyLockitDTOWithScope(version, c, StoreLockitScope(version))
+}
+
+// ApplyLockitDTOWithScope é o apply com a fonte do arquivo escolhida pelo
+// chamador. A gravação é do próprio arquivo carregado (SaveLanguages →
+// mods/), então escopo nenhum precisa de hook de save.
+func ApplyLockitDTOWithScope(version common.GameVersion, c dto.Collection, scope LockitApplyScope) error {
 	for _, id := range c.SortedKeys() {
 		entry := c[id]
-		l, ok := lockit.LayoutForID(version, id)
-		if !ok {
-			return fmt.Errorf("unknown lockit id: %s", id)
-		}
-		f, err := lockit.LoadFromStore(l)
+		f, err := scope.Load(id)
 		if err != nil {
 			return err
 		}

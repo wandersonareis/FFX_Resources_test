@@ -128,6 +128,36 @@ func DedupHelpDTO(c dto.Collection) dto.Collection {
 	return DedupDTO(c)
 }
 
+// HelpApplyScope é o conjunto de painéis CARREGADOS onde o apply atua — o
+// mesmo papel de TableApplyScope para events/eventtable: o escopo é quem
+// separa data/ (store global) de .vbf (sessão de cliques).
+type HelpApplyScope struct {
+	// Ids são os painéis carregados no escopo (índice de propagação).
+	Ids []string
+	// Panel devolve o painel carregado; nil = não carregado.
+	Panel func(name string) *helpfile.HelpKeyedStringFile
+	// Save grava o painel tocado em mods/ (intocado = no-op).
+	Save func(name string) error
+}
+
+// StoreHelpScope monta o escopo do store de data/: os painéis que
+// EnsureHelpLoaded carregou, gravados pelo próprio Save de cada painel.
+func StoreHelpScope(version common.GameVersion) HelpApplyScope {
+	return HelpApplyScope{
+		Ids: helpfile.HelpEntryNames(),
+		Panel: func(name string) *helpfile.HelpKeyedStringFile {
+			return helpfile.GetHelp(version, name)
+		},
+		Save: func(name string) error {
+			p := helpfile.GetHelp(version, name)
+			if p == nil {
+				return nil
+			}
+			return p.Save()
+		},
+	}
+}
+
 // ApplyHelpDTO aplica o DTO de volta nos binários (parse DTO → binário).
 //
 // Com dedup, o algoritmo é único para UI e import, em 4 fases — todas as
@@ -142,6 +172,14 @@ func DedupHelpDTO(c dto.Collection) dto.Collection {
 //  4. escrita + save de todo painel tocado (lote ou propagação). Sem
 //     alteração, nada é gravado.
 func ApplyHelpDTO(version common.GameVersion, c dto.Collection, ids []string) error {
+	return ApplyHelpDTOWithScope(version, c, ids, StoreHelpScope(version))
+}
+
+// ApplyHelpDTOWithScope é o motor de apply com um escopo montado pelo
+// chamador (data/ usa o store; o .vbf usa os painéis da sessão de cliques).
+// version documenta a árvore de origem — quem decide o que está carregado é
+// o escopo.
+func ApplyHelpDTOWithScope(version common.GameVersion, c dto.Collection, ids []string, scope HelpApplyScope) error {
 	filter := make(map[string]bool)
 	if len(ids) > 0 {
 		for _, id := range ids {
@@ -177,8 +215,8 @@ func ApplyHelpDTO(version common.GameVersion, c dto.Collection, ids []string) er
 	// qualquer escrita: um texto novo igual ao velho de outra entrada não
 	// arrasta alvos alheios nem reverte rascunho de terceiros.
 	index := make(map[string][]helpTarget)
-	for _, name := range helpfile.HelpEntryNames() {
-		p := helpfile.GetHelp(version, name)
+	for _, name := range scope.Ids {
+		p := scope.Panel(name)
 		if p == nil {
 			continue
 		}
@@ -203,7 +241,7 @@ func ApplyHelpDTO(version common.GameVersion, c dto.Collection, ids []string) er
 		if !inBatch(name) {
 			continue
 		}
-		panel := helpfile.GetHelp(version, name)
+		panel := scope.Panel(name)
 		if panel == nil {
 			common.LogError("failed to update help %s: painel não carregado", name)
 			failed = append(failed, name)
@@ -249,15 +287,11 @@ func ApplyHelpDTO(version common.GameVersion, c dto.Collection, ids []string) er
 	// Save: só o que recebeu texto novo (lote ou propagação). Save de cada
 	// painel grava apenas as localizações alteradas — intocados são no-op.
 	if len(saveSet) > 0 {
-		for _, name := range helpfile.HelpEntryNames() {
+		for _, name := range scope.Ids {
 			if !saveSet[name] {
 				continue
 			}
-			p := helpfile.GetHelp(version, name)
-			if p == nil {
-				continue
-			}
-			if err := p.Save(); err != nil {
+			if err := scope.Save(name); err != nil {
 				common.LogError("failed to save help %s: %v", name, err)
 				failed = append(failed, name)
 			}

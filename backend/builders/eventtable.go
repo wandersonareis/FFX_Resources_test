@@ -119,61 +119,32 @@ func buildTableEntry(kind, id string, version common.GameVersion, strings []*eve
 	return entry, true
 }
 
-// ApplyTableDTO aplica o DTO de volta nos binários: cada row toca o
-// FieldString correspondente (por posição × idioma) e Save regrava as
-// localizações na árvore mods/. Seguir o padrão lockit: todos os idiomas
-// presentes na row são aplicados (o lockit grava só o 'us'; aqui seguimos o
-// help/events que aplica todos — a decisão do editor é por célula).
+// ApplyTableDTO aplica o DTO de volta nos binários pelo MESMO motor do
+// events (4 fases — ver tableapply.go): o escopo é o store do kind
+// (data/ — limitado apenas pela presença de arquivo), então a edição de
+// uma def se espalha por índice de texto para TODAS as cópias presentes e
+// cada binário tocado é recompilado em mods/. Tradução divergente não
+// participa (dedupe é de original para original). Refs "$hash" do payload
+// (view dedupada) resolvem contra as defs do lote.
 func ApplyTableDTO(kind string, version common.GameVersion, c dto.Collection) error {
 	if err := eventtable.Validate(kind); err != nil {
 		return err
 	}
-	for _, id := range c.SortedKeys() {
-		entry := c[id]
-		f, err := eventtable.LoadFromStore(kind, version, id)
-		if err != nil {
-			return fmt.Errorf("%s %s: %w", kind, id, err)
-		}
-		if err := applyTableEntry(f, entry); err != nil {
-			return fmt.Errorf("%s %s: %w", kind, id, err)
-		}
-		if err := f.Save(); err != nil {
-			return fmt.Errorf("%s %s: %w", kind, id, err)
-		}
-	}
-	return nil
-}
-
-// applyTableEntry mapeia cada row de volta à posição física e atualiza os
-// textos dos FieldStrings (todos os idiomas presentes na row, sem dedup —
-// mesma régua do lockit; a propagação por hash dos eventos fica de fora
-// deliberadamente: btl/cloud/tutorial não têm gêmeos cross-file).
-func applyTableEntry(f *eventtable.File, entry dto.FileEntry) error {
-	dto.SortRows(entry.Rows)
-	for _, row := range entry.Rows {
-		if row.Index < 0 || row.Index >= len(f.Strings) {
-			return fmt.Errorf("string index out of range: %d", row.Index)
-		}
-		obj := f.Strings[row.Index]
-		if obj == nil {
-			continue
-		}
-		for lang, newText := range row.Text {
-			if newText == "" {
-				continue
+	return applyTextDTO(kind, c, nil, TableApplyScope{
+		Ids: eventtable.List(kind, version),
+		StringsFor: func(id string) []*event.LocalizedFieldStringObject {
+			f := eventtable.Get(kind, version, id)
+			if f == nil {
+				return nil
 			}
-			if _, ok := common.SupportedLanguages[lang]; !ok {
-				common.LogVerbose("%s: idioma %q não suportado em row %d", f.Kind, lang, row.Index)
-				continue
+			return f.Strings
+		},
+		Save: func(id string) error {
+			f := eventtable.Get(kind, version, id)
+			if f == nil {
+				return fmt.Errorf("%s %s: não carregado", kind, id)
 			}
-			fs := obj.GetLocalizedContent(lang)
-			if fs == nil {
-				continue // artefato não tem este idioma: não inventa arquivo
-			}
-			if newText != fs.GetRegularString() {
-				fs.SetRegularString(newText)
-			}
-		}
-	}
-	return nil
+			return f.Save()
+		},
+	})
 }

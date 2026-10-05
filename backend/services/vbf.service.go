@@ -32,6 +32,11 @@ import (
 	"ffxresources/backend/builders"
 	"ffxresources/backend/common"
 	"ffxresources/backend/dto"
+	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/fileFormats/eventtable"
+	"ffxresources/backend/fileFormats/helpfile"
+	"ffxresources/backend/fileFormats/lockit"
+	"ffxresources/backend/fileFormats/objectsfile"
 	"ffxresources/backend/fileFormats/vbf"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/loggingService"
@@ -157,6 +162,7 @@ func vbfArchiveFor(p string) (*vbf.Archive, error) {
 
 // CloseVbfArchives fecha os containers abertos (chamado no shutdown do app).
 func CloseVbfArchives() {
+	vbfSessionResetAll() // a sessão descreve os containers: cai junto
 	vbfArchMu.Lock()
 	defer vbfArchMu.Unlock()
 	for key, a := range vbfArchives {
@@ -446,9 +452,10 @@ func (s *MetadataService) ListVbfMacroChunks(vbfPath, macroPath string) ([]dto.V
 //
 // Diferente de GetEntry, nada aqui é data-driven: o estado ATUAL vem do
 // container (mods-first) e o ORIGINAL do container puro — os dois do mesmo
-// .vbf. Sem dedup de display: ele é construído sobre a árvore data/ inteira,
-// que é justamente o que pode não existir por completo. Divergência de
-// estrutura continua sendo reportada (paths/contagens, sem conteúdo).
+// .vbf. O dedup de display é o da SESSÃO de cliques (vbfSessionStore): o
+// def é a 1ª carga da sessão — com o texto linkado na UI, editar "na cópia"
+// é editar a def. Divergência de estrutura continua sendo reportada
+// (paths/contagens, sem conteúdo).
 func (s *MetadataService) GetVbfTextEntry(vbfPath, innerPath, id string) (dto.FileEntry, error) {
 	a, t, err := s.vbfTargetOf(vbfPath, innerPath)
 	if err != nil {
@@ -465,7 +472,16 @@ func (s *MetadataService) GetVbfTextEntry(vbfPath, innerPath, id string) (dto.Fi
 	}
 
 	return vbfRun(a, t, innerPath, func() (dto.FileEntry, error) {
-		current, exists, err := s.loadOriginalFrom(t.Kind, t.ID, t.Version, common.SourceVbfPreferred)
+		// Sessão: arquivo já carregado e mods intocado serve do store, sem
+		// re-decodificar o container. O dedupe acontece a cada inserção
+		// (upsert na sessão) — clicou na cópia depois da def e ela não
+		// está traduzida, sai como ref "$hash" da própria sessão.
+		if out, ok := vbfSessionCached(vbfPath, t); ok {
+			return out, nil
+		}
+		// Todos os kinds de texto decodificam o MESMO objeto que embute o
+		// DTO: é ele que o apply vai mutar e que o save persiste em mods/.
+		estado, current, exists, err := s.decodeVbfEstado(t, common.SourceVbfPreferred)
 		if err != nil {
 			return dto.FileEntry{}, err
 		}
@@ -478,12 +494,197 @@ func (s *MetadataService) GetVbfTextEntry(vbfPath, innerPath, id string) (dto.Fi
 				"original de %s/%s/%s ausente no .vbf — entregando sem a coluna Original",
 				t.Version, t.Kind, t.ID,
 			)
-			return current, nil
+			// Registra mesmo assim: sem upsert a sessão não teria o estado
+			// do arquivo e o save recusaria na hora de editar.
+			return vbfSessionUpsertEstado(vbfPath, t, current, estado), nil
 		}
 		merged, diverged := withOriginal(entryRef{kind: t.Kind, id: t.ID, version: t.Version}, current, orig)
 		logDivergence(diverged)
-		return merged, nil
+		return vbfSessionUpsertEstado(vbfPath, t, merged, estado), nil
 	})
+}
+
+// decodeVbfEstado decodifica o arquivo de texto do .vbf na fonte dada e
+// devolve (estado, entry): o MESMO objeto que embute o DTO — a sessão guarda
+// ele, o apply muta ele e o save grava ele em mods/. Devolve exists=false
+// quando a fonte não tem o arquivo (sem erro: o chamador degrada).
+func (s *MetadataService) decodeVbfEstado(t vbfTarget, src common.FileSource) (*vbfEstado, dto.FileEntry, bool, error) {
+	switch t.Kind {
+	case KindEvents:
+		strs, err := event.ReadLocalizedEventStringsFrom(t.ID, t.Version, src)
+		if err != nil {
+			return nil, dto.FileEntry{}, false, err
+		}
+		if len(strs) == 0 {
+			return nil, dto.FileEntry{}, false, nil
+		}
+		entry, ok := builders.BuildEventEntryDTOFrom(t.ID, t.Version, strs)
+		if !ok {
+			return nil, dto.FileEntry{}, false, nil
+		}
+		return &vbfEstado{strings: strs}, entry, true, nil
+
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		strs, err := eventtable.ReadLocalizedStringsFrom(t.Kind, t.ID, t.Version, src)
+		if err != nil {
+			return nil, dto.FileEntry{}, false, err
+		}
+		if len(strs) == 0 {
+			return nil, dto.FileEntry{}, false, nil
+		}
+		entry, ok := builders.BuildTableEntryDTOFrom(t.Kind, t.ID, t.Version, strs)
+		if !ok {
+			return nil, dto.FileEntry{}, false, nil
+		}
+		return &vbfEstado{strings: strs}, entry, true, nil
+
+	case KindHelp:
+		// O painel vem com todas as localizações que a fonte tem; o mesmo
+		// objeto vira o DTO (coluna Traduzido) e o alvo do save (mods/).
+		panel := helpfile.ReadHelpPanelFrom(t.Version, t.ID, src)
+		if panel == nil {
+			return nil, dto.FileEntry{}, false, nil
+		}
+		entry, ok := builders.BuildHelpEntryDTOFrom(t.ID, t.Version, panel)
+		if !ok {
+			return nil, dto.FileEntry{}, false, nil
+		}
+		return &vbfEstado{painel: panel}, entry, true, nil
+
+	case KindLockit:
+		for _, l := range lockit.LayoutsForVersion(t.Version) {
+			if l.ID() != t.ID {
+				continue
+			}
+			f, err := lockit.LoadFrom(l, src)
+			if err != nil {
+				return nil, dto.FileEntry{}, false, err
+			}
+			c, err := builders.BuildLockitDTOFrom([]*lockit.LockitFile{f})
+			if err != nil {
+				return nil, dto.FileEntry{}, false, err
+			}
+			entry, ok := c[t.ID]
+			if !ok {
+				return nil, dto.FileEntry{}, false, nil
+			}
+			return &vbfEstado{lockitFile: f}, entry, true, nil
+		}
+		return nil, dto.FileEntry{}, false, nil
+
+	case KindObjects:
+		layouts, err := s.resolveObjectLayouts(t.Version, []string{t.ID})
+		if err != nil {
+			return nil, dto.FileEntry{}, false, fmt.Errorf("objects %s: %w", t.ID, err)
+		}
+		if len(layouts) == 0 {
+			return nil, dto.FileEntry{}, false, fmt.Errorf("objects %s: layout não encontrado", t.ID)
+		}
+		layout := layouts[0]
+		key := objectsfile.FileLayoutKey(t.Version, layout.PatternPath())
+		bin, err := objectsfile.LoadObjectFileFrom(layout, src)
+		if err != nil {
+			return nil, dto.FileEntry{}, false, fmt.Errorf("objects %s: %w", t.ID, err)
+		}
+		if bin == nil || bin.GetObjects() == nil || bin.GetObjects().IsEmpty() {
+			return nil, dto.FileEntry{}, false, nil
+		}
+		c, err := builders.BuildObjectsDTO(bin.GetObjects(), layout, key)
+		if err != nil {
+			return nil, dto.FileEntry{}, false, fmt.Errorf("objects %s: %w", t.ID, err)
+		}
+		entry, ok := c[t.ID]
+		if !ok {
+			return nil, dto.FileEntry{}, false, nil
+		}
+		estado := &vbfEstado{binario: &vbfEstadoBinario{key: key, layout: layout, bin: bin}}
+		return estado, entry, true, nil
+
+	case KindMacro:
+		// O dicionário é UM artefato por localização: o estado guardado é o
+		// dicionário INTEIRO (base do rebuild — os outros chunks não podem
+		// sumir quando só um foi aberto).
+		full, err := builders.BuildMacroDTOFromSource(t.Version, src)
+		if err != nil {
+			return nil, dto.FileEntry{}, false, err
+		}
+		entry, ok := full[t.ID]
+		if !ok {
+			return nil, dto.FileEntry{}, false, nil
+		}
+		return &vbfEstado{macro: full}, entry, true, nil
+	}
+	return nil, dto.FileEntry{}, false, fmt.Errorf("kind sem fluxo de sessão: %s", t.Kind)
+}
+
+// ApplyVbfTextCollection aplica (no ESCOPO da sessão do container) os edits
+// vindos das tabelas abertas no navegador de .vbf: o MESMO applier de data/,
+// com a limitação imposta ao .vbf — o arquivo precisa ter sido aberto no
+// clique (a propagação alcança só as cópias carregadas). Binários gravados =
+// os tocados (lote ou propagação), em mods/<rel>; arquivo que só existe no
+// container cria o mods/ na gravação. Qualquer escrita invalida os caches
+// de view (a sessão incluída: a próxima carga re-decodifica pelo mods novo).
+func (s *MetadataService) ApplyVbfTextCollection(vbfPath, kind string, version common.GameVersion, c dto.Collection) error {
+	kind = strings.ToLower(strings.TrimSpace(kind))
+	if _, err := vbfArchiveFor(vbfPath); err != nil {
+		return fmt.Errorf(".vbf indisponível: %w", err)
+	}
+	if err := ensureVersionReady(version); err != nil {
+		return err
+	}
+	if err := applyVbfCollectionInSession(vbfPath, kind, version, c); err != nil {
+		return err
+	}
+	clearDedupViewCache() // mods mudou: cru data/, pristine e sessão de .vbf caem
+	return nil
+}
+
+// applyVbfCollectionInSession roda o applier do kind com o escopo montado
+// da sessão de cliques do .vbf. A fonte do estado é SEMPRE a sessão (o
+// objeto decodificado no clique); a gravação de todos os appliers vai para
+// mods/ — o container não tem API de escrita e o guard de escrita recusa
+// qualquer alvo fora de mods/ dentro da árvore do jogo.
+func applyVbfCollectionInSession(vbfPath, kind string, version common.GameVersion, c dto.Collection) error {
+	base := filepath.Base(vbfPath)
+	switch kind {
+	case KindEvents, KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		scope, ok := vbfSessionApplyScope(vbfPath, kind, version)
+		if !ok {
+			return fmt.Errorf("nenhum arquivo %s aberto na sessão de %s", kind, base)
+		}
+		return builders.ApplyTextDTOWithScope(kind, c, scope)
+
+	case KindHelp:
+		scope, ok := vbfSessionHelpScope(vbfPath)
+		if !ok {
+			return fmt.Errorf("nenhum painel help aberto na sessão de %s", base)
+		}
+		return builders.ApplyHelpDTOWithScope(version, c, c.SortedKeys(), scope)
+
+	case KindLockit:
+		scope, ok := vbfSessionLockitScope(vbfPath)
+		if !ok {
+			return fmt.Errorf("nenhum arquivo lockit aberto na sessão de %s", base)
+		}
+		return builders.ApplyLockitDTOWithScope(version, c, scope)
+
+	case KindObjects:
+		loadBin, ok := vbfSessionObjectsLoader(vbfPath)
+		if !ok {
+			return fmt.Errorf("nenhum arquivo objects aberto na sessão de %s", base)
+		}
+		return applyObjectsCollection(version, c, loadBin)
+
+	case KindMacro:
+		full, ok := vbfSessionMacro(vbfPath)
+		if !ok {
+			return fmt.Errorf("nenhum chunk de macro aberto na sessão de %s", base)
+		}
+		return applyMacroCollection(version, full, c)
+
+	default:
+		return fmt.Errorf("unknown kind: %s", kind)
+	}
 }
 
 // GetVbfImageEntry devolve a textura (.dds.phyre) pedida a partir do .vbf,
