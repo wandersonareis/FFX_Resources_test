@@ -97,5 +97,3 @@ export function SetGameExeLocation(arg1:string):Promise<void>;
 export function SetUnsavedEdits(arg1:boolean):Promise<void>;
 
 export function WriteLog(arg1:string,arg2:string,arg3:Record<string, any>):Promise<void>;
-
-export function WriteTextFile(arg1:string,arg2:string):Promise<void>;

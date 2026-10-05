@@ -189,7 +189,3 @@ export function SetUnsavedEdits(arg1) {
 export function WriteLog(arg1, arg2, arg3) {
   return window['go']['main']['App']['WriteLog'](arg1, arg2, arg3);
 }
-
-export function WriteTextFile(arg1, arg2) {
-  return window['go']['main']['App']['WriteTextFile'](arg1, arg2);
-}

@@ -178,13 +178,6 @@ func (a *App) ReadFileAsString(file string) string {
 	return string(content)
 }
 
-func (a *App) WriteTextFile(file string, text string) {
-	err := os.WriteFile(file, []byte(text), 0644)
-	if err != nil {
-		a.noticationService.NotifyError(err)
-	}
-}
-
 func (a *App) SelectDirectory(title string) string {
 	selection, err := runtime.OpenDirectoryDialog(interactions.NewInteractionService().Ctx, runtime.OpenDialogOptions{
 		Title:            title,
