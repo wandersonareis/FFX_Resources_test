@@ -24,6 +24,17 @@ func logDecodeError(err error) {
 	}
 }
 
+// charOrPUAToken devolve o texto do caractere do código do jogo: o próprio
+// rune, ou o token {PUA:XX:CHAR} quando o slot é duplicado — o encode canônico
+// usaria outro byte, então o token preserva o byte exato no round-trip
+// (ver converter.ParseCommand, case "PUA:").
+func charOrPUAToken(code uint, chr rune, charset string, version common.GameVersion) string {
+	if canon, err := ffxencoding.CharToByte(chr, charset, version); err == nil && canon != code {
+		return fmt.Sprintf("{PUA:%X:%c}", code, chr)
+	}
+	return string(chr)
+}
+
 func getStringAtLookupOffsetBinary(table []byte, offset int, localization string, version common.GameVersion) string {
     if offset < 0 || offset >= len(table) {
         return ""
@@ -52,7 +63,7 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
         switch {
         case idx >= 0x30:
             if chr, err := ffxencoding.ByteToChar(uint(idx)+extraOffset, charset, gameVersion); err == nil {
-                out.WriteRune(chr)
+                out.WriteString(charOrPUAToken(uint(idx)+extraOffset, chr, charset, gameVersion))
             } else {
                 logDecodeError(err)
                 if extraOffset != 0 {
@@ -94,7 +105,7 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
             actualIdx := section*0xD0 + uint(lowByte)
             newVar := actualIdx + extraOffset
             if chr, err := ffxencoding.ByteToChar(newVar, charset, gameVersion); err == nil {
-                out.WriteRune(chr)
+                out.WriteString(charOrPUAToken(newVar, chr, charset, gameVersion))
             } else {
                 logDecodeError(err)
                 if extraOffset != 0 {
@@ -107,7 +118,7 @@ func getStringAtLookupOffsetBinary(table []byte, offset int, localization string
         // === NOVO: quando extraOffset está ativo, bytes baixos viram caractere ===
         case extraOffset != 0:
             if chr, err := ffxencoding.ByteToChar(uint(idx)+extraOffset, charset, gameVersion); err == nil {
-                out.WriteRune(chr)
+                out.WriteString(charOrPUAToken(uint(idx)+extraOffset, chr, charset, gameVersion))
             } else {
                 logDecodeError(err)
                 out.WriteString(fmt.Sprintf("{UNKDBLCHR:04:%02X}", idx))

@@ -1,0 +1,1058 @@
+package services
+
+// Importação em lote (.json/.strings): parse → detecção de kind/versão →
+// store → casamento por HASH → merge do 'us' → capacidade uint16.
+//
+// O hash é a identidade do texto e nunca é reescrito pela ferramenta. O
+// artefato traz o hash do texto vigente quando foi exportado (o tradutor
+// mexe só no valor), então o casamento serve para as duas coisas ao mesmo
+// tempo: é a CHAVE (a ordem das rows e a linha faltando não afetam nada) e
+// é o sinal de staleness (a store mudou desde o export ⇒ hash não casa).
+//
+// Divisão de erros:
+//   - arquivo (ilegível, extensão, key ausente/inválida, kind ou versão
+//     divergentes, kinds misturados) → error (toast no frontend);
+//   - entrada inexistente na versão e capacidade uint16 → summary.Errors
+//     (modal desabilita Importar).
+//
+// NÃO bloqueiam, e nem entram no resumo: hash não encontrado e tag de
+// controle divergente. A row é pulada, o resto importa, e o problema sai
+// só no log (LogWarning com hash e texto) para o revisor corrigir.
+//
+// Capacidade uint16 SEMPRE após a conversão das tags de controle em bytes:
+//   - events: rebuild real em cópias (RebuildFieldStrings deduplica offsets);
+//   - objects: texto medido direto por converter.StringToByteSize (mesma
+//     conversão do FillByteList do rebuild, sem instâncias auxiliares);
+//   - macro: rebuild real do dicionário inteiro (layout do container).
+//
+// A store nunca é mutada: events trabalham em cópias de FieldString.
+
+import (
+	"fmt"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	"ffxresources/backend/builders"
+	"ffxresources/backend/common"
+	"ffxresources/backend/core/converter"
+	ffxencoding "ffxresources/backend/core/encoding"
+	"ffxresources/backend/datastore"
+	"ffxresources/backend/dto"
+	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/fileFormats/eventtable"
+	"ffxresources/backend/fileFormats/helpfile"
+	"ffxresources/backend/fileFormats/lockit"
+	"ffxresources/backend/fileFormats/objectsfile"
+	"ffxresources/backend/formatters/hash"
+	jsonfmt "ffxresources/backend/formatters/json"
+	strfmt "ffxresources/backend/formatters/strings"
+)
+
+// importUint16Limit é o teto de bytes por binário: os offsets são uint16
+// (0..65535) e a string table começa em 0 → 65536 bytes é o máximo gravável.
+const importUint16Limit = 65536
+
+// importPlan é o resultado do prepareImport: entradas válidas mescladas e o
+// resumo para o modal.
+type importPlan struct {
+	kind    string
+	merged  dto.Collection // store clonada + 'us' do import (alvo do apply)
+	summary dto.ImportSummary
+}
+
+// ---- helpers de rows ---------------------------------------------------------
+
+// binaryRowKey é a coordenada da row NO BINÁRIO: (Index, Name) — a mesma
+// chave "index\x00name" do strings parser. NÃO é identidade de import: o
+// casamento é pelo hash; esta chave só desempata dentro de um grupo de hash
+// (dedup) e localiza a row original em data/ para validar tags.
+func binaryRowKey(r dto.TextRow) string {
+	return fmt.Sprintf("%d\x00%s", r.Index, r.Name)
+}
+
+// usText devolve o texto 'us' da row.
+func usText(r dto.TextRow) string {
+	return r.Text[common.DefaultLocalization]
+}
+
+// isBlankText diz se um texto não é traduzível: vazio, só espaço, o "-" que
+// é o próprio texto do jogo (mais da metade do data/ pristine) ou só tags de
+// formatação ({TEXT_NEWLINE}, {TEXT_ITALIC}, color…) — linha que o tradutor
+// não teria o que editar. O filtro é de casamento e de export — a store
+// nunca é filtrada, porque é ela que guarda a posição da row no binário e o
+// rebuild posicional.
+func isBlankText(t string) bool {
+	s := strings.TrimSpace(stripTextTags(t))
+	return s == "" || s == "-"
+}
+
+// stripTextTags remove do texto todas as tags classificadas como text-tag
+// (ausência/quantidade delas % não é conteúdo). Chave
+// explícita: tags de CONTROLE (icone, pausa…) NÃO saem — elas preservam
+// significado no segmento. As duas regras batem: tag sem fechamento não é
+// tag, vira texto literal.
+func stripTextTags(t string) string {
+	runes := []rune(t)
+	out := make([]rune, 0, len(runes))
+	for i := 0; i < len(runes); i++ {
+		if runes[i] != '{' {
+			out = append(out, runes[i])
+			continue
+		}
+		end := -1
+		for j := i + 1; j < len(runes); j++ {
+			if runes[j] == '}' {
+				end = j
+				break
+			}
+		}
+		if end < 0 {
+			out = append(out, runes[i])
+			continue
+		}
+		if converter.IsTextTag(string(runes[i+1 : end])) {
+			i = end
+			continue
+		}
+		out = append(out, runes[i])
+	}
+	return string(out)
+}
+
+// usHash devolve o hash 'us' da row, calculando-o quando a row não trouxer
+// (artefato feito à mão). É leitura pura: o hash da store nunca é reescrito.
+func usHash(r dto.TextRow) string {
+	if h := r.Hash[common.DefaultLocalization]; h != "" {
+		return h
+	}
+	return hash.Sum64Hex(usText(r))
+}
+
+// countCandidates conta as rows do artefato com 'us' utilizável — o
+// denominador de "N inserido de N". Rows em branco não são candidatas.
+func countCandidates(rows []dto.TextRow) int {
+	n := 0
+	for _, r := range rows {
+		if !isBlankText(usText(r)) {
+			n++
+		}
+	}
+	return n
+}
+
+// rowIndexCount conta índices distintos (index_count do resumo).
+func rowIndexCount(rows []dto.TextRow) int {
+	seen := make(map[int]bool, len(rows))
+	for _, r := range rows {
+		seen[r.Index] = true
+	}
+	return len(seen)
+}
+
+// importLanguages devolve (ordem estável) os idiomas com algum texto no arquivo.
+func importLanguages(c dto.Collection) []string {
+	seen := make(map[string]bool)
+	for _, id := range c.SortedKeys() {
+		for _, r := range c[id].Rows {
+			for lang, t := range r.Text {
+				if t != "" {
+					seen[lang] = true
+				}
+			}
+		}
+	}
+	out := make([]string, 0, len(seen))
+	for lang := range seen {
+		out = append(out, lang)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// ---- casamento por hash ------------------------------------------------------
+
+// As três mensagens do import. Todas vão para o console colorido e para o
+// arquivo JSON de log (common/system.go). hash não encontrado e tag
+// divergente NUNCA entram em summary.Errors: a row é bloqueada, a
+// importação segue, e quem corrige é o revisor no artefato.
+const (
+	logImportUnmatched = "import %s: hash não encontrado — hash %q texto %q"
+	logImportTagLost   = "import %s: tag de controle divergente — hash %q texto %q %v"
+	logImportInserted  = "import %s: %d/%d linha(s) inserida(s)"
+)
+
+// rowPair é o casamento entre uma row do artefato e a row da store. A
+// posição vem SEMPRE da store; o texto novo vem do artefato.
+type rowPair struct {
+	store    dto.TextRow
+	imported dto.TextRow
+}
+
+// tagViolation é uma row cuja tradução divergiu das tags de controle do
+// original (data/ ou VBF).
+type tagViolation struct {
+	row    dto.TextRow
+	issues []converter.TagIssue
+}
+
+// hashMatch casa as rows do artefato com as da store pelo hash 'us'.
+//
+// O hash é a CHAVE; (Index, Name) desempata DENTRO do grupo de hash — dedup
+// faz N rows da store compartilharem o mesmo hash e aí só a coordenada diz
+// qual célula é qual. A ordem das rows e a linha faltando não afetam nada:
+// row do artefato sem par simplesmente não participa, e não é erro.
+//
+//  1. row do artefato com 'us' em branco → pulada (nunca é candidata e nunca
+//     loga: é o "-" e o vazio que o tradutor nem vê);
+//  2. grupo := storeByHash[usHash(artefato)]; grupo vazio → unmatched (a
+//     store mudou desde o export, ou o texto não existe mais);
+//  3. grupo de 1 → par direto, o Index do artefato é ignorado aqui;
+//  4. grupo de N → desempata por binaryRowKey; sem coordenada ou célula já
+//     reivindicada → unmatched.
+func hashMatch(importedEntry, storeEntry dto.FileEntry) (pairs []rowPair, unmatched []dto.TextRow) {
+	storeByHash := make(map[string][]int, len(storeEntry.Rows))
+	for i, r := range storeEntry.Rows {
+		if isBlankText(usText(r)) {
+			continue
+		}
+		storeByHash[usHash(r)] = append(storeByHash[usHash(r)], i)
+	}
+
+	claimed := make(map[int]bool, len(importedEntry.Rows))
+	for _, r := range importedEntry.Rows {
+		if isBlankText(usText(r)) {
+			continue
+		}
+		group := storeByHash[usHash(r)]
+		if len(group) == 0 {
+			unmatched = append(unmatched, r)
+			continue
+		}
+
+		si := -1
+		if len(group) == 1 {
+			si = group[0]
+		} else {
+			rk := binaryRowKey(r)
+			for _, i := range group {
+				if !claimed[i] && binaryRowKey(storeEntry.Rows[i]) == rk {
+					si = i
+					break
+				}
+			}
+		}
+		if si < 0 || claimed[si] {
+			unmatched = append(unmatched, r)
+			continue
+		}
+		claimed[si] = true
+		pairs = append(pairs, rowPair{store: storeEntry.Rows[si], imported: r})
+	}
+	return pairs, unmatched
+}
+
+// importMatch é o resultado do casamento de uma entrada.
+type importMatch struct {
+	candidates int            // rows do artefato com 'us' utilizável
+	inserted   int            // casaram E passaram na validação de tags
+	changed    int            // destas, com texto diferente da store
+	pairs      []rowPair      // a gravar
+	unmatched  []dto.TextRow  // sem grupo na store
+	tagLost    []tagViolation // tags de controle divergentes
+}
+
+// matchImportEntry casa por hash e, quando origFor for fornecido, filtra as
+// rows cuja tradução diverge das tags de controle do original. Com origFor
+// nil a validação de tags é pulada.
+//
+// A filtragem acontece AQUI (e não no merge) para que a row rejeitada nem
+// chegue em mergeImportUs: é por isso que ela não aparece em merged[id] e a
+// função de uso nunca a vê.
+//
+// origFor é uma função justamente para só ser chamada quando há par a
+// validar — sem par, não há o que comparar nem custo a pagar.
+func matchImportEntry(imp, se dto.FileEntry, origFor func() map[string]string) importMatch {
+	m := importMatch{candidates: countCandidates(imp.Rows)}
+	pairs, unmatched := hashMatch(imp, se)
+	m.unmatched = unmatched
+	if len(pairs) == 0 {
+		return m
+	}
+
+	var origByText map[string]string
+	if origFor != nil {
+		origByText = origFor()
+	}
+	for _, p := range pairs {
+		if origByText != nil {
+			if want, ok := origByText[binaryRowKey(p.store)]; ok {
+				if issues := converter.ControlTagDiff(want, usText(p.imported)); len(issues) > 0 {
+					m.tagLost = append(m.tagLost, tagViolation{row: p.imported, issues: issues})
+					continue
+				}
+			}
+		}
+		m.pairs = append(m.pairs, p)
+		if usText(p.imported) != usText(p.store) {
+			m.changed++
+		}
+	}
+	m.inserted = len(m.pairs)
+	return m
+}
+
+// originalRowTexts devolve (coordenada binário → texto 'us' original) da
+// entrada em data/ — ou no .vbf ativo, que é o que originalFor resolve.
+//
+// Nil quando não há referência: sem original não há o que comparar, e
+// travar a importação por data/ incompleto seria pior do que seguir sem
+// checagem. Rows originais em branco ficam de fora pelo mesmo motivo — não
+// tem tag a preservar em "-".
+func (s *MetadataService) originalRowTexts(kind, id string, version common.GameVersion) map[string]string {
+	entry, ok, err := s.originalFor(kind, id, version)
+	if err != nil || !ok {
+		if err != nil {
+			common.LogVerbose("import %s: sem original para validar tags: %v", id, err)
+		}
+		return nil
+	}
+	out := make(map[string]string, len(entry.Rows))
+	for _, r := range entry.Rows {
+		if t := usText(r); !isBlankText(t) {
+			out[binaryRowKey(r)] = t
+		}
+	}
+	return out
+}
+
+// filterExportRows remove do ARTEFATO as rows sem 'us' utilizável (vazio,
+// só espaço ou "-"). O projeto usa 'us' como padrão: se o 'us' não existe,
+// os outros idiomas não interessam — e há rows com texto em pt mas sem 'us',
+// que saem mesmo assim, como se espera.
+//
+// Só para EXPORT. A store (carga, merge, save, apply, VBF) continua
+// completa, porque é ela que guarda a posição da row no binário. Recalcula
+// Metadata.RowCount, que os builders preenchem com o total.
+func filterExportRows(c dto.Collection) dto.Collection {
+	out := make(dto.Collection, len(c))
+	for id, entry := range c {
+		rows := make([]dto.TextRow, 0, len(entry.Rows))
+		for _, r := range entry.Rows {
+			if isBlankText(usText(r)) {
+				continue
+			}
+			rows = append(rows, r)
+		}
+		if len(rows) == 0 {
+			continue // entrada só com row em branco: nada a traduzir
+		}
+		entry.Metadata = entry.Metadata.WithRowCount(len(rows))
+		entry.Rows = rows
+		out[id] = entry
+	}
+	return out
+}
+
+// mergeImportUs clona a store e sobrescreve o 'us' nos pares casados.
+//
+// A posição e a ordem vêm SEMPRE da store — o artefato só diz qual texto
+// novo entra em qual célula, e o que ele trouxer além disso é descartado.
+// O hash NUNCA é reescrito: a store é derivada do binário, e os builders
+// recalculam o hash na próxima carga.
+//
+// Idiomas não-us e placeholders vêm integralmente da store: o import só
+// contribui com inglês (os demais idiomas do arquivo são descartados).
+func mergeImportUs(store dto.Collection, matched map[string][]rowPair) dto.Collection {
+	out := make(dto.Collection, len(store))
+	for id, se := range store {
+		pairs := matched[id]
+		if len(pairs) == 0 {
+			out[id] = se
+			continue
+		}
+		byStore := make(map[string]dto.TextRow, len(pairs))
+		for _, p := range pairs {
+			byStore[binaryRowKey(p.store)] = p.imported
+		}
+		rows := make([]dto.TextRow, len(se.Rows))
+		for i, r := range se.Rows {
+			nr := r
+			if ir, ok := byStore[binaryRowKey(r)]; ok {
+				if t := usText(ir); !isBlankText(t) {
+					text := make(map[string]string, len(r.Text)+1)
+					for k, v := range r.Text {
+						text[k] = v
+					}
+					text[common.DefaultLocalization] = t
+					nr.Text = text
+				}
+			}
+			rows[i] = nr
+		}
+		out[id] = dto.FileEntry{Metadata: se.Metadata, Rows: rows}
+	}
+	return out
+}
+
+// stripHelpRowNames remove o row.Name legado ("text_%04d") das entradas
+// help. A rows nova não tem name; artefatos exportados antes da remoção
+// ainda casam com a store (rowKey = index\x00name) depois da limpeza.
+func stripHelpRowNames(c dto.Collection) {
+	for _, entry := range c {
+		for i := range entry.Rows {
+			entry.Rows[i].Name = ""
+		}
+	}
+}
+
+// ---- detecção ----------------------------------------------------------------
+
+// kindFromKey decide o kind pela metadata.key: macrodic.dcp → macro,
+// /event/ → events; /gamedata/ps3data/lockit/ → lockit; help/…/*.sps2 → help;
+// demais → objects.
+func kindFromKey(key string) string {
+	lower := strings.ToLower(key)
+	if strings.HasSuffix(lower, "macrodic.dcp") {
+		return KindMacro
+	}
+	if strings.Contains(lower, "/event/") {
+		return KindEvents
+	}
+	if lockit.IsLockitKey(key) {
+		return KindLockit
+	}
+	if strings.Contains(lower, "/battle/btl/") {
+		return KindBattleText
+	}
+	if strings.Contains(lower, "/cloudsave/") {
+		return KindCloud
+	}
+	if strings.HasSuffix(lower, "tutorial.msb") {
+		return KindTutorial
+	}
+	if strings.HasSuffix(lower, "/menu/menumain.bin") {
+		return KindMenuMain
+	}
+	if strings.Contains(lower, "/help/") && strings.HasSuffix(lower, ".sps2") {
+		return KindHelp
+	}
+	return KindObjects
+}
+
+// detectImportKind infere o kind e valida a versão pelas metadata.key.
+// A versão passa por VersionPathName: ffx2 e lastmiss dividem a árvore
+// ("ffx2"), então um export de lastmiss importa na aba lastmiss (e vice-versa).
+// Falha aqui é de arquivo inteiro (toast); erros por entrada vão no resumo.
+func detectImportKind(active common.GameVersion, imported dto.Collection) (string, error) {
+	kind := ""
+	for _, id := range imported.SortedKeys() {
+		key := strings.TrimSpace(imported[id].Metadata.Key)
+		if key == "" {
+			return "", fmt.Errorf("entrada %q sem metadata.key (arquivo não gerado por este app?)", id)
+		}
+		p, ok := dto.ParseKey(key)
+		if !ok {
+			return "", fmt.Errorf("metadata.key inválida na entrada %q: %q", id, key)
+		}
+		fv, verr := common.ParseGameVersionStrict(p.Version)
+		if verr != nil {
+			return "", fmt.Errorf("versão desconhecida no arquivo: %q", p.Version)
+		}
+		if common.VersionPathName(fv) != common.VersionPathName(active) {
+			return "", fmt.Errorf("arquivo é da versão %s, mas a aba ativa é %s", p.Version, active.String())
+		}
+		k := kindFromKey(key)
+		if kind == "" {
+			kind = k
+		} else if k != kind {
+			return "", fmt.Errorf("arquivo mistura kinds diferentes (%s e %s)", kind, k)
+		}
+	}
+	if kind == "" {
+		return "", fmt.Errorf("arquivo sem entradas")
+	}
+	return kind, nil
+}
+
+// importKnownIDs filtra os ids importados que existem estruturalmente nesta
+// versão (régua de events, layout de objects, chunks do macro). Devolve também
+// o DTO completo de macro (a capacidade mede o arquivo inteiro).
+func (s *MetadataService) importKnownIDs(kind string, version common.GameVersion, imported dto.Collection) (map[string]bool, dto.Collection, error) {
+	known := make(map[string]bool)
+	var macroFull dto.Collection
+	switch kind {
+	case KindEvents:
+		if err := ensureEventsLoaded(version); err != nil {
+			return nil, nil, err
+		}
+		visible := make(map[string]bool)
+		for _, id := range filterEventIDsForVersion(event.GetAllEventIDs(version), version) {
+			visible[id] = true
+		}
+		for _, id := range imported.SortedKeys() {
+			if visible[id] && event.GetEvent(version, id) != nil {
+				known[id] = true
+			}
+		}
+	case KindObjects:
+		for _, id := range imported.SortedKeys() {
+			if _, ok := objectKeyForID(version, id); ok {
+				known[id] = true
+			}
+		}
+	case KindLockit:
+		for _, id := range imported.SortedKeys() {
+			if _, ok := lockit.LayoutForID(version, id); ok {
+				known[id] = true
+			}
+		}
+	case KindMacro:
+		if version == common.GameVersionLastMiss {
+			// Last Mission não tem dicionário próprio: store vazia e todas
+			// as entradas importadas entram no resumo como desconhecidas.
+			return known, nil, nil
+		}
+		full, err := builders.BuildMacroDTO(version)
+		if err != nil {
+			return nil, nil, err
+		}
+		macroFull = full
+		for _, id := range imported.SortedKeys() {
+			if _, ok := full[id]; ok {
+				known[id] = true
+			}
+		}
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		for _, id := range imported.SortedKeys() {
+			if _, ok := eventtable.RelPath(kind, id); ok && originalExists(kind, id, version) {
+				known[id] = true
+			}
+		}
+	case KindHelp:
+		if err := ensureHelpLoaded(version); err != nil {
+			return nil, nil, err
+		}
+		for _, id := range imported.SortedKeys() {
+			if helpfile.GetHelp(version, id) != nil {
+				known[id] = true
+			}
+		}
+	}
+	return known, macroFull, nil
+}
+
+// loadImportStore carrega a Collection da store só para os ids conhecidos
+// (ids vazio significaria "tudo" no GetCollection — hence o guarda).
+func (s *MetadataService) loadImportStore(kind string, version common.GameVersion, known map[string]bool, macroFull dto.Collection) (dto.Collection, error) {
+	if len(known) == 0 {
+		return dto.Collection{}, nil
+	}
+	ids := make([]string, 0, len(known))
+	for id := range known {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	if kind == KindMacro {
+		out := make(dto.Collection, len(ids))
+		for _, id := range ids {
+			if e, ok := macroFull[id]; ok {
+				out[id] = e
+			}
+		}
+		return out, nil
+	}
+	return s.GetCollection(kind, version, ids)
+}
+
+// ---- capacidade uint16 (pós-rebuild, só leitura) ------------------------------
+
+// importEventsUsage mede o binário do evento em cópias: espelha
+// extractFieldStringsForLanguage (pula obj nil, placeholder p/ us nil), aplica
+// o 'us' importado nas cópias e SEMPRE roda RebuildFieldStrings — que converte
+// tags em bytes e deduplica offsets — só descartando o resultado. A store
+// nunca é tocada.
+func importEventsUsage(version common.GameVersion, id string, imp dto.FileEntry) (dto.ImportUsage, error) {
+	usage := dto.ImportUsage{ID: id, Kind: KindEvents, Limit: importUint16Limit}
+	ev := event.GetEvent(version, id)
+	if ev == nil {
+		return usage, fmt.Errorf("evento não encontrado: %s", id)
+	}
+	charset := ffxencoding.GetCharsetForLanguage(common.DefaultLocalization)
+	importUS := make(map[int]string, len(imp.Rows))
+	for _, r := range imp.Rows {
+		if r.Name != "" {
+			continue // events não têm Name; linha estranha já é bloqueada na validação
+		}
+		if t := r.Text[common.DefaultLocalization]; t != "" {
+			importUS[r.Index] = t
+		}
+	}
+	copies := make([]*event.FieldString, 0, len(ev.Strings))
+	for i, obj := range ev.Strings {
+		if obj == nil {
+			continue
+		}
+		var c *event.FieldString
+		if fs := obj.GetLocalizedContent(common.DefaultLocalization); fs != nil {
+			cp := *fs
+			c = &cp
+		} else {
+			c = event.NewEmptyFieldString(charset, version)
+		}
+		if t, ok := importUS[i]; ok {
+			c.SetRegularString(t)
+		}
+		copies = append(copies, c)
+	}
+	content := event.RebuildFieldStrings(copies, charset, version)
+	header := len(copies) * 8 // first = count*8, precisa caber em uint16
+	usage.Used = header + len(content)
+	over := header > 65535 || header+len(content) > importUint16Limit
+	for _, c := range copies {
+		if c.RegularOffset > 65535 || c.SimplifiedOffset > 65535 {
+			over = true
+			break
+		}
+	}
+	usage.Over = over
+	return usage, nil
+}
+
+// importEventTableUsage é o importEventsUsage das famílias eventtable (btl,
+// cloud/cloudv, tutorial.msb): mesma tabela dos events → mesma régua uint16.
+func importEventTableUsage(kind string, version common.GameVersion, id string, imp dto.FileEntry) (dto.ImportUsage, error) {
+	usage := dto.ImportUsage{ID: id, Kind: kind, Limit: importUint16Limit}
+	f := eventtable.Get(kind, version, id)
+	if f == nil {
+		return usage, fmt.Errorf("%s: %s não encontrado", kind, id)
+	}
+	charset := ffxencoding.GetCharsetForLanguage(common.DefaultLocalization)
+	importUS := make(map[int]string, len(imp.Rows))
+	for _, r := range imp.Rows {
+		if r.Name != "" {
+			continue
+		}
+		if t := r.Text[common.DefaultLocalization]; t != "" {
+			importUS[r.Index] = t
+		}
+	}
+	copies := make([]*event.FieldString, 0, len(f.Strings))
+	for i, obj := range f.Strings {
+		if obj == nil {
+			continue
+		}
+		var c *event.FieldString
+		if fs := obj.GetLocalizedContent(common.DefaultLocalization); fs != nil {
+			cp := *fs
+			c = &cp
+		} else {
+			c = event.NewEmptyFieldString(charset, version)
+		}
+		if t, ok := importUS[i]; ok {
+			c.SetRegularString(t)
+		}
+		copies = append(copies, c)
+	}
+	content := event.RebuildFieldStrings(copies, charset, version)
+	header := len(copies) * 8
+	usage.Used = header + len(content)
+	over := header > 65535 || header+len(content) > importUint16Limit
+	for _, c := range copies {
+		if c.RegularOffset > 65535 || c.SimplifiedOffset > 65535 {
+			over = true
+			break
+		}
+	}
+	usage.Over = over
+	return usage, nil
+}
+
+// importObjectsUsage mede a string table só com o texto: para cada segmento
+// 'us', o texto do import (override por ponteiro de conteúdo) senão o da
+// store, medido por converter.StringToByteSize — que é byte a byte o que o
+// FillByteList do RebuildKeyedStrings gravaria (terminador incluso; paridade
+// coberta por teste no converter). Sem wrappers de IGlobalKeyedString, sem
+// buffer auxiliar e sem gravar arquivo. A iteração espelha o collect do
+// rebuild: RangeIndex + GetLocalizedKeyedStrings("us"), pulando nil.
+func importObjectsUsage(version common.GameVersion, id string, imp dto.FileEntry) (dto.ImportUsage, error) {
+	usage := dto.ImportUsage{ID: id, Kind: KindObjects, Limit: importUint16Limit}
+	key, ok := objectKeyForID(version, id)
+	if !ok {
+		return usage, fmt.Errorf("objeto desconhecido: %s", id)
+	}
+	layout, ok := objectsfile.FileLayouts[key]
+	if !ok {
+		return usage, fmt.Errorf("layout não encontrado: %s", key)
+	}
+	binFile, err := objectsfile.LoadObjectFileFromStoreByLayout(layout)
+	if err != nil {
+		return usage, err
+	}
+	objects := binFile.GetObjects()
+	if objects == nil || objects.Len() == 0 {
+		return usage, fmt.Errorf("sem objetos: %s", id)
+	}
+
+	charset := ffxencoding.GetCharsetForLanguage(common.DefaultLocalization)
+	overrides := make(map[datastore.IGlobalKeyedString]string, len(imp.Rows))
+	for _, r := range imp.Rows {
+		t := r.Text[common.DefaultLocalization]
+		if t == "" {
+			continue
+		}
+		obj := objects.Get(r.Index)
+		if obj == nil {
+			return usage, fmt.Errorf("objeto %d ausente", r.Index)
+		}
+		seg := obj.GetKeyedString(r.Name)
+		if seg == nil {
+			return usage, fmt.Errorf("segmento %q ausente no objeto %d", r.Name, r.Index)
+		}
+		content := seg.GetLocalizedContent(common.DefaultLocalization)
+		if content == nil {
+			return usage, fmt.Errorf("segmento %q sem conteúdo 'us' no objeto %d", r.Name, r.Index)
+		}
+		overrides[content] = t
+	}
+
+	var merr error
+	pos := 0
+	objects.RangeIndex(func(_ int, obj datastore.IGlobalLocalizedTextObject) {
+		if obj == nil || merr != nil {
+			return
+		}
+		for _, ks := range obj.GetLocalizedKeyedStrings(common.DefaultLocalization) {
+			if ks == nil {
+				continue
+			}
+			text, has := overrides[ks]
+			if !has {
+				text = ks.GetString()
+			}
+			n, err := converter.StringToByteSize(text, charset, version)
+			if err != nil {
+				merr = err
+				return
+			}
+			pos += n
+		}
+	})
+	if merr != nil {
+		return usage, merr
+	}
+	usage.Used = pos
+	// Offset de cada string é sua posição inicial < Used; Used ≤ 65536 ⟺
+	// todo offset ≤ 65535 (cada string tem ao menos o terminador).
+	usage.Over = pos > importUint16Limit
+	return usage, nil
+}
+
+// importMacroUsage reconstrói o dicionário inteiro (todos os chunks, todos os
+// idiomas) com o 'us' mesclado e mede o container 'us'. Um uso só para o
+// arquivo: o limite é por binário. O layout (header + chunks) não é derivável
+// do texto puro, por isso o rebuild real.
+//
+// O merge é contra macroFull (o dicionário COMPLETO) e não contra a store
+// parcial: medir store+store ignorava o texto importado, e a capacidade saía
+// igual à de antes do import.
+func importMacroUsage(version common.GameVersion, macroFull dto.Collection, matched map[string][]rowPair) (dto.ImportUsage, error) {
+	usage := dto.ImportUsage{Kind: KindMacro, Limit: importUint16Limit}
+	containers, err := builders.RebuildMacroContainers(version, mergeImportUs(macroFull, matched))
+	if err != nil {
+		return usage, err
+	}
+	us := containers[common.DefaultLocalization]
+	if us == nil || len(us.Bytes) == 0 {
+		return usage, fmt.Errorf("rebuild do dicionário sem conteúdo 'us'")
+	}
+	usage.Used = len(us.Bytes)
+	usage.Over = usage.Used > importUint16Limit
+	return usage, nil
+}
+
+// ---- pipeline -----------------------------------------------------------------
+
+// prepareImport executa o pipeline SEM aplicar: parse → detecção → store →
+// validação por entrada → merge do 'us' → capacidades. Erros de arquivo voltam
+// como error (toast); erros por entrada/capacidade ficam em summary.Errors.
+func (s *MetadataService) prepareImport(path string, version common.GameVersion) (*importPlan, error) {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return nil, fmt.Errorf("nenhum arquivo selecionado")
+	}
+	raw, err := common.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	if len(raw) == 0 {
+		return nil, fmt.Errorf("arquivo vazio: %s", filepath.Base(path))
+	}
+
+	var imported dto.Collection
+	format := ""
+	switch ext := strings.ToLower(filepath.Ext(path)); ext {
+	case ".json":
+		format = "json"
+		imported, err = jsonfmt.NewJSONEventsFormatter().Unmarshal(raw)
+	case ".strings":
+		format = "strings"
+		imported, err = strfmt.NewStringsFormatter().Unmarshal(raw)
+	default:
+		return nil, fmt.Errorf("extensão não suportada: %s (use .json ou .strings)", ext)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("falha ao analisar o arquivo: %w", err)
+	}
+	if len(imported) == 0 {
+		return nil, fmt.Errorf("arquivo sem entradas: %s", filepath.Base(path))
+	}
+
+	kind, err := detectImportKind(version, imported)
+	if err != nil {
+		return nil, err
+	}
+	if kind == KindHelp {
+		// Compat com artefatos antigos: rows de help antes carregavam
+		// name (text_%04d); o formato novo diferencia linhas pelo
+		// arquivo + index, e a store já está sem name — sem limpar aqui,
+		// o rowKey (index\x00name) não casaria e o import seria bloqueado.
+		stripHelpRowNames(imported)
+	}
+	if err := ensureVersionReady(version); err != nil {
+		return nil, err
+	}
+	known, macroFull, err := s.importKnownIDs(kind, version, imported)
+	if err != nil {
+		return nil, err
+	}
+	store, err := s.loadImportStore(kind, version, known, macroFull)
+	if err != nil {
+		return nil, err
+	}
+
+	summary := dto.ImportSummary{
+		Path:      path,
+		Format:    format,
+		Kind:      kind,
+		Version:   version.String(),
+		Languages: importLanguages(imported),
+		// Toda importação confirmada reconstrói e grava os binários em mods/;
+		// o aviso no modal deixa o efeito explícito antes de aplicar.
+		SavesBinary: true,
+		Entries:     make([]dto.ImportEntryInfo, 0, len(imported)),
+		Usages:      make([]dto.ImportUsage, 0, len(known)),
+		Errors:      []string{},
+	}
+
+	valid := make(dto.Collection, len(known))
+	matched := make(map[string][]rowPair, len(known))
+	var totalChanged, totalIndices int
+	for _, id := range imported.SortedKeys() {
+		imp := imported[id]
+		info := dto.ImportEntryInfo{
+			ID:         id,
+			Key:        imp.Metadata.Key,
+			IndexCount: rowIndexCount(imp.Rows),
+		}
+		totalIndices += info.IndexCount
+
+		se, ok := store[id]
+		if !ok {
+			// Único erro por entrada — o resto do import segue.
+			info.Error = "entrada não existe nesta versão"
+			summary.Errors = append(summary.Errors, fmt.Sprintf("%s: entrada não existe nesta versão", id))
+			summary.Entries = append(summary.Entries, info)
+			continue
+		}
+		info.StoreIndexCount = rowIndexCount(se.Rows)
+
+		// Referência de tags = data/ (ou o .vbf ativo). Só é consultada se
+		// houver par; nil dentro de matchImportEntry pula a checagem.
+		m := matchImportEntry(imp, se, func() map[string]string {
+			return s.originalRowTexts(kind, id, version)
+		})
+		info.ChangedTexts = m.changed
+		totalChanged += m.changed
+
+		// hash não encontrado e tag divergente: log só, nunca resumo.
+		for _, r := range m.unmatched {
+			common.LogWarning(logImportUnmatched, id, usHash(r), usText(r))
+		}
+		for _, v := range m.tagLost {
+			common.LogWarning(logImportTagLost, id, usHash(v.row), usText(v.row), v.issues)
+		}
+		common.LogInfo(logImportInserted, id, m.inserted, m.candidates)
+
+		valid[id] = se
+		matched[id] = m.pairs
+		summary.Entries = append(summary.Entries, info)
+	}
+	summary.EntryCount = len(imported)
+	summary.TotalIndices = totalIndices
+	summary.ChangedTexts = totalChanged
+
+	merged := mergeImportUs(valid, matched)
+
+	// Capacidades sobre as entradas que serão gravadas; estouro bloqueia.
+	if kind == KindMacro {
+		if len(matched) > 0 && macroFull != nil {
+			usage, uerr := importMacroUsage(version, macroFull, matched)
+			if uerr != nil {
+				summary.Errors = append(summary.Errors, fmt.Sprintf("dicionário: %s", uerr.Error()))
+			} else {
+				summary.Usages = append(summary.Usages, usage)
+				if usage.Over {
+					summary.Errors = append(summary.Errors, fmt.Sprintf(
+						"dicionário: texto excede o limite binário (%d > %d bytes)",
+						usage.Used, usage.Limit))
+				}
+			}
+		}
+	} else if kind == KindLockit || kind == KindHelp {
+		// O lockit é uma lista CRLF sem offsets uint16 nem cabeçalho; não há
+		// limite de capacidade a medir (o import grava apenas o us).
+		// O help tem ponteiros u32 com textEnd/footer recalculados no
+		// rebuild — nenhum limite uint16 a medir; a validação estrutural
+		// acontece no próprio rebuild (reader revalida ao aplicar).
+	} else {
+		for _, id := range merged.SortedKeys() {
+			var usage dto.ImportUsage
+			var uerr error
+			switch {
+			case kind == KindEvents:
+				usage, uerr = importEventsUsage(version, id, merged[id])
+			case kind == KindBattleText || kind == KindCloud || kind == KindTutorial || kind == KindMenuMain:
+				usage, uerr = importEventTableUsage(kind, version, id, merged[id])
+			default:
+				usage, uerr = importObjectsUsage(version, id, merged[id])
+			}
+			if uerr != nil {
+				summary.Errors = append(summary.Errors, fmt.Sprintf("%s: %s", id, uerr.Error()))
+				continue
+			}
+			summary.Usages = append(summary.Usages, usage)
+			if usage.Over {
+				summary.Errors = append(summary.Errors, fmt.Sprintf(
+					"%s: texto excede o limite binário (%d > %d bytes)",
+					id, usage.Used, usage.Limit))
+			}
+		}
+	}
+
+	return &importPlan{kind: kind, merged: merged, summary: summary}, nil
+}
+
+// PreviewImport parseia e valida o arquivo (sem aplicar) e devolve o resumo
+// para o modal de confirmação.
+func (s *MetadataService) PreviewImport(path string, version common.GameVersion) (dto.ImportSummary, error) {
+	plan, err := s.prepareImport(path, version)
+	if err != nil {
+		return dto.ImportSummary{}, err
+	}
+	return plan.summary, nil
+}
+
+// ImportFile reexecuta o pipeline e aplica o 'us' mesclado no binário.
+// Qualquer erro de validação/capacidade bloqueia a importação inteira.
+// Devolve quantos textos em inglês mudaram em relação à store.
+func (s *MetadataService) ImportFile(path string, version common.GameVersion) (int, error) {
+	plan, err := s.prepareImport(path, version)
+	if err != nil {
+		return 0, err
+	}
+	if len(plan.summary.Errors) > 0 {
+		return 0, fmt.Errorf("importação bloqueada por %d erro(s) de validação", len(plan.summary.Errors))
+	}
+	if len(plan.merged) == 0 {
+		return 0, fmt.Errorf("nada a importar")
+	}
+	if err := s.ApplyTextCollection(plan.kind, version, plan.merged); err != nil {
+		return 0, err
+	}
+	return plan.summary.ChangedTexts, nil
+}
+
+// ExportJSON escreve os artefatos JSON do lote em mods/edits (ids vazio =
+// tudo; langs nil/vazio = todos os idiomas). O caminho do arquivo é o mesmo
+// usado na importação (seletor nativo). O dedup do marshal é por arquivo:
+// o escopo do pedido vira o escopo do dedup (self-contained, sem refs
+// órfãs), e o nome do artefato reflete o escopo (eventsExportPath).
+func (s *MetadataService) ExportJSON(kind string, version common.GameVersion, ids, langs []string) ([]string, error) {
+	kind = strings.ToLower(strings.TrimSpace(kind))
+	if kind == KindEvents || kind == KindMacro {
+		ids = s.normalizeIDs(ids)
+	}
+	c, err := s.GetCollection(kind, version, helpExportIDs(kind, ids))
+	if err != nil {
+		return nil, err
+	}
+	c = filterExportRows(c)
+	switch kind {
+	case KindEvents:
+		path, perr := eventsExportPath(version, ids)
+		if perr != nil {
+			return nil, perr
+		}
+		p, jerr := jsonfmt.NewJSONEventsFormatter().WriteEventsFile(c, path, langs)
+		if jerr != nil {
+			return nil, jerr
+		}
+		return []string{p}, nil
+	case KindObjects:
+		if len(ids) == 0 {
+			// Export completo: UM arquivo com todas as entradas (cada uma
+			// com sua metadata.key) e dedup GLOBAL entre elas — a repetição
+			// entre arquivos de sistema sai como refs do bulk.
+			path, perr := objectsBulkPath(version)
+			if perr != nil {
+				return nil, perr
+			}
+			p, werr := jsonfmt.NewJSONObjectFormatter().WriteObjectsFile(c, path, langs)
+			if werr != nil {
+				return nil, werr
+			}
+			return []string{p}, nil
+		}
+		// Seleção: um arquivo por entrada (dedup intra-arquivo, self-contained).
+		return jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
+	case KindMacro:
+		path, perr := macroExportPath(version, ids)
+		if perr != nil {
+			return nil, perr
+		}
+		p, jerr := jsonfmt.NewJSONMacroFormatter().WriteMacroFile(c, path, langs)
+		if jerr != nil {
+			return nil, jerr
+		}
+		return []string{p}, nil
+	case KindLockit:
+		return jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
+	case KindHelp:
+		paths, jerr := jsonfmt.NewJSONHelpFormatter().WriteHelp(c, version, langs)
+		if jerr != nil {
+			return nil, jerr
+		}
+		return paths, nil
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		return jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
+	default:
+		return nil, fmt.Errorf("unknown kind: %s", kind)
+	}
+}
+
+// CountChangedTexts devolve quantas rows têm 'us' diferente entre import e
+// store (utilitário de conferência para o frontend). Sem kind/version não há
+// como achar o original em data/, então a contagem é só por hash — a
+// validação de tags acontece em prepareImport, que alimenta o resumo.
+func (s *MetadataService) CountChangedTexts(imported, store dto.Collection) int {
+	total := 0
+	for _, id := range imported.SortedKeys() {
+		se, ok := store[id]
+		if !ok {
+			continue
+		}
+		total += matchImportEntry(imported[id], se, nil).changed
+	}
+	return total
+}

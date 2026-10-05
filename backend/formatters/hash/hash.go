@@ -13,9 +13,19 @@ import (
 	xxhash "github.com/bouine-cache/xxhash/v3"
 )
 
-// RefPrefix marca hashes e referências de dedup no JSON. O DTO em memória
-// carrega hex puro; o `$` nasce e morre dentro de formatters/json.
+// RefPrefix marca hashes e referências de dedup. O DTO em memória carrega hex
+// puro com uma única exceção: a entrega de help ao frontend — o builders
+// DedupHelpDTO escreve refs "$hash" em text[us] (ocultas na tabela) e o apply
+// as resolve de volta. No formato artefato (JSON/.strings) o `$` nasce nos
+// formatters, como antes.
 const RefPrefix = "$"
+
+// MinDedupRunes é o tamanho mínimo (em runes) para um texto repetido virar
+// referência de dedup ($hash). Partículas curtas como "ok" nunca viram ref:
+// repetem-se muito e cada ocorrência pode ter tradução distinta por contexto.
+// A contagem é em runes para não miscaracterizar CJK (ex.: "你好" tem 2 runes
+// mas 6 bytes). Regra única: formatters JSON/strings e o dedup do DTO de help.
+const MinDedupRunes = 5
 
 // Sum64Hex calcula o XXH64 (seed zero) da frase e devolve hex "%016x".
 // A frase hashed é o texto raw, incluindo tags de controle.

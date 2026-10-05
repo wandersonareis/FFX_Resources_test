@@ -93,37 +93,39 @@ func TestStringToByteListAbortsOnlyOnConfig(t *testing.T) {
 	}
 }
 
-func TestPUARunesRoundTrip(t *testing.T) {
+func TestPUATokenRoundTrip(t *testing.T) {
 	restore := seedTestMaps(t)
 	defer restore()
 
-	pua := rune(0xE0B5)
-	// Fora dos mapas: bijeção PUA→código, sem erro.
-	got, err := converter.CharToBytes(pua, "us", common.GameVersionFFX)
-	if err != nil {
-		t.Fatalf("PUA rune must not error: %v", err)
-	}
-	if !reflect.DeepEqual(got, []uint{0xB5}) {
-		t.Fatalf("PUA fallback must emit slot byte: %v", got)
-	}
-	// Mapa tem prioridade sobre a bijeção.
+	// Mapa com slot duplicado: 'B' canônico em 0x51, repetido em 0x99
+	// (como ” em 0x3C e 0x95 da tabela us real).
 	ffxencoding.SetCharMap(common.GameVersionFFX, "us",
-		map[uint]rune{0x50: 'A', 0x99: pua},
-		map[rune]uint{'A': 0x50, pua: 0x99})
-	got, err = converter.CharToBytes(pua, "us", common.GameVersionFFX)
+		map[uint]rune{0x50: 'A', 0x51: 'B', 0x99: 'B'},
+		map[rune]uint{'A': 0x50, 'B': 0x51})
+
+	// Decode do slot duplicado emite {PUA:CÓDIGO:CHAR}, não o rune puro —
+	// assim o byte exato sobrevive à extração.
+	back := converter.BytesToString([]byte{0x99, 0x00}, "us", common.GameVersionFFX)
+	if back != "{PUA:99:B}" {
+		t.Fatalf("dup slot must decode to PUA token: %q", back)
+	}
+
+	// Encode do token re-emite o byte exato do slot duplicado (o código do
+	// token é autoritativo; o CHAR é informativo).
+	raw, err := converter.StringToBytes("{PUA:99:B}", "us", common.GameVersionFFX)
 	if err != nil {
-		t.Fatalf("mapped PUA must not error: %v", err)
+		t.Fatalf("PUA token must encode: %v", err)
 	}
-	if !reflect.DeepEqual(got, []uint{0x99}) {
-		t.Fatalf("mapped PUA must win over fallback: %v", got)
+	if !reflect.DeepEqual(raw, []byte{0x99}) {
+		t.Fatalf("PUA token must emit exact slot byte: %v", raw)
 	}
-	// Round-trip completo pelo mapa.
-	raw, err := converter.StringToByteList([]rune{pua}, "us", common.GameVersionFFX)
+
+	// Round-trip completo pelo próprio texto decodificado.
+	raw2, err := converter.StringToBytes(back, "us", common.GameVersionFFX)
 	if err != nil {
-		t.Fatalf("PUA list must not error: %v", err)
+		t.Fatalf("decoded token must re-encode: %v", err)
 	}
-	back := converter.BytesToString(append(raw, 0x00), "us", common.GameVersionFFX)
-	if back != string([]rune{pua}) {
-		t.Fatalf("PUA round-trip mismatch: %q", back)
+	if !reflect.DeepEqual(raw2, []byte{0x99}) {
+		t.Fatalf("decoded token must re-encode to the same byte: %v", raw2)
 	}
 }

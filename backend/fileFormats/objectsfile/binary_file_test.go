@@ -89,7 +89,7 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 		interactions.NewInteractionServiceWithConfig(config)
 		Expect(common.GameFilesRoot).To(Equal(gameDir))
 
-		Expect(reader.InitializeInternals()).To(Succeed())
+		Expect(reader.InitializeInternals(version)).To(Succeed())
 
 		return tmpRoot
 	}
@@ -142,6 +142,26 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 		Expect(err).ToNot(HaveOccurred())
 		outBytes, err := os.ReadFile(outPath)
 		Expect(err).ToNot(HaveOccurred())
+
+		if hasDuplicateUSStrings(binFile) {
+			// Dedup de offsets (RebuildKeyedStrings): arquivo com strings
+			// repetidas compila MENOR (bytes compartilhados) — o oráculo
+			// aqui é o CONTEÚDO re-lido, não o SHA. O fixture é cópia em
+			// diretório temporário: sobrescrever aqui é seguro.
+			Expect(len(outBytes)).To(BeNumerically("<=", len(origBytes)))
+			Expect(os.WriteFile(filepath.Join(gameDir, rel), outBytes, 0o644)).To(Succeed())
+			reloaded := tc.read(tc.pattern, version)
+			Expect(reloaded).NotTo(BeNil())
+			Expect(reloaded.GetObjects().Len()).To(Equal(binFile.GetObjects().Len()))
+			origItems := binFile.GetObjects().Items()
+			reItems := reloaded.GetObjects().Items()
+			for i := range origItems {
+				Expect(reItems[i].ToString(common.DefaultLocalization)).
+					To(Equal(origItems[i].ToString(common.DefaultLocalization)),
+						"text mismatch at index %d", i)
+			}
+			return
+		}
 
 		Expect(sha256.Sum256(outBytes)).To(Equal(sha256.Sum256(origBytes)))
 	}

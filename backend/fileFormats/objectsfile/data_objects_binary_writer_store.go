@@ -27,19 +27,19 @@ func SaveBinaryFileStore(b *ObjectBinaryFileStore, filePath string) error {
 			return err
 		}
 
-		if err := writeBinaryLocalizedFileStore(b, b.Version, localizationKey, filePath, buf.Bytes()); err != nil {
+		if err := writeBinaryLocalizedFileStore(b, b.Version, localizationKey, buf.Bytes()); err != nil {
 			return err
 		}
 		lastBuf = buf.Bytes()
 	}
 
-	return common.WriteBytesToFile(filePath, lastBuf)
+	return writeExtraCopy(filePath, lastBuf)
 }
 
 func encodeBinaryLanguageStore(b *ObjectBinaryFileStore, localizationKey string) (*bytes.Buffer, error) {
 	keyedStrings := collectBinaryKeyedStringsStore(b, localizationKey)
 	charset := ffxencoding.GetCharsetForLanguage(localizationKey)
-	stringBytes := RebuildKeyedStrings(keyedStrings, charset, b.Version)
+	stringBytes := RebuildKeyedStrings(keyedStrings, charset, b.Version, b.StringBytes)
 
 	buf := bytes.NewBuffer(make([]byte, 0, b.Header.GetDataLength()+len(stringBytes)+0x20))
 
@@ -73,16 +73,18 @@ func collectBinaryKeyedStringsStore(b *ObjectBinaryFileStore, localizationKey st
 			if ks != nil {
 				all = append(all, ks)
 			} else {
-				common.LogVerbose("Keyed string is nil for object at index %d", obj.GetName(common.DefaultLocalization))
+				common.LogVerbose("Keyed string is nil for object %q", obj.GetName(common.DefaultLocalization))
 			}
 		}
 	})
 	return all
 }
 
-func writeBinaryLocalizedFileStore(b *ObjectBinaryFileStore, version common.GameVersion, localizationKey, filePath string, data []byte) error {
-	_ = b
-	localePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, common.GetLocalizationRootForVersion(version, localizationKey), filePath)
+func writeBinaryLocalizedFileStore(b *ObjectBinaryFileStore, version common.GameVersion, localizationKey string, data []byte) error {
+	// A cópia na árvore de mods espelha a localização canônica do arquivo
+	// (patternPath) — nunca o filePath do chamador, que pode ser absoluto
+	// (ex.: testes gravando em temp dir) e não deve ser embutido no join.
+	localePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, common.GetLocalizationRootForVersion(version, localizationKey), b.patternPath)
 	localePath = filepath.FromSlash(localePath)
 
 	dir := filepath.Dir(localePath)

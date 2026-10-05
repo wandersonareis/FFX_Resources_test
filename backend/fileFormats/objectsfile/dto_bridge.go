@@ -52,6 +52,21 @@ type orderedFieldKeys interface {
 	OrderedFieldKeys() []string
 }
 
+// FieldKeys devolve a ordem dos campos textuais do objeto: o layout quando o
+// tipo o expõe (orderedFieldKeys), a ordem canônica de staticFields quando
+// não expõe. É a MESMA escolha que ExportFieldTexts faz — separar "o que o
+// objeto tem" de "o que tem texto" é o que a guarda do ponteiro precisa
+// enxergar (um ref quebrado não aparece no export, mas existe no objeto).
+func FieldKeys(obj datastore.IGlobalLocalizedTextObject) []string {
+	if obj == nil {
+		return nil
+	}
+	if ordered, ok := obj.(orderedFieldKeys); ok {
+		return ordered.OrderedFieldKeys()
+	}
+	return staticFieldKeys()
+}
+
 // ExportFieldTexts flatteniza todos os campos textuais do objeto na ordem do
 // layout (ordem em que os textos aparecem no arquivo), para que o tradutor
 // leia os campos na mesma sequência do jogo. Campos vazios/ausentes são
@@ -61,10 +76,7 @@ func ExportFieldTexts(obj datastore.IGlobalLocalizedTextObject) []FieldText {
 		return nil
 	}
 	langs := sortedLangs()
-	keys := staticFieldKeys()
-	if ordered, ok := obj.(orderedFieldKeys); ok {
-		keys = ordered.OrderedFieldKeys()
-	}
+	keys := FieldKeys(obj)
 	var out []FieldText
 	for _, key := range keys {
 		if texts := collectTexts(obj.GetKeyedString(key), langs); len(texts) > 0 {

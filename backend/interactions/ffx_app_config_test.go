@@ -124,3 +124,33 @@ func TestSetLocationPersistsImmediately(t *testing.T) {
 		t.Fatalf("persisted TranslateLocation = %q, want %q", got, custom)
 	}
 }
+
+// O seletor de arquivo e o campo de configuração só aceitam os DOIS
+// executáveis do jogo: sem curinga *.exe e sem qualquer .exe do disco. ""
+// (limpar) continua válido e mantém a árvore VBF desligada.
+func TestNormalizeGameExe_SoAceitaFFXeFFX2(t *testing.T) {
+	cases := []struct {
+		in     string
+		want   string
+		wantOK bool
+	}{
+		{"", "", true},
+		{"   ", "", true},
+		{`D:\Jogo\FFX.exe`, `D:\Jogo\FFX.exe`, true},
+		{`D:\Jogo\ffx-2.exe`, `D:\Jogo\ffx-2.exe`, true},
+		{`D:\Jogo\FFX-2.EXE`, `D:\Jogo\FFX-2.EXE`, true},
+		{"FFX.exe", "FFX.exe", true},
+		{`D:\Jogo\explorer.exe`, "", false},
+		{`D:\Jogo\FFX2.exe`, "", false},
+		{`D:\Jogo\FFX-2 (1).exe`, "", false},
+		{`D:\Jogo\*.exe`, "", false},
+		{`D:\Jogo\FFX.exe.bak`, "", false},
+	}
+	for _, c := range cases {
+		got, ok := NormalizeGameExe(c.in)
+		if ok != c.wantOK || got != c.want {
+			t.Errorf("NormalizeGameExe(%q) = (%q, %v), want (%q, %v)",
+				c.in, got, ok, c.want, c.wantOK)
+		}
+	}
+}

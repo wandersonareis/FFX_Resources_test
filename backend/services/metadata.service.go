@@ -10,21 +10,41 @@ import (
 
 	"ffxresources/backend/builders"
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/progress"
 	"ffxresources/backend/core/reader"
+	"ffxresources/backend/datastore"
 	"ffxresources/backend/dto"
+	"ffxresources/backend/fileFormats/ddsphyre"
 	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/fileFormats/eventtable"
+	"ffxresources/backend/fileFormats/helpfile"
+	"ffxresources/backend/fileFormats/lockit"
 	"ffxresources/backend/fileFormats/macrodic"
 	"ffxresources/backend/fileFormats/objectsfile"
 	jsonfmt "ffxresources/backend/formatters/json"
 	strfmt "ffxresources/backend/formatters/strings"
 )
 
-// Kinds lógicos de texto servidos ao frontend.
+// Kinds lógicos servidos ao frontend: textos e imagens (.dds.phyre).
 const (
-	KindEvents  = "events"
-	KindObjects = "objects"
-	KindMacro   = "macro"
+	KindEvents     = "events"
+	KindObjects    = "objects"
+	KindMacro      = "macro"
+	KindLockit     = "lockit"
+	KindHelp       = "help"
+	KindBattleText = "battletext"
+	KindCloud      = "cloud"
+	KindTutorial   = "tutorial"
+	KindMenuMain   = "menumain"
+	// KindImages é a árvore de texturas .dds.phyre — um kind de IMAGEM:
+	// não tem rows de texto, não participa de export/import de texto e não
+	// entra no preload de coleções.
+	KindImages = "images"
 )
+
+// LastMissionShortened é o prefixo (eventID[:2]) do grupo de events da
+// Last Mission, que mora na árvore do ffx2: "lm".
+const LastMissionShortened = "lm"
 
 // EntrySummary é o índice leve para sidebar/tree: id + key, sem rows.
 // row_count aparece nas entradas (GetEntry/GetCollection), nunca aqui.
@@ -39,6 +59,125 @@ type EntrySummary struct {
 // continua intocado; este service é o "formato frontend".
 type MetadataService struct {
 	notifier INotificationService
+}
+
+// dedupViewKinds são os kinds cujo view (GetEntry) sai com dedup global
+// da versão — os formatos que agrupam texto numa única extração, onde as
+// repetições cruzam arquivos: help (arquivo único com os 6 painéis),
+// events (eventos gêmeos com repetição maciça) e macro (dicionário único
+// em um artefato). objects é extração 1:1 por arquivo — dedup intra-arquivo
+// no GetEntry, refs não propagam entre objetos.
+var dedupViewKinds = map[string]bool{
+	KindHelp:       true,
+	KindEvents:     true,
+	KindMacro:      true,
+	KindBattleText: true,
+	KindCloud:      true,
+	KindTutorial:   true,
+	KindMenuMain:   true,
+}
+
+type rawView struct {
+	collection dto.Collection
+	order      *builders.HashOrder
+}
+
+// Cache do cru por (versão|kind): o dedup global exige construir a versão
+// inteira (events: 45MB no ffx2) — construído uma única vez por carga e
+// invalidado por qualquer escrita (apply/import altera o store).
+//
+// Guarda o estado CRU (sem refs) + a ordem global dos ponteiros (HashOrder):
+// o dedup de display acontece POR ENTRADA em GetEntry — depois do merge com
+// o original, que é quem decide "traduzido" (Text vs Original) e reescreve
+// o ponteiro.
+var (
+	dedupViewMu    sync.Mutex
+	dedupViewCache = map[string]rawView{}
+)
+
+func (s *MetadataService) rawViewOf(kind string, version common.GameVersion) (rawView, error) {
+	key := version.String() + "|" + kind
+	dedupViewMu.Lock()
+	defer dedupViewMu.Unlock()
+	if v, ok := dedupViewCache[key]; ok {
+		return v, nil
+	}
+	full, err := s.GetCollection(kind, version, nil)
+	if err != nil {
+		return rawView{}, err
+	}
+	normalized := s.normalizeCollection(kind, version, full)
+	v := rawView{collection: normalized, order: builders.NewHashOrder(normalized)}
+	dedupViewCache[key] = v
+	return v, nil
+}
+
+// normalizeCollection devolve a Collection com os ponteiros normalizados
+// para o domínio display: entradas com binário em mods/ são merged com o
+// original (ponteiro = hash do original); as sem mods são não traduzidas
+// e o ponteiro de mods JÁ É o do original (mesmo conteúdo ⇒ mesmo XXH64).
+//
+// O trabalho é PARALELO a nível de arquivo: um worker por entrada executa
+// stat + leitura do original + merge + comparação de rows (todos os loops
+// internos sincronos), coletando o relatório de divergência; a emissão dos
+// avisos acontece DEPOIS do pool, em ordem canônica de chave.
+func (s *MetadataService) normalizeCollection(kind string, version common.GameVersion, c dto.Collection) dto.Collection {
+	keys := c.SortedKeys()
+	type normalized struct {
+		key   string
+		entry dto.FileEntry
+		diag  divergeDiag
+	}
+	results := make([]normalized, len(keys))
+	parallelFor(len(keys), func(i int) {
+		k := keys[i]
+		ref := entryRef{kind: kind, id: k, version: version}
+		entry := c[k]
+		if !hasModsFile(kind, k, version) {
+			results[i] = normalized{key: k, entry: entry}
+			return
+		}
+		if inData, _ := originalTrees(kind, k, version); !inData {
+			results[i] = normalized{key: k, entry: entry}
+			return
+		}
+		orig, exists, oerr := s.originalFor(kind, k, version)
+		if oerr != nil || !exists {
+			results[i] = normalized{key: k, entry: entry}
+			return
+		}
+		merged, diag := withOriginal(ref, entry, orig)
+		results[i] = normalized{key: k, entry: merged, diag: diag}
+	})
+
+	out := make(dto.Collection, len(c))
+	for i := range results {
+		out[results[i].key] = results[i].entry
+	}
+	// Emissão em ordem canônica: os workers apenas coletam; o arquivo de
+	// diagnóstico fica determinístico.
+	for i := range results {
+		logDivergence(results[i].diag)
+	}
+	return out
+}
+
+// clearDedupViewCache invalida o cru em cache: o store mudou (apply ou
+// import), e os ponteiros/ordem precisam ser reconstruídos na próxima
+// entrega. O original pristine (data/) acompanha: os dois caches descrevem
+// a MESMA árvore de gamefiles, então caem juntos.
+//
+// A sessão de .vbf cai também: uma escrita em mods/ muda o texto que a
+// sessão serviu (cópia traduzida vira literal na próxima carga) — o
+// carimbo por arquivo pegaria o arquivo próprio, mas o def de outro
+// arquivo carregado seguiria velho. Perder o decode cache é o preço da
+// frescura; re-decodificar é o comportamento original do fluxo por clique.
+func clearDedupViewCache() {
+	dedupViewMu.Lock()
+	dedupViewCache = map[string]rawView{}
+	dedupViewMu.Unlock()
+	clearOriginalCache()
+	vbfSessionResetAll()
 }
 
 func NewMetadataService(notifier INotificationService) *MetadataService {
@@ -133,8 +272,14 @@ func (s *MetadataService) resolveID(id string) (string, string, bool, error) {
 	if _, ok := dto.ChunkIndexFromID(id); ok {
 		return common.VersionPathName(cur) + "/menu/macrodic.dcp", id, false, nil
 	}
+	if helpfile.IsHelpEntry(id) {
+		return dto.NewHelpMetadata(id, "help/"+helpfile.HelpEntryDir(id), cur).Key, id, false, nil
+	}
 	if key, ok := objectKeyForID(cur, id); ok {
 		return key, id, false, nil
+	}
+	if l, ok := lockit.LayoutForID(cur, id); ok {
+		return l.Key(), id, false, nil
 	}
 	if len(id) < 2 {
 		return "", "", false, fmt.Errorf("unknown id: %s", id)
@@ -162,9 +307,23 @@ func (s *MetadataService) resolvePath(q string) (string, string, bool, error) {
 		version = v
 	}
 	slash := filepath.ToSlash(abs)
+	if lockit.IsLockitKey(slash) {
+		base := filepath.Base(slash)
+		stem := strings.TrimSuffix(base, filepath.Ext(base))
+		for _, l := range lockit.LayoutsForVersion(version) {
+			if strings.HasPrefix(stem, l.ID()) {
+				return l.Key(), l.ID(), false, nil
+			}
+		}
+		return "", "", false, fmt.Errorf("lockit path desconhecido: %s", q)
+	}
 	locPattern, ok := localizationPatternFromPath(slash)
 	if !ok {
 		return "", "", false, fmt.Errorf("path is not under a localization root: %s", q)
+	}
+	if strings.HasPrefix(locPattern, helpfile.HelpDirPrefix+"/") && strings.HasSuffix(locPattern, helpfile.HelpFileExt) {
+		stem := strings.TrimSuffix(filepath.Base(locPattern), filepath.Ext(locPattern))
+		return common.VersionPathName(version) + "/" + locPattern, stem, false, nil
 	}
 	key := common.VersionPathName(version) + "/" + locPattern
 	id := strings.TrimSuffix(filepath.Base(locPattern), filepath.Ext(locPattern))
@@ -188,6 +347,17 @@ func localizationPatternFromPath(slashAbs string) (string, bool) {
 	return strings.Join(segs[1:], "/"), true
 }
 
+// exportProgress emite o progresso do export por entrada: Begin com o
+// total de entradas da Collection e Step por key — os formatters chamam
+// progress.Step no loop de serialização; o defer fecha o ciclo.
+func exportProgress(kind string, version common.GameVersion, c dto.Collection) func() {
+	label := fmt.Sprintf("Exportando %s (%s)…", kind, version)
+	progress.Begin(label, len(c))
+	return func() {
+		progress.End()
+	}
+}
+
 // objectKeyForID procura nos layouts a key do basename (determinístico).
 func objectKeyForID(version common.GameVersion, id string) (string, bool) {
 	want := id + ".bin"
@@ -209,10 +379,26 @@ func objectKeyForID(version common.GameVersion, id string) (string, bool) {
 // caminhos escritos. langs nil/vazio = todos os idiomas.
 func (s *MetadataService) ExportEntry(kind string, version common.GameVersion, id string, langs []string) ([]string, error) {
 	kind = strings.ToLower(strings.TrimSpace(kind))
-	c, err := s.GetCollection(kind, version, []string{id})
+	// help: o artefato é único e SEMPRE cobre os 6 painéis (as defs do dedup
+	// só resolvem com todos os arquivos no mesmo arquivo) — a seleção da
+	// árvore é validada e ignorada.
+	ids := []string{id}
+	if kind == KindHelp {
+		if !helpfile.IsHelpEntry(id) {
+			return nil, fmt.Errorf("painel de ajuda desconhecido: %s", id)
+		}
+		ids = helpfile.HelpEntryNames()
+	}
+	c, err := s.GetCollection(kind, version, ids)
 	if err != nil {
 		return nil, err
 	}
+	// Menu de contexto exportou com hifen: o filtro de rows em branco
+	// ('us' vazio/espaço/"-") vale para TODO artefato — mesmo contrato de
+	// ExportJSON/ExportStrings. Antes do exportProgress: a barra conta só
+	// o que sai.
+	c = filterExportRows(c)
+	defer exportProgress(kind, version, c)()
 
 	var paths []string
 	switch kind {
@@ -237,15 +423,51 @@ func (s *MetadataService) ExportEntry(kind string, version common.GameVersion, i
 		}
 		paths = append(append(paths, jps...), sps...)
 	case KindMacro:
-		jp, jerr := jsonfmt.NewJSONMacroFormatter().WriteMacro(c, version, langs)
+		// Chunk selecionado não pode sobrescrever o artefato canônico
+		// (macro_dictionary): o naming segue o escopo do pedido.
+		path, perr := macroExportPath(version, []string{id})
+		if perr != nil {
+			return nil, perr
+		}
+		jp, jerr := jsonfmt.NewJSONMacroFormatter().WriteMacroFile(c, path, langs)
 		if jerr != nil {
 			return paths, jerr
 		}
-		sp, serr := strfmt.NewStringsFormatter().WriteMacro(c, version, langs)
+		sp, serr := strfmt.NewStringsFormatter().WriteMacroFile(c, strfmt.StringsPathFor(path), langs)
 		if serr != nil {
 			return paths, serr
 		}
 		paths = append(paths, jp, sp)
+	case KindLockit:
+		jps, jerr := jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
+		if jerr != nil {
+			return paths, jerr
+		}
+		sps, serr := strfmt.NewStringsFormatter().WriteObjects(c, version, langs)
+		if serr != nil {
+			return paths, serr
+		}
+		paths = append(append(paths, jps...), sps...)
+	case KindHelp:
+		jps, jerr := jsonfmt.NewJSONHelpFormatter().WriteHelp(c, version, langs)
+		if jerr != nil {
+			return paths, jerr
+		}
+		sps, serr := strfmt.NewStringsFormatter().WriteHelp(c, version, langs)
+		if serr != nil {
+			return paths, serr
+		}
+		paths = append(append(paths, jps...), sps...)
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		jps, jerr := jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
+		if jerr != nil {
+			return paths, jerr
+		}
+		sps, serr := strfmt.NewStringsFormatter().WriteObjects(c, version, langs)
+		if serr != nil {
+			return paths, serr
+		}
+		paths = append(append(paths, jps...), sps...)
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
@@ -253,8 +475,10 @@ func (s *MetadataService) ExportEntry(kind string, version common.GameVersion, i
 }
 
 // ImportEntry lê o artefato JSON padrão da entrada (mods/edits) e aplica o DTO
-// de volta no binário, persistindo. Devolve o caminho lido.
+// de volta no binário, persistindo. Devolve o caminho lido. Escrita muda o
+// store: o view dedupado (cache por versão) é invalidado.
 func (s *MetadataService) ImportEntry(kind string, version common.GameVersion, id string) ([]string, error) {
+	clearDedupViewCache()
 	kind = strings.ToLower(strings.TrimSpace(kind))
 	if err := ensureVersionReady(version); err != nil {
 		return nil, err
@@ -312,14 +536,67 @@ func (s *MetadataService) ImportEntry(kind string, version common.GameVersion, i
 		}
 		return []string{path}, nil
 
+	case KindLockit:
+		path, err := jsonfmt.ObjectsJSONPath(id, version)
+		if err != nil {
+			return nil, err
+		}
+		read, err := jsonfmt.NewJSONObjectFormatter().ReadObjects(path)
+		if err != nil {
+			return nil, err
+		}
+		if err := builders.ApplyLockitDTO(version, read); err != nil {
+			return nil, err
+		}
+		return []string{path}, nil
+
+	case KindHelp:
+		if err := ensureHelpLoaded(version); err != nil {
+			return nil, err
+		}
+		// Artefato único de help: lê mods/edits e aplica as entradas nele
+		// presentes — o arquivo é a unidade de import (sem agrupamento).
+		if !helpfile.IsHelpEntry(id) {
+			return nil, fmt.Errorf("painel de ajuda desconhecido: %s", id)
+		}
+		path, err := jsonfmt.HelpJSONPath(version)
+		if err != nil {
+			return nil, err
+		}
+		read, err := jsonfmt.NewJSONHelpFormatter().ReadHelp(path)
+		if err != nil {
+			return nil, err
+		}
+		stripHelpRowNames(read)
+		if err := builders.ApplyHelpDTO(version, read, read.SortedKeys()); err != nil {
+			return nil, err
+		}
+		return []string{path}, nil
+
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		path, err := jsonfmt.ObjectsJSONPath(id, version)
+		if err != nil {
+			return nil, err
+		}
+		read, err := jsonfmt.NewJSONObjectFormatter().ReadObjects(path)
+		if err != nil {
+			return nil, err
+		}
+		if err := builders.ApplyTableDTO(kind, version, read); err != nil {
+			return nil, err
+		}
+		return []string{path}, nil
+
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
 }
 
 // ApplyEntry aplica uma entrada editada (DTO) de volta no binário e persiste.
-// É o "salvar" do editor in-memory (Ver/Editar).
+// É o "salvar" do editor in-memory (Ver/Editar). Escrita muda o store: o
+// view dedupado (cache por versão) é invalidado.
 func (s *MetadataService) ApplyEntry(kind string, version common.GameVersion, id string, entry dto.FileEntry) error {
+	clearDedupViewCache()
 	kind = strings.ToLower(strings.TrimSpace(kind))
 	if err := ensureVersionReady(version); err != nil {
 		return err
@@ -341,6 +618,18 @@ func (s *MetadataService) ApplyEntry(kind string, version common.GameVersion, id
 		}
 		c[id] = entry
 		return builders.ApplyMacroDTO(version, c)
+	case KindLockit:
+		return builders.ApplyLockitDTO(version, dto.Collection{id: entry})
+	case KindHelp:
+		if err := ensureHelpLoaded(version); err != nil {
+			return err
+		}
+		return builders.ApplyHelpDTO(version, dto.Collection{id: entry}, []string{id})
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		if !eventtableKindUsable(kind, version) {
+			return nil
+		}
+		return builders.ApplyTableDTO(kind, version, dto.Collection{id: entry})
 	default:
 		return fmt.Errorf("unknown kind: %s", kind)
 	}
@@ -361,7 +650,9 @@ func macroChunkHasText(entry dto.FileEntry) bool {
 // ApplyTextCollection aplica um lote de entradas editadas (DTO) e persiste.
 // É o "salvar" do editor do frontend: recebe só as entradas com edição, mas
 // agrupa por arquivo para reconstruir cada binário uma única vez.
+// Escrever muda o store: o view dedupado (cache por versão) é invalidado.
 func (s *MetadataService) ApplyTextCollection(kind string, version common.GameVersion, c dto.Collection) error {
+	clearDedupViewCache()
 	kind = strings.ToLower(strings.TrimSpace(kind))
 	if len(c) == 0 {
 		return nil
@@ -375,49 +666,14 @@ func (s *MetadataService) ApplyTextCollection(kind string, version common.GameVe
 		if err := ensureEventsLoaded(version); err != nil {
 			return err
 		}
-		ids := make([]string, 0, len(c))
-		for _, id := range c.SortedKeys() {
-			ids = append(ids, id)
-		}
-		return builders.ApplyEventsDTO(version, c, ids)
+		return builders.ApplyEventsDTO(version, c, c.SortedKeys())
 
 	case KindObjects:
 		// Aplica as rows de todas as entradas antes de salvar cada binário:
 		// entradas repetidas (mesmo arquivo) recebem todas as suas rows.
-		byKey := make(map[string][]dto.FileEntry, len(c))
-		order := make([]string, 0, len(c))
-		for _, id := range c.SortedKeys() {
-			key, ok := objectKeyForID(version, id)
-			if !ok {
-				return fmt.Errorf("unknown object id: %s", id)
-			}
-			if _, seen := byKey[key]; !seen {
-				order = append(order, key)
-			}
-			byKey[key] = append(byKey[key], c[id])
-		}
-		for _, key := range order {
-			layout, ok := objectsfile.FileLayouts[key]
-			if !ok {
-				layout, ok = objectsfile.FileLayoutFor(version, key)
-				if !ok {
-					return fmt.Errorf("no object layout for key: %s", key)
-				}
-			}
-			binFile, err := objectsfile.LoadObjectFileFromStoreByLayout(layout)
-			if err != nil {
-				return err
-			}
-			for _, entry := range byKey[key] {
-				if err := builders.ApplyObjectsEntry(binFile.GetObjects(), version, key, entry); err != nil {
-					return err
-				}
-			}
-			if err := binFile.SaveToBinary(layout.PatternPath()); err != nil {
-				return err
-			}
-		}
-		return nil
+		return applyObjectsCollection(version, c, func(layout objectsfile.FileLayout) (datastore.IBinaryFile, error) {
+			return objectsfile.LoadObjectFileFromStoreByLayout(layout)
+		})
 
 	case KindMacro:
 		// Aplica sobre o DTO completo para não perder os outros chunks.
@@ -425,14 +681,91 @@ func (s *MetadataService) ApplyTextCollection(kind string, version common.GameVe
 		if err != nil {
 			return err
 		}
-		for id, entry := range c {
-			full[id] = entry
+		return applyMacroCollection(version, full, c)
+
+	case KindLockit:
+		return builders.ApplyLockitDTO(version, c)
+
+	case KindHelp:
+		if err := ensureHelpLoaded(version); err != nil {
+			return err
 		}
-		return builders.ApplyMacroDTO(version, full)
+		return builders.ApplyHelpDTO(version, c, c.SortedKeys())
+
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		if !eventtableKindUsable(kind, version) {
+			return nil
+		}
+		return builders.ApplyTableDTO(kind, version, c)
 
 	default:
 		return fmt.Errorf("unknown kind: %s", kind)
 	}
+}
+
+// applyObjectsCollection agrupa o lote por binário, aplica as rows de cada
+// entrada e salva cada binário tocado em mods/ (o pattern path do layout é
+// relativo: o SaveToBinary só grava a árvore mods).
+//
+// loadBin escolhe de onde vem o binário EM MEMÓRIA: o store de data/
+// (mods-first) no fluxo normal, ou o objeto decodificado da sessão quando o
+// arquivo veio do .vbf. A fonte é o único ponto que muda — a gravação é
+// sempre em mods/.
+func applyObjectsCollection(version common.GameVersion, c dto.Collection, loadBin func(layout objectsfile.FileLayout) (datastore.IBinaryFile, error)) error {
+	byKey := make(map[string][]dto.FileEntry, len(c))
+	order := make([]string, 0, len(c))
+	for _, id := range c.SortedKeys() {
+		key, ok := objectKeyForID(version, id)
+		if !ok {
+			return fmt.Errorf("unknown object id: %s", id)
+		}
+		if _, seen := byKey[key]; !seen {
+			order = append(order, key)
+		}
+		byKey[key] = append(byKey[key], c[id])
+	}
+	for _, key := range order {
+		layout, ok := objectsfile.FileLayouts[key]
+		if !ok {
+			layout, ok = objectsfile.FileLayoutFor(version, key)
+			if !ok {
+				return fmt.Errorf("no object layout for key: %s", key)
+			}
+		}
+		binFile, err := loadBin(layout)
+		if err != nil {
+			return err
+		}
+		for _, entry := range byKey[key] {
+			if err := builders.ApplyObjectsEntry(binFile.GetObjects(), version, key, entry); err != nil {
+				return err
+			}
+		}
+		if err := binFile.SaveToBinary(layout.PatternPath()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// applyMacroCollection sobrepõe o lote no dicionário COMPLETO e reconstrói
+// os binários (→ mods/). full vem da fonte da sessão: o dicionário inteiro
+// do .vbf no fluxo de container, o do store em data/. Refs "$hash" do
+// payload (view dedupado) resolvem contra as defs do dicionário inteiro —
+// nunca são gravadas literais no rebuild.
+//
+// A base entra em uma cópia rasa: ela pode ser o dicionário GUARDADO na
+// sessão de .vbf, e um rebuild que falhe no meio não pode deixar sujeira
+// no estado (a próxima carga pegaria um dicionário pela metade).
+func applyMacroCollection(version common.GameVersion, full, c dto.Collection) error {
+	base := make(dto.Collection, len(full)+len(c))
+	for id, entry := range full {
+		base[id] = entry
+	}
+	for id, entry := range c {
+		base[id] = entry
+	}
+	return builders.ApplyMacroDTO(version, builders.ResolveDedupRefs(base))
 }
 
 // applyObjectsEntry carrega o binário do layout, aplica a entrada e salva.
@@ -460,6 +793,31 @@ func (s *MetadataService) applyObjectsEntry(version common.GameVersion, id strin
 
 // ---- texto em memória (DTO estruturado, sem disco) --------------------------
 
+// filterEventIDsForVersion aplica a régua de events por versão, porque o
+// lastmiss é expansão do ffx2 e lê a MESMA árvore de eventos:
+//   - ffx2: esconde o grupo "lm" — é conteúdo de Last Mission;
+//   - lastmiss: mostra só o grupo "lm" (lmdn*/lmev*/lmtuto*/lmys*);
+//   - ffx: inalterado (o "lm" do FFX, lmyt*, é texto dessa versão).
+func filterEventIDsForVersion(ids []string, version common.GameVersion) []string {
+	if version != common.GameVersionFFX2 && version != common.GameVersionLastMiss {
+		return ids
+	}
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		isLM := len(id) >= 2 && strings.EqualFold(id[:2], LastMissionShortened)
+		if version == common.GameVersionLastMiss {
+			if isLM {
+				out = append(out, id)
+			}
+			continue
+		}
+		if !isLM {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
 // ListEntries devolve o índice leve (id + key, sem rows) para montar
 // sidebar/tree. Barato por design: não carrega binários de objects.
 func (s *MetadataService) ListEntries(kind string, version common.GameVersion) ([]EntrySummary, error) {
@@ -471,12 +829,17 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 		if err := ensureEventsLoaded(version); err != nil {
 			return nil, err
 		}
-		ids := event.GetAllEventIDs(version)
+		ids := filterEventIDsForVersion(event.GetAllEventIDs(version), version)
 		sort.Strings(ids)
 		out := make([]EntrySummary, 0, len(ids))
 		for _, id := range ids {
 			out = append(out, EntrySummary{ID: id, Key: dto.NewEventMetadata(id, version).Key})
 		}
+
+		// Inventário de arquivos em paralelo (stat por arquivo) + varredura
+		// dos sobras em mods/ (evento só em mods é invisível na árvore: a
+		// descoberta é data-driven — só o log denuncia).
+		s.emitTreeDiag(KindEvents, version, ids, modsOnlyFilesForEvents(version))
 		return out, nil
 	case KindObjects:
 		var keys []string
@@ -486,17 +849,35 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 			}
 		}
 		sort.Strings(keys)
+		allIDs := make([]string, 0, len(keys))
 		out := make([]EntrySummary, 0, len(keys))
 		for _, key := range keys {
 			layout := objectsfile.FileLayouts[key]
 			id := strings.TrimSuffix(layout.FileName, filepath.Ext(layout.FileName))
+			allIDs = append(allIDs, id)
+			if !originalExists(KindObjects, id, version) {
+				common.LogWarning(
+					"objects %s/%s: sem original em data/ — omitido da árvore (arquivo só em mods/)",
+					version, id,
+				)
+				continue
+			}
 			out = append(out, EntrySummary{ID: id, Key: key})
 		}
+		s.emitTreeDiag(KindObjects, version, allIDs, nil)
 		return out, nil
 	case KindMacro:
-		c, err := builders.BuildMacroDTO(version)
+		if version == common.GameVersionLastMiss {
+			// Last Mission não tem dicionário próprio: não servir os chunks
+			// do macrodic de FFX-2 (apenas retorna vazio, sem erro).
+			return []EntrySummary{}, nil
+		}
+		// A árvore é definida por data/: o dicionário existe em data/ ou
+		// não existe. O que só estiver em mods/ não é exibido (regra 4).
+		c, err := builders.BuildMacroDTOFromSource(version, common.SourceData)
 		if err != nil {
-			return nil, err
+			common.LogWarning("macro %s: sem original em data/ — árvore vazia: %v", version, err)
+			return []EntrySummary{}, nil
 		}
 		out := make([]EntrySummary, 0, len(c))
 		for _, k := range c.SortedKeys() {
@@ -506,6 +887,127 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 			}
 			out = append(out, EntrySummary{ID: k, Key: c[k].Metadata.Key})
 		}
+		s.emitTreeDiag(KindMacro, version, c.SortedKeys(), nil)
+		return out, nil
+	case KindLockit:
+		layouts := lockit.LayoutsForVersion(version)
+		ids := make([]string, 0, len(layouts))
+		out := make([]EntrySummary, 0, len(layouts))
+		for _, l := range layouts {
+			ids = append(ids, l.ID())
+			if !originalExists(KindLockit, l.ID(), version) {
+				common.LogWarning(
+					"lockit %s/%s: sem original em data/ — omitido da árvore (arquivo só em mods/)",
+					version, l.ID(),
+				)
+				continue
+			}
+			out = append(out, EntrySummary{ID: l.ID(), Key: l.Key()})
+		}
+		s.emitTreeDiag(KindLockit, version, ids, nil)
+		return out, nil
+	case KindImages:
+		if version == common.GameVersionLastMiss {
+			// Last Mission não tem árvore própria: divide a do ffx2, mas os
+			// .dds.phyre vivem só no ffx2 — vazio, como macro/lockit.
+			return []EntrySummary{}, nil
+		}
+		ids, onlyMods, fallback, err := ddsphyre.Scan(version)
+		if err != nil {
+			return nil, err
+		}
+		if len(ids) == 0 {
+			return []EntrySummary{}, nil
+		}
+		if fallback {
+			// data/ não foi extraído do FFX_Data.vbf: a árvore saiu de
+			// mods/, então originalExists é sempre false — serve sem filtro
+			// e denuncia uma única vez, em vez de 2 mil WARNs (regra 4).
+			common.LogWarning(
+				"images %s: nenhum .dds.phyre em data/ — árvore montada com %d texturas de mods/ (extraia o FFX_Data.vbf)",
+				version, len(ids),
+			)
+		}
+		out := make([]EntrySummary, 0, len(ids))
+		kept := make([]string, 0, len(ids))
+		for _, id := range ids {
+			if !fallback && !originalExists(KindImages, id, version) {
+				common.LogWarning(
+					"images %s/%s: sem original em data/ — omitido da árvore (arquivo só em mods/)",
+					version, id,
+				)
+				continue
+			}
+			kept = append(kept, id)
+			out = append(out, EntrySummary{
+				ID:  id,
+				Key: dto.NewImageMetadata(id, version).Key,
+			})
+		}
+		if !fallback {
+			// Sobras em mods/ (textura nova ou só substituída) viram WARN —
+			// ids já são o relatório legível (rel sem o sufixo).
+			s.emitTreeDiag(KindImages, version, kept, onlyMods)
+		}
+		// Cópias idênticas somem da árvore: um grupo = UMA linha (o
+		// representante), as cópias vivem na lista "Repetidas" do painel.
+		return hideImageDuplicates(out, version), nil
+	case KindHelp:
+		// Painéis de ajuda são FFX-only: a árvore ffx2 (e a lastmiss, que
+		// divide a árvore do ffx2) não tem a pasta help/. Sem erro — vazio,
+		// como o macro/lockit para lastmiss.
+		if version != common.GameVersionFFX {
+			return []EntrySummary{}, nil
+		}
+		if err := ensureHelpLoaded(version); err != nil {
+			return nil, err
+		}
+		out := make([]EntrySummary, 0, len(helpfile.HelpEntries))
+		for _, entry := range helpfile.HelpEntries {
+			if helpfile.GetHelp(version, entry.Name) == nil {
+				continue
+			}
+			if !originalExists(KindHelp, entry.Name, version) {
+				common.LogWarning(
+					"help %s/%s: sem original em data/ — omitido da árvore (arquivo só em mods/)",
+					version, entry.Name,
+				)
+				continue
+			}
+			out = append(out, EntrySummary{
+				ID:  entry.Name,
+				Key: dto.NewHelpMetadata(entry.Name, "help/"+entry.Dir, version).Key,
+			})
+		}
+		names := make([]string, 0, len(helpfile.HelpEntries))
+		for _, entry := range helpfile.HelpEntries {
+			names = append(names, entry.Name)
+		}
+		s.emitTreeDiag(KindHelp, version, names, nil)
+		return out, nil
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		// eventtable: mesma régua dos demais kinds — a árvore é definida
+		// por data/; o que só existe em mods/ não é exibido (regra 4).
+		if !eventtableKindUsable(kind, version) {
+			return []EntrySummary{}, nil
+		}
+		ids := eventtable.List(kind, version)
+		out := make([]EntrySummary, 0, len(ids))
+		for _, id := range ids {
+			if !originalExists(kind, id, version) {
+				common.LogWarning(
+					"%s %s/%s: sem original em data/ — omitido da árvore (arquivo só em mods/)",
+					kind, version, id,
+				)
+				continue
+			}
+			key, ok := eventtable.Key(version, kind, id)
+			if !ok {
+				continue
+			}
+			out = append(out, EntrySummary{ID: id, Key: key})
+		}
+		s.emitTreeDiag(kind, version, ids, nil)
 		return out, nil
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
@@ -513,16 +1015,164 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 }
 
 // GetEntry devolve uma entrada completa (metadata + rows) por demanda.
+// GetCollection continua RAW (export, preview e validação de import).
+//
+// Fluxo display, em três fases:
+//  1. cru (ponteiro = hash do texto do arquivo, sem refs);
+//  2. merge com o original de data/ — quando TODAS as rows casam em
+//     (Index, Name), o ponteiro é reescrito para o hash do ORIGINAL
+//     (imutável) e `Original` é anexado.hash(Text)==hash(Original) ⇔
+//     célula ainda não traduzida;
+//  3. dedup de display: colapsa em ref o que é repetição de um original
+//     at e não é a 1ª ocorrência global do ponteiro. Dupe sobre texto já
+//     traduzido não acontece (o texto traduzido permanece literal).
+//
+// O que só existe em mods/ é ignorado com warning; falha de leitura de
+// data/ degrada (sem `original`) em vez de quebrar o view.
 func (s *MetadataService) GetEntry(kind, id string, version common.GameVersion) (dto.FileEntry, error) {
-	c, err := s.GetCollection(kind, version, []string{id})
+	kind = strings.ToLower(strings.TrimSpace(kind))
+	// Frescura do store: binário modificado no disco (tradução copiada/
+	// editada em mods/) recarrega antes de servir. O store mudou → o view
+	// cru dedupado dos kinds dedupados também sai.
+	if s.refreshEntryStore(kind, id, version) {
+		clearDedupViewCache()
+	}
+	entry, base, order, err := s.currentEntry(kind, id, version)
 	if err != nil {
 		return dto.FileEntry{}, err
 	}
+
+	// Kinds sem dedup de display (lockit): entrega direta, sem collapse.
+	_ = base
+	_ = order
+
+	inData, inMods := originalTrees(kind, id, version)
+	if !inData {
+		if inMods {
+			// Regra 4: o que só existe em mods/ não é exibido — não há
+			// original contra o qual revisar.
+			common.LogWarning(
+				"sem original em data/: ignorando %s/%s/%s (arquivo presente apenas em mods/)",
+				version, kind, id,
+			)
+			return dto.FileEntry{}, fmt.Errorf("%s/%s não tem original em data/ (arquivo presente apenas em mods/)", kind, id)
+		}
+		// Nenhuma árvore tem o arquivo (store sem contraparte em disco).
+		// Nunca quebrar o view por ausência do original: entrega sem ele
+		// e SEM reescrever ponteiros — o colapso cai no ramo RAW do dedup
+		// de display (por texto).
+		common.LogWarning(
+			"sem original em data/ para %s/%s/%s — entregando a entrada sem a coluna Original",
+			version, kind, id,
+		)
+		return builders.DedupDisplayDTO(entry, base, order), nil
+	}
+
+	orig, exists, oerr := s.originalFor(kind, id, version)
+	if oerr != nil {
+		common.LogError(
+			"falha ao ler o original de %s/%s/%s: %v — entregando a entrada sem a coluna Original",
+			version, kind, id, oerr,
+		)
+		return builders.DedupDisplayDTO(entry, base, order), nil
+	}
+	if !exists {
+		common.LogWarning(
+			"original de %s/%s/%s sem rows em data/ — entregando a entrada sem a coluna Original",
+			version, kind, id,
+		)
+		return builders.DedupDisplayDTO(entry, base, order), nil
+	}
+	merged, diverged := withOriginal(entryRef{kind: kind, id: id, version: version}, entry, orig)
+	logDivergence(diverged)
+	return builders.DedupDisplayDTO(merged, base, order), nil
+}
+
+// currentEntry monta a entrada CRU (estado atual, ponteiro = hash do texto
+// do arquivo, sem refs): kinds com dedup global saem do cache de cru da
+// versão, objects saem do GetCollection do escopo pedido e os demais
+// passam pelo GetCollection direto. O dedup de display e o merge com o
+// original acontecem em GetEntry.
+func (s *MetadataService) currentEntry(kind, id string, version common.GameVersion) (dto.FileEntry, int, *builders.HashOrder, error) {
+	if dedupViewKinds[kind] {
+		raw, err := s.rawViewOf(kind, version)
+		if err != nil {
+			return dto.FileEntry{}, 0, nil, err
+		}
+		entry, ok := raw.collection[id]
+		if !ok {
+			return dto.FileEntry{}, 0, nil, fmt.Errorf("%s entry not found: %s", kind, id)
+		}
+		base, ok := raw.order.Offset(id)
+		if !ok {
+			base = 0
+		}
+		return entry, base, raw.order, nil
+	}
+	if kind == KindObjects {
+		// Escopo do PRÓPRIO arquivo (refs não propagam entre objetos): a
+		// ordem dos ponteiros cobre só este arquivo, self-contained como o
+		// export por arquivo.
+		c, err := s.GetCollection(kind, version, []string{id})
+		if err != nil {
+			return dto.FileEntry{}, 0, nil, err
+		}
+		entry, ok := c[id]
+		if !ok {
+			return dto.FileEntry{}, 0, nil, fmt.Errorf("%s entry not found: %s", kind, id)
+		}
+		order := builders.NewHashOrder(c)
+		base, ok := order.Offset(id)
+		if !ok {
+			base = 0
+		}
+		return entry, base, order, nil
+	}
+	c, err := s.GetCollection(kind, version, []string{id})
+	if err != nil {
+		return dto.FileEntry{}, 0, nil, err
+	}
 	entry, ok := c[id]
 	if !ok {
-		return dto.FileEntry{}, fmt.Errorf("%s entry not found: %s", kind, id)
+		return dto.FileEntry{}, 0, nil, fmt.Errorf("%s entry not found: %s", kind, id)
 	}
-	return entry, nil
+	return entry, 0, nil, nil
+}
+
+// refreshEntryStore vigia a frescura do store da entrada antes de servir:
+// binário modificado no disco (tradução copiada/editada manualmente em
+// mods/) recarrega — mesmo vigia do lockit, estendido aos demais formatos.
+// Devolve true quando o store foi atualizado (o chamador invalida caches
+// derivados).
+func (s *MetadataService) refreshEntryStore(kind, id string, version common.GameVersion) bool {
+	switch kind {
+	case KindEvents:
+		if version == common.GameVersionLastMiss {
+			// LastMiss divide a árvore do ffx2: os carimbos bulk foram
+			// tomados com a versão pedida (lm) — mesma régua.
+			return event.EnsureEventFresh(version, id)
+		}
+		return event.EnsureEventFresh(version, id)
+	case KindObjects:
+		// A reutilização vigiada roda em buildObjectsCollection (GetCollection);
+		// GetEntry objects passa por lá.
+		return false
+	case KindMacro:
+		if version == common.GameVersionLastMiss {
+			return false
+		}
+		return macrodic.EnsureMacrosFresh(version)
+	case KindLockit:
+		// Vigiado dentro de LoadFromStore (lockitFiles/ApplyLockitDTO).
+		return false
+	case KindHelp:
+		if version != common.GameVersionFFX {
+			return false
+		}
+		return helpfile.EnsureHelpFresh(version)
+	default:
+		return false
+	}
 }
 
 // ListLanguages devolve os idiomas disponíveis em formato chave/valor
@@ -573,10 +1223,19 @@ func (s *MetadataService) GetCollection(kind string, version common.GameVersion,
 		if err := ensureEventsLoaded(version); err != nil {
 			return nil, err
 		}
+		// Frescura bulk (export/lote): binário modificado no disco
+		// recarrega antes de montar o DTO.
+		if event.EnsureAllEventsFresh(version, ids) {
+			clearDedupViewCache()
+		}
 		return builders.BuildEventsDTO(version, ids)
 	case KindObjects:
 		return s.buildObjectsCollection(version, ids)
 	case KindMacro:
+		if version == common.GameVersionLastMiss {
+			// Last Mission não tem dicionário próprio (macrodic do ffx2).
+			return dto.Collection{}, nil
+		}
 		c, err := builders.BuildMacroDTO(version)
 		if err != nil {
 			return nil, err
@@ -598,35 +1257,97 @@ func (s *MetadataService) GetCollection(kind string, version common.GameVersion,
 			return nil, fmt.Errorf("no matching macro chunks in DTO")
 		}
 		return out, nil
+	case KindLockit:
+		if version == common.GameVersionLastMiss {
+			// Last Mission é expansão do ffx2 e não tem lockit próprio
+			// (mesma régua do macro: vazio, sem erro).
+			return dto.Collection{}, nil
+		}
+		return builders.BuildLockitDTO(version, ids)
+	case KindHelp:
+		if version != common.GameVersionFFX {
+			// A árvore ffx2/lastmiss não tem a pasta help/.
+			return dto.Collection{}, nil
+		}
+		return builders.BuildHelpDTO(version, ids)
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		if !eventtableKindUsable(kind, version) {
+			return dto.Collection{}, nil
+		}
+		return builders.BuildTableDTO(kind, version, ids)
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
 }
 
+// helpExportIDs decide os ids do export: o artefato de help é único e
+// SEMPRE cobre os 6 painéis (as defs do dedup só resolvem com todos os
+// arquivos no mesmo arquivo); demais kinds passam os ids recebidos.
+func helpExportIDs(kind string, ids []string) []string {
+	if strings.EqualFold(strings.TrimSpace(kind), KindHelp) {
+		return helpfile.HelpEntryNames()
+	}
+	return ids
+}
+
 // ExportStrings monta o DTO em memória e escreve arquivos .strings,
 // ao lado dos .json (mesmo diretório, mesmo basename).
-// ids vazio = tudo; langs nil/vazio = todos os idiomas.
+// ids vazio = tudo; langs nil/vazio = todos os idiomas. O dedup do marshal
+// é por arquivo: o escopo do pedido vira o escopo do dedup (self-contained,
+// sem refs órfãs), e o nome do artefato reflete o escopo (eventsExportPath).
 func (s *MetadataService) ExportStrings(kind string, version common.GameVersion, ids, langs []string) ([]string, error) {
-	c, err := s.GetCollection(kind, version, ids)
+	kind = strings.ToLower(strings.TrimSpace(kind))
+	if kind == KindEvents || kind == KindMacro {
+		ids = s.normalizeIDs(ids)
+	}
+	c, err := s.GetCollection(kind, version, helpExportIDs(kind, ids))
 	if err != nil {
 		return nil, err
 	}
+	c = filterExportRows(c)
 	f := strfmt.NewStringsFormatter()
-	switch strings.ToLower(strings.TrimSpace(kind)) {
+	switch kind {
 	case KindEvents:
-		p, err := f.WriteEvents(c, version, langs)
-		if err != nil {
-			return nil, err
+		path, perr := eventsExportPath(version, ids)
+		if perr != nil {
+			return nil, perr
+		}
+		p, werr := f.WriteEventsFile(c, strfmt.StringsPathFor(path), langs)
+		if werr != nil {
+			return nil, werr
 		}
 		return []string{p}, nil
 	case KindObjects:
+		if len(ids) == 0 {
+			// Export completo: arquivo único com dedup global entre as
+			// entradas (irmão do JSON bulk, mesmo basename).
+			path, perr := objectsBulkPath(version)
+			if perr != nil {
+				return nil, perr
+			}
+			p, werr := f.WriteObjectsFile(c, strfmt.StringsPathFor(path), langs)
+			if werr != nil {
+				return nil, werr
+			}
+			return []string{p}, nil
+		}
 		return f.WriteObjects(c, version, langs)
 	case KindMacro:
-		p, err := f.WriteMacro(c, version, langs)
-		if err != nil {
-			return nil, err
+		path, perr := macroExportPath(version, ids)
+		if perr != nil {
+			return nil, perr
+		}
+		p, werr := f.WriteMacroFile(c, path, langs)
+		if werr != nil {
+			return nil, werr
 		}
 		return []string{p}, nil
+	case KindLockit:
+		return f.WriteObjects(c, version, langs)
+	case KindHelp:
+		return f.WriteHelp(c, version, langs)
+	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		return f.WriteObjects(c, version, langs)
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
@@ -642,14 +1363,13 @@ func (s *MetadataService) buildObjectsCollection(version common.GameVersion, ids
 	out := make(dto.Collection, len(layouts))
 	for _, layout := range layouts {
 		key := objectsfile.FileLayoutKey(version, layout.PatternPath())
-		binFile, ok := objectsfile.ObjectFileDataStore.Get(key)
-		if !ok {
-			var lerr error
-			binFile, lerr = objectsfile.LoadObjectFileFromStoreByLayout(layout)
-			if lerr != nil {
-				common.LogVerbose("skip objects %s: %v", key, lerr)
-				continue
-			}
+		// Sempre via LoadObjectFileFromStoreByLayout: a reutilização é
+		// vigiada pelo carimbo físico — binário modificado no disco
+		// (tradução copiada em mods/) recarrega na próxima leitura.
+		binFile, lerr := objectsfile.LoadObjectFileFromStoreByLayout(layout)
+		if lerr != nil {
+			common.LogVerbose("skip objects %s: %v", key, lerr)
+			continue
 		}
 		if binFile == nil || binFile.GetObjects() == nil || binFile.GetObjects().IsEmpty() {
 			continue
@@ -718,7 +1438,23 @@ func ensureEventsLoaded(version common.GameVersion) error {
 	return nil
 }
 
-// EnsureMacroContainers expõe a leitura dos containers (uso avançado).
-func (s *MetadataService) macroContainers(version common.GameVersion) (map[string]*macrodic.MacroDictionaryBinaryFile, error) {
-	return macrodic.ReadMacroDictionaryContainers(version)
+// ensureHelpLoaded garante os painéis de ajuda em memória (carga única).
+func ensureHelpLoaded(version common.GameVersion) error {
+	return helpfile.EnsureHelpLoaded(version)
+}
+
+// eventtableKindUsable informa se a família eventtable tem binário nesta
+// versão: battletext e cloud existem em FFX e FFX-2; tutorial.msb é FFX-2
+// only. LastMiss divide a árvore do FFX-2 — os artefatos seguem a régua:
+// essa aba não exibe estas folhas (ficar no ffx2).
+func eventtableKindUsable(kind string, version common.GameVersion) bool {
+	switch kind {
+	case KindBattleText, KindCloud:
+		return version == common.GameVersionFFX || version == common.GameVersionFFX2
+	case KindTutorial:
+		return version == common.GameVersionFFX2
+	case KindMenuMain:
+		return version == common.GameVersionFFX
+	}
+	return false
 }

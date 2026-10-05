@@ -11,16 +11,6 @@ func FileVersionSuffix() string {
 	return CurrentGameVersion().Suffix()
 }
 
-// HasVersionSuffix informa se o nome já contém um sufixo de versão
-// (_ffx, _ffx2 ou _lastmiss) antes da extensão.
-func HasVersionSuffix(fileName string) bool {
-	ext := filepath.Ext(fileName)
-	base := strings.TrimSuffix(fileName, ext)
-	return strings.HasSuffix(base, "_ffx") ||
-		strings.HasSuffix(base, "_ffx2") ||
-		strings.HasSuffix(base, "_lastmiss")
-}
-
 // StripVersionSuffix remove o sufixo de versão do nome, se presente.
 func StripVersionSuffix(fileName string) string {
 	ext := filepath.Ext(fileName)

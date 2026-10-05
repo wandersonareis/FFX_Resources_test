@@ -72,30 +72,10 @@ func BuildEventsDTO(version common.GameVersion, ids []string) (dto.Collection, e
 			common.LogVerbose("No strings found for event %s, skipping", id)
 			continue
 		}
-		entry := dto.FileEntry{
-			Metadata: dto.NewEventMetadata(id, version),
-			Rows:     make([]dto.TextRow, 0, len(ev.Strings)),
-		}
-		for i, str := range ev.Strings {
-			if str == nil {
-				continue
-			}
-			text := make(map[string]string, len(langs))
-			for _, lang := range langs {
-				text[lang] = str.GetLocalizedString(lang)
-			}
-			entry.Rows = append(entry.Rows, dto.TextRow{
-				Index: i,
-				Hash:  hash.Texts(text),
-				Text:  text,
-			})
-		}
-		if len(entry.Rows) == 0 {
-			common.LogVerbose("No strings found for event %s, skipping", id)
+		entry, ok := buildEventEntry(id, version, ev.Strings, langs)
+		if !ok {
 			continue
 		}
-		dto.SortRows(entry.Rows)
-		entry.Metadata = entry.Metadata.WithRowCount(len(entry.Rows))
 		out[id] = entry
 	}
 	if len(out) == 0 {
@@ -109,89 +89,67 @@ func BuildEventsDTO(version common.GameVersion, ids []string) (dto.Collection, e
 	return out, nil
 }
 
+// BuildEventEntryDTOFrom monta UMA entrada de evento a partir das strings
+// lidas direto dos arquivos (fonte explícita), sem tocar no store global.
+// É o caminho do ORIGINAL: event.ReadLocalizedEventStringsFrom(SourceData).
+// ok=false quando não há nenhuma row com texto.
+func BuildEventEntryDTOFrom(id string, version common.GameVersion, strings []*event.LocalizedFieldStringObject) (dto.FileEntry, bool) {
+	if len(strings) == 0 {
+		return dto.FileEntry{}, false
+	}
+	return buildEventEntry(id, version, strings, SortedLocalizationKeys())
+}
+
+// buildEventEntry converte as strings localizadas de um evento em rows do
+// DTO. O Index é a posição física no binário (reconstrução posicional).
+func buildEventEntry(id string, version common.GameVersion, strings []*event.LocalizedFieldStringObject, langs []string) (dto.FileEntry, bool) {
+	entry := dto.FileEntry{
+		Metadata: dto.NewEventMetadata(id, version),
+		Rows:     make([]dto.TextRow, 0, len(strings)),
+	}
+	for i, str := range strings {
+		if str == nil {
+			continue
+		}
+		text := make(map[string]string, len(langs))
+		for _, lang := range langs {
+			text[lang] = str.GetLocalizedString(lang)
+		}
+		entry.Rows = append(entry.Rows, dto.TextRow{
+			Index: i,
+			Hash:  hash.Texts(text),
+			Text:  text,
+		})
+	}
+	if len(entry.Rows) == 0 {
+		common.LogVerbose("No strings found for event %s, skipping", id)
+		return dto.FileEntry{}, false
+	}
+	dto.SortRows(entry.Rows)
+	entry.Metadata = entry.Metadata.WithRowCount(len(entry.Rows))
+	return entry, true
+}
+
 // ApplyEventsDTO aplica o DTO de volta no store/binário (parse DTO → binário).
 // Só o applier faz isso; o formatter nunca toca no binário.
 // Se ids vazio, aplica todas as entradas da Collection; senão, só as pedidas.
+//
+// O escopo é o store de eventos da versão (data/): TODOS os eventos
+// carregados participam da propagação (índice de texto pré-estado) e só os
+// binários tocados são recompilados. O motor é o mesmo do .vbf (sessão) —
+// ver tableapply.go.
 func ApplyEventsDTO(version common.GameVersion, c dto.Collection, ids []string) error {
-	filter := make(map[string]bool)
-	if len(ids) > 0 {
-		for _, id := range ids {
-			filter[id] = true
-		}
-	}
-	var failed []string
-	var applied []string
-	for _, key := range c.SortedKeys() {
-		if len(filter) > 0 && !filter[key] {
-			continue
-		}
-		entry := c[key]
-		if err := applySingleEventDTO(version, key, entry); err != nil {
-			common.LogError("failed to update event %s: %v", key, err)
-			failed = append(failed, key)
-			continue
-		}
-		applied = append(applied, key)
-	}
-	if len(applied) == 0 && len(failed) == 0 {
-		return fmt.Errorf("no matching events in DTO to apply")
-	}
-	// Persiste os aplicados de volta no binário.
-	var saveFailed []string
-	for _, id := range applied {
-		if err := event.ExportEventStringsToLocalizations(version, id); err != nil {
-			common.LogVerbose("Error saving event %s: %v", id, err)
-			saveFailed = append(saveFailed, id)
-		}
-	}
-	if len(failed) > 0 || len(saveFailed) > 0 {
-		sort.Strings(failed)
-		sort.Strings(saveFailed)
-		return fmt.Errorf("failed to update %d event(s): %v; failed to save %d event(s): %v",
-			len(failed), failed, len(saveFailed), saveFailed)
-	}
-	common.LogVerbose("Events processed successfully! (%d events)", len(applied))
-	return nil
-}
-
-func applySingleEventDTO(version common.GameVersion, eventID string, entry dto.FileEntry) error {
-	ev := event.GetEvent(version, eventID)
-	if ev == nil {
-		return fmt.Errorf("event not found in memory: %s", eventID)
-	}
-	dto.SortRows(entry.Rows)
-	for _, row := range entry.Rows {
-		if row.Index < 0 || row.Index >= len(ev.Strings) {
-			return fmt.Errorf("string index out of range for event %s: %d", eventID, row.Index)
-		}
-		obj := ev.Strings[row.Index]
-		if obj == nil {
-			continue
-		}
-		for lang, newText := range row.Text {
-			if newText == "" {
-				continue
+	return applyTextDTO("event", c, ids, TableApplyScope{
+		Ids: event.GetAllEventIDs(version),
+		StringsFor: func(id string) []*event.LocalizedFieldStringObject {
+			ev := event.GetEvent(version, id)
+			if ev == nil {
+				return nil
 			}
-			if _, ok := common.SupportedLanguages[lang]; !ok {
-				common.LogVerbose("unsupported localization %s for event %s[%d]", lang, eventID, row.Index)
-				continue
-			}
-			if want, ok := row.Hash[lang]; ok && want != "" {
-				if got := hash.Sum64Hex(newText); got != want {
-					common.LogVerbose("hash mismatch for event %s[%d] lang %s: file %s vs text %s",
-						eventID, row.Index, lang, want, got)
-				}
-			}
-			fs := obj.GetLocalizedContent(lang)
-			if fs == nil {
-				return fmt.Errorf("failed to get localized content for %s", lang)
-			}
-			if fs.GetRegularString() == newText {
-				continue
-			}
-			fs.SetRegularString(newText)
-		}
-	}
-	event.SetEvent(version, eventID, ev)
-	return nil
+			return ev.Strings
+		},
+		Save: func(id string) error {
+			return event.ExportEventStringsToLocalizations(version, id)
+		},
+	})
 }

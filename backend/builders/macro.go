@@ -15,10 +15,10 @@ import (
 // Macro name rows: o formato atual (chunks com ChunkIndex + strings
 // posicionais) é mantido — o idx é necessário para reconstrução do
 // binário na mesma ordem. Cada string vira até duas rows:
-// Name="name" e, quando houver simplificado distinto, Name="simplifiedName".
+// Name="name" e, quando houver simplificado distinto, Name="name_simplified".
 const (
 	macroNameField           = "name"
-	macroSimplifiedNameField = "simplifiedName"
+	macroSimplifiedNameField = "name_simplified"
 )
 
 // MacroChunkKey é a chave da Collection para um chunk: basename sem
@@ -43,7 +43,14 @@ func parseMacroChunkKey(key string) (int, bool) {
 // BuildMacroDTO monta a Collection pronta (texto + metadata + hash) lendo
 // os containers do disco para a versão dada.
 func BuildMacroDTO(version common.GameVersion) (dto.Collection, error) {
-	containers, err := macrodic.ReadMacroDictionaryContainers(version)
+	return BuildMacroDTOFromSource(version, common.SourcePreferred)
+}
+
+// BuildMacroDTOFromSource é BuildMacroDTO lendo os containers da árvore
+// indicada. SourceData entrega o dicionário pristine de data/ — é por ele
+// que se define a PRESENÇA dos chunks (árvore/coluna Original).
+func BuildMacroDTOFromSource(version common.GameVersion, src common.FileSource) (dto.Collection, error) {
+	containers, err := macrodic.ReadMacroDictionaryContainersFrom(version, src)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +158,7 @@ func BuildMacroDTOFromContainers(version common.GameVersion, containers map[stri
 	}
 	for key, entry := range out {
 		// Ordena por (index, name) para saída determinística; a reconstrução
-		// usa o Index posicional, então a ordem entre name/simplifiedName
+		// usa o Index posicional, então a ordem entre name/name_simplified
 		// no arquivo não importa.
 		sort.Slice(entry.Rows, func(a, b int) bool {
 			if entry.Rows[a].Index != entry.Rows[b].Index {

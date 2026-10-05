@@ -1,13 +1,19 @@
 build/bin
 node_modules
-frontend/dist
+frontend/out
 .angular
 package-lock.json
 package.json.md5
 .idea
+.kilo
 .vscode
 ffxhdbats
+dds-phyre-tool-master/*
+edits
 *.log
+# Logs do app: um arquivo por início de app em logs/ ao lado do executável
+# (a rotação também deixa .gz aqui)
+logs/
 # If you prefer the allow list template instead of the deny list, see community template:
 # https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
 #
@@ -72,3 +78,4 @@ yarn-error.log*
 frontend/src/environments/*
 battle/*
 examples/*
+proj

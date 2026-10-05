@@ -109,7 +109,7 @@ func NewObjectBinaryFile(patternPath string, creator CreatorFunc, languageCode s
 }
 
 func (b *ObjectBinaryFile) resolveFilePath() string {
-	return filepath.Join(common.GetLocalizationRoot(b.languageCode), b.patternPath)
+	return filepath.Join(common.GetLocalizationRootForVersion(b.Version, b.languageCode), b.patternPath)
 }
 
 func interactionGameFilesDir() string {

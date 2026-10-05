@@ -1,0 +1,532 @@
+export namespace common {
+	
+	export class GameVersion {
+	
+	
+	    static createFrom(source: any = {}) {
+	        return new GameVersion(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	
+	    }
+	}
+	export class Language {
+	    code: string;
+	    name: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Language(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.code = source["code"];
+	        this.name = source["name"];
+	    }
+	}
+
+}
+
+export namespace dto {
+	
+	export class BatchResult {
+	    done: string[];
+	    failed: string[];
+	    total: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new BatchResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.done = source["done"];
+	        this.failed = source["failed"];
+	        this.total = source["total"];
+	    }
+	}
+	export class TextRow {
+	    index: number;
+	    name?: string;
+	    hash?: Record<string, string>;
+	    text: Record<string, string>;
+	    original?: Record<string, string>;
+	    // União dos dois lados da tabela: a row existe só no original (o
+	    // arquivo traduzido tem menos linhas) ou só na tradução.
+	    missingInOriginal?: boolean;
+	    missingInTranslated?: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new TextRow(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.index = source["index"];
+	        this.name = source["name"];
+	        this.hash = source["hash"];
+	        this.text = source["text"];
+	        this.original = source["original"];
+	        this.missingInOriginal = source["missingInOriginal"];
+	        this.missingInTranslated = source["missingInTranslated"];
+	    }
+	}
+	export class RefLink {
+	    // Anotação de link de ref dedupada: o texto ATUAL da def, o pristine
+	    // dela e onde ela vive (arquivo + Index/Name) — alimenta o texto
+	    // linkado (cor própria), o tooltip "repetição" e o editor aberto na
+	    // def através do link.
+	    text: string;
+	    original?: string;
+	    sourceId?: string;
+	    sourceIndex: number;
+	    sourceName?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RefLink(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.text = source["text"];
+	        this.original = source["original"];
+	        this.sourceId = source["sourceId"];
+	        this.sourceIndex = source["sourceIndex"];
+	        this.sourceName = source["sourceName"];
+	    }
+	}
+	export class Metadata {
+	    key: string;
+	    row_count?: number;
+	    id?: string;
+	    is_dir?: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Metadata(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.key = source["key"];
+	        this.row_count = source["row_count"];
+	        this.id = source["id"];
+	        this.is_dir = source["is_dir"];
+	    }
+	}
+	export class FileEntry {
+	    metadata: Metadata;
+	    rows: TextRow[];
+	    // Anotações de link de refs dedupadas (rowKey → def), exclusivas de
+	    // EXIBIÇÃO — o payload de apply/export nunca as carrega.
+	    refs?: Record<string, RefLink>;
+	
+	    static createFrom(source: any = {}) {
+	        return new FileEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.metadata = this.convertValues(source["metadata"], Metadata);
+	        this.rows = this.convertValues(source["rows"], TextRow);
+	        this.refs = source["refs"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ImageDuplicate {
+	    id: string;
+	    key: string;
+	    modded: boolean;
+	    identical: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ImageDuplicate(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.key = source["key"];
+	        this.modded = source["modded"];
+	        this.identical = source["identical"];
+	    }
+	}
+	export class ImageDuplicates {
+	    duplicates: ImageDuplicate[];
+	    dupPayload: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ImageDuplicates(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.duplicates = this.convertValues(source["duplicates"], ImageDuplicate);
+	        this.dupPayload = source["dupPayload"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ImageEntry {
+	    metadata: Metadata;
+	    source: string;
+	    format: string;
+	    width: number;
+	    height: number;
+	    mipmapCount: number;
+	    maxMipmapLevel: number;
+	    pngData: string;
+	    flipped: boolean;
+	    ddsData: string;
+	    ddsPath?: string;
+	    pngPath?: string;
+	    modded: boolean;
+	    duplicates: ImageDuplicate[];
+	    dupPayload: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ImageEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.metadata = this.convertValues(source["metadata"], Metadata);
+	        this.source = source["source"];
+	        this.format = source["format"];
+	        this.width = source["width"];
+	        this.height = source["height"];
+	        this.mipmapCount = source["mipmapCount"];
+	        this.maxMipmapLevel = source["maxMipmapLevel"];
+	        this.pngData = source["pngData"];
+	        this.flipped = source["flipped"];
+	        this.ddsData = source["ddsData"];
+	        this.ddsPath = source["ddsPath"];
+	        this.pngPath = source["pngPath"];
+	        this.modded = source["modded"];
+	        this.duplicates = this.convertValues(source["duplicates"], ImageDuplicate);
+	        this.dupPayload = source["dupPayload"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ImageImportResult {
+	    updated: string[];
+	    failed: string[];
+	    total: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ImageImportResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.updated = source["updated"];
+	        this.failed = source["failed"];
+	        this.total = source["total"];
+	    }
+	}
+	export class ImportEntryInfo {
+	    id: string;
+	    key: string;
+	    index_count: number;
+	    store_index_count: number;
+	    changed_texts: number;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ImportEntryInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.key = source["key"];
+	        this.index_count = source["index_count"];
+	        this.store_index_count = source["store_index_count"];
+	        this.changed_texts = source["changed_texts"];
+	        this.error = source["error"];
+	    }
+	}
+	export class ImportUsage {
+	    id: string;
+	    kind: string;
+	    used: number;
+	    limit: number;
+	    over: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ImportUsage(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.kind = source["kind"];
+	        this.used = source["used"];
+	        this.limit = source["limit"];
+	        this.over = source["over"];
+	    }
+	}
+	// VbfRoot é uma raiz de árvore da sidebar: um .vbf encontrado perto do
+	// executável do jogo.
+	export class VbfRoot {
+	    name: string;
+	    path: string;
+	    version: string;
+	    size: number;
+	    entries: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new VbfRoot(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.version = source["version"];
+	        this.size = source["size"];
+	        this.entries = source["entries"];
+	    }
+	}
+	// VbfNode é um filho imediato de um diretório do .vbf — ou um chunk do
+	// macrodic. kind/id/vazios = formato fora do escopo do app.
+	export class VbfNode {
+	    name: string;
+	    path: string;
+	    isDir: boolean;
+	    size: number;
+	    kind: string;
+	    id: string;
+	    version: string;
+	    macro: boolean;
+	    image: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new VbfNode(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.isDir = source["isDir"];
+	        this.size = source["size"];
+	        this.kind = source["kind"];
+	        this.id = source["id"];
+	        this.version = source["version"];
+	        this.macro = source["macro"];
+	        this.image = source["image"];
+	    }
+	}
+	export class ImportSummary {
+	    path: string;
+	    format: string;
+	    kind: string;
+	    version: string;
+	    languages: string[];
+	    entry_count: number;
+	    total_indices: number;
+	    changed_texts: number;
+	    saves_binary: boolean;
+	    entries: ImportEntryInfo[];
+	    usages: ImportUsage[];
+	    errors: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ImportSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.format = source["format"];
+	        this.kind = source["kind"];
+	        this.version = source["version"];
+	        this.languages = source["languages"];
+	        this.entry_count = source["entry_count"];
+	        this.total_indices = source["total_indices"];
+	        this.changed_texts = source["changed_texts"];
+	        this.saves_binary = source["saves_binary"];
+	        this.entries = this.convertValues(source["entries"], ImportEntryInfo);
+	        this.usages = this.convertValues(source["usages"], ImportUsage);
+	        this.errors = source["errors"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	
+
+}
+
+export namespace services {
+	
+	export class EntrySummary {
+	    id: string;
+	    key: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new EntrySummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.key = source["key"];
+	    }
+	}
+	export class TagSuggestion {
+	    tag: string;
+	    label: string;
+	    key: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TagSuggestion(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.tag = source["tag"];
+	        this.label = source["label"];
+	        this.key = source["key"];
+	    }
+	}
+	export class TagCatalogEntry {
+	    tag: string;
+	    prefix: string;
+	    hint: string;
+	    values: TagSuggestion[];
+	
+	    static createFrom(source: any = {}) {
+	        return new TagCatalogEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.tag = source["tag"];
+	        this.prefix = source["prefix"];
+	        this.hint = source["hint"];
+	        this.values = this.convertValues(source["values"], TagSuggestion);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class TagCatalog {
+	    version: string;
+	    tags: TagCatalogEntry[];
+	
+	    static createFrom(source: any = {}) {
+	        return new TagCatalog(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.version = source["version"];
+	        this.tags = this.convertValues(source["tags"], TagCatalogEntry);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+
+}
+

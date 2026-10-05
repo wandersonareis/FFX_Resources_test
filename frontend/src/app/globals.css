@@ -1,0 +1,349 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+.editor-content .tiptap p {
+  margin: 0 0 0.5rem;
+}
+
+.game-tag-chip {
+  display: inline-block;
+  padding: 0 0.45rem;
+  margin: 0 0.1rem;
+  border-radius: 4px;
+  font-size: 0.78em;
+  font-weight: 600;
+  line-height: 1.6;
+  background: rgba(98, 91, 113, 0.16);
+  border: 1px solid rgba(98, 91, 113, 0.4);
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+
+.game-tag-chip.locked {
+  background: rgba(120, 120, 120, 0.22);
+  border-style: dashed;
+  cursor: not-allowed;
+  text-transform: none;
+}
+
+.game-tag-chip.invalid {
+  background: rgba(190, 60, 60, 0.16);
+  border-color: rgba(190, 60, 60, 0.65);
+}
+
+/* Sprite de ícones de controle — public/pad_icon.png (408×272, fundo
+   transparente, glifos do Xbox como renderiza o jogo no PC). Uma imagem só,
+   posição por tile; a escala é feita via calc (Wails/WebView2), mantendo as
+   coordenadas NATIVAS no código. Contextos definem --gb-l (escala linear);
+   tiles atarracados (shoulders, pílulas back/start) compensam com --gb-c.
+   Glifos glossy escuros: legível reação nos dois temas, sem backing. */
+.gb-sprite {
+  --gb-l: 0.5;
+  --gb-c: 1;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+  background-image: url('/pad_icon.png');
+  background-repeat: no-repeat;
+  background-size: calc(408px * var(--gb-l) * var(--gb-c))
+    calc(272px * var(--gb-l) * var(--gb-c));
+  background-position: calc(-1 * var(--x) * var(--gb-l) * var(--gb-c))
+    calc(-1 * var(--y) * var(--gb-l) * var(--gb-c));
+  width: calc(var(--w) * var(--gb-l) * var(--gb-c));
+  height: calc(var(--h) * var(--gb-l) * var(--gb-c));
+}
+
+/* Contextos: chip no texto, item de menu e trigger de dropdown. */
+.game-tag-chip .gb-sprite {
+  --gb-l: 0.5;
+}
+.gb-sprite.gb-menu-item {
+  --gb-l: 0.65;
+}
+.gb-sprite.gb-trigger-ico {
+  --gb-l: 0.75;
+}
+
+/* Sequências de direção (Up+Right e similares) — espaçamento entre os
+   ícones do mesmo chip/menu. */
+.gb-sprite + .gb-sprite {
+  margin-left: calc(4px * var(--gb-l) * var(--gb-c));
+}
+
+/* Face buttons — espelho do buttonMap do jogo na arte do Xbox:
+   30 TRIANGLE→Y, 31 X→A, 32 CIRCLE→B, 33 SQUARE→X. */
+.gb-y { --x: 103px; --y: 1px; --w: 32px; --h: 32px; }
+.gb-a { --x: 35px; --y: 1px; --w: 32px; --h: 32px; }
+.gb-b { --x: 69px; --y: 1px; --w: 32px; --h: 32px; }
+.gb-x { --x: 1px; --y: 1px; --w: 32px; --h: 32px; }
+
+/* Shoulders (LB/RB/LT/RT). */
+.gb-lb { --x: 137px; --y: 3px; --w: 32px; --h: 27px; --gb-c: 1.2; }
+.gb-rb { --x: 171px; --y: 3px; --w: 32px; --h: 27px; --gb-c: 1.2; }
+.gb-lt { --x: 205px; --y: 3px; --w: 32px; --h: 27px; --gb-c: 1.2; }
+.gb-rt { --x: 239px; --y: 3px; --w: 32px; --h: 27px; --gb-c: 1.2; }
+
+/* START (▶) e SELECT (◀). */
+.gb-start { --x: 307px; --y: 7px; --w: 32px; --h: 21px; --gb-c: 1.55; }
+.gb-back { --x: 273px; --y: 7px; --w: 32px; --h: 21px; --gb-c: 1.55; }
+
+/* Setas de direção (0x41–0x48) e cursor ✛ (0x40/0x4F). */
+.gb-arrow-up { --x: 5px; --y: 36px; --w: 26px; --h: 30px; --gb-c: 1.1; }
+.gb-arrow-right { --x: 36px; --y: 38px; --w: 30px; --h: 26px; --gb-c: 1.1; }
+.gb-arrow-down { --x: 72px; --y: 36px; --w: 26px; --h: 30px; --gb-c: 1.1; }
+.gb-arrow-left { --x: 103px; --y: 38px; --w: 30px; --h: 26px; --gb-c: 1.1; }
+.gb-cursor { --x: 136px; --y: 34px; --w: 35px; --h: 34px; }
+
+/* Decoracão do `{query` enquanto o autocomplete está ativo. */
+.tag-suggestion-active {
+  background: rgba(90, 130, 200, 0.18);
+  border-radius: 3px;
+  text-decoration: underline dotted;
+}
+
+.tag-suggestion-active.is-empty {
+  text-decoration: none;
+}
+
+/* Popup do autocomplete do editor, montado DENTRO do container passado à
+   extensão (o wrapper do GameTextEditor; num modal Radix, dentro do diálogo).
+   Estar dentro do conteúdo do Dialog é o que torna cliques/Escape nele
+   internos ao modal — montado no body, o DismissableLayer do Radix FECHA
+   o diálogo inteiro em qualquer clique no popup (interact-outside).
+   O clique nos itens faz preventDefault no mousedown (no JS): o foco/caret
+   permanece no editor (senão o Tiptap perde a seleção e a sugestão sai
+   antes do click completar). */
+.tag-suggestion {
+  position: absolute;
+  z-index: 100;
+  min-width: 240px;
+  max-width: 380px;
+  max-height: 300px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    0 2px 6px rgba(0, 0, 0, 0.12);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.tag-suggestion-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+}
+
+.tag-suggestion-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.28rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.tag-suggestion-item.active {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.tag-suggestion-label {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tag-suggestion-detail {
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag-suggestion-empty {
+  padding: 0.6rem;
+  opacity: 0.65;
+}
+
+.tag-suggestion-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.7rem;
+  opacity: 0.75;
+}
+
+/* Aviso do rodapé: N itens ocultos pelo corte de MAX_VALUES — filtre. */
+.tag-suggestion-note {
+  flex-basis: 100%;
+  margin-top: 0.1rem;
+  font-size: 0.68rem;
+  font-style: italic;
+}
+
+.tag-suggestion-footer kbd {
+  min-width: 1.1rem;
+  padding: 0 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.68rem;
+  text-align: center;
+}
+
+.text-cell {
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 480px;
+}
+
+.translated-cell {
+  cursor: pointer;
+}
+
+.translated-cell:hover {
+  background: var(--accent);
+}
+
+.translated-cell.edited {
+  box-shadow: inset 2px 0 0 var(--primary);
+  font-weight: 500;
+}
+

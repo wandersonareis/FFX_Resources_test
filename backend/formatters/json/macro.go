@@ -17,7 +17,7 @@ const MacroJSONFileName = "macro_dictionary_all_localizations.json"
 //
 // Formato: mapa raiz chaveado por chunk ("chunk_NN"), cada entrada com
 // metadata (ChunkIndex para reconstrução posicional) e rows
-// [{index, name, hash, text}], onde name é "name"/"simplifiedName".
+// [{index, name, hash, text}], onde name é "name"/"name_simplified".
 type JSONMacroFormatter struct{}
 
 // NewJSONMacroFormatter constrói o formatter JSON do dicionário de macros.

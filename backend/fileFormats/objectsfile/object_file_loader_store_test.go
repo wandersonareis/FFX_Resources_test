@@ -23,6 +23,33 @@ type storeVsReadCase struct {
 	read    func(string, common.GameVersion) datastore.IBinaryFile
 }
 
+// hasDuplicateUSStrings detecta strings 'us' repetidas no arquivo. Com o
+// dedup de offsets no rebuild (RebuildKeyedStrings), arquivos com
+// duplicatas compilam MENORES que o original (bytes compartilhados) — o
+// oráculo byte-exato (SHA-256) vale apenas para arquivos sem duplicatas;
+// para os demais, o oráculo é o conteúdo re-lido.
+func hasDuplicateUSStrings(f datastore.IBinaryFile) bool {
+	seen := make(map[string]bool)
+	found := false
+	f.GetObjects().RangeIndex(func(_ int, obj datastore.IGlobalLocalizedTextObject) {
+		if obj == nil || found {
+			return
+		}
+		for _, field := range objectsfile.ExportFieldTexts(obj) {
+			t := field.Texts[common.DefaultLocalization]
+			if t == "" {
+				continue
+			}
+			if seen[t] {
+				found = true
+				return
+			}
+			seen[t] = true
+		}
+	})
+	return found
+}
+
 var storeVsReadCases = []storeVsReadCase{
 	{pattern: "battle/kernel/command.bin", version: common.GameVersionFFX, read: objectsfile.ReadCommandLocalizations},
 	{pattern: "battle/kernel/important.bin", version: common.GameVersionFFX, read: objectsfile.ReadCommandLocalizations},
@@ -66,7 +93,7 @@ var _ = Describe("LoadObjectFile differential vs Read oracle", Ordered, func() {
 		config.SetLocation("ImportLocation", filepath.Join(tmpRoot, "reimported"))
 
 		interactions.NewInteractionServiceWithConfig(config)
-		Expect(reader.InitializeInternals()).To(Succeed())
+		Expect(reader.InitializeInternals(common.GameVersionFFX)).To(Succeed())
 	})
 
 	AfterAll(func() {
@@ -106,7 +133,7 @@ var _ = Describe("LoadObjectFile differential vs Read oracle", Ordered, func() {
 			stored, err := objectsfile.LoadObjectFileFromStore(tc.version, tc.pattern)
 			Expect(err).To(BeNil())
 
-			outPath := filepath.Join(tmpRoot, "reimported", tc.pattern)
+				outPath := filepath.Join(tmpRoot, "reimported", tc.pattern)
 			Expect(os.MkdirAll(filepath.Dir(outPath), 0755)).To(Succeed())
 			Expect(stored.SaveToBinary(outPath)).To(Succeed())
 
@@ -116,6 +143,26 @@ var _ = Describe("LoadObjectFile differential vs Read oracle", Ordered, func() {
 			Expect(err).ToNot(HaveOccurred())
 			outBytes, err := os.ReadFile(outPath)
 			Expect(err).ToNot(HaveOccurred())
+
+			if hasDuplicateUSStrings(stored) {
+				// Dedup de offsets (RebuildKeyedStrings): arquivo com
+				// strings repetidas compila MENOR (bytes compartilhados) —
+				// o oráculo aqui é o CONTEÚDO re-lido, não o SHA. O fixture
+				// é cópia em diretório temporário: sobrescrever é seguro.
+				Expect(len(outBytes)).To(BeNumerically("<=", len(origBytes)))
+				Expect(os.WriteFile(filepath.Join(gameDir, rel), outBytes, 0o644)).To(Succeed())
+				reloaded := tc.read(tc.pattern, tc.version)
+				Expect(reloaded).NotTo(BeNil())
+				Expect(reloaded.GetObjects().Len()).To(Equal(stored.GetObjects().Len()))
+				origItems := stored.GetObjects().Items()
+				reItems := reloaded.GetObjects().Items()
+				for i := range origItems {
+					Expect(reItems[i].ToString(common.DefaultLocalization)).
+						To(Equal(origItems[i].ToString(common.DefaultLocalization)),
+							"text mismatch at index %d", i)
+				}
+				return
+			}
 
 			Expect(sha256.Sum256(outBytes)).To(Equal(sha256.Sum256(origBytes)))
 		})
@@ -172,7 +219,7 @@ var _ = Describe("LastMiss load without global version", Ordered, func() {
 		config.SetLocation("ImportLocation", filepath.Join(tmpRoot, "reimported"))
 
 		interactions.NewInteractionServiceWithConfig(config)
-		Expect(reader.InitializeInternals()).To(Succeed())
+		Expect(reader.InitializeInternals(common.GameVersionLastMiss)).To(Succeed())
 	})
 
 	AfterAll(func() {

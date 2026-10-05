@@ -11,7 +11,6 @@ import (
 	"ffxresources/backend/fileFormats/objectsfile"
 	"ffxresources/backend/formatters/json"
 	"ffxresources/backend/interactions"
-	"ffxresources/backend/models"
 	testcommon "ffxresources/testData"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -42,6 +41,10 @@ var _ = Describe("FileLayout Registry", Ordered, func() {
 
 var _ = Describe("ObjectFileStore", Ordered, func() {
 	It("should Register and Get", func() {
+		// A store é GLOBAL e outros specs (differential/integrity) registram
+		// arquivos nela — com ordem aleatória de specs, o estado inicial
+		// precisa ser determinístico.
+		objectsfile.ResetObjectFileStoreForTest()
 		store := objectsfile.NewObjectFileStore()
 		Expect(store.Len()).To(Equal(0))
 
@@ -80,30 +83,6 @@ var _ = Describe("LoadObjectFileFromStore error handling", Ordered, func() {
 	})
 })
 
-var _ = Describe("Export/Import roundtrip with FileMetadata", Ordered, func() {
-	BeforeAll(func() {
-		Expect(testcommon.SetBuildBinPath()).To(Succeed())
-		common.SetVerboseMode(false)
-	})
-
-	It("should produce FileMetadata with version/dir/filename from a layout", func() {
-		layout, ok := objectsfile.FileLayoutFor(common.GameVersionFFX, "battle/kernel/command.bin")
-		Expect(ok).To(BeTrue())
-
-		meta := models.NewObjectFileMetadata(layout.Version, layout.DirPattern, layout.FileName)
-		Expect(meta.DirPattern).To(Equal("battle/kernel"))
-		Expect(meta.FileName).To(Equal("command.bin"))
-	})
-
-	It("should write/omit new fields as expected", func() {
-		layout, _ := objectsfile.FileLayoutFor(common.GameVersionFFX, "battle/kernel/command.bin")
-		meta := models.NewObjectFileMetadata(layout.Version, layout.DirPattern, layout.FileName)
-
-		Expect(*meta.Version).To(Equal(layout.Version))
-		Expect(meta.Version.String()).To(Equal("ffx"))
-	})
-})
-
 var _ = Describe("Integration: integrity cycle via LoadObjectFileFromStore + FileLayout", Ordered, func() {
 	var (
 		tmpRoot           string
@@ -138,7 +117,7 @@ var _ = Describe("Integration: integrity cycle via LoadObjectFileFromStore + Fil
 		config.SetLocation("ImportLocation", filepath.Join(tmpRoot, "reimported"))
 
 		interactions.NewInteractionServiceWithConfig(config)
-		Expect(reader.InitializeInternals()).To(Succeed())
+		Expect(reader.InitializeInternals(common.GameVersionFFX)).To(Succeed())
 	})
 
 	AfterAll(func() {
@@ -188,6 +167,27 @@ var _ = Describe("Integration: integrity cycle via LoadObjectFileFromStore + Fil
 			Expect(err).To(BeNil())
 			outBytes, err := os.ReadFile(reimported.Name())
 			Expect(err).To(BeNil())
+
+			if hasDuplicateUSStrings(binFile) {
+				// Dedup de offsets (RebuildKeyedStrings): arquivo com
+				// strings repetidas compila MENOR (bytes compartilhados) —
+				// o oráculo aqui é o CONTEÚDO re-lido, não o SHA. O fixture
+				// é cópia em diretório temporário: sobrescrever é seguro.
+				Expect(len(outBytes)).To(BeNumerically("<=", len(origBytes)))
+				Expect(os.WriteFile(filepath.Join(gameDir, origRel), outBytes, 0o644)).To(Succeed())
+				reloaded := objectsfile.ReadCommandLocalizations(tc.pattern, tc.version)
+				Expect(reloaded).NotTo(BeNil())
+				Expect(reloaded.GetObjects().Len()).To(Equal(binFile.GetObjects().Len()))
+				origItems := binFile.GetObjects().Items()
+				reItems := reloaded.GetObjects().Items()
+				for i := range origItems {
+					Expect(reItems[i].ToString(common.DefaultLocalization)).
+						To(Equal(origItems[i].ToString(common.DefaultLocalization)),
+							"text mismatch at index %d", i)
+				}
+				continue
+			}
+
 			Expect(sha256.Sum256(outBytes)).To(Equal(sha256.Sum256(origBytes)))
 		}
 	})

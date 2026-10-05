@@ -12,8 +12,10 @@ import (
 
 // SaveBinaryFile persists a ObjectBinaryFile's objects back to binary form.
 // It mirrors the lifecycle used in examples/main.go: objects already loaded
-// in memory are re-encoded for the default (us) localization, written to the
-// localized mods tree and finally to filePath itself.
+// in memory are re-encoded for the default (us) localization and written to
+// the localized mods tree. When filePath is absolute it is written as an
+// extra copy (rotina de teste/reimport); um caminho RELATIVO é ignorado —
+// gravar nele seria criar o arquivo no CWD do processo.
 func SaveBinaryFile(b *ObjectBinaryFile, filePath string) error {
 	var lastBuf []byte
 
@@ -27,19 +29,30 @@ func SaveBinaryFile(b *ObjectBinaryFile, filePath string) error {
 			return err
 		}
 
-		if err := writeBinaryLocalizedFile(b, localizationKey, filePath, buf.Bytes()); err != nil {
+		if err := writeBinaryLocalizedFile(b, localizationKey, buf.Bytes()); err != nil {
 			return err
 		}
 		lastBuf = buf.Bytes()
 	}
 
-	return common.WriteBytesToFile(filePath, lastBuf)
+	return writeExtraCopy(filePath, lastBuf)
+}
+
+// writeExtraCopy grava a cópia extra em filePath apenas quando o caminho é
+// absoluto. Caminho relativo (ex.: layout.PatternPath() vindo do service)
+// não tem raiz definida e cairia no diretório corrente do processo.
+func writeExtraCopy(filePath string, data []byte) error {
+	if filePath == "" || !filepath.IsAbs(filePath) {
+		common.LogVerbose("Skipping extra copy (non-absolute path): %q", filePath)
+		return nil
+	}
+	return common.WriteBytesToFile(filePath, data)
 }
 
 func encodeBinaryLanguage(b *ObjectBinaryFile, localizationKey string) (*bytes.Buffer, error) {
 	keyedStrings := collectBinaryKeyedStrings(b, localizationKey)
 	charset := ffxencoding.GetCharsetForLanguage(localizationKey)
-	stringBytes := RebuildKeyedStrings(keyedStrings, charset, b.Version)
+	stringBytes := RebuildKeyedStrings(keyedStrings, charset, b.Version, b.StringBytes)
 
 	buf := bytes.NewBuffer(make([]byte, 0, b.Header.GetDataLength()+len(stringBytes)+0x20))
 
@@ -73,16 +86,18 @@ func collectBinaryKeyedStrings(b *ObjectBinaryFile, localizationKey string) []da
 			if ks != nil {
 				all = append(all, ks)
 			} else {
-				common.LogVerbose("Keyed string is nil for object at index %d", obj.GetName(common.DefaultLocalization))
+				common.LogVerbose("Keyed string is nil for object %q", obj.GetName(common.DefaultLocalization))
 			}
 		}
 	})
 	return all
 }
 
-func writeBinaryLocalizedFile(b *ObjectBinaryFile, localizationKey, filePath string, data []byte) error {
-	_ = b
-	localePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, common.GetLocalizationRoot(localizationKey), filePath)
+func writeBinaryLocalizedFile(b *ObjectBinaryFile, localizationKey string, data []byte) error {
+	// A cópia na árvore de mods espelha a localização canônica do arquivo
+	// (patternPath) — nunca o filePath do chamador, que pode ser absoluto
+	// (ex.: testes gravando em temp dir) e não deve ser embutido no join.
+	localePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, common.GetLocalizationRootForVersion(b.Version, localizationKey), b.patternPath)
 	localePath = filepath.FromSlash(localePath)
 
 	dir := filepath.Dir(localePath)

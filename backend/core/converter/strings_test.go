@@ -271,5 +271,5 @@ func setupBasicCharMaps() {
 	ffxencoding.SetCharMap("kr", usMap, usReverseMap)
 	ffxencoding.SetCharMap("ch", usMap, usReverseMap) */
 
-	reader.InitializeInternals() // Initialize character maps and macros
+	reader.InitializeInternals(common.GameVersionFFX) // Initialize character maps and macros
 }

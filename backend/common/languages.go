@@ -20,7 +20,7 @@ var (
 		"us": "English",
 	}
 
-	Charsets = []string{"ch", "cn", "jp", "kr", "us"}
+	Charsets = []string{"ch", "cn", "jp", "kr", "us", "default"}
 )
 
 // Language é um idioma disponível em formato chave/valor:
@@ -52,9 +52,16 @@ func SupportedLanguageCodes() []string {
 	return codes
 }
 
+// LanguageCodeToCharset resolve o charset de um idioma: ch/kr/jp têm tabela
+// dedicada; sp/fr/de/it usam a tabela default (a-trema, glifo do trema
+// intacto nos fonts desses idiomas); us/en/desconhecidos usam a us (a-til,
+// font do us com a troca do til). Espelha ffxencoding.GetCharsetForLanguage.
 func LanguageCodeToCharset(languageCode string) string {
-	if charset, ok := languageCodes[languageCode]; ok {
-		return charset
+	switch languageCode {
+	case "ch", "kr", "jp":
+		return languageCode
+	case "sp", "fr", "de", "it":
+		return "default"
 	}
 	return "us"
 }

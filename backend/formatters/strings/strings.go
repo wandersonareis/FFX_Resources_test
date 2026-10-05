@@ -17,7 +17,7 @@
 // primeiro ("=" dentro do texto passa intacto; a chave nunca tem espaço).
 // def: literal cujo xxh64 == hash da chave (verificação grátis na leitura).
 // ref: "$hash" resolvido pela tabela hash→texto do próprio arquivo.
-// Name é omitido quando vazio (events); objects/macro emitem
+// Name é omitido quando vazio (events/help); objects/macro emitem
 // <id>:<name>:<index>:<lang>.
 package strings
 
@@ -27,6 +27,7 @@ import (
 	stdstrings "strings"
 
 	"ffxresources/backend/common"
+	"ffxresources/backend/core/progress"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/formatters/hash"
 )
@@ -42,10 +43,6 @@ func ExtensionStrings() string {
 // keyValueSep liga a chave ao hash de identidade (U+2566).
 const keyValueSep = "║"
 
-// minDedupRunes replica a regra do JSON (formatters/json): só textos do
-// idioma default com ao menos 5 runes viram referência $hash.
-const minDedupRunes = 5
-
 // Marshal organiza a Collection pronta no formato Strings (todos os idiomas).
 // Recebe apenas DTO pronto; não toca no domínio nem muta a entrada.
 func Marshal(c dto.Collection) ([]byte, error) {
@@ -60,6 +57,7 @@ func MarshalLangs(c dto.Collection, langs []string) ([]byte, error) {
 	var out stdstrings.Builder
 	seen := make(map[string]string) // hashHex bare -> texto (só default lang)
 	for _, k := range c.SortedKeys() {
+		progress.Step(k)
 		entry := c[k]
 		out.WriteString("/*key=" + entry.Metadata.Key + " row_count=" + strconv.Itoa(len(entry.Rows)) + "*/\n")
 		rows := make([]dto.TextRow, len(entry.Rows))
@@ -78,7 +76,7 @@ func MarshalLangs(c dto.Collection, langs []string) ([]byte, error) {
 				}
 				value := escapeValue(text)
 				if lang == common.DefaultLocalization {
-					if runeCount(text) >= minDedupRunes {
+					if runeCount(text) >= hash.MinDedupRunes {
 						if _, dup := seen[h]; dup {
 							value = hash.Prefix(h)
 						} else {

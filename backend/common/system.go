@@ -1,54 +1,17 @@
 package common
 
 import (
-	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
+
+	"ffxresources/backend/loggingService"
 )
-
-func GetNumCpu() int {
-	return runtime.NumCPU()
-}
-
-func GetToolExcutable(exeName string) (string, error) {
-	currentDirectory := GetExecDir()
-
-	executablePath := filepath.Join(currentDirectory, exeName)
-
-	return exec.LookPath(executablePath)
-}
 
 func GetExecDir() string {
 	exePath, _ := os.Executable()
 	currentDirectory := filepath.Dir(exePath)
 
 	return currentDirectory
-}
-
-func GetBasePath() string {
-	_, filename, _, ok := runtime.Caller(0)
-	if !ok {
-		panic("Error when obtaining source code path")
-	}
-
-	srcPath := filepath.Dir(filename)
-
-	if base := os.Getenv("APP_BASE_PATH"); base != "" {
-		return base
-	}
-
-	exePath, err := os.Executable()
-	if err == nil {
-		return filepath.Dir(exePath)
-	}
-
-	return srcPath
-}
-
-func GetTempDir() string {
-	return os.TempDir()
 }
 
 func SetVerboseMode(enabled bool) {
@@ -63,29 +26,26 @@ func IsVerboseMode() bool {
 	return verbose == "1"
 }
 
-const (
-	colorReset   = "\033[0m"
-	colorVerbose = "\033[33m"
-	colorInfo    = "\033[32m"
-	colorError   = "\033[31m"
-)
+// Façade de log: os helpers do common delegam ao loggingService — console
+// colorido pelo nível + persistência em arquivo (JSON). Logging não pode
+// derrubar a aplicação: erros de escrita são ignorados pelo zerolog.
 
 func LogVerbose(format string, args ...any) {
-	if IsVerboseMode() {
-		log.Printf(colorVerbose+format+colorReset, args...)
-	}
+	loggingService.Verbose(format, args...)
 }
 
 func LogInfo(format string, args ...any) {
-	log.Printf(colorInfo+format+colorReset, args...)
+	loggingService.Info(format, args...)
+}
+
+// LogWarning registra um aviso recuperável (entrada ignorada, divergência de
+// árvore, degradação controlada) — visível sempre, sem ser erro.
+func LogWarning(format string, args ...any) {
+	loggingService.Warn(format, args...)
 }
 
 func LogError(format string, args ...any) {
-	log.Printf(colorError+format+colorReset, args...)
-}
-
-func SetModsEnabled(enabled bool) {
-	DisableMods = !enabled
+	loggingService.Error(format, args...)
 }
 
 func AreModsEnabled() bool {

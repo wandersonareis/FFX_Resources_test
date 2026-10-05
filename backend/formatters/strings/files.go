@@ -56,6 +56,13 @@ func asStringsPath(jsonPath string) string {
 	return stdstrings.TrimSuffix(jsonPath, ".json") + extensionStrings
 }
 
+// StringsPathFor devolve o caminho .strings irmão de um caminho .json
+// (mesmo basename, extensão trocada) — para chamadores que decidem o
+// naming do artefato (escopo do export).
+func StringsPathFor(jsonPath string) string {
+	return asStringsPath(jsonPath)
+}
+
 // EventsStringsPath resolve o caminho do Strings de eventos em edits/,
 // ao lado do JSON (mesmo basename).
 func EventsStringsPath(c dto.Collection, version common.GameVersion) (string, error) {
@@ -78,6 +85,24 @@ func (f StringsFormatter) WriteEvents(c dto.Collection, version common.GameVersi
 		return "", err
 	}
 	filePath, err := EventsStringsPath(c, version)
+	if err != nil {
+		return "", err
+	}
+	if err := common.WriteBytesToFile(filePath, raw); err != nil {
+		return "", fmt.Errorf("error writing strings file %s: %v", filePath, err)
+	}
+	common.LogVerbose("Exported event strings file: %s", filePath)
+	return filePath, nil
+}
+
+// WriteEventsFile serializa a Collection e escreve no caminho dado — o
+// naming é decisão do chamador (escopo do export: bulk, individual ou
+// subconjunto; o dedup do marshal é por arquivo = self-contained).
+func (f StringsFormatter) WriteEventsFile(c dto.Collection, filePath string, langs []string) (string, error) {
+	if len(c) == 0 {
+		return "", fmt.Errorf("no events with string data to export")
+	}
+	raw, err := f.MarshalLangs(c, langs)
 	if err != nil {
 		return "", err
 	}
@@ -115,28 +140,43 @@ func ObjectsStringsPath(key string, version common.GameVersion) (string, error) 
 
 // WriteObjects serializa a Collection e escreve um arquivo Strings por
 // entrada. Recebe apenas DTO pronto e devolve os caminhos escritos.
-// langs nil/vazio = todos os idiomas.
+// langs nil/vazio = todos os idiomas. Cada arquivo é serializado isolado:
+// o dedup do marshal tem escopo do próprio arquivo (self-contained).
 func (f StringsFormatter) WriteObjects(c dto.Collection, version common.GameVersion, langs []string) ([]string, error) {
 	if len(c) == 0 {
 		return nil, fmt.Errorf("no objects with text data to export")
 	}
 	var paths []string
 	for _, key := range c.SortedKeys() {
-		singleRaw, err := f.MarshalLangs(dto.Collection{key: c[key]}, langs)
-		if err != nil {
-			return nil, err
-		}
 		filePath, err := ObjectsStringsPath(key, version)
 		if err != nil {
 			return nil, err
 		}
-		if err := common.WriteBytesToFile(filePath, singleRaw); err != nil {
-			return nil, fmt.Errorf("error writing strings file %s: %v", filePath, err)
+		p, err := f.WriteObjectsFile(dto.Collection{key: c[key]}, filePath, langs)
+		if err != nil {
+			return nil, err
 		}
-		common.LogVerbose("Exported objects strings file: %s", filePath)
-		paths = append(paths, filePath)
+		paths = append(paths, p)
 	}
 	return paths, nil
+}
+
+// WriteObjectsFile serializa a Collection e escreve no caminho dado — o
+// naming é decisão do chamador (export completo em arquivo único: dedup
+// global entre as entradas via mapa $hash compartilhado).
+func (f StringsFormatter) WriteObjectsFile(c dto.Collection, filePath string, langs []string) (string, error) {
+	if len(c) == 0 {
+		return "", fmt.Errorf("no objects with text data to export")
+	}
+	raw, err := f.MarshalLangs(c, langs)
+	if err != nil {
+		return "", err
+	}
+	if err := common.WriteBytesToFile(filePath, raw); err != nil {
+		return "", fmt.Errorf("error writing strings file %s: %v", filePath, err)
+	}
+	common.LogVerbose("Exported objects strings file: %s", filePath)
+	return filePath, nil
 }
 
 // ReadObjects lê um arquivo Strings de objetos e devolve a Collection (DTO).

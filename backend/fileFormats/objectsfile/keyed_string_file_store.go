@@ -108,15 +108,16 @@ func (f *KeyedStringFileStore) OrderedFieldKeys() []string {
 	return keys
 }
 
-// GetName retorna o campo "name" se existir; senão o primeiro campo não-vazio.
+// GetName retorna o campo "name" se existir; senão o PRIMEIRO campo do
+// layout (mesmo fallback do fluxo mapeado — chunkmap/object.go — que usa
+// segments[0]; o fallback por "primeiro não-vazio" divergia dos renames:
+// help/command como primeira entrada).
 func (f *KeyedStringFileStore) GetName(languageCode string) string {
 	if seg := f.byName["name"]; seg != nil {
 		return seg.GetLocalizedString(languageCode)
 	}
-	for _, seg := range f.segments {
-		if s := seg.GetLocalizedString(languageCode); s != "" {
-			return s
-		}
+	if len(f.segments) > 0 {
+		return f.segments[0].GetLocalizedString(languageCode)
 	}
 	return ""
 }
@@ -201,27 +202,40 @@ func FieldStringStore(f *KeyedStringFileStore, name, languageCode string) string
 	return ""
 }
 
+// FieldStringStoreAt é FieldStringStore por POSIÇÃO no layout (nil-safe).
+func FieldStringStoreAt(f *KeyedStringFileStore, index int, languageCode string) string {
+	keys := f.OrderedFieldKeys()
+	if index < 0 || index >= len(keys) {
+		return ""
+	}
+	return FieldStringStore(f, keys[index], languageCode)
+}
+
 // Formatters do store (cópias dos legados, operando no tipo Store).
 var (
 	commandLegacyFmtStore = func(f *KeyedStringFileStore, lang string) string {
 		return fmt.Sprintf("%s %s - %s %s",
-			FieldStringStore(f, "name", lang),
-			FieldStringStore(f, "simplifiedName", lang),
-			FieldStringStore(f, "description", lang),
-			FieldStringStore(f, "simplifiedDescription", lang))
+			FieldStringStoreAt(f, 0, lang),
+			FieldStringStoreAt(f, 1, lang),
+			FieldStringStoreAt(f, 2, lang),
+			FieldStringStoreAt(f, 3, lang))
 	}
 
 	nameOnlyLegacyFmtStore = func(f *KeyedStringFileStore, lang string) string {
 		return fmt.Sprintf("%s %s",
-			FieldStringStore(f, "name", lang),
-			FieldStringStore(f, "simplifiedName", lang))
+			FieldStringStoreAt(f, 0, lang),
+			FieldStringStoreAt(f, 1, lang))
 	}
 
+	// threePartLegacyFmtStore une o primeiro, o segundo e o ÚLTIMO campo:
+	// os terceiros variam por arquivo (information/effect/creature_data_help).
 	threePartLegacyFmtStore = func(f *KeyedStringFileStore, lang string) string {
+		keys := f.OrderedFieldKeys()
+		third := keys[len(keys)-1]
 		return fmt.Sprintf("%s - %s - %s",
-			FieldStringStore(f, "name", lang),
-			FieldStringStore(f, "description", lang),
-			FieldStringStore(f, "effect", lang))
+			FieldStringStore(f, keys[0], lang),
+			FieldStringStore(f, keys[1], lang),
+			FieldStringStore(f, third, lang))
 	}
 )
 

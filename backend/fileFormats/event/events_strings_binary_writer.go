@@ -68,17 +68,24 @@ func ExportEventStringsToLocalizations(gameVersion common.GameVersion, eventID s
 	if eventFile == nil {
 		return fmt.Errorf("event not found: %s", eventID)
 	}
+	return ExportLocalizedStringsToLocalizations(gameVersion, eventID, eventFile.Strings)
+}
 
+// ExportLocalizedStringsToLocalizations grava um lote de strings do evento
+// DIRETO em mods/ (todas as localizações), sem depender do store. É o
+// caminho da sessão do .vbf: o arquivo decodificado no clique é gravado
+// pelo estado que ele tem, mesmo sem nunca ter passado pelo store de data/.
+func ExportLocalizedStringsToLocalizations(gameVersion common.GameVersion, eventID string, localizedStrings []*LocalizedFieldStringObject) error {
 	if len(eventID) < 2 {
 		return fmt.Errorf("invalid event ID: %s", eventID)
 	}
 
-	if len(eventFile.Strings) == 0 {
+	if len(localizedStrings) == 0 {
 		return fmt.Errorf("no strings to write for event: %s", eventID)
 	}
 
-	info := models.NewEventFileInfo(eventID, eventFile.Version)
-	return writeEventStringsToAllLocalizations(info.LocalizationPattern, eventFile.Strings, eventFile.Version)
+	info := models.NewEventFileInfo(eventID, gameVersion)
+	return writeEventStringsToAllLocalizations(info.LocalizationPattern, localizedStrings, gameVersion)
 }
 
 // writeEventStringsToAllLocalizations writes event string data to binary files for all
@@ -104,7 +111,9 @@ func writeEventStringsToAllLocalizations(pathPattern string, localizedStrings []
 	}
 
 	for localizationKey := range common.SupportedLanguages {
-		localizationRoot := common.GetLocalizationRoot(localizationKey)
+		// Versão explícita do import/apply: lastmiss divide a árvore com o
+		// ffx2 e o estado global pode divergir do arquivo sendo salvo.
+		localizationRoot := common.GetLocalizationRootForVersion(version, localizationKey)
 		localePath := filepath.Join(common.GameFilesRoot, common.ModsFolder, localizationRoot, pathPattern)
 		localePath = filepath.FromSlash(localePath)
 
@@ -158,7 +167,12 @@ func convertEventStringsToBytes(localizedStrings []*LocalizedFieldStringObject, 
 	return buildEventStringsBinaryData(fieldStrings)
 }
 
-// extractFieldStringsForLanguage extracts FieldString objects for a specific language
+// EncodeLocalizedStrings é o codec compartilhado com os formatos da mesma
+// tabela (battle/btl, cloudsave, tutorial.msb — ver backend/fileFormats/
+// eventtable): header de 8B por entrada + RebuildFieldStrings.
+func EncodeLocalizedStrings(localizedStrings []*LocalizedFieldStringObject, languageCode string, version common.GameVersion) ([]byte, error) {
+	return convertEventStringsToBytes(localizedStrings, languageCode, version)
+} // extractFieldStringsForLanguage extracts FieldString objects for a specific language
 // from LocalizedFieldStringObject instances. This function handles the conversion from
 // localized objects to the field string format used in binary files.
 //

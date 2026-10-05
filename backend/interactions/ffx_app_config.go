@@ -3,8 +3,8 @@ package interactions
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"ffxresources/backend/common"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,11 +14,13 @@ type IGetAppConfig interface {
 	GetGameVersion() common.GameVersion
 	GetLocations() map[string]string
 	GetLocation(name string) string
+	GetEnableMods() bool
 }
 
 type ISetAppConfig interface {
 	SetGameVersion(version common.GameVersion)
 	SetLocation(name, path string)
+	SetEnableMods(enabled bool)
 }
 
 type IAppConfig interface {
@@ -26,17 +28,26 @@ type IAppConfig interface {
 	ISetAppConfig
 	FromJson() error
 	ToJson() error
+	// GameExeLocation é o executável do jogo escolhido pelo usuário
+	// (caminho de ARQUIVO, não diretório): é a partir dele que se
+	// localizam os .vbf que abrem a árvore original completa.
+	GetGameExeLocation() string
+	SetGameExeLocation(path string)
 }
 
 type AppConfig struct {
 	filePath    string
 	locations   map[string]string
 	gameVersion common.GameVersion
+	enableMods  bool
+	gameExeLoc  string
 }
 
 type appConfigJSON struct {
-	Locations   map[string]string `json:"Locations"`
-	GameVersion common.GameVersion `json:"GameVersion"`
+	Locations       map[string]string  `json:"Locations"`
+	GameVersion     common.GameVersion `json:"GameVersion"`
+	EnableMods      *bool              `json:"EnableMods,omitempty"`
+	GameExeLocation string             `json:"GameExeLocation,omitempty"`
 }
 
 func NewAppConfig() *AppConfig {
@@ -46,13 +57,14 @@ func NewAppConfig() *AppConfig {
 		filePath:    filePath,
 		locations:   defaultLocations(),
 		gameVersion: common.GameVersionFFX,
+		enableMods:  true, // mods-first é o comportamento padrão
 	}
 
-	// FromJson mescla o arquivo sobre os defaults; em qualquer falha
-	// mantemos o config padrão válido em vez de retornar nil.
 	if err := c.FromJson(); err != nil {
 		common.LogVerbose("Using default config (%v)", err)
 	}
+
+	common.SetModsEnabled(c.enableMods)
 
 	if err := c.validateConfig(); err != nil {
 		common.LogVerbose("Could not persist default config (%v)", err)
@@ -134,8 +146,10 @@ func (c *AppConfig) validateConfig() error {
 
 func (c *AppConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(appConfigJSON{
-		Locations:   c.locations,
-		GameVersion: c.gameVersion,
+		Locations:       c.locations,
+		GameVersion:     c.gameVersion,
+		EnableMods:      &c.enableMods,
+		GameExeLocation: c.gameExeLoc,
 	})
 }
 
@@ -166,6 +180,17 @@ func (c *AppConfig) UnmarshalJSON(data []byte) error {
 	}
 	c.locations = merged
 	c.gameVersion = aux.GameVersion
+	// Caminho do executável: vazio mantém "sem VBF configurado" (a árvore
+	// vbf simplesmente não aparece na sidebar).
+	// Valor que não seja FFX.exe/FFX-2.exe vem de versões antigas do
+	// config e é descartado ("" mantém "sem VBF configurado").
+	if exe, ok := NormalizeGameExe(aux.GameExeLocation); ok {
+		c.gameExeLoc = exe
+	}
+	// EnableMods ausente no arquivo → mantém o default (true).
+	if aux.EnableMods != nil {
+		c.enableMods = *aux.EnableMods
+	}
 	return nil
 }
 
@@ -226,7 +251,7 @@ func (c *AppConfig) GetGameVersion() common.GameVersion {
 func (c *AppConfig) SetGameVersion(version common.GameVersion) {
 	c.gameVersion = version
 	common.SetCurrentGameVersion(c.gameVersion)
-	
+
 	_ = c.ToJson()
 }
 
@@ -243,5 +268,62 @@ func (c *AppConfig) SetLocation(name, path string) {
 		c.locations = make(map[string]string)
 	}
 	c.locations[name] = path
+	_ = c.ToJson()
+}
+
+// GetEnableMods devolve a preferência mods-first (config EnableMods).
+func (c *AppConfig) GetEnableMods() bool {
+	return c.enableMods
+}
+
+// SetEnableMods persiste o toggle e aplica na resolução de caminhos.
+func (c *AppConfig) SetEnableMods(enabled bool) {
+	c.enableMods = enabled
+	common.SetModsEnabled(enabled)
+	_ = c.ToJson()
+}
+
+// GetGameExeLocation devolve o executável do jogo configurado ("" quando o
+// usuário ainda não escolheu — nesse caso não há raízes VBF na sidebar).
+func (c *AppConfig) GetGameExeLocation() string {
+	return c.gameExeLoc
+}
+
+// gameExeNames é o PAR de executáveis aceitos. O seletor de arquivo e o
+// campo de configuração não podem virar seletor de qualquer .exe do disco:
+// só FFX.exe e FFX-2.exe, sem curinga.
+var gameExeNames = map[string]bool{
+	"ffx.exe":   true,
+	"ffx-2.exe": true,
+}
+
+// NormalizeGameExe valida e normaliza o caminho do executável do jogo.
+//
+// "" é aceito (limpar a configuração desliga as raízes VBF da sidebar).
+// Qualquer outro caminho só passa se o nome base for FFX.exe ou
+// FFX-2.exe, sem diferenciar maiúsculas — devolve o caminho como veio.
+// Caminho rejeitado sai como ("", false) e NÃO é persistido.
+func NormalizeGameExe(path string) (string, bool) {
+	p := strings.TrimSpace(path)
+	if p == "" {
+		return "", true
+	}
+	if !gameExeNames[strings.ToLower(filepath.Base(p))] {
+		return "", false
+	}
+	return p, true
+}
+
+// SetGameExeLocation persiste o caminho do executável do jogo (fonte da
+// localização dos .vbf). Caminho que não seja FFX.exe/FFX-2.exe é
+// recusado em silêncio — o valor guardado continua o anterior, então o
+// eco do config (event GameExeLocation) devolve a UI ao estado válido.
+func (c *AppConfig) SetGameExeLocation(path string) {
+	normalized, ok := NormalizeGameExe(path)
+	if !ok {
+		common.LogVerbose("game exe rejeitado (só FFX.exe/FFX-2.exe): %q", path)
+		return
+	}
+	c.gameExeLoc = normalized
 	_ = c.ToJson()
 }

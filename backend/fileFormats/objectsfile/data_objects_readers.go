@@ -178,17 +178,20 @@ func ReadWeaponNamesLocalizations(patternPath string, gameVersion common.GameVer
 }
 
 // skipLayout monta campos na posição 0 com skip entre eles (como o segmentOffsets antigo).
+// Usado pelos EXAMPLES de lm_command/lm_item (o terceiro campo real é
+// information no lm_command e effect no lm_item — os exemplos usam o
+// caminho congelado, onde o terceiro fica "effect").
 func skipLayout(skip int) LayoutSet {
 	return LayoutSet{
 		common.GameVersionLastMiss: {
 			{"name", skip},
-			{"description", skip},
+			{"help", skip},
 			{"effect", 0},
 		},
 	}
 }
 
-// JobLayoutAt monta Name/Description contíguos + Effect.
+// JobLayoutAt monta Name/Help contíguos + Effect.
 // TODO(lastmiss/job): o skip real do Effect ainda é posicional; medir a partir
 // do fim do campo description (position 0 aqui) e atualizar quando o offset real
 // do efect no layout intermediário for confirmado.
@@ -197,12 +200,12 @@ func JobLayoutAt(effectSegmentPosition int64) LayoutSet {
 	return LayoutSet{
 		common.GameVersionFFX2: {
 			{"name", 0},
-			{"description", gap},
+			{"help", gap},
 			{"effect", 0},
 		},
 		common.GameVersionLastMiss: {
 			{"name", 0},
-			{"description", gap},
+			{"help", gap},
 			{"effect", 0},
 		},
 	}

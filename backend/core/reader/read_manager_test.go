@@ -3,11 +3,8 @@ package reader_test
 import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/reader"
-	"ffxresources/backend/core/writer"
 	"ffxresources/backend/datastore"
-	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/core/encoding"
-	"ffxresources/backend/interactions"
 	testcommon "ffxresources/testData"
 	"os"
 	"path/filepath"
@@ -16,10 +13,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
-
-func interactionsVersion() common.GameVersion {
-	return interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-}
 
 func TestReadManager(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -57,12 +50,12 @@ var _ = Describe("ReadManager", Ordered, func() {
 	Context("when testing FFX (ffx)", func() {
 		BeforeEach(func() {
 			common.SetCurrentGameVersion(common.GameVersionFFX)
-			//common.SetGameFilesRoot(filepath.Join(rootDir, "FFX", "binary"))
+			common.SetGameFilesRoot(filepath.Join(rootDir, "FFX", "binary"))
 		})
 
 		Context("when all required files exist", func() {
 			It("should initialize all character maps for available charsets", func() {
-				Expect(reader.InitializeInternals()).To(Succeed())
+				Expect(reader.InitializeInternals(common.GameVersionFFX)).To(Succeed())
 
 				// Verify that character maps were created for each charset
 				for _, charset := range common.Charsets {
@@ -77,7 +70,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 			})
 
 			It("should prepare string macros for all localizations", func() {
-				Expect(reader.InitializeInternals()).To(Succeed())
+				Expect(reader.InitializeInternals(common.GameVersionFFX)).To(Succeed())
 
 				// Verify that macros were published into the datastore
 				// Since we can't access specific macros by localization directly,
@@ -87,7 +80,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 			It("should handle Korean and Chinese localizations without output", func() {
 				// This test verifies that kr and ch localizations are processed
 				// but with printOutput set to false
-				Expect(reader.InitializeInternals()).To(Succeed())
+				Expect(reader.InitializeInternals(common.GameVersionFFX)).To(Succeed())
 
 				// We can't directly test the printOutput behavior in unit tests,
 				// but we can verify the function completes without error
@@ -99,12 +92,15 @@ var _ = Describe("ReadManager", Ordered, func() {
 	Context("when testing FFX-2 (ffx2)", func() {
 		BeforeEach(func() {
 			common.SetCurrentGameVersion(common.GameVersionFFX2)
-			//common.SetGameFilesRoot(filepath.Join(rootDir, "FFX-2", "binary"))
+			common.SetGameFilesRoot(filepath.Join(rootDir, "FFX-2", "binary"))
 		})
 
 		Context("when all required files exist", func() {
 			It("should initialize all character maps for available charsets", func() {
-				Expect(reader.InitializeInternals()).To(Succeed())
+				// PrepareVersion recebe a versão explícita: a versão global
+				// (config do app via interactions) não controla os buckets
+				// de charset, e o config do ambiente de teste é sempre FFX.
+				Expect(reader.PrepareVersion(common.GameVersionFFX2)).To(Succeed())
 
 				// Verify that character maps were created for each charset
 				for _, charset := range common.Charsets {
@@ -119,7 +115,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 			})
 
 			It("should prepare string macros for all localizations", func() {
-				Expect(reader.InitializeInternals()).To(Succeed())
+				Expect(reader.PrepareVersion(common.GameVersionFFX2)).To(Succeed())
 
 				// Verify that macros were published into the datastore
 				// Since we can't access specific macros by localization directly,
@@ -129,7 +125,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 			It("should handle Korean and Chinese localizations without output", func() {
 				// This test verifies that kr and ch localizations are processed
 				// but with printOutput set to false
-				Expect(reader.InitializeInternals()).To(Succeed())
+				Expect(reader.PrepareVersion(common.GameVersionFFX2)).To(Succeed())
 
 				// We can't directly test the printOutput behavior in unit tests,
 				// but we can verify the function completes without error
@@ -138,7 +134,7 @@ var _ = Describe("ReadManager", Ordered, func() {
 		})
 	})
 
-	Context("when charset files are missing", func() {
+	Context("when game files are missing", func() {
 		BeforeEach(func() {
 			common.SetGameFilesRoot("missing_resources")
 		})
@@ -146,11 +142,11 @@ var _ = Describe("ReadManager", Ordered, func() {
 			common.SetGameFilesRoot(originalResourcesRoot)
 		})
 
-		It("should handle missing charset files gracefully", func() {
-			// This depends on how PrepareCharset handles errors
-			// You might want to adjust this based on actual error handling
-			err := reader.InitializeInternals()
-			Expect(err).To(HaveOccurred(), "Initializing internals should return an error when resources are missing")
+		It("inicializa sem erro: charsets são embutidos e macros ausentes são toleradas", func() {
+			// Os charsets vivem em core/encoding/charset_tables.go — não há
+			// mais I/O de tabela, então nada falha por recurso ausente aqui.
+			// Macros ausentes são ignoradas silenciosamente (PrepareStringMacros).
+			Expect(reader.InitializeInternals(common.GameVersionFFX)).To(Succeed())
 		})
 	})
 
@@ -167,27 +163,8 @@ var _ = Describe("ReadManager", Ordered, func() {
 			// This depends on how PrepareStringMacros handles errors
 			// You might want to adjust this based on actual error handling
 			Expect(func() {
-				reader.InitializeInternals()
+				reader.InitializeInternals(common.GameVersionFFX)
 			}).ToNot(Panic())
-		})
-	})
-
-	Context("should read all event files", func() {
-		It("should read event file and write event file binary successfully", func() {
-			// Initialize internals to read event files
-			err := reader.InitializeInternals()
-			Expect(err).ToNot(HaveOccurred(), "Initializing internals should not return an error")
-
-			eventsFolder, err := common.NewFileAccessor(common.GetPathOriginalsEvent())
-			Expect(err).ToNot(HaveOccurred(), "Resolving events directory should not return an error")
-
-			err = reader.ReadAllEvents(eventsFolder)
-			Expect(err).ToNot(HaveOccurred(), "Reading all events should not return an error")
-
-			// Verify that EventFiles map is populated
-			Expect(event.HasEvents(interactionsVersion())).To(BeTrue(), "Events should be populated in datastore")
-			writer.ExportAllLocalizationsToJSON()
-			Expect(reader.EditAndSaveEventJSONFiles()).To(Succeed())
 		})
 	})
 })

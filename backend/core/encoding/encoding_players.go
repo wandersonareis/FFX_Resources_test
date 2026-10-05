@@ -117,3 +117,32 @@ func GetIconName(iconIdx byte) string {
 	}
 	return "?"
 }
+
+// copyByteStringMap devolve uma cópia isolada de uma tabela de nomes.
+func copyByteStringMap(src map[byte]string) map[byte]string {
+	out := make(map[byte]string, len(src))
+	for k, v := range src {
+		out[k] = v
+	}
+	return out
+}
+
+// PlayerCharTable devolve cópia do mapa índice→personagem da versão, para
+// montagem do catálogo de tags do editor (mesma lógica de GetPlayerChar).
+func PlayerCharTable(version common.GameVersion) map[byte]string {
+	if version == common.GameVersionFFX2 || version == common.GameVersionLastMiss {
+		return copyByteStringMap(playerCharMapV2)
+	}
+	return copyByteStringMap(playerCharMap)
+}
+
+// ButtonTable devolve cópia do mapa índice→botão (mesmo para todas as
+// versões — GetButtonName não tem versão).
+func ButtonTable() map[byte]string {
+	return copyByteStringMap(buttonMap)
+}
+
+// IconTable devolve cópia do mapa índice→ícone (mesmo para todas as versões).
+func IconTable() map[byte]string {
+	return copyByteStringMap(iconMap)
+}

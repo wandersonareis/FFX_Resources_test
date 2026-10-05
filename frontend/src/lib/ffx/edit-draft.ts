@@ -1,0 +1,410 @@
+import { createStore } from '@tanstack/store';
+import { useSelector } from '@tanstack/react-store';
+import { dto } from '@/wailsjs/go/models';
+import { EntryKind } from './display-names';
+import type { GameVersionId } from './game-version';
+import {
+  missingProtectedTags,
+  newUnclosedFragment,
+  restoreProtectedTags as restoreTags,
+} from './protected-tags';
+
+/** Chave de linha no rascunho: mesma que o backend usa (Index + Name). */
+export function rowKey(row: Pick<dto.TextRow, 'index' | 'name'>): string {
+  return `${row.index}:${row.name ?? ''}`;
+}
+
+interface DraftState {
+  version: GameVersionId;
+  kind: EntryKind;
+  id: string;
+  /** Entrada original carregada (base para reconstruir o lote no salvar). */
+  entry: dto.FileEntry;
+  /** Edições por rowKey → idioma → texto (só o que difere do original). */
+  edits: Map<string, Map<string, string>>;
+  /**
+   * Origem do rascunho: "" = data/; caminho do .vbf = tabela aberta no
+   * navegador de container. O mesmo id pode existir nas duas fontes —
+   * a chave leva a origem para não colidir, e o destino do salvar muda:
+   * data/ → ApplyTextCollection; .vbf → ApplyVbfTextCollection.
+   */
+  source: string;
+}
+
+const draftKey = (
+  version: GameVersionId,
+  kind: EntryKind,
+  id: string,
+  source: string
+): string => `${version}|${kind}|${id}|${source}`;
+
+interface DraftSnapshot {
+  hasDirty: boolean;
+  revision: number;
+}
+
+/** Relatório do gate de tags no save-all (ver restoreProtectedTags). */
+export interface GateReport {
+  restored: number;
+  unresolved: number;
+  unclosed: number;
+}
+
+type ReloadListener = () => void;
+
+/**
+ * Store reativo do resumo de rascunhos (TanStack Store): {hasDirty, revision}
+ * substitui o snapshot imutável que o useSyncExternalStore consumia. Os dados
+ * (estados/dirtyFiles) ficam imperativos no singleton abaixo — só a notificação
+ * é reativa.
+ */
+const editStore = createStore<DraftSnapshot>({
+  hasDirty: false,
+  revision: 0,
+});
+
+/**
+ * Rascunhos de edição em memória (singleton reativo). Trocar de arquivo não
+ * perde nada: o rascunho fica por (version|kind|id) até o usuário salvar ou
+ * descartar. O "traduzido" é o texto editado que substitui o slot 'us' no
+ * binário. As notificações disparam o TanStack Store compartilhado.
+ */
+class EditDraftStore {
+  private readonly states = new Map<string, DraftState>();
+  private readonly dirtyFiles = new Set<string>();
+  private readonly reloadListeners = new Set<ReloadListener>();
+
+  /** Snapshot imutável atual (leitura imperativa, p/ saveAllDrafts). */
+  getSnapshot(): DraftSnapshot {
+    return editStore.state;
+  }
+
+  /** Callback chamado após salvar tudo (reselect da aba ativa). */
+  onSaved(listener: ReloadListener): () => void {
+    this.reloadListeners.add(listener);
+    return () => this.reloadListeners.delete(listener);
+  }
+
+  private notify(): void {
+    editStore.setState((prev) => ({
+      hasDirty: this.dirtyFiles.size > 0,
+      revision: prev.revision + 1,
+    }));
+  }
+
+  /** Registra a base (entrada original) ao abrir o arquivo na tabela. */
+  setBase(
+    version: GameVersionId,
+    kind: EntryKind,
+    id: string,
+    entry: dto.FileEntry,
+    source = ''
+  ): void {
+    const key = draftKey(version, kind, id, source);
+    const existing = this.states.get(key);
+    if (existing) {
+      existing.entry = entry;
+      return;
+    }
+    this.states.set(key, {
+      version,
+      kind,
+      id,
+      entry,
+      edits: new Map(),
+      source,
+    });
+    this.touch(key, false);
+  }
+
+  /**
+   * A base da entrada já está registrada? É a guarda de quem edita ATRAVÉS
+   * do link: sem base, setCell descarta a edição em silêncio.
+   */
+  hasBase(
+    version: GameVersionId,
+    kind: EntryKind,
+    id: string,
+    source = ''
+  ): boolean {
+    return this.states.has(draftKey(version, kind, id, source));
+  }
+
+  /** Descarta rascunho sem edição (base fora de uso). */
+  dropBase(version: GameVersionId, kind: EntryKind, id: string, source = ''): void {
+    const key = draftKey(version, kind, id, source);
+    if (this.states.get(key)?.edits.size === 0) {
+      this.states.delete(key);
+    }
+  }
+
+  /** Registra/edita o texto de uma célula. Texto igual ao original limpa a edição. */
+  setCell(
+    version: GameVersionId,
+    kind: EntryKind,
+    id: string,
+    row: dto.TextRow,
+    lang: string,
+    text: string,
+    source = ''
+  ): void {
+    const key = draftKey(version, kind, id, source);
+    const state = this.states.get(key);
+    if (!state) return;
+
+    const rKey = rowKey(row);
+    const original = row.text?.[lang] ?? '';
+    let byLang = state.edits.get(rKey);
+    if (text === original) {
+      if (byLang) {
+        byLang.delete(lang);
+        if (byLang.size === 0) state.edits.delete(rKey);
+      }
+    } else {
+      if (!byLang) {
+        byLang = new Map();
+        state.edits.set(rKey, byLang);
+      }
+      byLang.set(lang, text);
+    }
+    this.touch(key, state.edits.size > 0);
+  }
+
+  /** Valor editado da célula (undefined = sem edição). */
+  editOf(
+    version: GameVersionId,
+    kind: EntryKind,
+    id: string,
+    row: dto.TextRow,
+    lang: string,
+    source = ''
+  ): string | undefined {
+    return this.editTextOf(version, kind, id, rowKey(row), lang, source);
+  }
+
+  /**
+   * Valor editado da célula pelo rowKey — sem precisar do row. É o que a
+   * célula linkada usa para mostrar a edição da def de OUTRA entrada ao
+   * vivo (o link anota o rowKey da def).
+   */
+  editTextOf(
+    version: GameVersionId,
+    kind: EntryKind,
+    id: string,
+    rKey: string,
+    lang: string,
+    source = ''
+  ): string | undefined {
+    return this.states
+      .get(draftKey(version, kind, id, source))
+      ?.edits.get(rKey)
+      ?.get(lang);
+  }
+
+  isDirty(version: GameVersionId, kind: EntryKind, id: string, source = ''): boolean {
+    const state = this.states.get(draftKey(version, kind, id, source));
+    return !!state && state.edits.size > 0;
+  }
+
+  /** Limpa o rascunho (após salvar a entrada). */
+  clear(version: GameVersionId, kind: EntryKind, id: string, source = ''): void {
+    const key = draftKey(version, kind, id, source);
+    this.states.delete(key);
+    this.touch(key, false);
+  }
+
+  /** Limpa todos os rascunhos (após salvar tudo). */
+  clearAll(): void {
+    this.states.clear();
+    this.touchAll();
+  }
+
+  /**
+   * Gate do save-all: restaura as tags protegidas que sumiram de todas as
+   * células editadas (reinserção alinhada) e relata o que ainda impede o
+   * salvamento:
+   *
+   *  - restored: células corrigidas automaticamente;
+   *  - unresolved: células que continuam sem tag protegida (restore falhou);
+   *  - unclosed: células com `{…` aberto que o original não tinha.
+   *
+   * `unresolved`/`unclosed` maiores que zero abortam o save — o texto não
+   * vai ao binário com valor perdido ou tag pela metade.
+   */
+  restoreProtectedTags(): GateReport {
+    let restored = 0;
+    let unresolved = 0;
+    let unclosed = 0;
+    let touched = false;
+
+    for (const state of this.states.values()) {
+      if (state.edits.size === 0) continue;
+      const rows = new Map<string, dto.TextRow>();
+      for (const row of state.entry.rows) rows.set(rowKey(row), row);
+
+      for (const [rKey, byLang] of state.edits) {
+        const row = rows.get(rKey);
+        if (!row) continue;
+        for (const [lang, text] of [...byLang]) {
+          const original = row.text?.[lang] ?? '';
+          let current = text;
+
+          if (missingProtectedTags(original, current).length > 0) {
+            const restoredText = restoreTags(original, current);
+            if (restoredText !== current) {
+              current = restoredText;
+              restored += 1;
+              touched = true;
+              if (current === original) byLang.delete(lang);
+              else byLang.set(lang, current);
+            }
+            if (missingProtectedTags(original, current).length > 0) {
+              unresolved += 1;
+            }
+          }
+          if (newUnclosedFragment(original, current) !== null) unclosed += 1;
+        }
+        if (byLang.size === 0) state.edits.delete(rKey);
+      }
+      if (state.edits.size === 0) touched = true;
+    }
+
+    if (touched) {
+      // Só o que resta no rascunho continua sujo (uma célula que virou o
+      // original deixa de exigir escrita no arquivo).
+      this.dirtyFiles.clear();
+      for (const [key, state] of this.states) {
+        if (state.edits.size > 0) this.dirtyFiles.add(key);
+      }
+      this.notify();
+    }
+    return { restored, unresolved, unclosed };
+  }
+
+  /**
+   * Monta a Collection do kind/version com as entradas editadas
+   * (base + edições mescladas), pronta para ApplyTextCollection.
+   * Só rascunhos de data/ (source = ""): os de .vbf vão pelo
+   * buildSourceCollection, com destino próprio.
+   */
+  buildCollection(
+    version: GameVersionId,
+    kind: EntryKind
+  ): Record<string, dto.FileEntry> {
+    return this.buildSourceCollection(version, kind, '');
+  }
+
+  /** Collection do kind/version para UMA fonte ('' = data/; .vbf = caminho). */
+  buildSourceCollection(
+    version: GameVersionId,
+    kind: EntryKind,
+    source: string
+  ): Record<string, dto.FileEntry> {
+    const out: Record<string, dto.FileEntry> = {};
+    for (const state of this.states.values()) {
+      if (state.edits.size === 0 || state.version !== version) continue;
+      if (state.source !== source) continue;
+      if (splitDraftKind(state) !== kind) continue;
+      out[splitDraftId(state)] = this.merge(state);
+    }
+    return out;
+  }
+
+  /** Lotes por kind para os arquivos sujos de DATA/ (por versão). */
+  dirtyBatches(): Map<GameVersionId, Map<EntryKind, string[]>> {
+    const out = new Map<GameVersionId, Map<EntryKind, string[]>>();
+    for (const state of this.states.values()) {
+      if (state.edits.size === 0 || state.source !== '') continue;
+      const kind = splitDraftKind(state);
+      const byKind = out.get(state.version) ?? new Map<EntryKind, string[]>();
+      const list = byKind.get(kind) ?? [];
+      list.push(splitDraftId(state));
+      byKind.set(kind, list);
+      out.set(state.version, byKind);
+    }
+    return out;
+  }
+
+  /**
+   * Lotes de .vbf sujos: versão → container (caminho) → kind → ids. O
+   * destino do salvar muda: mesmo motor, escopo da sessão do container.
+   */
+  dirtyVbfBatches(): Map<GameVersionId, Map<string, Map<EntryKind, string[]>>> {
+    const out = new Map<GameVersionId, Map<string, Map<EntryKind, string[]>>>();
+    for (const state of this.states.values()) {
+      if (state.edits.size === 0 || state.source === '') continue;
+      const byRoot =
+        out.get(state.version) ?? new Map<string, Map<EntryKind, string[]>>();
+      const byKind = byRoot.get(state.source) ?? new Map<EntryKind, string[]>();
+      const kind = splitDraftKind(state);
+      const list = byKind.get(kind) ?? [];
+      list.push(splitDraftId(state));
+      byKind.set(kind, list);
+      byRoot.set(state.source, byKind);
+      out.set(state.version, byRoot);
+    }
+    return out;
+  }
+
+  private merge(state: DraftState): dto.FileEntry {
+    const rows = state.entry.rows.map((row) => {
+      const edits = state.edits.get(rowKey(row));
+      let text = row.text;
+      if (edits && edits.size > 0) {
+        text = { ...(row.text ?? {}) };
+        for (const [lang, value] of edits) {
+          text[lang] = value;
+        }
+      }
+      // Payload de apply: só o que o binário precisa (index/name/hash/text).
+      // `original` é exclusivo de EXIBIÇÃO (vem de data/) e não pode viajar
+      // no payload — o backend o ignora, mas o contrato é não enviá-lo.
+      return dto.TextRow.createFrom({
+        index: row.index,
+        name: row.name,
+        hash: row.hash,
+        text,
+      });
+    });
+    return dto.FileEntry.createFrom({ metadata: state.entry.metadata, rows });
+  }
+
+  private touch(key: string, dirty: boolean): void {
+    if (dirty) {
+      this.dirtyFiles.add(key);
+    } else {
+      this.dirtyFiles.delete(key);
+    }
+    this.notify();
+  }
+
+  private touchAll(): void {
+    this.dirtyFiles.clear();
+    this.notify();
+  }
+
+  private fireSaved(): void {
+    for (const listener of this.reloadListeners) listener();
+  }
+
+  /** Chamado pelo saveAll após persistir tudo. */
+  markSaved(): void {
+    this.clearAll();
+    this.fireSaved();
+  }
+}
+
+export const editDraft = new EditDraftStore();
+
+function splitDraftKind(state: DraftState): EntryKind {
+  return state.kind;
+}
+
+function splitDraftId(state: DraftState): string {
+  return state.id;
+}
+
+export function useEditDraft(): { store: EditDraftStore; snapshot: DraftSnapshot } {
+  const snapshot = useSelector(editStore);
+  return { store: editDraft, snapshot };
+}

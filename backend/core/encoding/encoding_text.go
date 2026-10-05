@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"sync"
 
 	"ffxresources/backend/common"
 )
@@ -22,11 +23,22 @@ var (
 // Antes havia um único bucket global por charset, então carregar FFX-2
 // sobrescrevia os mapas de FFX. Agora cada versão (FFX/FFX-2/LastMiss) tem seu
 // próprio bucket: ByteToCharMaps[versão][charset].
+//
+// O acesso é concorrente na aplicação (Wails despacha cada binding em uma
+// goroutine): a preparação dos charsets acontece por vários caminhos
+// (ensureVersionReady com readyMu, mas também helpfile/lockit que chamam
+// PrepareVersionCharsets direto) enquanto outras goroutines decodificam texto
+// via CharToByte. charMapsMu serializa escrita x leitura; os mapas internos
+// (por charset) são publicados por substituição de referência e nunca
+// mutados depois — por isso os getters podem devolvê-los vivos.
 var (
+	charMapsMu     sync.RWMutex
 	ByteToCharMaps = make(map[common.GameVersion]map[string]map[uint]rune)
 	CharToByteMaps = make(map[common.GameVersion]map[string]map[rune]uint)
 )
 
+// ensureVersionBucket cria os buckets ausentes da versão. DEVE ser chamada
+// com charMapsMu em modo escrita.
 func ensureVersionBucket(version common.GameVersion) common.GameVersion {
 	if ByteToCharMaps == nil {
 		ByteToCharMaps = make(map[common.GameVersion]map[string]map[uint]rune)
@@ -47,11 +59,14 @@ func ensureVersionBucket(version common.GameVersion) common.GameVersion {
 // Mapa/charset ausente (configuração) e caractere ausente (dado) são
 // distinguidos via ErrVersionNotFound/ErrCharsetNotFound/ErrCharNotFound.
 func ByteToChar(hex uint, charset string, version common.GameVersion) (rune, error) {
+	charMapsMu.RLock()
 	byCharset, ok := ByteToCharMaps[version]
 	if !ok {
+		charMapsMu.RUnlock()
 		return 0, fmt.Errorf("%w: %v", ErrVersionNotFound, version)
 	}
 	charsetMap, ok := byCharset[charset]
+	charMapsMu.RUnlock()
 	if !ok {
 		return 0, fmt.Errorf("%w: %q (version=%v)", ErrCharsetNotFound, charset, version)
 	}
@@ -65,11 +80,14 @@ func ByteToChar(hex uint, charset string, version common.GameVersion) (rune, err
 
 // CharToByte resolve uma rune para byte no charset da versão indicada.
 func CharToByte(chr rune, charset string, version common.GameVersion) (uint, error) {
+	charMapsMu.RLock()
 	byCharset, ok := CharToByteMaps[version]
 	if !ok {
+		charMapsMu.RUnlock()
 		return 0, fmt.Errorf("%w: %v", ErrVersionNotFound, version)
 	}
 	charsetMap, ok := byCharset[charset]
+	charMapsMu.RUnlock()
 	if !ok {
 		return 0, fmt.Errorf("%w: %q (version=%v)", ErrCharsetNotFound, charset, version)
 	}
@@ -86,6 +104,8 @@ func CharToByte(chr rune, charset string, version common.GameVersion) (uint, err
 // common.CharsetVersion (lastmiss usa os mapas de ffx2).
 func EnsureCharsetLoaded(version common.GameVersion, charset string) error {
 	version = common.CharsetVersion(version)
+	charMapsMu.RLock()
+	defer charMapsMu.RUnlock()
 	byCharset, ok := ByteToCharMaps[version]
 	if !ok {
 		return fmt.Errorf("%w: %v", ErrVersionNotFound, version)
@@ -121,8 +141,11 @@ func EnsureAllCharsetsLoaded(version common.GameVersion) error {
 	return nil
 }
 
-// SetCharMap publica os mapas de um charset na versão indicada.
+// SetCharMap publica os mapas de um charset na versão indicada. Os mapas
+// entram de uma vez (substituição de referência) e nunca são mutados depois.
 func SetCharMap(version common.GameVersion, charset string, byteToCharMap map[uint]rune, charToByteMap map[rune]uint) {
+	charMapsMu.Lock()
+	defer charMapsMu.Unlock()
 	v := ensureVersionBucket(version)
 	ByteToCharMaps[v][charset] = byteToCharMap
 	CharToByteMaps[v][charset] = charToByteMap
@@ -130,6 +153,8 @@ func SetCharMap(version common.GameVersion, charset string, byteToCharMap map[ui
 
 // GetByteToCharMap retorna o mapa byte->rune do charset na versão indicada (pode ser nil).
 func GetByteToCharMap(version common.GameVersion, charset string) map[uint]rune {
+	charMapsMu.RLock()
+	defer charMapsMu.RUnlock()
 	if byCharset, ok := ByteToCharMaps[version]; ok {
 		return byCharset[charset]
 	}
@@ -138,6 +163,8 @@ func GetByteToCharMap(version common.GameVersion, charset string) map[uint]rune 
 
 // GetCharToByteMap retorna o mapa rune->byte do charset na versão indicada (pode ser nil).
 func GetCharToByteMap(version common.GameVersion, charset string) map[rune]uint {
+	charMapsMu.RLock()
+	defer charMapsMu.RUnlock()
 	if byCharset, ok := CharToByteMaps[version]; ok {
 		return byCharset[charset]
 	}
@@ -146,12 +173,16 @@ func GetCharToByteMap(version common.GameVersion, charset string) map[rune]uint 
 
 // ClearCharMaps limpa os charsets da versão indicada.
 func ClearCharMaps(version common.GameVersion) {
+	charMapsMu.Lock()
+	defer charMapsMu.Unlock()
 	delete(ByteToCharMaps, version)
 	delete(CharToByteMaps, version)
 }
 
 // ClearAllCharMaps limpa todas as versões (útil em testes).
 func ClearAllCharMaps() {
+	charMapsMu.Lock()
+	defer charMapsMu.Unlock()
 	ByteToCharMaps = make(map[common.GameVersion]map[string]map[uint]rune)
 	CharToByteMaps = make(map[common.GameVersion]map[string]map[rune]uint)
 }

@@ -19,7 +19,7 @@ func ExportMacroDictionaryExample() {
 
 	// Step 1: Initialize internals to load character maps and macro dictionaries
 	common.LogInfo("1. Inicializando dados internos (carregando mapas de caracteres e dicionários de macros)...")
-	err := reader.InitializeInternals()
+	err := reader.InitializeInternals(interactions.NewInteractionService().FFXAppConfig().GetGameVersion())
 	if err != nil {
 		log.Printf("Erro ao inicializar dados internos: %v", err)
 		return
@@ -104,7 +104,7 @@ func CompleteWorkflowExample() {
 
 	// Step 1: Initialize data
 	common.LogInfo("1. Inicializando dados do jogo...")
-	if err := reader.InitializeInternals(); err != nil {
+	if err := reader.InitializeInternals(interactions.NewInteractionService().FFXAppConfig().GetGameVersion()); err != nil {
 		common.LogError("Erro ao inicializar dados: %v\n", err)
 		return
 	}
@@ -131,7 +131,7 @@ func BinaryReconstructionExample() {
 
 	// Step 1: Initialize data
 	common.LogInfo("1. Inicializando dados do jogo...")
-	if err := reader.InitializeInternals(); err != nil {
+	if err := reader.InitializeInternals(interactions.NewInteractionService().FFXAppConfig().GetGameVersion()); err != nil {
 		common.LogError("Erro ao inicializar dados: %v\n", err)
 		return
 	}

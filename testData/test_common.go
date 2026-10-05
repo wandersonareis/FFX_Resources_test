@@ -17,16 +17,16 @@ func GetTestDataRootDirectory() string {
 }
 
 // SetBuildBinPath sets the "APP_BASE_PATH" environment variable to the build/bin directory
-// within the project root. It checks for the existence of the "resources.asar" file in that
-// directory and returns an error if the file is not found or if setting the environment
-// variable fails.
+// within the project root. Returns an error if that directory does not exist or if setting
+// the environment variable fails.
 func SetBuildBinPath() error {
 	projectRoot := findProjectRoot()
 	buildBinPath := filepath.Join(projectRoot, "build", "bin")
-	asarFilePath := filepath.Join(buildBinPath, "resources.asar")
 
-	if _, err := os.Stat(asarFilePath); os.IsNotExist(err) {
-		return fmt.Errorf("resources.asar file not found in the build directory: %v", err)
+	if info, err := os.Stat(buildBinPath); err != nil {
+		return fmt.Errorf("build directory not found: %v", err)
+	} else if !info.IsDir() {
+		return fmt.Errorf("build path is not a directory: %s", buildBinPath)
 	}
 
 	if err := os.Setenv("APP_BASE_PATH", buildBinPath); err != nil {

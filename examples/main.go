@@ -17,6 +17,11 @@ dos editores de eventos JSON.
 func main() {
 	common.LogInfo("=== EXEMPLOS DO SISTEMA DE EVENTOS FFX ===")
 
+	// Texturas .dds.phyre (PhyreEngine/DX11): scan da árvore, extração em
+	// DDS/PNG (com flip de orientação), save e reimport. Auto-contido:
+	// trabalha em cópias temporárias, sem tocar em data/ nem mods/.
+	runDDSPHYREExample()
+
 	// ===== FFX (v1) =====
 	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(common.GameVersionFFX)
 	if err := interactions.NewInteractionService().GameLocation.SetTargetDirectory("/home/mestre/FFX_Resources/build/bin/data/"); err != nil {
@@ -24,12 +29,12 @@ func main() {
 		common.LogError("Erro ao definir diretório de destino: %v\n", err)
 		return
 	}
-	common.SetVerboseMode(false)                                                                                    // Ativa o modo verboso para depuração
+	common.SetVerboseMode(false) // Ativa o modo verboso para depuração
 
 	// Inicialização obrigatória
 	common.LogInfo("=== FFX (v1) ===")
 	common.LogInfo("Inicializando sistema (FFX v1)...")
-	if err := reader.InitializeInternals(); err != nil {
+	if err := reader.InitializeInternals(common.GameVersionFFX); err != nil {
 		common.LogError("Erro ao inicializar sistema: %v\n", err)
 		return
 	}
@@ -39,24 +44,29 @@ func main() {
 
 	// ===== FFX-2 (v2) =====
 	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(common.GameVersionFFX2)
-	if err := interactions.NewInteractionService().GameLocation.SetTargetDirectory("/home/mestre/FFX_Resources/build/bin/data/"); err != nil {
+	if err := interactions.NewInteractionService().GameLocation.SetTargetDirectory("F:\\ffxWails\\FFX_Resources\\examples"); err != nil {
 		common.LogError("Erro ao definir diretório de destino: %v\n", err)
 		return
 	}
 
 	common.LogInfo("\n=== FFX-2 (v2) ===")
 	common.LogInfo("Reinicializando dicionários para FFX-2...")
-	if err := reader.InitializeInternals(); err != nil {
+	if err := reader.InitializeInternals(common.GameVersionFFX2); err != nil {
 		common.LogError("Erro ao inicializar sistema: %v\n", err)
 		return
 	}
 	runFFX2Examples()
 	runEventsExamples(common.GameVersionFFX2)
 
+	// Mapeamento struct <-> binário (uma struct Go por chunk, sem tags — o
+	// tipo do campo diz se é texto ou dado). Auto-contido: não depende do
+	// diretório do jogo nem da inicialização.
+	runChunkMappingExample()
+
 	// ===== LastMiss (lastmiss) =====
 	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(common.GameVersionLastMiss)
 
-	common.LogInfo("\n=== LastMiss (lastmiss) ===")	
+	common.LogInfo("\n=== LastMiss (lastmiss) ===")
 	runLastMissExamples()
 
 	runObjectFileStore()
@@ -76,7 +86,7 @@ func showMainMenu() {
 	//writer.WriteStringsEventForAllLocalizationsJSON("akagi0100", true) // Exporta o evento "akagi0100" para JSON
 	writer.ExportMacroDictionaryToJSON()
 	//reader.EditAndSaveMacroDictJSONFiles(true) // Exemplo de fluxo completo de exportação/importação
-	reader.EditAndSaveSpecificEventFromJSON("znkd1500") // Edita e salva o evento "znkd1500" do JSON
+	//event.ExportEventStringsToLocalizations(common.CurrentGameVersion(), "znkd1500") // Fluxo novo: exporta/reconstrói o evento via fileFormats/event
 	// ===== WORKFLOW JSON =====
 	// demoWorkflowJSON()
 	// exemploEditorEspecificoDemo()	// ===== EXEMPLO ATIVO (descomente para testar) =====

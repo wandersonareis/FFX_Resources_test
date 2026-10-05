@@ -93,6 +93,9 @@ func (e *NotificationService) NotifySuccess(message string) {
 }
 
 func isEmptyContext(ctx context.Context) bool {
+	if ctx == nil {
+		return true
+	}
 	ctxString := reflect.TypeOf(ctx).String()
 	return ctxString == "*context.emptyCtx" || ctxString == "context.backgroundCtx"
 }
