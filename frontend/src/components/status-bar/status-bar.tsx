@@ -170,7 +170,8 @@ export function StatusBar() {
             </p>
             <p className="text-xs opacity-70">
               Contagem fixa na abertura do arquivo; linhas sem original de
-              data/ e referências de dedup ficam fora.
+              data/ ficam fora da contagem. As repetições linkadas (dedup)
+              aparecem na tabela, mas o texto vive na def — não contam aqui.
             </p>
           </AlertDescription>
         </Alert>

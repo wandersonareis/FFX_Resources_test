@@ -96,6 +96,14 @@ class EditDraftStore {
     this.touch(key, false);
   }
 
+  /**
+   * A base da entrada já está registrada? É a guarda de quem edita ATRAVÉS
+   * do link: sem base, setCell descarta a edição em silêncio.
+   */
+  hasBase(version: GameVersionId, kind: EntryKind, id: string): boolean {
+    return this.states.has(draftKey(version, kind, id));
+  }
+
   /** Descarta rascunho sem edição (base fora de uso). */
   dropBase(version: GameVersionId, kind: EntryKind, id: string): void {
     const key = draftKey(version, kind, id);
@@ -143,9 +151,24 @@ class EditDraftStore {
     row: dto.TextRow,
     lang: string
   ): string | undefined {
+    return this.editTextOf(version, kind, id, rowKey(row), lang);
+  }
+
+  /**
+   * Valor editado da célula pelo rowKey — sem precisar do row. É o que a
+   * célula linkada usa para mostrar a edição da def de OUTRA entrada ao
+   * vivo (o link anota o rowKey da def).
+   */
+  editTextOf(
+    version: GameVersionId,
+    kind: EntryKind,
+    id: string,
+    rKey: string,
+    lang: string
+  ): string | undefined {
     return this.states
       .get(draftKey(version, kind, id))
-      ?.edits.get(rowKey(row))
+      ?.edits.get(rKey)
       ?.get(lang);
   }
 

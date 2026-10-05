@@ -17,6 +17,10 @@ export function TranslationDialog({ view }: { view: EntryView }) {
   const open = useSelector(store, (s) => s.dialogOpen);
   const row = useSelector(store, (s) => s.translationRow);
   const rows = useSelector(store, (s) => s.rows);
+  // Alvo override (ref → def em OUTRA entrada): o diálogo está preso na row
+  // sintetizada da def — navegar trocaria de linha SEM trocar de arquivo, e
+  // o store ignora o movimento (setas que não fazem nada).
+  const target = useSelector(store, (s) => s.translationTarget);
   const [languages, setLanguages] = useState<Array<{ code: string; name: string }>>([]);
 
   useEffect(() => {
@@ -31,9 +35,11 @@ export function TranslationDialog({ view }: { view: EntryView }) {
       row={row}
       version={view.version}
       languages={languages}
-      hasPrevious={rows.findIndex((r) => r.index === row?.index) > 0}
+      hasPrevious={
+        !target && rows.findIndex((r) => r.index === row?.index) > 0
+      }
       hasNext={
-        rows.findIndex((r) => r.index === row?.index) < rows.length - 1
+        !target && rows.findIndex((r) => r.index === row?.index) < rows.length - 1
       }
       onNavigate={(direction, value) => actions.navigateRow(direction, value)}
       onClosed={(value) => actions.commitRow(value)}

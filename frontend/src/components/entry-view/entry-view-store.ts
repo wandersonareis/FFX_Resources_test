@@ -22,7 +22,6 @@ import {
   sendErrorNotification,
   sendErrorNotificationWithMessage,
 } from '@/lib/ffx/error-handler';
-import { isRefText } from '@/lib/ffx/hash-ref';
 import { isBlankSourceRow } from '@/lib/ffx/blank-us';
 import { SOURCE_LANG } from '@/lib/ffx/save-all';
 import {
@@ -38,6 +37,16 @@ import type { SideNode } from './types';
 
 /** Estado de carga de um item principal da árvore. */
 export type KindLoadStatus = 'loading' | 'ready' | 'error';
+
+/**
+ * Alvo da edição: a entrada onde o rascunho registra a tradução. A célula
+ * linkada abre o editor na def — mesmo que a def viva em OUTRA entrada
+ * (o link anota o arquivo e o rowKey dela).
+ */
+export interface TranslationTarget {
+  kind: EntryKind;
+  id: string;
+}
 
 /**
  * Ação de imagem em curso — extrair / replicar / deletar sobre um id
@@ -68,6 +77,13 @@ export interface EntryViewState {
   selectedEntry: EntryRow | null;
   rows: dto.TextRow[];
   /**
+   * Anotações de link das rows de ref dedupada da entrada aberta
+   * (rowKey → texto atual da def + origem). Vem do backend na entrega
+   * dedupada (FileEntry.refs) e alimenta o texto linkado na tabela
+   * (cor própria, tooltip "repetição").
+   */
+  refLinks: Record<string, dto.RefLink>;
+  /**
    * Textura aberta (kind=images). null = nenhum / kind de texto.
    * Guardada aqui junto da seleção para o painel de imagem não precisar de
    * estado próprio (e para sobreviver à troca de componente).
@@ -86,6 +102,12 @@ export interface EntryViewState {
   generation: number;
   /** Linha aberta no modal do editor. */
   translationRow: dto.TextRow | null;
+  /**
+   * Alvo da edição do modal: null = a entrada aberta (selectedEntry);
+   * preenchido quando o editor abre na DEF de outra entrada através do
+   * link (a tradução é registrada no rascunho do arquivo da def).
+   */
+  translationTarget: TranslationTarget | null;
   dialogOpen: boolean;
   /**
    * Diálogo de ação de imagem aberto (extrair/replicar/deletar) ou null.
@@ -115,8 +137,14 @@ export interface EntryActions {
   requestTableFocus(): void;
   /** Tabela focou a 1ª linha: limpa o pedido pendente. */
   consumeTableFocus(): void;
-  /** Abre o modal do editor para a linha clicada/teclada na tabela. */
-  openDialog(row: dto.TextRow): void;
+  /**
+   * Abre o modal do editor para a linha clicada/teclada na tabela. target
+   * preenchido = edita a DEF de outra entrada através do link (o rascunho
+   * registra no arquivo da def).
+   */
+  openDialog(row: dto.TextRow, target?: TranslationTarget): void;
+  /** Célula linkada: abre o editor na row da def apontada pelo link. */
+  openLinked(row: dto.TextRow): void;
   /** Navegação ←/→ do modal sem fechar (value aplicado como rascunho). */
   navigateRow(direction: 'prev' | 'next', value?: string): void;
   /** Fechamento do modal (value != undefined aplica a edição). */
@@ -192,6 +220,7 @@ function createEntryStore(version: GameVersionId) {
     activeKind: 'events',
     selectedEntry: null,
     rows: [],
+    refLinks: {},
     image: null,
     loading: true,
     progress: null,
@@ -201,6 +230,7 @@ function createEntryStore(version: GameVersionId) {
     >,
     generation: 0,
     translationRow: null,
+    translationTarget: null,
     dialogOpen: false,
     imageAction: null,
     pendingTableFocus: false,
@@ -286,6 +316,7 @@ function vbfSideNode(root: string, node: VbfNode): SideNode {
 const NO_SELECTION: Partial<EntryViewState> = {
   selectedEntry: null,
   rows: [],
+  refLinks: {},
   progress: null,
   image: null,
 };
@@ -437,17 +468,17 @@ export function createEntryView(version: GameVersionId): EntryView {
       }
       // Progresso por row: FIXO na abertura (não acompanha rascunho).
       patch({ progress: entryProgress(full) });
-      // Dedup: refs "$hash" (repetições idênticas) ficam fora da tabela —
-      // o tradutor traduz cada texto uma vez. A base do rascunho guarda a
-      // entry COMPLETA; o backend resolve refs e propaga o texto editado
-      // para todas as cópias no salvar (UI e import).
+      // Anotações de link das refs dedupadas (texto da def + origem) —
+      // alimenta o texto linkado na tabela (cor própria, tooltip).
+      patch({ refLinks: full.refs ?? {} });
+      // Dedup: cópia não traduzida = linha VISÍVEL com o texto da def
+      // linkado (as duas árvores; o link anota a fonte no tooltip). Editar
+      // pela ref edita a def — nunca cria texto divergente.
       // Blank: rows sem 'us' utilizável (vazio/espaço/"-") seguem o mesmo
       // contrato do export — o tradutor nunca vê o que o artefato
       // exportado não traria.
       const rows = (full.rows ?? []).filter(
-        (r) =>
-          !isRefText(r.text?.[SOURCE_LANG], r.hash?.[SOURCE_LANG]) &&
-          !isBlankSourceRow(r.text?.[SOURCE_LANG])
+        (r) => !isBlankSourceRow(r.text?.[SOURCE_LANG])
       );
       patch({ rows });
     } catch (error) {
@@ -653,6 +684,26 @@ export function createEntryView(version: GameVersionId): EntryView {
     });
   };
 
+  /**
+   * Garante a BASE do rascunho do alvo da edição — é o que torna possível
+   * editar PELA REF: a def pode viver em um arquivo que o usuário nunca
+   * abriu, e sem base o editDraft.setCell descarta a edição em silêncio (o
+   * payload de apply é montado a partir dela). Devolve false quando a def
+   * não pôde ser carregada: nesse caso o editor NÃO abre — gravar sem base
+   * fabricaria um payload incompleto do arquivo da def.
+   */
+  const ensureDraftBase = async (t: TranslationTarget): Promise<boolean> => {
+    if (editDraft.hasBase(version, t.kind, t.id)) return true;
+    try {
+      const full = await loadEntry(t.kind, t.id, version);
+      editDraft.setBase(version, t.kind, t.id, full);
+      return true;
+    } catch (error) {
+      sendErrorNotification(error);
+      return false;
+    }
+  };
+
   const actions: EntryActions = {
     reload,
     coldReload,
@@ -680,19 +731,80 @@ export function createEntryView(version: GameVersionId): EntryView {
     toggleNode,
     requestTableFocus: () => patch({ pendingTableFocus: true }),
     consumeTableFocus: () => patch({ pendingTableFocus: false }),
-    openDialog: (row) => {
+    openDialog: (row, target) => {
       // Entrada aberta pelo .vbf é somente leitura: não existe edição para
       // abrir (o salvar sairia de mods/ contra um original que pode nem estar
       // extraído em data/).
       if (store.state.selectedEntry?.vbf) return;
-      patch({ translationRow: row, dialogOpen: true });
+      patch({
+        translationRow: row,
+        translationTarget: target ?? null,
+        dialogOpen: true,
+      });
+    },
+    openLinked: async (row) => {
+      const entry = store.state.selectedEntry;
+      if (!entry) return;
+      const link = store.state.refLinks[rowKey(row)];
+      if (!link) {
+        actions.openDialog(row);
+        return;
+      }
+      // Def na MESMA entrada (ou sem origem anotada): abre na row real,
+      // com navegação normal do diálogo.
+      if (!link.sourceId || link.sourceId === entry.id) {
+        const def = store.state.rows.find(
+          (r) =>
+            r.index === link.sourceIndex &&
+            (r.name ?? '') === (link.sourceName ?? '')
+        );
+        if (def) {
+          actions.openDialog(def);
+          return;
+        }
+      }
+      // Def em OUTRA entrada (ex.: ref de 236 apontando o 235): row
+      // sintetizada + alvo override — o rascunho registra no arquivo da
+      // def e a navegação fica desabilitada (row única). A BASE do rascunho
+      // dela precisa existir antes do editor, ou setCell descarta a edição
+      // em silêncio.
+      const rKey = `${link.sourceIndex}:${link.sourceName ?? ''}`;
+      const target: TranslationTarget = {
+        kind: entry.kind,
+        id: link.sourceId ?? entry.id,
+      };
+      if (!(await ensureDraftBase(target))) return;
+      const live = editDraft.editTextOf(
+        version,
+        target.kind,
+        target.id,
+        rKey,
+        SOURCE_LANG
+      );
+      const synthetic = dto.TextRow.createFrom({
+        index: link.sourceIndex,
+        name: link.sourceName,
+        hash: { [SOURCE_LANG]: row.hash?.[SOURCE_LANG] ?? '' },
+        text: { [SOURCE_LANG]: live ?? link.text ?? '' },
+        original:
+          link.original !== undefined
+            ? { [SOURCE_LANG]: link.original }
+            : undefined,
+      });
+      actions.openDialog(synthetic, target);
     },
     navigateRow: (direction, value) => {
-      const { selectedEntry: entry, translationRow: row } = store.state;
-      if (value !== undefined && entry && row) {
-        editDraft.setCell(version, entry.kind, entry.id, row, SOURCE_LANG, value);
+      const { translationRow: row, translationTarget: target } = store.state;
+      const entry = store.state.selectedEntry;
+      if (value !== undefined && row && (target || entry)) {
+        const t = target ?? {
+          kind: entry!.kind,
+          id: entry!.id,
+        };
+        editDraft.setCell(version, t.kind, t.id, row, SOURCE_LANG, value);
         patch({ rows: [...store.state.rows] });
       }
+      if (target) return; // alvo override: navegação desabilitada (row única)
       const idx = store.state.rows.findIndex(
         (r) => rowKey(r) === (row ? rowKey(row) : null)
       );
@@ -701,12 +813,17 @@ export function createEntryView(version: GameVersionId): EntryView {
       if (next) patch({ translationRow: next });
     },
     commitRow: (value) => {
-      const { selectedEntry: entry, translationRow: row } = store.state;
-      if (value !== undefined && entry && row) {
-        editDraft.setCell(version, entry.kind, entry.id, row, SOURCE_LANG, value);
+      const { translationRow: row, translationTarget: target } = store.state;
+      const entry = store.state.selectedEntry;
+      if (value !== undefined && row && (target || entry)) {
+        const t = target ?? {
+          kind: entry!.kind,
+          id: entry!.id,
+        };
+        editDraft.setCell(version, t.kind, t.id, row, SOURCE_LANG, value);
         patch({ rows: [...store.state.rows] });
       }
-      patch({ dialogOpen: false, translationRow: null });
+      patch({ dialogOpen: false, translationRow: null, translationTarget: null });
     },
     openImageAction: (action) => {
       // Ações de imagem agem sobre data/ + mods/: a partir do .vbf o id

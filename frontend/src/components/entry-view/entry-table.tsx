@@ -7,7 +7,7 @@ import { dto } from '@/wailsjs/go/models';
 import { useEditDraft, rowKey } from '@/lib/ffx/edit-draft';
 import { SOURCE_LANG } from '@/lib/ffx/save-all';
 import { resolveSegmentLabel } from '@/lib/ffx/display-names';
-import { DEDUP_VIEW_KINDS } from '@/lib/ffx/hash-ref';
+import { DEDUP_VIEW_KINDS, LINKED_SIDE, linkedRowText } from '@/lib/ffx/hash-ref';
 import { GameTextView } from '@/components/game-text-view';
 import {
   Table,
@@ -37,8 +37,24 @@ export function EntryTable({ view }: { view: EntryView }) {
   const activeKind = useSelector(store, (s) => s.activeKind);
   const selectedEntry = useSelector(store, (s) => s.selectedEntry);
   const loading = useSelector(store, (s) => s.loading);
+  const refLinks = useSelector(store, (s) => s.refLinks);
   const { store: drafts, snapshot } = useEditDraft();
   const version = view.version;
+
+  // Texto da célula LINKADA (row de ref): estado atual da def — rascunho
+  // dela inclusive. O "$hash" do backend nunca é pintado.
+  const linkedValueOf = useCallback(
+    (row: dto.TextRow): string | undefined => {
+      const link = refLinks[rowKey(row)];
+      const entry = selectedEntry;
+      if (!link) return undefined;
+      if (!entry) return link.text ?? '';
+      return linkedRowText(entry.id, link, (defId, defKey) =>
+        drafts.editTextOf(version, entry.kind, defId, defKey, SOURCE_LANG)
+      );
+    },
+    [refLinks, selectedEntry, drafts, version]
+  );
 
   const [focusedRowId, setFocusedRowId] = useState<string | null>(null);
   const rowRefs = useRef(new Map<string, HTMLTableRowElement>());
@@ -73,7 +89,10 @@ export function EntryTable({ view }: { view: EntryView }) {
       } else if (event.key === 'Enter') {
         event.preventDefault();
         setFocusedRowId(key);
-        actions.openDialog(row);
+        // Row de ref dedupada: o editor abre NA DEF (através do link) —
+        // nunca em cima do "$hash".
+        if (refLinks[key]) actions.openLinked(row);
+        else actions.openDialog(row);
       } else if (event.key === 'ArrowLeft') {
         event.preventDefault();
         // Volta o foco para o nó selecionado na árvore (fecha o ciclo de
@@ -95,7 +114,7 @@ export function EntryTable({ view }: { view: EntryView }) {
         node?.focus();
       }
     },
-    [rows, actions, selectedEntry]
+    [rows, actions, selectedEntry, refLinks]
   );
 
   // lockit: numeração própria por grupo (game/utf8), sem expor o índice
@@ -162,6 +181,11 @@ export function EntryTable({ view }: { view: EntryView }) {
         }),
         columnHelper.accessor(
           (row) => {
+            // Ref dedupada: a célula pinta o TEXTO DA DEF (estado atual,
+            // rascunho incluído) — o "$hash" entregue pelo backend é só o
+            // ponteiro de collapse, nunca conteúdo exibível.
+            const linked = linkedValueOf(row);
+            if (linked !== undefined) return linked;
             const entry = selectedEntry;
             // Entrada aberta pelo .vbf é somente leitura: o rascunho de
             // edição não entra na visualização.
@@ -182,9 +206,7 @@ export function EntryTable({ view }: { view: EntryView }) {
               const entry = selectedEntry;
               const readOnly = Boolean(entry?.vbf);
               const edited =
-                !missing &&
-                !readOnly &&
-                entry
+                !missing && !readOnly && entry
                   ? drafts.editOf(version, entry.kind, entry.id, row, SOURCE_LANG) !==
                     undefined
                   : false;
@@ -192,6 +214,34 @@ export function EntryTable({ view }: { view: EntryView }) {
                 return (
                   <div className="text-cell translated-cell" title="Linha inexistente no arquivo traduzido">
                     <span className={MISSING_SIDE}>—</span>
+                  </div>
+                );
+              }
+              // Ref dedupada (link): texto da def em cor própria, com o
+              // original dela no tooltip. O clique abre o editor NA DEF —
+              // a tradução é registrada no arquivo da def, nunca aqui.
+              const link = refLinks[rowKey(row)];
+              if (link) {
+                const defText = linkedValueOf(row) ?? link.text ?? '';
+                const defTranslated =
+                  defText !== '' && defText !== (link.original ?? '');
+                return (
+                  <div
+                    className={`text-cell translated-cell${defTranslated ? ' edited' : ''}`}
+                    title={
+                      defTranslated
+                        ? `Repetição de: ${link.original ?? ''}`
+                        : 'Repetição (dedup): o texto vive na def de outro ponto'
+                    }
+                    onClick={
+                      readOnly ? undefined : () => actions.openLinked(row)
+                    }
+                  >
+                    <GameTextView
+                      text={defText}
+                      fallback="—"
+                      className={LINKED_SIDE}
+                    />
                   </div>
                 );
               }
@@ -210,7 +260,7 @@ export function EntryTable({ view }: { view: EntryView }) {
         ),
       ]),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeKind, selectedEntry, version, snapshot.revision, drafts, actions, lockitSeq]
+    [activeKind, selectedEntry, version, snapshot.revision, drafts, actions, lockitSeq, refLinks, linkedValueOf]
   );
 
   const table = useTable({
@@ -232,8 +282,10 @@ export function EntryTable({ view }: { view: EntryView }) {
     rowRefs.current.get(rowKey(rows[0]))?.focus();
   }, [pendingTableFocus, selectedEntry, rows, actions]);
 
-  // Painel 100% deduplicado: todas as linhas deste arquivo são refs de
-  // textos cuja def vive em outro arquivo — sem linhas para traduzir aqui.
+  // Arquivo sem NENHUMA linha servível: a tabela ficaria com o corpo vazio,
+  // então o aviso explica. Note que as refs NÃO entram aqui — elas ficam
+  // VISÍVEIS como link (nada é oculto: nem arquivo, nem linha repetida, em
+  // data/ ou no .vbf).
   if (
     DEDUP_VIEW_KINDS.has(activeKind) &&
     selectedEntry &&
@@ -242,8 +294,9 @@ export function EntryTable({ view }: { view: EntryView }) {
   ) {
     return (
       <div className="mt-2 rounded-md border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
-        Todas as linhas deste arquivo são repetições de textos definidos em
-        outro arquivo (dedup) — nada a traduzir aqui.
+        Nenhuma linha traduzível neste arquivo (todas em branco no original).
+        As repetições de textos definidos em outro arquivo saem como link para
+        a def — nada é ocultado.
       </div>
     );
   }
