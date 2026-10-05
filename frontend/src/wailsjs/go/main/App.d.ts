@@ -6,6 +6,8 @@ import {services} from '../models';
 
 export function ApplyTextCollection(arg1:string,arg2:common.GameVersion,arg3:dto.Collection):Promise<void>;
 
+export function ApplyVbfTextCollection(arg1:string,arg2:string,arg3:common.GameVersion,arg4:dto.Collection):Promise<void>;
+
 export function CountChangedTexts(arg1:dto.Collection,arg2:dto.Collection):Promise<number>;
 
 export function DeleteImages(arg1:string,arg2:string,arg3:Array<string>,arg4:string,arg5:common.GameVersion):Promise<dto.BatchResult>;

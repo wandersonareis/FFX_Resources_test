@@ -6,6 +6,10 @@ export function ApplyTextCollection(arg1, arg2, arg3) {
   return window['go']['main']['App']['ApplyTextCollection'](arg1, arg2, arg3);
 }
 
+export function ApplyVbfTextCollection(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['ApplyVbfTextCollection'](arg1, arg2, arg3, arg4);
+}
+
 export function CountChangedTexts(arg1, arg2) {
   return window['go']['main']['App']['CountChangedTexts'](arg1, arg2);
 }

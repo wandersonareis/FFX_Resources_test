@@ -354,6 +354,17 @@ func (a *App) ApplyTextCollection(kind string, version common.GameVersion, c dto
 	return a.MetadataService.ApplyTextCollection(kind, version, c)
 }
 
+// ApplyVbfTextCollection aplica (no escopo da sessão do container) os edits
+// vindos das tabelas abertas no navegador de .vbf: mesmo motor do "Salvar"
+// de data/, com a propagação limitada às cópias abertas no clique. Grava em
+// mods/ os binários tocados.
+func (a *App) ApplyVbfTextCollection(vbfPath, kind string, version common.GameVersion, c dto.Collection) error {
+	if a.MetadataService == nil {
+		return fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ApplyVbfTextCollection(vbfPath, kind, version, c)
+}
+
 // ListTextEntries devolve o índice leve (id + key, sem rows) para montar
 // sidebar/tree. kind: events, objects ou macro.
 func (a *App) ListTextEntries(kind string, version common.GameVersion) ([]services.EntrySummary, error) {
