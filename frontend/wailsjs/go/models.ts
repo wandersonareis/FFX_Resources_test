@@ -47,6 +47,26 @@ export namespace dto {
 	        this.total = source["total"];
 	    }
 	}
+	export class RefLink {
+	    text: string;
+	    original?: string;
+	    sourceId?: string;
+	    sourceIndex: number;
+	    sourceName?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RefLink(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.text = source["text"];
+	        this.original = source["original"];
+	        this.sourceId = source["sourceId"];
+	        this.sourceIndex = source["sourceIndex"];
+	        this.sourceName = source["sourceName"];
+	    }
+	}
 	export class TextRow {
 	    index: number;
 	    name?: string;
@@ -92,6 +112,7 @@ export namespace dto {
 	export class FileEntry {
 	    metadata: Metadata;
 	    rows: TextRow[];
+	    refs?: Record<string, RefLink>;
 	
 	    static createFrom(source: any = {}) {
 	        return new FileEntry(source);
@@ -101,6 +122,7 @@ export namespace dto {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.metadata = this.convertValues(source["metadata"], Metadata);
 	        this.rows = this.convertValues(source["rows"], TextRow);
+	        this.refs = this.convertValues(source["refs"], RefLink, true);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -339,6 +361,7 @@ export namespace dto {
 		    return a;
 		}
 	}
+	
 	
 	
 	

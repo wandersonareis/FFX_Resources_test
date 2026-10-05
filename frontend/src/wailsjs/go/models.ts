@@ -73,6 +73,30 @@ export namespace dto {
 	        this.missingInTranslated = source["missingInTranslated"];
 	    }
 	}
+	export class RefLink {
+	    // Anotação de link de ref dedupada: o texto ATUAL da def, o pristine
+	    // dela e onde ela vive (arquivo + Index/Name) — alimenta o texto
+	    // linkado (cor própria), o tooltip "repetição" e o editor aberto na
+	    // def através do link.
+	    text: string;
+	    original?: string;
+	    sourceId?: string;
+	    sourceIndex: number;
+	    sourceName?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RefLink(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.text = source["text"];
+	        this.original = source["original"];
+	        this.sourceId = source["sourceId"];
+	        this.sourceIndex = source["sourceIndex"];
+	        this.sourceName = source["sourceName"];
+	    }
+	}
 	export class Metadata {
 	    key: string;
 	    row_count?: number;
@@ -94,6 +118,9 @@ export namespace dto {
 	export class FileEntry {
 	    metadata: Metadata;
 	    rows: TextRow[];
+	    // Anotações de link de refs dedupadas (rowKey → def), exclusivas de
+	    // EXIBIÇÃO — o payload de apply/export nunca as carrega.
+	    refs?: Record<string, RefLink>;
 	
 	    static createFrom(source: any = {}) {
 	        return new FileEntry(source);
@@ -103,6 +130,7 @@ export namespace dto {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.metadata = this.convertValues(source["metadata"], Metadata);
 	        this.rows = this.convertValues(source["rows"], TextRow);
+	        this.refs = source["refs"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
