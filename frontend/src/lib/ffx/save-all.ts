@@ -1,6 +1,7 @@
-import { ApplyTextCollection } from '@/wailsjs/go/main/App';
+import { ApplyTextCollection, ApplyVbfTextCollection } from '@/wailsjs/go/main/App';
 import { loggedToast as toast } from '@/lib/ffx/toast-logged';
 import { editDraft } from './edit-draft';
+import { invalidateVbfCache } from './vbf';
 import { sendErrorNotification } from './error-handler';
 import type { GameVersionId } from './game-version';
 import { EntryKind } from './display-names';
@@ -53,7 +54,33 @@ export async function saveAllDrafts(
         );
       }
     }
+    // Tabelas abertas pelo .vbf: mesmo motor, escopo da sessão do
+    // container — salvos os binários tocados (lote ou propagação entre
+    // cópias abertas).
+    for (const [version, byRoot] of editDraft.dirtyVbfBatches()) {
+      for (const [root, byKind] of byRoot) {
+        for (const kind of byKind.keys()) {
+          const collection = editDraft.buildSourceCollection(
+            version as GameVersionId,
+            kind as EntryKind,
+            root
+          );
+          if (Object.keys(collection).length === 0) continue;
+          await ApplyVbfTextCollection(
+            root,
+            kind,
+            version as Parameters<typeof ApplyVbfTextCollection>[2],
+            collection as Parameters<typeof ApplyVbfTextCollection>[3]
+          );
+        }
+      }
+    }
     editDraft.markSaved();
+    // Tradução nova em mods/: o que o navegador de .vbf serviu pode ter
+    // mudado (cópia traduzida vira literal na próxima carga) — as caches
+    // de .vbf da sessão caem junto com o reload do backend (carimbo por
+    // arquivo) e daqui.
+    invalidateVbfCache();
     toast('Alterações salvas no jogo.', { duration: 3000 });
   } catch (error) {
     sendErrorNotification(error);

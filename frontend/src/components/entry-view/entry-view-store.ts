@@ -39,13 +39,32 @@ import type { SideNode } from './types';
 export type KindLoadStatus = 'loading' | 'ready' | 'error';
 
 /**
+ * Kinds de TEXTO com fluxo de save/edição na sessão do .vbf (espelho do
+ * backend): todos — o estado decodificado fica na sessão do container e a
+ * gravação é sempre em mods/ (o .vbf é só fonte, nunca é escrito).
+ */
+export const EDITABLE_VBF_KINDS: ReadonlySet<string> = new Set([
+  'events',
+  'battletext',
+  'cloud',
+  'tutorial',
+  'menumain',
+  'help',
+  'macro',
+  'objects',
+  'lockit',
+]);
+
+/**
  * Alvo da edição: a entrada onde o rascunho registra a tradução. A célula
  * linkada abre o editor na def — mesmo que a def viva em OUTRA entrada
- * (o link anota o arquivo e o rowKey dela).
+ * (o link anota o arquivo e o rowKey dela). source = "" (data/) ou o
+ * caminho do .vbf.
  */
 export interface TranslationTarget {
   kind: EntryKind;
   id: string;
+  source: string;
 }
 
 /**
@@ -460,12 +479,16 @@ export function createEntryView(version: GameVersionId): EntryView {
       const full = entry.vbf
         ? await loadVbfEntry(entry.vbf.root, entry.vbf.path, entry.id)
         : await loadEntry(entry.kind, entry.id, version);
-      // Entrada aberta a partir do .vbf é VISUALIZAÇÃO: não alimenta o
-      // rascunho de edição (salvar gravaria em mods/ contra um original que
-      // pode nem estar extraído em data/) e nem registra a base do rascunho.
-      if (!entry.vbf) {
-        editDraft.setBase(version, entry.kind, entry.id, full);
-      }
+      // Rascunho por fonte: data/ e o .vbf têm namespaces separados (o
+      // mesmo id pode existir nos dois). A tabela aberta pelo .vbf alimenta
+      // o rascunho do container: o salvar roteia ao binding de .vbf.
+      editDraft.setBase(
+        version,
+        entry.kind,
+        entry.id,
+        full,
+        entry.vbf?.root ?? ''
+      );
       // Progresso por row: FIXO na abertura (não acompanha rascunho).
       patch({ progress: entryProgress(full) });
       // Anotações de link das refs dedupadas (texto da def + origem) —
@@ -685,6 +708,25 @@ export function createEntryView(version: GameVersionId): EntryView {
   };
 
   /**
+   * Caminho interno (no container) de um arquivo do .vbf pelo id — a folha
+   * só existe na árvore depois que o diretório foi aberto (carga
+   * preguiçosa). A def de uma ref está na sessão JUSTAMENTE porque já foi
+   * aberta alguma vez, então a folha costuma estar lá.
+   */
+  const vbfPathOf = (root: string, id: string): string | undefined => {
+    const walk = (nodes: SideNode[]): string | undefined => {
+      for (const node of nodes) {
+        const vbf = node.entry?.vbf;
+        if (vbf && vbf.root === root && node.entry?.id === id) return vbf.path;
+        const hit = node.children ? walk(node.children) : undefined;
+        if (hit !== undefined) return hit;
+      }
+      return undefined;
+    };
+    return walk(store.state.vbfRoots);
+  };
+
+  /**
    * Garante a BASE do rascunho do alvo da edição — é o que torna possível
    * editar PELA REF: a def pode viver em um arquivo que o usuário nunca
    * abriu, e sem base o editDraft.setCell descarta a edição em silêncio (o
@@ -693,10 +735,22 @@ export function createEntryView(version: GameVersionId): EntryView {
    * fabricaria um payload incompleto do arquivo da def.
    */
   const ensureDraftBase = async (t: TranslationTarget): Promise<boolean> => {
-    if (editDraft.hasBase(version, t.kind, t.id)) return true;
+    if (editDraft.hasBase(version, t.kind, t.id, t.source)) return true;
     try {
-      const full = await loadEntry(t.kind, t.id, version);
-      editDraft.setBase(version, t.kind, t.id, full);
+      let full: dto.FileEntry;
+      if (t.source) {
+        const path = vbfPathOf(t.source, t.id);
+        if (path === undefined) {
+          sendErrorNotificationWithMessage(
+            `O arquivo da def (${t.id}) não está na árvore deste .vbf — abra-o na sidebar para editá-lo pela ref.`
+          );
+          return false;
+        }
+        full = await loadVbfEntry(t.source, path, t.id);
+      } else {
+        full = await loadEntry(t.kind, t.id, version);
+      }
+      editDraft.setBase(version, t.kind, t.id, full, t.source);
       return true;
     } catch (error) {
       sendErrorNotification(error);
@@ -732,10 +786,16 @@ export function createEntryView(version: GameVersionId): EntryView {
     requestTableFocus: () => patch({ pendingTableFocus: true }),
     consumeTableFocus: () => patch({ pendingTableFocus: false }),
     openDialog: (row, target) => {
-      // Entrada aberta pelo .vbf é somente leitura: não existe edição para
-      // abrir (o salvar sairia de mods/ contra um original que pode nem estar
-      // extraído em data/).
-      if (store.state.selectedEntry?.vbf) return;
+      // Todo kind de TEXTO do .vbf é editável (o salvar roteia ao binding
+      // de .vbf com o estado da sessão, gravando em mods/). Só kind fora
+      // desta lista cai aqui — hoje nenhum texto; imagens têm fluxo próprio.
+      const entry = store.state.selectedEntry;
+      if (entry?.vbf && !EDITABLE_VBF_KINDS.has(entry.kind)) {
+        sendErrorNotificationWithMessage(
+          `Edição de ${KIND_LABELS[entry.kind]} a partir do .vbf ainda não é suportada — abra pela árvore de data/.`
+        );
+        return;
+      }
       patch({
         translationRow: row,
         translationTarget: target ?? null,
@@ -772,6 +832,7 @@ export function createEntryView(version: GameVersionId): EntryView {
       const target: TranslationTarget = {
         kind: entry.kind,
         id: link.sourceId ?? entry.id,
+        source: entry.vbf?.root ?? '',
       };
       if (!(await ensureDraftBase(target))) return;
       const live = editDraft.editTextOf(
@@ -779,7 +840,8 @@ export function createEntryView(version: GameVersionId): EntryView {
         target.kind,
         target.id,
         rKey,
-        SOURCE_LANG
+        SOURCE_LANG,
+        target.source
       );
       const synthetic = dto.TextRow.createFrom({
         index: link.sourceIndex,
@@ -800,8 +862,9 @@ export function createEntryView(version: GameVersionId): EntryView {
         const t = target ?? {
           kind: entry!.kind,
           id: entry!.id,
+          source: entry!.vbf?.root ?? '',
         };
-        editDraft.setCell(version, t.kind, t.id, row, SOURCE_LANG, value);
+        editDraft.setCell(version, t.kind, t.id, row, SOURCE_LANG, value, t.source);
         patch({ rows: [...store.state.rows] });
       }
       if (target) return; // alvo override: navegação desabilitada (row única)
@@ -819,8 +882,9 @@ export function createEntryView(version: GameVersionId): EntryView {
         const t = target ?? {
           kind: entry!.kind,
           id: entry!.id,
+          source: entry!.vbf?.root ?? '',
         };
-        editDraft.setCell(version, t.kind, t.id, row, SOURCE_LANG, value);
+        editDraft.setCell(version, t.kind, t.id, row, SOURCE_LANG, value, t.source);
         patch({ rows: [...store.state.rows] });
       }
       patch({ dialogOpen: false, translationRow: null, translationTarget: null });

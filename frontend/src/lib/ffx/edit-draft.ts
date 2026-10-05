@@ -16,14 +16,27 @@ export function rowKey(row: Pick<dto.TextRow, 'index' | 'name'>): string {
 
 interface DraftState {
   version: GameVersionId;
+  kind: EntryKind;
+  id: string;
   /** Entrada original carregada (base para reconstruir o lote no salvar). */
   entry: dto.FileEntry;
   /** Edições por rowKey → idioma → texto (só o que difere do original). */
   edits: Map<string, Map<string, string>>;
+  /**
+   * Origem do rascunho: "" = data/; caminho do .vbf = tabela aberta no
+   * navegador de container. O mesmo id pode existir nas duas fontes —
+   * a chave leva a origem para não colidir, e o destino do salvar muda:
+   * data/ → ApplyTextCollection; .vbf → ApplyVbfTextCollection.
+   */
+  source: string;
 }
 
-const draftKey = (version: GameVersionId, kind: EntryKind, id: string): string =>
-  `${version}|${kind}|${id}`;
+const draftKey = (
+  version: GameVersionId,
+  kind: EntryKind,
+  id: string,
+  source: string
+): string => `${version}|${kind}|${id}|${source}`;
 
 interface DraftSnapshot {
   hasDirty: boolean;
@@ -84,15 +97,23 @@ class EditDraftStore {
     version: GameVersionId,
     kind: EntryKind,
     id: string,
-    entry: dto.FileEntry
+    entry: dto.FileEntry,
+    source = ''
   ): void {
-    const key = draftKey(version, kind, id);
+    const key = draftKey(version, kind, id, source);
     const existing = this.states.get(key);
     if (existing) {
       existing.entry = entry;
       return;
     }
-    this.states.set(key, { version, entry, edits: new Map() });
+    this.states.set(key, {
+      version,
+      kind,
+      id,
+      entry,
+      edits: new Map(),
+      source,
+    });
     this.touch(key, false);
   }
 
@@ -100,13 +121,18 @@ class EditDraftStore {
    * A base da entrada já está registrada? É a guarda de quem edita ATRAVÉS
    * do link: sem base, setCell descarta a edição em silêncio.
    */
-  hasBase(version: GameVersionId, kind: EntryKind, id: string): boolean {
-    return this.states.has(draftKey(version, kind, id));
+  hasBase(
+    version: GameVersionId,
+    kind: EntryKind,
+    id: string,
+    source = ''
+  ): boolean {
+    return this.states.has(draftKey(version, kind, id, source));
   }
 
   /** Descarta rascunho sem edição (base fora de uso). */
-  dropBase(version: GameVersionId, kind: EntryKind, id: string): void {
-    const key = draftKey(version, kind, id);
+  dropBase(version: GameVersionId, kind: EntryKind, id: string, source = ''): void {
+    const key = draftKey(version, kind, id, source);
     if (this.states.get(key)?.edits.size === 0) {
       this.states.delete(key);
     }
@@ -119,9 +145,10 @@ class EditDraftStore {
     id: string,
     row: dto.TextRow,
     lang: string,
-    text: string
+    text: string,
+    source = ''
   ): void {
-    const key = draftKey(version, kind, id);
+    const key = draftKey(version, kind, id, source);
     const state = this.states.get(key);
     if (!state) return;
 
@@ -149,9 +176,10 @@ class EditDraftStore {
     kind: EntryKind,
     id: string,
     row: dto.TextRow,
-    lang: string
+    lang: string,
+    source = ''
   ): string | undefined {
-    return this.editTextOf(version, kind, id, rowKey(row), lang);
+    return this.editTextOf(version, kind, id, rowKey(row), lang, source);
   }
 
   /**
@@ -164,22 +192,23 @@ class EditDraftStore {
     kind: EntryKind,
     id: string,
     rKey: string,
-    lang: string
+    lang: string,
+    source = ''
   ): string | undefined {
     return this.states
-      .get(draftKey(version, kind, id))
+      .get(draftKey(version, kind, id, source))
       ?.edits.get(rKey)
       ?.get(lang);
   }
 
-  isDirty(version: GameVersionId, kind: EntryKind, id: string): boolean {
-    const state = this.states.get(draftKey(version, kind, id));
+  isDirty(version: GameVersionId, kind: EntryKind, id: string, source = ''): boolean {
+    const state = this.states.get(draftKey(version, kind, id, source));
     return !!state && state.edits.size > 0;
   }
 
   /** Limpa o rascunho (após salvar a entrada). */
-  clear(version: GameVersionId, kind: EntryKind, id: string): void {
-    const key = draftKey(version, kind, id);
+  clear(version: GameVersionId, kind: EntryKind, id: string, source = ''): void {
+    const key = draftKey(version, kind, id, source);
     this.states.delete(key);
     this.touch(key, false);
   }
@@ -255,32 +284,64 @@ class EditDraftStore {
   /**
    * Monta a Collection do kind/version com as entradas editadas
    * (base + edições mescladas), pronta para ApplyTextCollection.
+   * Só rascunhos de data/ (source = ""): os de .vbf vão pelo
+   * buildSourceCollection, com destino próprio.
    */
   buildCollection(
     version: GameVersionId,
     kind: EntryKind
   ): Record<string, dto.FileEntry> {
+    return this.buildSourceCollection(version, kind, '');
+  }
+
+  /** Collection do kind/version para UMA fonte ('' = data/; .vbf = caminho). */
+  buildSourceCollection(
+    version: GameVersionId,
+    kind: EntryKind,
+    source: string
+  ): Record<string, dto.FileEntry> {
     const out: Record<string, dto.FileEntry> = {};
-    for (const [key, state] of this.states) {
+    for (const state of this.states.values()) {
       if (state.edits.size === 0 || state.version !== version) continue;
-      const [k, id] = splitDraftKey(key);
-      if (k !== kind) continue;
-      out[id] = this.merge(state);
+      if (state.source !== source) continue;
+      if (splitDraftKind(state) !== kind) continue;
+      out[splitDraftId(state)] = this.merge(state);
     }
     return out;
   }
 
-  /** Lotes por kind para os arquivos sujos (por versão). */
+  /** Lotes por kind para os arquivos sujos de DATA/ (por versão). */
   dirtyBatches(): Map<GameVersionId, Map<EntryKind, string[]>> {
     const out = new Map<GameVersionId, Map<EntryKind, string[]>>();
-    for (const [key, state] of this.states) {
-      if (state.edits.size === 0) continue;
-      const [kind, id] = splitDraftKey(key);
+    for (const state of this.states.values()) {
+      if (state.edits.size === 0 || state.source !== '') continue;
+      const kind = splitDraftKind(state);
       const byKind = out.get(state.version) ?? new Map<EntryKind, string[]>();
       const list = byKind.get(kind) ?? [];
-      list.push(id);
+      list.push(splitDraftId(state));
       byKind.set(kind, list);
       out.set(state.version, byKind);
+    }
+    return out;
+  }
+
+  /**
+   * Lotes de .vbf sujos: versão → container (caminho) → kind → ids. O
+   * destino do salvar muda: mesmo motor, escopo da sessão do container.
+   */
+  dirtyVbfBatches(): Map<GameVersionId, Map<string, Map<EntryKind, string[]>>> {
+    const out = new Map<GameVersionId, Map<string, Map<EntryKind, string[]>>>();
+    for (const state of this.states.values()) {
+      if (state.edits.size === 0 || state.source === '') continue;
+      const byRoot =
+        out.get(state.version) ?? new Map<string, Map<EntryKind, string[]>>();
+      const byKind = byRoot.get(state.source) ?? new Map<EntryKind, string[]>();
+      const kind = splitDraftKind(state);
+      const list = byKind.get(kind) ?? [];
+      list.push(splitDraftId(state));
+      byKind.set(kind, list);
+      byRoot.set(state.source, byKind);
+      out.set(state.version, byRoot);
     }
     return out;
   }
@@ -335,9 +396,12 @@ class EditDraftStore {
 
 export const editDraft = new EditDraftStore();
 
-function splitDraftKey(key: string): [EntryKind, string] {
-  const parts = key.split('|');
-  return [parts[1] as EntryKind, parts[2]];
+function splitDraftKind(state: DraftState): EntryKind {
+  return state.kind;
+}
+
+function splitDraftId(state: DraftState): string {
+  return state.id;
 }
 
 export function useEditDraft(): { store: EditDraftStore; snapshot: DraftSnapshot } {

@@ -28,24 +28,30 @@ const defEntry = (): dto.FileEntry =>
 
 describe('editDraft: base é pré-requisito da edição', () => {
   it('setCell sem base é descartado — e hasBase denuncia a ausência', () => {
-    expect(editDraft.hasBase(VERSION, KIND, ID)).toBe(false);
-    editDraft.setCell(VERSION, KIND, ID, defRow, 'us', 'Tradução');
-    expect(editDraft.hasBase(VERSION, KIND, ID)).toBe(false);
-    expect(editDraft.editTextOf(VERSION, KIND, ID, '3:', 'us')).toBeUndefined();
+    expect(editDraft.hasBase(VERSION, KIND, ID, '')).toBe(false);
+    editDraft.setCell(VERSION, KIND, ID, defRow, 'us', 'Tradução', '');
+    expect(editDraft.hasBase(VERSION, KIND, ID, '')).toBe(false);
+    expect(editDraft.editTextOf(VERSION, KIND, ID, '3:', 'us', '')).toBeUndefined();
   });
 
   it('com base, a edição da def fica visível para os links e para o salvar', () => {
-    editDraft.setBase(VERSION, KIND, ID, defEntry());
-    expect(editDraft.hasBase(VERSION, KIND, ID)).toBe(true);
+    editDraft.setBase(VERSION, KIND, ID, defEntry(), '');
+    expect(editDraft.hasBase(VERSION, KIND, ID, '')).toBe(true);
 
-    editDraft.setCell(VERSION, KIND, ID, defRow, 'us', 'Tradução da def');
+    editDraft.setCell(VERSION, KIND, ID, defRow, 'us', 'Tradução da def', '');
     // É o que a célula linkada da ref lê para repintar ao vivo.
-    expect(editDraft.editTextOf(VERSION, KIND, ID, '3:', 'us')).toBe(
+    expect(editDraft.editTextOf(VERSION, KIND, ID, '3:', 'us', '')).toBe(
       'Tradução da def'
     );
-    expect(editDraft.isDirty(VERSION, KIND, ID)).toBe(true);
+    expect(editDraft.isDirty(VERSION, KIND, ID, '')).toBe(true);
 
-    editDraft.clear(VERSION, KIND, ID);
-    expect(editDraft.hasBase(VERSION, KIND, ID)).toBe(false);
+    editDraft.clear(VERSION, KIND, ID, '');
+    expect(editDraft.hasBase(VERSION, KIND, ID, '')).toBe(false);
+  });
+
+  it('fontes têm namespaces separados (data/ e .vbf não colidem)', () => {
+    editDraft.setBase(VERSION, KIND, ID, defEntry(), '');
+    expect(editDraft.hasBase(VERSION, KIND, ID, 'C:\\game\\data.vbf')).toBe(false);
+    editDraft.clear(VERSION, KIND, ID, '');
   });
 });

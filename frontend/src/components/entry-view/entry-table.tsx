@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { EntryView } from './entry-view-store';
+import { EDITABLE_VBF_KINDS, type EntryView } from './entry-view-store';
 import { columnHelper, entryNodeId, features } from './types';
 
 /**
@@ -50,7 +50,14 @@ export function EntryTable({ view }: { view: EntryView }) {
       if (!link) return undefined;
       if (!entry) return link.text ?? '';
       return linkedRowText(entry.id, link, (defId, defKey) =>
-        drafts.editTextOf(version, entry.kind, defId, defKey, SOURCE_LANG)
+        drafts.editTextOf(
+          version,
+          entry.kind,
+          defId,
+          defKey,
+          SOURCE_LANG,
+          entry.vbf?.root ?? ''
+        )
       );
     },
     [refLinks, selectedEntry, drafts, version]
@@ -187,12 +194,19 @@ export function EntryTable({ view }: { view: EntryView }) {
             const linked = linkedValueOf(row);
             if (linked !== undefined) return linked;
             const entry = selectedEntry;
-            // Entrada aberta pelo .vbf é somente leitura: o rascunho de
-            // edição não entra na visualização.
-            const edited =
-              entry && !entry.vbf
-                ? drafts.editOf(version, entry.kind, entry.id, row, SOURCE_LANG)
-                : undefined;
+            // Rascunho por FONTE: data/ ("") e o .vbf (caminho do container)
+            // têm namespaces separados. Ler sem a fonte esconderia a edição
+            // feita pela ref (na def de outra entrada — inclusive de .vbf).
+            const edited = entry
+              ? drafts.editOf(
+                  version,
+                  entry.kind,
+                  entry.id,
+                  row,
+                  SOURCE_LANG,
+                  entry.vbf?.root ?? ''
+                )
+              : undefined;
             return edited ?? row.text?.[SOURCE_LANG] ?? '';
           },
           {
@@ -204,11 +218,23 @@ export function EntryTable({ view }: { view: EntryView }) {
               // marcação — nada a traduzir, então o diálogo não abre.
               const missing = row.missingInTranslated === true;
               const entry = selectedEntry;
-              const readOnly = Boolean(entry?.vbf);
+              // Somente leitura = .vbf de kind fora da lista de kinds
+              // editáveis (nenhum texto hoje: events, tabelas eventtable,
+              // help, macro, objects e lockit editam pelo .vbf, gravando
+              // sempre em mods/). O rascunho é da fonte do container.
+              const readOnly = entry?.vbf
+                ? !EDITABLE_VBF_KINDS.has(entry.kind)
+                : false;
               const edited =
-                !missing && !readOnly && entry
-                  ? drafts.editOf(version, entry.kind, entry.id, row, SOURCE_LANG) !==
-                    undefined
+                !missing && entry
+                  ? drafts.editOf(
+                      version,
+                      entry.kind,
+                      entry.id,
+                      row,
+                      SOURCE_LANG,
+                      entry.vbf?.root ?? ''
+                    ) !== undefined
                   : false;
               if (missing) {
                 return (
