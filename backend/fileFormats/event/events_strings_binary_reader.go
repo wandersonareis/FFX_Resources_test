@@ -77,10 +77,6 @@ func discoverEventFiles(eventsFolder common.FileAccessor, localization string, v
 		if !entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
 			continue
 		}
-		if common.SkipBlitzballEvents && entry.Name() == "bl" {
-			continue
-		}
-
 		subInfos, err := discoverSubdirectoryEvents(eventsFolder.ResolvedPath, entry.Name(), version)
 		if err != nil {
 			common.LogVerbose("failed to read subdirectory %s: %v", entry.Name(), err)
@@ -119,10 +115,6 @@ func discoverSubdirectoryEvents(eventsRoot, subdirName string, version common.Ga
 func ReadCompleteEventFile(info *models.EventFileInfo) (*EventFile, error) {
 	if info == nil || len(info.EventID) < 2 {
 		return nil, fmt.Errorf("invalid event ID")
-	}
-
-	if info.Version == common.GameVersionFFX2 && info.EventID == "crcr0000" {
-		return nil, nil
 	}
 
 	localizedStrings := ReadLocalizedStringFiles(info.LocalizationPattern, info.Version)

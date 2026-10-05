@@ -141,6 +141,11 @@ func matchVbfPath(vbfName, inner string) (vbfTarget, bool) {
 	if slash == "" {
 		return vbfTarget{}, false
 	}
+	if common.IsSkippedFilePath(slash) {
+		// Lista estática: formato conhecido mas não servido — o navegador
+		// mostra o arquivo como incompatível em vez de decodificar.
+		return vbfTarget{}, false
+	}
 	lower := normPath(slash)
 	base := path.Base(lower)
 	stem := strings.TrimSuffix(base, path.Ext(base))
