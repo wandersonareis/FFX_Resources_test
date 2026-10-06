@@ -105,6 +105,9 @@ func discoverSubdirectoryEvents(eventsRoot, subdirName string, version common.Ga
 		}
 		info := models.NewEventFileInfo(subEntry.Name(), version)
 		if info != nil {
+			if common.IsSkippedFilePath(info.LocalizationPattern) {
+				continue // silencioso: lista estática
+			}
 			eventInfos = append(eventInfos, info)
 		}
 	}
@@ -115,6 +118,10 @@ func discoverSubdirectoryEvents(eventsRoot, subdirName string, version common.Ga
 func ReadCompleteEventFile(info *models.EventFileInfo) (*EventFile, error) {
 	if info == nil || len(info.EventID) < 2 {
 		return nil, fmt.Errorf("invalid event ID")
+	}
+
+	if common.IsSkippedFilePath(info.LocalizationPattern) {
+		return nil, nil // silencioso: lista estática
 	}
 
 	localizedStrings := ReadLocalizedStringFiles(info.LocalizationPattern, info.Version)

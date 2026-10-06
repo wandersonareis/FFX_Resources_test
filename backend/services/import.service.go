@@ -425,6 +425,9 @@ func kindFromKey(key string) string {
 	if lockit.IsLockitKey(key) {
 		return KindLockit
 	}
+	if strings.Contains(lower, "/battle/btl/tuto0000/") {
+		return KindTutorial
+	}
 	if strings.Contains(lower, "/battle/btl/") {
 		return KindBattleText
 	}
@@ -971,7 +974,7 @@ func (s *MetadataService) ImportFile(path string, version common.GameVersion) (i
 		return 0, err
 	}
 	if len(plan.summary.Errors) > 0 {
-		return 0, fmt.Errorf("importação bloqueada por %d erro(s) de validação", len(plan.summary.Errors))
+		return 0, fmt.Errorf("importação bloqueada: %v", plan.summary.Errors)
 	}
 	if len(plan.merged) == 0 {
 		return 0, fmt.Errorf("nada a importar")

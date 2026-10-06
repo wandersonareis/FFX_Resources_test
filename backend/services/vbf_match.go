@@ -184,11 +184,16 @@ func matchVbfPath(vbfName, inner string) (vbfTarget, bool) {
 	case strings.Contains(lower, "/battle/btl/"):
 		// battletext: <raiz de localização>/battle/btl/<id>/<id>.bin.
 		// O id é o nome do DIRETÓRIO (o .bin dentro tem o mesmo stem).
-		kind = KindBattleText
-		if dir := path.Base(path.Dir(slash)); dir != "" && dir != "btl" {
-			id = dir
+		if dir := path.Base(path.Dir(slash)); dir != "" && dir != "btl" && strings.EqualFold(dir, "tuto0000") {
+			// tuto0000 é tutorial (par tuto0000.bin + tutorial.msb).
+			kind, id = KindTutorial, "tuto0000"
 		} else {
-			id = stem
+			kind = KindBattleText
+			if dir := path.Base(path.Dir(slash)); dir != "" && dir != "btl" {
+				id = dir
+			} else {
+				id = stem
+			}
 		}
 
 	case strings.Contains(lower, "/cloudsave/"):

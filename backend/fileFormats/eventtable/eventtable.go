@@ -42,7 +42,7 @@ const (
 // descoberta dinâmica em diretório).
 var fixedIDs = map[string][]string{
 	KindCloud:     {"cloud"},
-	KindTutorial:  {"tutorial"},
+	KindTutorial:  {"tutorial", "tuto0000"},
 	KindMenuMain:  {"menumain"},
 }
 
@@ -54,6 +54,10 @@ func RelPath(kind, id string) (string, bool) {
 	case KindBattleText:
 		id = strings.TrimSpace(id)
 		if id == "" || strings.ContainsAny(id, `/\`) {
+			return "", false
+		}
+		if strings.EqualFold(id, "tuto0000") {
+			// tuto0000 pertence à família tutorial (par tuto0000.bin + tutorial.msb).
 			return "", false
 		}
 		return filepath.ToSlash(filepath.Join("battle", "btl", id, id+".bin")), true
@@ -68,8 +72,11 @@ func RelPath(kind, id string) (string, bool) {
 		}
 		return "", false
 	case KindTutorial:
-		if strings.EqualFold(strings.TrimSpace(id), "tutorial") {
+		switch strings.ToLower(strings.TrimSpace(id)) {
+		case "tutorial":
 			return "menu/tutorial.msb", true
+		case "tuto0000", "tuto":
+			return "battle/btl/tuto0000/tuto0000.bin", true
 		}
 		return "", false
 	case KindMenuMain:
@@ -88,6 +95,11 @@ func RelPaths(kind, id string) []string {
 			return []string{"cloudsave/cloud.bin", "cloudsave/cloudv.bin"}
 		}
 		return nil
+	}
+	if kind == KindTutorial && (id == "tuto0000" || id == "tuto") {
+		// tuto0000.bin e tutorial.msb (em battle/btl/tuto0000/) são o MESMO
+		// arquivo (byte-idênticos): lê uma vez, Save grava os dois.
+		return []string{"battle/btl/tuto0000/tuto0000.bin", "battle/btl/tuto0000/tutorial.msb"}
 	}
 	if rel, ok := RelPath(kind, id); ok {
 		return []string{rel}
@@ -141,6 +153,9 @@ func IDs(kind string, version common.GameVersion) []string {
 			if common.IsSkippedFilePath(filepath.ToSlash(filepath.Join("battle", "btl", e.Name(), e.Name()+".bin"))) {
 				continue
 			}
+			if strings.EqualFold(e.Name(), "tuto0000") {
+				continue // tuto0000 pertence à família tutorial
+			}
 			out = append(out, e.Name())
 		}
 	}
@@ -186,7 +201,14 @@ func Load(kind string, version common.GameVersion, id string) (*File, error) {
 	if len(strings_) == 0 {
 		return nil, fmt.Errorf("%s: %s sem localizações", kind, rel)
 	}
-	return &File{Kind: kind, ID: id, Version: version, Strings: strings_, Bins: []BinSpec{{Name: id, Rel: rel, Start: 0, Len: len(strings_)}}}, nil
+	bins := []BinSpec{{Name: id, Rel: rel, Start: 0, Len: len(strings_)}}
+	if kind == KindTutorial && (strings.EqualFold(id, "tuto0000") || strings.EqualFold(id, "tuto")) {
+		bins = []BinSpec{
+			{Name: "tuto0000", Rel: "battle/btl/tuto0000/tuto0000.bin", Start: 0, Len: len(strings_)},
+			{Name: "tutorial.msb", Rel: "battle/btl/tuto0000/tutorial.msb", Start: 0, Len: len(strings_)},
+		}
+	}
+	return &File{Kind: kind, ID: id, Version: version, Strings: strings_, Bins: bins}, nil
 }
 
 // loadCloud lê cloud.bin + cloudv.bin juntos (mesmo artefato), preservando
