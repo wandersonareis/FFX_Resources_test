@@ -12,6 +12,9 @@ import (
 // desse diretório (ex.: "2d/crcr/...").
 var SkippedFilePathsFFX = []string{
 	"battle/btl/bjyt02_00/bjyt02_00.bin",
+	"battle/btl/bsil05_04/bsil05_04.bin",
+	"battle/btl/bsil07_03/bsil07_03.bin",
+	"battle/btl/cdsp07_01/cdsp07_01.bin",
 	"battle/btl/bjyt02_01/bjyt02_01.bin",
 	"battle/btl/bsil03_00/bsil03_00.bin",
 	"battle/btl/bsil04_00/bsil04_00.bin",
