@@ -40,6 +40,16 @@ export interface EntryRow {
   vbf?: { root: string; path: string };
 }
 
+/**
+ * Extrai o código de idioma do caminho do arquivo dentro do container
+ * (padrão `new_<code>pc`: "new_jppc" → "jp", "new_sppc" → "sp").
+ * Null quando o caminho não tem raiz de localização.
+ */
+export function locFromVbfPath(path: string): string | null {
+  const m = /\/new_([a-z]{2})pc\//.exec(path.replace(/\\/g, '/'));
+  return m ? m[1] : null;
+}
+
 // Kinds servidos por versão na sidebar. lastmiss é expansão do ffx2 e não tem
 // dicionário próprio → sem 'macro' (a aba não mostra "Dicionário"). O lockit
 // (kit de localização do menu/launcher) existe em FFX e FFX-2. Os painéis de

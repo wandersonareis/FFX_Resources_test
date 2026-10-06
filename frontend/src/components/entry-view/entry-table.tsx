@@ -17,8 +17,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { EDITABLE_VBF_KINDS, type EntryView } from './entry-view-store';
+import { type EntryView } from './entry-view-store';
 import { columnHelper, entryNodeId, features } from './types';
+import { locFromVbfPath } from '@/lib/ffx/tree-data';
 
 /**
  * Célula de uma linha que SÓ EXISTE num dos dois lados (união da tabela):
@@ -138,6 +139,12 @@ export function EntryTable({ view }: { view: EntryView }) {
     return map;
   }, [rows]);
 
+  // Entrada .vbf de idioma não-us: a coluna Original/Traduzido mostra o
+  // texto DESTE binário do idioma clicado (não o 'us').
+  const textLoc = selectedEntry?.vbf?.path
+    ? (locFromVbfPath(selectedEntry.vbf.path) ?? SOURCE_LANG)
+    : SOURCE_LANG;
+
   const columns = useMemo(
     () =>
       columnHelper.columns([
@@ -167,7 +174,7 @@ export function EntryTable({ view }: { view: EntryView }) {
               }),
             ]
           : []),
-        columnHelper.accessor((row) => row.original?.[SOURCE_LANG], {
+        columnHelper.accessor((row) => row.original?.[textLoc], {
           id: 'original',
           header: 'Original',
           cell: (info) => {
@@ -207,7 +214,7 @@ export function EntryTable({ view }: { view: EntryView }) {
                   entry.vbf?.root ?? ''
                 )
               : undefined;
-            return edited ?? row.text?.[SOURCE_LANG] ?? '';
+            return edited ?? row.text?.[textLoc] ?? '';
           },
           {
             id: 'translated',
@@ -222,9 +229,7 @@ export function EntryTable({ view }: { view: EntryView }) {
               // editáveis (nenhum texto hoje: events, tabelas eventtable,
               // help, macro, objects e lockit editam pelo .vbf, gravando
               // sempre em mods/). O rascunho é da fonte do container.
-              const readOnly = entry?.vbf
-                ? !EDITABLE_VBF_KINDS.has(entry.kind)
-                : false;
+              const readOnly = entry?.vbf != null;
               const edited =
                 !missing && entry
                   ? drafts.editOf(

@@ -15,6 +15,7 @@ import {
   loadImage,
   loadEntry,
   loadKindEntries,
+  locFromVbfPath,
 } from '@/lib/ffx/tree-data';
 import { editDraft, rowKey } from '@/lib/ffx/edit-draft';
 import { entryProgress, type EntryProgress } from '@/lib/ffx/entry-progress';
@@ -490,18 +491,25 @@ export function createEntryView(version: GameVersionId): EntryView {
         entry.vbf?.root ?? ''
       );
       // Progresso por row: FIXO na abertura (não acompanha rascunho).
-      patch({ progress: entryProgress(full) });
+      // Entrada vbf de idioma não-us: contagem por 'us' não se aplica — o
+      // texto deste binário já está na coluna exibida.
+      const vbfLocProgress = entry.vbf ? locFromVbfPath(entry.vbf.path) : null;
+      patch({
+        progress:
+          vbfLocProgress && vbfLocProgress !== SOURCE_LANG
+            ? null
+            : entryProgress(full),
+      });
       // Anotações de link das refs dedupadas (texto da def + origem) —
       // alimenta o texto linkado na tabela (cor própria, tooltip).
       patch({ refLinks: full.refs ?? {} });
-      // Dedup: cópia não traduzida = linha VISÍVEL com o texto da def
-      // linkado (as duas árvores; o link anota a fonte no tooltip). Editar
-      // pela ref edita a def — nunca cria texto divergente.
-      // Blank: rows sem 'us' utilizável (vazio/espaço/"-") seguem o mesmo
-      // contrato do export — o tradutor nunca vê o que o artefato
-      // exportado não traria.
-      const rows = (full.rows ?? []).filter(
-        (r) => !isBlankSourceRow(r.text?.[SOURCE_LANG])
+      // Filtro de linhas: para .vbf de idioma não-us, olha o idioma do
+      // binário clicado (o .vbf é só visualização — nada a traduzir).
+      const vbfLoc = entry.vbf ? locFromVbfPath(entry.vbf.path) : null;
+      const rows = (full.rows ?? []).filter((r) =>
+        vbfLoc && vbfLoc !== SOURCE_LANG
+          ? !isBlankSourceRow(r.text?.[vbfLoc])
+          : !isBlankSourceRow(r.text?.[SOURCE_LANG])
       );
       patch({ rows });
     } catch (error) {
