@@ -3,6 +3,7 @@ package services
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"ffxresources/backend/common"
@@ -10,6 +11,14 @@ import (
 	"ffxresources/backend/fileFormats/helpfile"
 	"ffxresources/backend/formatters/hash"
 )
+
+// versionForKey deriva a versão do prefixo da key ("ffx2/..." → FFX-2).
+func versionForKey(key string) common.GameVersion {
+	if strings.HasPrefix(strings.ToLower(key), "ffx2/") {
+		return common.GameVersionFFX2
+	}
+	return common.GameVersionFFX
+}
 
 // kindFromKey detecta help pela key (help/…/*.sps2) e mantém os outros kinds.
 func TestKindFromKeyHelp(t *testing.T) {
@@ -30,7 +39,7 @@ func TestKindFromKeyHelp(t *testing.T) {
 		{"ffx/menu/menumain.bin", KindMenuMain},
 	}
 	for _, tc := range cases {
-		if got := kindFromKey(tc.key); got != tc.want {
+		if got := kindFromKey(tc.key, versionForKey(tc.key)); got != tc.want {
 			t.Fatalf("kindFromKey(%q) = %q, want %q", tc.key, got, tc.want)
 		}
 	}

@@ -1,16 +1,19 @@
 package common
 
-import "strings"
+import (
+	"strings"
+)
 
-// SkippedFilePaths é a lista estática de arquivos a evitar em todo o app:
+// SkippedFilePathsFFX e SkippedFilePathsFFX2 são as listas estáticas de
+// arquivos a evitar, por versão (lastmiss divide a árvore do FFX-2):
 // decode, export, import, árvore em data/ e abertura via .vbf.
-// Formato de cada entrada: caminho relativo canônico com "/", até o arquivo
-// (ex.: "battle/btl/crcr00_000/crcr00_000.bin"). Como a entrada contém o
-// diretório completo, nunca casa com homônimos fora desse diretório
-// (ex.: "2d/crcr/..." ou "menu/...").
-// Para adicionar novos casos (battle/, events/, objects/...), basta
-// acrescentar linhas aqui.
-var SkippedFilePaths = []string{
+// Formato: caminho relativo canônico com "/" até o arquivo. A entrada
+// contém o diretório completo, então nunca casa com homônimos fora
+// desse diretório (ex.: "2d/crcr/...").
+var SkippedFilePathsFFX = []string{}
+
+var SkippedFilePathsFFX2 = []string{
+	"battle/btl/bika07_228/bika07_228.bin",
 	"battle/btl/crcr00_000/crcr00_000.bin",
 	"battle/btl/crcr00_001/crcr00_001.bin",
 	"battle/btl/crcr00_002/crcr00_002.bin",
@@ -148,14 +151,142 @@ var SkippedFilePaths = []string{
 	"battle/btl/crcr01_034/crcr01_034.bin",
 	"battle/btl/crcr01_035/crcr01_035.bin",
 	"battle/btl/crcr01_036/crcr01_036.bin",
+	"battle/btl/zzzz01_29/zzzz01_29.bin",
+	"battle/btl/zzzz01_30/zzzz01_30.bin",
+	"battle/btl/zzzz01_31/zzzz01_31.bin",
+	"battle/btl/zzzz01_53/zzzz01_53.bin",
+	"battle/btl/zzzz01_75/zzzz01_75.bin",
+	"battle/btl/zzzz01_76/zzzz01_76.bin",
+	"battle/btl/zzzz01_77/zzzz01_77.bin",
+	"battle/btl/zzzz01_82/zzzz01_82.bin",
+	"battle/btl/zzzz01_85/zzzz01_85.bin",
+	"battle/btl/zzzz02_41/zzzz02_41.bin",
+	"battle/btl/zzzz02_42/zzzz02_42.bin",
+	"battle/btl/zzzz02_43/zzzz02_43.bin",
+	"battle/btl/zzzz02_44/zzzz02_44.bin",
+	"battle/btl/zzzz02_45/zzzz02_45.bin",
+	"battle/btl/zzzz02_46/zzzz02_46.bin",
+	"battle/btl/zzzz02_47/zzzz02_47.bin",
+	"battle/btl/zzzz02_48/zzzz02_48.bin",
+	"battle/btl/zzzz02_49/zzzz02_49.bin",
+	"battle/btl/zzzz02_50/zzzz02_50.bin",
+	"battle/btl/zzzz02_51/zzzz02_51.bin",
+	"battle/btl/zzzz02_52/zzzz02_52.bin",
+	"battle/btl/zzzz02_53/zzzz02_53.bin",
+	"battle/btl/zzzz02_58/zzzz02_58.bin",
+	"battle/btl/zzzz02_60/zzzz02_60.bin",
+	"battle/btl/zzzz02_64/zzzz02_64.bin",
+	"battle/btl/zzzz02_79/zzzz02_79.bin",
+	"battle/btl/zzzz02_93/zzzz02_93.bin",
+	"battle/btl/zzzz02_95/zzzz02_95.bin",
+	"battle/btl/zzzz03_00/zzzz03_00.bin",
+	"battle/btl/zzzz03_01/zzzz03_01.bin",
+	"battle/btl/zzzz03_02/zzzz03_02.bin",
+	"battle/btl/zzzz03_03/zzzz03_03.bin",
+	"battle/btl/zzzz03_04/zzzz03_04.bin",
+	"battle/btl/zzzz03_05/zzzz03_05.bin",
+	"battle/btl/zzzz03_06/zzzz03_06.bin",
+	"battle/btl/zzzz03_07/zzzz03_07.bin",
+	"battle/btl/zzzz03_08/zzzz03_08.bin",
+	"battle/btl/zzzz03_09/zzzz03_09.bin",
+	"battle/btl/zzzz03_10/zzzz03_10.bin",
+	"battle/btl/zzzz03_11/zzzz03_11.bin",
+	"battle/btl/zzzz03_12/zzzz03_12.bin",
+	"battle/btl/zzzz03_13/zzzz03_13.bin",
+	"battle/btl/zzzz03_14/zzzz03_14.bin",
+	"battle/btl/zzzz03_15/zzzz03_15.bin",
+	"battle/btl/zzzz03_16/zzzz03_16.bin",
+	"battle/btl/zzzz03_17/zzzz03_17.bin",
+	"battle/btl/zzzz03_18/zzzz03_18.bin",
+	"battle/btl/zzzz03_19/zzzz03_19.bin",
+	"battle/btl/zzzz03_20/zzzz03_20.bin",
+	"battle/btl/zzzz03_21/zzzz03_21.bin",
+	"battle/btl/zzzz03_22/zzzz03_22.bin",
+	"battle/btl/zzzz03_23/zzzz03_23.bin",
+	"battle/btl/zzzz03_24/zzzz03_24.bin",
+	"battle/btl/zzzz03_25/zzzz03_25.bin",
+	"battle/btl/zzzz03_26/zzzz03_26.bin",
+	"battle/btl/zzzz03_27/zzzz03_27.bin",
+	"battle/btl/zzzz03_28/zzzz03_28.bin",
+	"battle/btl/zzzz03_29/zzzz03_29.bin",
+	"battle/btl/zzzz03_30/zzzz03_30.bin",
+	"battle/btl/zzzz03_31/zzzz03_31.bin",
+	"battle/btl/zzzz03_32/zzzz03_32.bin",
+	"battle/btl/zzzz03_33/zzzz03_33.bin",
+	"battle/btl/zzzz03_34/zzzz03_34.bin",
+	"battle/btl/zzzz03_35/zzzz03_35.bin",
+	"battle/btl/zzzz03_36/zzzz03_36.bin",
+	"battle/btl/zzzz03_37/zzzz03_37.bin",
+	"battle/btl/zzzz03_38/zzzz03_38.bin",
+	"battle/btl/zzzz03_39/zzzz03_39.bin",
+	"battle/btl/zzzz03_40/zzzz03_40.bin",
+	"battle/btl/zzzz03_41/zzzz03_41.bin",
+	"battle/btl/zzzz03_42/zzzz03_42.bin",
+	"battle/btl/zzzz03_43/zzzz03_43.bin",
+	"battle/btl/zzzz03_44/zzzz03_44.bin",
+	"battle/btl/zzzz03_45/zzzz03_45.bin",
+	"battle/btl/zzzz03_46/zzzz03_46.bin",
+	"battle/btl/zzzz03_47/zzzz03_47.bin",
+	"battle/btl/zzzz03_48/zzzz03_48.bin",
+	"battle/btl/zzzz03_49/zzzz03_49.bin",
+	"battle/btl/zzzz03_50/zzzz03_50.bin",
+	"battle/btl/zzzz03_51/zzzz03_51.bin",
+	"battle/btl/zzzz03_52/zzzz03_52.bin",
+	"battle/btl/zzzz03_53/zzzz03_53.bin",
+	"battle/btl/zzzz03_54/zzzz03_54.bin",
+	"battle/btl/zzzz03_55/zzzz03_55.bin",
+	"battle/btl/zzzz03_56/zzzz03_56.bin",
+	"battle/btl/zzzz03_57/zzzz03_57.bin",
+	"battle/btl/zzzz03_58/zzzz03_58.bin",
+	"battle/btl/zzzz03_59/zzzz03_59.bin",
+	"battle/btl/zzzz03_60/zzzz03_60.bin",
+	"battle/btl/zzzz03_61/zzzz03_61.bin",
+	"battle/btl/zzzz03_62/zzzz03_62.bin",
+	"battle/btl/zzzz03_63/zzzz03_63.bin",
+	"battle/btl/zzzz03_64/zzzz03_64.bin",
+	"battle/btl/zzzz03_65/zzzz03_65.bin",
+	"battle/btl/zzzz03_66/zzzz03_66.bin",
+	"battle/btl/zzzz03_67/zzzz03_67.bin",
+	"battle/btl/zzzz03_68/zzzz03_68.bin",
+	"battle/btl/zzzz03_69/zzzz03_69.bin",
+	"battle/btl/zzzz03_70/zzzz03_70.bin",
+	"battle/btl/zzzz03_71/zzzz03_71.bin",
+	"battle/btl/zzzz03_72/zzzz03_72.bin",
+	"battle/btl/zzzz03_73/zzzz03_73.bin",
+	"battle/btl/zzzz03_74/zzzz03_74.bin",
+	"battle/btl/zzzz03_75/zzzz03_75.bin",
+	"battle/btl/zzzz03_76/zzzz03_76.bin",
+	"battle/btl/zzzz03_77/zzzz03_77.bin",
+	"battle/btl/zzzz03_78/zzzz03_78.bin",
+	"battle/btl/zzzz03_79/zzzz03_79.bin",
+	"battle/btl/zzzz03_80/zzzz03_80.bin",
+	"battle/btl/zzzz03_81/zzzz03_81.bin",
+	"battle/btl/zzzz03_82/zzzz03_82.bin",
+	"battle/btl/zzzz03_83/zzzz03_83.bin",
+	"battle/btl/zzzz03_84/zzzz03_84.bin",
+	"battle/btl/zzzz03_85/zzzz03_85.bin",
+	"battle/btl/zzzz03_86/zzzz03_86.bin",
+	"battle/btl/zzzz03_87/zzzz03_87.bin",
 }
 
 // IsSkippedFilePath informa se o caminho (absoluto ou relativo, com "/"
-// ou "\\") contém alguma entrada de SkippedFilePaths. Todo caminho de
-// arquivo servido ao app deve passar por aqui antes de decode/export/import.
-func IsSkippedFilePath(path string) bool {
+// ou "\\") contém alguma entrada da lista da versão indicada. Todo
+// caminho de arquivo servido ao app deve passar por aqui antes de
+// decode/export/import. Lastmiss (e qualquer versão desconhecida)
+// retorna false: não há entradas de skip nessas versões.
+func IsSkippedFilePath(path string, version GameVersion) bool {
 	s := strings.ToLower(strings.ReplaceAll(path, "\\", "/"))
-	for _, e := range SkippedFilePaths {
+	var list []string
+	switch version {
+	case GameVersionFFX:
+		list = SkippedFilePathsFFX
+	case GameVersionFFX2:
+		list = SkippedFilePathsFFX2
+	default:
+		// lastmiss e qualquer outra versão: sem skip.
+		return false
+	}
+	for _, e := range list {
 		if strings.Contains(s, e) {
 			return true
 		}

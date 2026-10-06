@@ -150,7 +150,7 @@ func IDs(kind string, version common.GameVersion) []string {
 		}
 		bin := filepath.Join(scanDir, e.Name(), e.Name()+".bin")
 		if _, err := os.Stat(bin); err == nil {
-			if common.IsSkippedFilePath(filepath.ToSlash(filepath.Join("battle", "btl", e.Name(), e.Name()+".bin"))) {
+			if common.IsSkippedFilePath(filepath.ToSlash(filepath.Join("battle", "btl", e.Name(), e.Name()+".bin")), version) {
 				continue
 			}
 			if strings.EqualFold(e.Name(), "tuto0000") {
@@ -193,7 +193,7 @@ func Load(kind string, version common.GameVersion, id string) (*File, error) {
 	if !ok {
 		return nil, fmt.Errorf("%s: id desconhecido %q", kind, id)
 	}
-	if common.IsSkippedFilePath(rel) {
+	if common.IsSkippedFilePath(rel, version) {
 		// Silencioso: a lista estática evita decode sem log/erro.
 		return &File{Kind: kind, ID: id, Version: version, Strings: nil, Bins: []BinSpec{{Name: id, Rel: rel}}}, nil
 	}
@@ -250,7 +250,7 @@ func ReadLocalizedStringsFrom(kind string, id string, version common.GameVersion
 	if !ok {
 		return nil, fmt.Errorf("%s: id desconhecido %q", kind, id)
 	}
-	if common.IsSkippedFilePath(rel) {
+	if common.IsSkippedFilePath(rel, version) {
 		// Silencioso: a lista estática evita decode sem log/erro.
 		return nil, nil
 	}
@@ -277,7 +277,7 @@ func (f *File) Save() error {
 	}
 	for _, loc := range common.SupportedLanguageCodes() {
 		for _, bin := range bins {
-			if common.IsSkippedFilePath(bin.Rel) {
+			if common.IsSkippedFilePath(bin.Rel, f.Version) {
 				continue // silencioso
 			}
 			buf, err := event.EncodeLocalizedStrings(f.Strings[bin.Start:bin.Start+bin.Len], loc, f.Version)

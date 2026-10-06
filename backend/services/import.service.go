@@ -411,8 +411,8 @@ func stripHelpRowNames(c dto.Collection) {
 // kindFromKey decide o kind pela metadata.key: macrodic.dcp → macro,
 // /event/ → events; /gamedata/ps3data/lockit/ → lockit; help/…/*.sps2 → help;
 // demais → objects.
-func kindFromKey(key string) string {
-	if common.IsSkippedFilePath(key) {
+func kindFromKey(key string, version common.GameVersion) string {
+	if common.IsSkippedFilePath(key, version) {
 		return ""
 	}
 	lower := strings.ToLower(key)
@@ -468,10 +468,10 @@ func detectImportKind(active common.GameVersion, imported dto.Collection) (strin
 		if common.VersionPathName(fv) != common.VersionPathName(active) {
 			return "", fmt.Errorf("arquivo é da versão %s, mas a aba ativa é %s", p.Version, active.String())
 		}
-		if common.IsSkippedFilePath(key) {
+		if common.IsSkippedFilePath(key, active) {
 			continue // silencioso: lista estática, nada a fazer
 		}
-		k := kindFromKey(key)
+		k := kindFromKey(key, active)
 		if k == "" {
 			return "", fmt.Errorf("entrada %q sem kind reconhecido", id)
 		}
