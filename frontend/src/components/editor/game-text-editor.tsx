@@ -7,6 +7,10 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import { ChevronDown, DoorOpen, Eraser, Italic, Palette, RotateCcw, Undo2, Redo2 } from 'lucide-react';
 import { gameTextParser } from '@/lib/ffx/game-text-parser';
+import {
+  splitLeadingPadding,
+  summarizePadding,
+} from '@/lib/ffx/leading-padding';
 import { KNOWN_COLORS, extractChipLabel, isLockedTagInner } from '@/lib/ffx/game-text-tags';
 import {
   getChipValidator,
@@ -163,12 +167,17 @@ export function GameTextEditor({
         createTagAutocompleteExtension(catalog, () => popupContainerRef.current),
         createPasteHandlerExtension(gameTextParser, validate),
       ],
-      content: gameTextParser.parseGameTextToHTML(value, validate),
+      content: gameTextParser.parseGameTextToHTML(
+        splitLeadingPadding(value).body,
+        validate
+      ),
       onUpdate: ({ editor: updated }) => {
         suppressUpdate.current = true;
         try {
+          const { padding } = splitLeadingPadding(value);
           onValueChangeRef.current(
-            gameTextParser.serializeJSONToGameText(updated.getJSON())
+            padding +
+              gameTextParser.serializeJSONToGameText(updated.getJSON())
           );
         } finally {
           queueMicrotask(() => (suppressUpdate.current = false));
@@ -188,7 +197,7 @@ export function GameTextEditor({
   useEffect(() => {
     if (!editor || suppressUpdate.current || catalog === undefined) return;
     const html = gameTextParser.parseGameTextToHTML(
-      value,
+      splitLeadingPadding(value).body,
       getChipValidator(catalog)
     );
     if (editor.getHTML() !== html) {
@@ -359,6 +368,17 @@ export function GameTextEditor({
         </Tooltip>
       </div>
 
+      {splitLeadingPadding(value).padding !== '' && (
+        <div
+          className="flex items-center gap-1 text-xs text-muted-foreground"
+          title="Espaços/quebras intencionais do jogo, preservados automaticamente"
+        >
+          <span>␍ padding de tela:</span>
+          <code className="rounded bg-muted px-1">
+            {summarizePadding(splitLeadingPadding(value).padding)}
+          </code>
+        </div>
+      )}
       <div
         ref={hostRef}
         className="min-h-40 rounded border border-border p-3 outline-none [&_.tiptap_p]:mb-2 [&_.tiptap_p:last-child]:mb-0"

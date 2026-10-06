@@ -2,6 +2,10 @@
 
 import { useMemo } from 'react';
 import { gameTextParser } from '@/lib/ffx/game-text-parser';
+import {
+  splitLeadingPadding,
+  summarizePadding,
+} from '@/lib/ffx/leading-padding';
 import { cn } from '@/lib/utils';
 
 interface GameTextViewProps {
@@ -21,19 +25,30 @@ interface GameTextViewProps {
  * dangerouslySetInnerHTML.
  */
 export function GameTextView({ text, fallback = '', className }: GameTextViewProps) {
-  const html = useMemo(() => gameTextParser.parseGameTextToHTML(text ?? ''), [text]);
+  const html = useMemo(
+    () => gameTextParser.parseGameTextToHTML(splitLeadingPadding(text ?? '').body),
+    [text]
+  );
 
   if (!text) {
     return fallback ? <div className={className}>{fallback}</div> : null;
   }
 
+  const padding = splitLeadingPadding(text ?? '').padding;
   return (
-    <div
-      className={cn(
-        '[&_p]:mb-1 [&_p:last-child]:mb-0',
-        className
+    <div className={className}>
+      {padding !== '' && (
+        <div className="mb-1 flex items-center gap-1 text-xs text-muted-foreground">
+          <span>␍ padding de tela:</span>
+          <code className="rounded bg-muted px-1">
+            {summarizePadding(padding)}
+          </code>
+        </div>
       )}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+      <div
+        className="[&_p]:mb-1 [&_p:last-child]:mb-0"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    </div>
   );
 }
