@@ -428,9 +428,6 @@ func kindFromKey(key string, version common.GameVersion) string {
 	if strings.Contains(lower, "/battle/btl/tuto0000/") {
 		return KindTutorial
 	}
-	if strings.Contains(lower, "/battle/btl/menumain/") {
-		return KindMenuMain
-	}
 	if strings.Contains(lower, "/battle/btl/") {
 		return KindBattleText
 	}
