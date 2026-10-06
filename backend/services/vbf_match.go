@@ -187,6 +187,10 @@ func matchVbfPath(vbfName, inner string) (vbfTarget, bool) {
 		if dir := path.Base(path.Dir(slash)); dir != "" && dir != "btl" && strings.EqualFold(dir, "tuto0000") {
 			// tuto0000 é tutorial (par tuto0000.bin + tutorial.msb).
 			kind, id = KindTutorial, "tuto0000"
+		} else if dir := path.Base(path.Dir(slash)); dir != "" && dir != "btl" && strings.EqualFold(dir, "menumain") {
+			// menumain de battle/btl é variante do mesmo kind (KindMenuMain);
+			// o dedup por hash no GetEntry une as linhas iguais dos dois.
+			kind, id = KindMenuMain, "menumain_btl"
 		} else {
 			kind = KindBattleText
 			if dir := path.Base(path.Dir(slash)); dir != "" && dir != "btl" {

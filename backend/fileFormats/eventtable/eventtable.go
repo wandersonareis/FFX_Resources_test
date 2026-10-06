@@ -43,7 +43,7 @@ const (
 var fixedIDs = map[string][]string{
 	KindCloud:     {"cloud"},
 	KindTutorial:  {"tutorial", "tuto0000"},
-	KindMenuMain:  {"menumain"},
+	KindMenuMain:  {"menumain", "menumain_btl"},
 }
 
 // RelPath devolve o caminho do binário de strings, relativo à raiz de
@@ -56,8 +56,8 @@ func RelPath(kind, id string) (string, bool) {
 		if id == "" || strings.ContainsAny(id, `/\`) {
 			return "", false
 		}
-		if strings.EqualFold(id, "tuto0000") {
-			// tuto0000 pertence à família tutorial (par tuto0000.bin + tutorial.msb).
+		if strings.EqualFold(id, "tuto0000") || strings.EqualFold(id, "menumain") {
+			// tuto0000 pertence à família tutorial; menumain pertence a KindMenuMain.
 			return "", false
 		}
 		return filepath.ToSlash(filepath.Join("battle", "btl", id, id+".bin")), true
@@ -80,8 +80,11 @@ func RelPath(kind, id string) (string, bool) {
 		}
 		return "", false
 	case KindMenuMain:
-		if strings.EqualFold(strings.TrimSpace(id), "menumain") {
-			return "menu/menumain.bin", true
+		switch strings.ToLower(strings.TrimSpace(id)) {
+		case "menumain":
+			return filepath.ToSlash("menu/menumain.bin"), true
+		case "menumain_btl":
+			return filepath.ToSlash("battle/btl/menumain/menumain.bin"), true
 		}
 		return "", false
 	}
@@ -153,8 +156,8 @@ func IDs(kind string, version common.GameVersion) []string {
 			if common.IsSkippedFilePath(filepath.ToSlash(filepath.Join("battle", "btl", e.Name(), e.Name()+".bin")), version) {
 				continue
 			}
-			if strings.EqualFold(e.Name(), "tuto0000") {
-				continue // tuto0000 pertence à família tutorial
+			if strings.EqualFold(e.Name(), "tuto0000") || strings.EqualFold(e.Name(), "menumain") {
+				continue // tuto0000 → tutorial; menumain → KindMenuMain
 			}
 			out = append(out, e.Name())
 		}
