@@ -178,6 +178,61 @@ func TestGetEntryTranslatedTwinStaysLiteral(t *testing.T) {
 	}
 }
 
+// stripEventMods remove o binário de mods/ do evento: simula a entrada NÃO
+// traduzida (pristine só em data/) — o cenário em que o HashOrder cru nasce
+// sem a coluna Original para a def.
+func stripEventMods(t *testing.T, version common.GameVersion, id string) {
+	t.Helper()
+	rel, err := event.EventRelPath(id)
+	if err != nil {
+		t.Fatalf("relpath %s: %v", id, err)
+	}
+	for loc := range common.SupportedLanguages {
+		lroot := common.GetLocalizationRootForVersion(version, loc)
+		modsPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, lroot, rel)
+		if err := os.Remove(modsPath); err != nil && !os.IsNotExist(err) {
+			t.Fatalf("remover mods %s: %v", modsPath, err)
+		}
+	}
+}
+
+// TestGetEntryRefAnnotationCarriesDefOriginal: def NÃO traduzida (sem
+// mods/, pristine só em data/) colapsa a twin em ref e a anotação de ref
+// precisa carregar o Original da def — é o texto do tooltip "Repetição de:".
+// Regressão: o HashOrder cru (normalizeCollection) só merge Original de
+// entradas COM mods/, então a anotação da def não traduzida vinha vazia e o
+// tooltip saía truncado ("Repetição de: " sem texto).
+func TestGetEntryRefAnnotationCarriesDefOriginal(t *testing.T) {
+	svc := seedDisplayRoot(t)
+	seedEventsSynthetic(common.GameVersionFFX2, "zev001", []string{sharedOriginal})
+	seedEventsSynthetic(common.GameVersionFFX2, "zev002", []string{sharedOriginal})
+
+	seedEventsData(t, common.GameVersionFFX2, "zev001")
+	seedEventsData(t, common.GameVersionFFX2, "zev002")
+	// Def e twin sem mods/: nenhuma tradução — o caso comum do dedup.
+	stripEventMods(t, common.GameVersionFFX2, "zev001")
+	stripEventMods(t, common.GameVersionFFX2, "zev002")
+
+	twin, err := svc.GetEntry(KindEvents, "zev002", common.GameVersionFFX2)
+	if err != nil {
+		t.Fatalf("get twin: %v", err)
+	}
+	if !displayRowIsRef(twin.Rows[0]) {
+		t.Fatalf("twin não traduzida deveria colapsar sob a def: %q", twin.Rows[0].Text["us"])
+	}
+	link, ok := twin.Refs[dto.RowKey(twin.Rows[0])]
+	if !ok {
+		t.Fatal("row de ref sem anotação Refs")
+	}
+	if link.SourceID != "zev001" {
+		t.Fatalf("anotação deveria apontar para a def zev001: %q", link.SourceID)
+	}
+	if link.Original != sharedOriginal {
+		t.Fatalf("Original da anotação deveria carregar o pristine da def: %q != %q",
+			link.Original, sharedOriginal)
+	}
+}
+
 // TestGetEntryWithoutOriginalKeepsRawPointers: sem contraparte em data/
 // a entrada degrada — sem Original e sem reescrita de ponteiro; o colapso
 // cai no ramo por texto, sem ponteiros de origem mista.

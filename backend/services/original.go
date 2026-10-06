@@ -50,6 +50,12 @@ var (
 	originalMu    sync.Mutex
 	originalCache = map[string]originalValue{}
 	originalMacro = map[common.GameVersion]dto.Collection{}
+
+	// refOriginalCache memoiza rows do pristine por RowKey para o tooltip
+	// de repetição (fillRefOriginals). nil = def sem original em data/
+	// (ausência memoizada: não vira re-leitura por clique).
+	refOriginalMu     sync.Mutex
+	refOriginalCache = map[string]map[string]string{}
 )
 
 func originalCacheKey(kind string, version common.GameVersion, id string) string {
@@ -336,6 +342,74 @@ func (s *MetadataService) loadOriginalFrom(kind, id string, version common.GameV
 	return dto.FileEntry{}, false, fmt.Errorf("unknown kind: %s", kind)
 }
 
+// fillRefOriginals preenche o Original vazio das anotações de ref (tooltip
+// "Repetição de:" na UI). O HashOrder do dedup de display nasce da coleção
+// RAW (normalizeCollection), onde a coluna Original só é merged para
+// entradas COM binário em mods/ — a def NÃO traduzida (o caso comum do
+// dedup: a 1ª ocorrência ainda sem edição) chegava sem pristine e o tooltip
+// saía truncado ("Repetição de: " sem texto). Aqui o original da def sai
+// do pristine de data/ (originalFor), com memo de sessão.
+//
+// Ausência/falha do original degrada e fica memoizada (não vira re-leitura
+// por clique): a anotação segue sem Original e o frontend cai no texto
+// atual da def. id é a entrada servida — fallback quando a anotação não
+// carrega SourceID.
+func (s *MetadataService) fillRefOriginals(entry dto.FileEntry, kind, id string, version common.GameVersion) dto.FileEntry {
+	if len(entry.Refs) == 0 {
+		return entry
+	}
+	for key, ref := range entry.Refs {
+		if ref.Original != "" {
+			continue
+		}
+		defID := ref.SourceID
+		if defID == "" {
+			defID = id
+		}
+		rows := s.refOriginalRows(kind, defID, version)
+		if orig, ok := rows[dto.RowKey(dto.TextRow{Index: ref.SourceIndex, Name: ref.SourceName})]; ok {
+			ref.Original = orig
+			entry.Refs[key] = ref
+		}
+	}
+	return entry
+}
+
+// refOriginalRows devolve o texto 'us' do pristine de data/ por RowKey,
+// com memo de sessão. O pristine não muda com apply (mods/ é outra árvore),
+// então o memo só cai no clearOriginalCache — inclusive porque, com .vbf
+// ativo, o originalFor bypassa o cache dele e sem memo cada clique da view
+// releria/reparsaria data/ uma vez por def da entrega.
+func (s *MetadataService) refOriginalRows(kind, id string, version common.GameVersion) map[string]string {
+	key := originalCacheKey(kind, version, id)
+	refOriginalMu.Lock()
+	if rows, ok := refOriginalCache[key]; ok {
+		refOriginalMu.Unlock()
+		return rows
+	}
+	refOriginalMu.Unlock()
+
+	orig, exists, err := s.originalFor(kind, id, version)
+	if err != nil || !exists {
+		common.LogWarning(
+			"sem original em data/ para a def %s/%s/%s — tooltip de repetição degrada para o texto atual",
+			version, kind, id,
+		)
+		refOriginalMu.Lock()
+		refOriginalCache[key] = nil
+		refOriginalMu.Unlock()
+		return nil
+	}
+	rows := make(map[string]string, len(orig.Rows))
+	for _, r := range orig.Rows {
+		rows[dto.RowKey(r)] = r.Text[common.DefaultLocalization]
+	}
+	refOriginalMu.Lock()
+	refOriginalCache[key] = rows
+	refOriginalMu.Unlock()
+	return rows
+}
+
 // withOriginal devolve uma CÓPIA de current com `Original` preenchido e o
 // PONTEIRO de dupe (Hash) reescrito a partir de data/, casando as rows por
 // (Index, Name) — e devolve o relatório de divergência de estrutura.
@@ -498,6 +572,9 @@ func clearOriginalCache() {
 	originalCache = map[string]originalValue{}
 	originalMacro = map[common.GameVersion]dto.Collection{}
 	originalMu.Unlock()
+	refOriginalMu.Lock()
+	refOriginalCache = map[string]map[string]string{}
+	refOriginalMu.Unlock()
 }
 
 // InvalidateViewCaches descarta tudo que foi DERIVADO da árvore de

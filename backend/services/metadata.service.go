@@ -1091,7 +1091,7 @@ func (s *MetadataService) GetEntry(kind, id string, version common.GameVersion) 
 			"sem original em data/ para %s/%s/%s — entregando a entrada sem a coluna Original",
 			version, kind, id,
 		)
-		return builders.DedupDisplayDTO(entry, base, order), nil
+		return s.fillRefOriginals(builders.DedupDisplayDTO(entry, base, order), kind, id, version), nil
 	}
 
 	orig, exists, oerr := s.originalFor(kind, id, version)
@@ -1100,18 +1100,18 @@ func (s *MetadataService) GetEntry(kind, id string, version common.GameVersion) 
 			"falha ao ler o original de %s/%s/%s: %v — entregando a entrada sem a coluna Original",
 			version, kind, id, oerr,
 		)
-		return builders.DedupDisplayDTO(entry, base, order), nil
+		return s.fillRefOriginals(builders.DedupDisplayDTO(entry, base, order), kind, id, version), nil
 	}
 	if !exists {
 		common.LogWarning(
 			"original de %s/%s/%s sem rows em data/ — entregando a entrada sem a coluna Original",
 			version, kind, id,
 		)
-		return builders.DedupDisplayDTO(entry, base, order), nil
+		return s.fillRefOriginals(builders.DedupDisplayDTO(entry, base, order), kind, id, version), nil
 	}
 	merged, diverged := withOriginal(entryRef{kind: kind, id: id, version: version}, entry, orig)
 	logDivergence(diverged)
-	return builders.DedupDisplayDTO(merged, base, order), nil
+	return s.fillRefOriginals(builders.DedupDisplayDTO(merged, base, order), kind, id, version), nil
 }
 
 // currentEntry monta a entrada CRU (estado atual, ponteiro = hash do texto

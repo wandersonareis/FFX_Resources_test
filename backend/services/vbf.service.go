@@ -477,7 +477,7 @@ func (s *MetadataService) GetVbfTextEntry(vbfPath, innerPath, id string) (dto.Fi
 		// (upsert na sessão) — clicou na cópia depois da def e ela não
 		// está traduzida, sai como ref "$hash" da própria sessão.
 		if out, ok := vbfSessionCached(vbfPath, t); ok {
-			return out, nil
+			return s.fillRefOriginals(out, t.Kind, t.ID, t.Version), nil
 		}
 		// Todos os kinds de texto decodificam o MESMO objeto que embute o
 		// DTO: é ele que o apply vai mutar e que o save persiste em mods/.
@@ -496,11 +496,11 @@ func (s *MetadataService) GetVbfTextEntry(vbfPath, innerPath, id string) (dto.Fi
 			)
 			// Registra mesmo assim: sem upsert a sessão não teria o estado
 			// do arquivo e o save recusaria na hora de editar.
-			return vbfSessionUpsertEstado(vbfPath, t, current, estado), nil
+			return s.fillRefOriginals(vbfSessionUpsertEstado(vbfPath, t, current, estado), t.Kind, t.ID, t.Version), nil
 		}
 		merged, diverged := withOriginal(entryRef{kind: t.Kind, id: t.ID, version: t.Version}, current, orig)
 		logDivergence(diverged)
-		return vbfSessionUpsertEstado(vbfPath, t, merged, estado), nil
+		return s.fillRefOriginals(vbfSessionUpsertEstado(vbfPath, t, merged, estado), t.Kind, t.ID, t.Version), nil
 	})
 }
 

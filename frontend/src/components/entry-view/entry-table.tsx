@@ -254,14 +254,17 @@ export function EntryTable({ view }: { view: EntryView }) {
               const link = refLinks[rowKey(row)];
               if (link) {
                 const defText = linkedValueOf(row) ?? link.text ?? '';
-                const defTranslated =
-                  defText !== '' && defText !== (link.original ?? '');
+                // Fallback: original ausente (def sem pristine em data/)
+                // degrada para o texto atual da def em vez de truncar o
+                // tooltip ("Repetição de: " sem texto).
+                const original = link.original || link.text || '';
+                const defTranslated = defText !== '' && defText !== original;
                 return (
                   <div
                     className={`text-cell translated-cell${defTranslated ? ' edited' : ''}`}
                     title={
                       defTranslated
-                        ? `Repetição de: ${link.original ?? ''}`
+                        ? `Repetição de: ${original}`
                         : 'Repetição (dedup): o texto vive na def de outro ponto'
                     }
                     onClick={
