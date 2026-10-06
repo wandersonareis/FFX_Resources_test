@@ -302,7 +302,6 @@ var SkippedFilePathsFFX2 = []string{
 	"battle/btl/zzzz03_85/zzzz03_85.bin",
 	"battle/btl/zzzz03_86/zzzz03_86.bin",
 	"battle/btl/zzzz03_87/zzzz03_87.bin",
-	"strings",
 }
 
 // IsSkippedFilePath informa se o caminho (absoluto ou relativo, com "/"
