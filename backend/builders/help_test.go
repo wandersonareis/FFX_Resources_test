@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"unicode/utf8"
 
 	"ffxresources/backend/builders"
 	"ffxresources/backend/common"
@@ -357,8 +356,8 @@ func TestDedupHelpDTORefsAndDefs(t *testing.T) {
 			if helpIsRef(dr) {
 				refCount++
 				bare, _ := hash.Strip(us)
-				if utf8.RuneCountInString(fr.Text[common.DefaultLocalization]) < hash.MinDedupRunes {
-					t.Fatalf("%s[%d]: ref com menos de %d runes", k, i, hash.MinDedupRunes)
+				if !hash.IsDedupEligible(fr.Text[common.DefaultLocalization]) {
+					t.Fatalf("%s[%d]: ref inelegível (≤ %d runes)", k, i, hash.MinDedupRunes)
 				}
 				if !literal[bare] {
 					t.Fatalf("%s[%d]: ref %s sem def literal antes dela", k, i, bare)

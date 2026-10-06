@@ -76,7 +76,7 @@ func MarshalLangs(c dto.Collection, langs []string) ([]byte, error) {
 				}
 				value := escapeValue(text)
 				if lang == common.DefaultLocalization {
-					if runeCount(text) >= hash.MinDedupRunes {
+					if hash.IsDedupEligible(text) {
 						if _, dup := seen[h]; dup {
 							value = hash.Prefix(h)
 						} else {

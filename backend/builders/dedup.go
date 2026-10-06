@@ -7,8 +7,6 @@
 package builders
 
 import (
-	"unicode/utf8"
-
 	"ffxresources/backend/common"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/formatters/hash"
@@ -35,7 +33,7 @@ func DedupDTO(c dto.Collection) dto.Collection {
 			r := &rows[i]
 			t := r.Text[common.DefaultLocalization]
 			h := r.Hash[common.DefaultLocalization]
-			if t == "" || h == "" || utf8.RuneCountInString(t) < hash.MinDedupRunes {
+			if t == "" || h == "" || !hash.IsDedupEligible(t) {
 				continue
 			}
 			if _, ok := defs[h]; !ok {
@@ -348,9 +346,9 @@ func DedupDisplayDTO(entry dto.FileEntry, base int, ho *HashOrder) dto.FileEntry
 		// pré-original).
 		elegivel := false
 		if origUS != "" {
-			elegivel = t == origUS && utf8.RuneCountInString(origUS) >= hash.MinDedupRunes
+			elegivel = t == origUS && hash.IsDedupEligible(origUS)
 		} else if def, ok := ho.defText(h); ok {
-			elegivel = def == t && utf8.RuneCountInString(t) >= hash.MinDedupRunes
+			elegivel = def == t && hash.IsDedupEligible(t)
 		}
 		if !elegivel {
 			continue

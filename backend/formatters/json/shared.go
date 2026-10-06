@@ -11,7 +11,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"strings"
-	"unicode/utf8"
 
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/progress"
@@ -50,8 +49,8 @@ func marshalCollection(c dto.Collection) ([]byte, error) {
 // pedidos (nil/vazio = todos).
 //
 // Na saída, todo hash ganha o prefixo `$` e, só no idioma default, textos
-// repetidos (len >= hash.MinDedupRunes runes) viram referência `$hash` —
-// mesma regra do DedupHelpDTO do builders. O DTO de entrada nunca é mutado.
+// repetidos (hash.IsDedupEligible: > MinDedupRunes runes) viram referência
+// `$hash` — mesma regra do DedupHelpDTO do builders. O DTO de entrada nunca é mutado.
 func marshalCollectionLangs(c dto.Collection, langs []string) ([]byte, error) {
 	filter := langSet(langs)
 	seen := make(map[string]string) // hashHex bare -> texto (só default lang)
@@ -80,7 +79,7 @@ func marshalCollectionLangs(c dto.Collection, langs []string) ([]byte, error) {
 					r.Text[lang] = t
 				}
 			}
-			if t := r.Text[common.DefaultLocalization]; utf8.RuneCountInString(t) >= hash.MinDedupRunes {
+			if t := r.Text[common.DefaultLocalization]; hash.IsDedupEligible(t) {
 				if h, _ := hash.Strip(r.Hash[common.DefaultLocalization]); h != "" {
 					if _, ok := seen[h]; ok {
 						r.Text[common.DefaultLocalization] = hash.Prefix(h)
