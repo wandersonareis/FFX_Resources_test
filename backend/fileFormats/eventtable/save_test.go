@@ -27,13 +27,20 @@ func TestCloudSaveWritesBothBins(t *testing.T) {
 	if err != nil {
 		t.Skip("cloud fixture ausente:", err)
 	}
-	if len(f.Bins) != 2 {
-		t.Fatalf("cloud deve carregar 2 bins, tem %d", len(f.Bins))
+	if len(f.Bins) != 1 {
+		t.Fatalf("cloud deve carregar 1 bin, tem %d", len(f.Bins))
+	}
+	fv, err := eventtable.Load(eventtable.KindCloud, common.GameVersionFFX2, "cloudv")
+	if err != nil {
+		t.Skip("cloudv fixture ausente:", err)
 	}
 
 	tmp := t.TempDir()
 	common.GameFilesRoot = tmp
 	if err := f.Save(); err != nil {
+		t.Fatal(err)
+	}
+	if err := fv.Save(); err != nil {
 		t.Fatal(err)
 	}
 	for _, name := range []string{"cloud.bin", "cloudv.bin"} {

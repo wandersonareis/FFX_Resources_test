@@ -187,6 +187,10 @@ func matchVbfPath(vbfName, inner string) (vbfTarget, bool) {
 		if dir := path.Base(path.Dir(slash)); dir != "" && dir != "btl" && strings.EqualFold(dir, "tuto0000") {
 			// tuto0000 é tutorial (par tuto0000.bin + tutorial.msb).
 			kind, id = KindTutorial, "tuto0000"
+		} else if dir := path.Base(path.Dir(slash)); dir != "" && dir != "btl" && strings.EqualFold(dir, "menumain") {
+			// menumain de battle/btl é o mesmo artefato em menu/ (variante da
+			// mesma família KindMenuMain; dedup por hash colapsa as linhas iguais).
+			kind, id = KindMenuMain, "menumain_btl"
 		} else {
 			kind = KindBattleText
 			if dir := path.Base(path.Dir(slash)); dir != "" && dir != "btl" {
@@ -198,9 +202,13 @@ func matchVbfPath(vbfName, inner string) (vbfTarget, bool) {
 
 	case strings.Contains(lower, "/cloudsave/"):
 		// cloud: <raiz de localização>/cloudsave/cloud.bin | cloudv.bin.
-		// v  cloud.bin e cloudv.bin são um ÚNICO artefato ("cloud", par).
+		// Dois artefatos do mesmo kind (dedup por hash une os dois no GetEntry).
 		kind = KindCloud
-		id = "cloud"
+		if stem == "cloudv" {
+			id = "cloudv"
+		} else {
+			id = "cloud"
+		}
 
 	case base == "tutorial.msb":
 		// tutorial: <raiz de localização>/menu/tutorial.msb.

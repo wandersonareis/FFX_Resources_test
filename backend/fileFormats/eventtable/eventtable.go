@@ -41,9 +41,9 @@ const (
 // fixedIDs são os artefatos estáticos por família (battletext é o único com
 // descoberta dinâmica em diretório).
 var fixedIDs = map[string][]string{
-	KindCloud:     {"cloud"},
+	KindCloud:     {"cloud", "cloudv"},
 	KindTutorial:  {"tutorial", "tuto0000"},
-	KindMenuMain:  {"menumain"},
+	KindMenuMain:  {"menumain", "menumain_btl"},
 }
 
 // RelPath devolve o caminho do binário de strings, relativo à raiz de
@@ -56,19 +56,20 @@ func RelPath(kind, id string) (string, bool) {
 		if id == "" || strings.ContainsAny(id, `/\`) {
 			return "", false
 		}
-		if strings.EqualFold(id, "tuto0000") {
-			// tuto0000 pertence à família tutorial (par tuto0000.bin + tutorial.msb).
+		if strings.EqualFold(id, "tuto0000") || strings.EqualFold(id, "menumain") {
+			// tuto0000 pertence à família tutorial; menumain pertence a KindMenuMain.
 			return "", false
 		}
 		return filepath.ToSlash(filepath.Join("battle", "btl", id, id+".bin")), true
 	case KindCloud:
-		// cloud.bin + cloudv.bin são um único artefato (id "cloud"): o par é
-		// sempre lido/exportado/importado JUNTO — o dedup ($hash) entre os dois
-		// arquivos só funciona num artefato único, e o Save recompõe os dois
-		// binários. Bins com contagens iguais por idioma (régua events).
+		// cloud.bin e cloudv.bin são dois artefatos separados do mesmo kind;
+		// o dedup por hash ($hash) entre eles acontece no GetEntry, como
+		// menumain/tutorial — nenhum fundimento de linhas no load.
 		switch strings.ToLower(strings.TrimSpace(id)) {
 		case "cloud", "cloudsave":
 			return "cloudsave/cloud.bin", true
+		case "cloudv":
+			return "cloudsave/cloudv.bin", true
 		}
 		return "", false
 	case KindTutorial:
@@ -80,8 +81,11 @@ func RelPath(kind, id string) (string, bool) {
 		}
 		return "", false
 	case KindMenuMain:
-		if strings.EqualFold(strings.TrimSpace(id), "menumain") {
-			return "menu/menumain.bin", true
+		switch strings.ToLower(strings.TrimSpace(id)) {
+		case "menumain":
+			return filepath.ToSlash("menu/menumain.bin"), true
+		case "menumain_btl":
+			return filepath.ToSlash("battle/btl/menumain/menumain.bin"), true
 		}
 		return "", false
 	}
@@ -91,8 +95,11 @@ func RelPath(kind, id string) (string, bool) {
 // RelPaths lista todos os bins físicos de um artefato (cloud = par cloud+cloudv).
 func RelPaths(kind, id string) []string {
 	if kind == KindCloud {
-		if id == "cloud" || id == "cloudsave" {
-			return []string{"cloudsave/cloud.bin", "cloudsave/cloudv.bin"}
+		switch id {
+		case "cloud", "cloudsave":
+			return []string{"cloudsave/cloud.bin"}
+		case "cloudv":
+			return []string{"cloudsave/cloudv.bin"}
 		}
 		return nil
 	}
@@ -153,8 +160,8 @@ func IDs(kind string, version common.GameVersion) []string {
 			if common.IsSkippedFilePath(filepath.ToSlash(filepath.Join("battle", "btl", e.Name(), e.Name()+".bin")), version) {
 				continue
 			}
-			if strings.EqualFold(e.Name(), "tuto0000") {
-				continue // tuto0000 pertence à família tutorial
+			if strings.EqualFold(e.Name(), "tuto0000") || strings.EqualFold(e.Name(), "menumain") {
+				continue // tuto0000 → tutorial; menumain → KindMenuMain
 			}
 			out = append(out, e.Name())
 		}
@@ -186,9 +193,6 @@ type File struct {
 // Load lê todos os idiomas disponíveis do artefato (resolução mods-first)
 // e devolve o File lógico. Não registra no store.
 func Load(kind string, version common.GameVersion, id string) (*File, error) {
-	if kind == KindCloud {
-		return loadCloud(version)
-	}
 	rel, ok := RelPath(kind, id)
 	if !ok {
 		return nil, fmt.Errorf("%s: id desconhecido %q", kind, id)
@@ -211,41 +215,9 @@ func Load(kind string, version common.GameVersion, id string) (*File, error) {
 	return &File{Kind: kind, ID: id, Version: version, Strings: strings_, Bins: bins}, nil
 }
 
-// loadCloud lê cloud.bin + cloudv.bin juntos (mesmo artefato), preservando
-// a faixa de cada um para o Save reescrever os dois binários.
-func loadCloud(version common.GameVersion) (*File, error) {
-	cloud := event.ReadLocalizedStringFilesFrom("cloudsave/cloud.bin", version, common.SourcePreferred)
-	cloudv := event.ReadLocalizedStringFilesFrom("cloudsave/cloudv.bin", version, common.SourcePreferred)
-	if len(cloud) == 0 && len(cloudv) == 0 {
-		return nil, fmt.Errorf("cloudsave: nenhum conteúdo")
-	}
-	all := make([]*event.LocalizedFieldStringObject, 0, len(cloud)+len(cloudv))
-	all = append(all, cloud...)
-	all = append(all, cloudv...)
-	return &File{
-		Kind:    KindCloud,
-		ID:      "cloud",
-		Version: version,
-		Strings: all,
-		Bins: []BinSpec{
-			{Name: "cloud", Rel: "cloudsave/cloud.bin", Start: 0, Len: len(cloud)},
-			{Name: "cloudv", Rel: "cloudsave/cloudv.bin", Start: len(cloud), Len: len(cloudv)},
-		},
-	}, nil
-}
-
 // ReadLocalizedStringsFrom lê as strings direto da árvore indicada, sem
 // tocar no store (é o caminho do ORIGINAL / .vbf).
 func ReadLocalizedStringsFrom(kind string, id string, version common.GameVersion, src common.FileSource) ([]*event.LocalizedFieldStringObject, error) {
-	if kind == KindCloud {
-		cloud := event.ReadLocalizedStringFilesFrom("cloudsave/cloud.bin", version, src)
-		cloudv := event.ReadLocalizedStringFilesFrom("cloudsave/cloudv.bin", version, src)
-		all := append(append([]*event.LocalizedFieldStringObject{}, cloud...), cloudv...)
-		if len(all) == 0 {
-			return nil, fmt.Errorf("cloudsave: nenhum conteúdo (%s)", src)
-		}
-		return all, nil
-	}
 	rel, ok := RelPath(kind, id)
 	if !ok {
 		return nil, fmt.Errorf("%s: id desconhecido %q", kind, id)

@@ -90,8 +90,8 @@ func TestEventtableRelPath(t *testing.T) {
 	if rel, ok := eventtable.RelPath(eventtable.KindCloud, "cloud"); !ok || rel != "cloudsave/cloud.bin" {
 		t.Errorf("cloud relpath: %q %v", rel, ok)
 	}
-	if _, ok := eventtable.RelPath(eventtable.KindCloud, "cloudv"); ok {
-		t.Error("cloudv deixa de ser id próprio (partura de 'cloud'), deve falhar")
+	if rel, ok := eventtable.RelPath(eventtable.KindCloud, "cloudv"); !ok || rel != "cloudsave/cloudv.bin" {
+		t.Errorf("cloudv relpath: %q %v", rel, ok)
 	}
 	if rel, ok := eventtable.RelPath(eventtable.KindTutorial, "tutorial"); !ok || rel != "menu/tutorial.msb" {
 		t.Errorf("tutorial relpath: %q %v", rel, ok)
