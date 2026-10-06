@@ -66,9 +66,10 @@ const FFX_GROUPS: Record<string, string> = {
   loop: 'Demo',
   open: 'Abertura',
   samp: 'Amostra',
-  scen: 'Cenas',
   sysf: 'Sistema',
   test: 'Teste',
+  // scen (Cenas/Eternal Calm, sc/scene*.bin) fica oculto na listagem do
+  // ffx: aparece na aba eternalcalm.
 };
 
 /**
@@ -85,9 +86,16 @@ const FFX2_EXTRA: Record<string, string> = {
 };
 const FFX2_GROUPS: Record<string, string> = { ...FFX_GROUPS, ...FFX2_EXTRA };
 
+// eternalcalm é expansão do ffx e lê a MESMA árvore de events: mostra só
+// o grupo "scen" (sc/scene*.bin — os arquivos .bin do Eternal Calm).
+const ETERNAL_CALM_GROUPS: Record<string, string> = {
+  scen: 'Eternal Calm',
+};
+
 // lastmiss é expansão do ffx2 e lê a MESMA árvore de events.
 const GROUPS_BY_VERSION: Record<GameVersionId, Record<string, string>> = {
   ffx: FFX_GROUPS,
+  eternalcalm: ETERNAL_CALM_GROUPS,
   ffx2: FFX2_GROUPS,
   lastmiss: FFX2_GROUPS,
 };

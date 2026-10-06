@@ -89,7 +89,8 @@ func originalRelPathLoc(kind, id string, version common.GameVersion, loc string)
 			layout.PatternPath(),
 		), true
 	case KindMacro:
-		if version == common.GameVersionLastMiss {
+		if version == common.GameVersionLastMiss || version == common.GameVersionEternalCalm {
+			// Expansões sem dicionário próprio (macrodic do jogo-pai).
 			return "", false
 		}
 		return filepath.Join(
@@ -117,7 +118,8 @@ func originalRelPathLoc(kind, id string, version common.GameVersion, loc string)
 		}
 		return "", false
 	case KindImages:
-		if version == common.GameVersionLastMiss || !ddsphyre.ValidID(id) {
+		if version == common.GameVersionLastMiss || version == common.GameVersionEternalCalm || !ddsphyre.ValidID(id) {
+			// Expansões sem texturas próprias (.dds.phyre do jogo-pai).
 			return "", false
 		}
 		return ddsphyre.RelPath(version, id), true

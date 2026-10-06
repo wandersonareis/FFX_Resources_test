@@ -1,7 +1,8 @@
 export const GAME_VERSIONS = [
   { id: 'ffx', label: 'FFX' },
+  { id: 'eternalcalm', label: 'FFX Eternal Calm' },
   { id: 'ffx2', label: 'FFX-2' },
-  { id: 'lastmiss', label: 'Last Mission' },
+  { id: 'lastmiss', label: 'FFX-2 Last Mission' },
 ] as const;
 
 export type GameVersionId = (typeof GAME_VERSIONS)[number]['id'];

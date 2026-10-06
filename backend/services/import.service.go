@@ -451,8 +451,10 @@ func kindFromKey(key string, version common.GameVersion) string {
 
 // detectImportKind infere o kind e valida a versão pelas metadata.key.
 // A versão passa por VersionPathName: ffx2 e lastmiss dividem a árvore
-// ("ffx2"), então um export de lastmiss importa na aba lastmiss (e vice-versa).
-// Falha aqui é de arquivo inteiro (toast); erros por entrada vão no resumo.
+// ("ffx2") e ffx e eternalcalm também ("ffx"), então um export de lastmiss
+// importa na aba lastmiss (e vice-versa) — idem eternalcalm/ffx, limitado
+// pela régua de events de cada aba. Falha aqui é de arquivo inteiro (toast);
+// erros por entrada vão no resumo.
 func detectImportKind(active common.GameVersion, imported dto.Collection) (string, error) {
 	kind := ""
 	for _, id := range imported.SortedKeys() {
@@ -523,8 +525,8 @@ func (s *MetadataService) importKnownIDs(kind string, version common.GameVersion
 			}
 		}
 	case KindMacro:
-		if version == common.GameVersionLastMiss {
-			// Last Mission não tem dicionário próprio: store vazia e todas
+		if version == common.GameVersionLastMiss || version == common.GameVersionEternalCalm {
+			// Expansões sem dicionário próprio: store vazia e todas
 			// as entradas importadas entram no resumo como desconhecidas.
 			return known, nil, nil
 		}

@@ -65,13 +65,22 @@ var (
 	SaveTxt       components.IList[IGlobalLocalizedTextObject] = components.NewEmptyList[IGlobalLocalizedTextObject]()
 )
 
-// normalizeGameVersion garante que apenas FFX ou FFX2 sejam usados.
-// Qualquer valor desconhecido (ex.: 0) cai para FFX.
+// normalizeGameVersion normaliza a versão para o bucket da ÁRVORE do jogo:
+// eternalcalm divide a árvore (charset, macros, events, objects) com o ffx,
+// e lastmiss com o ffx2 — a separação por versão (régua de events, kinds
+// servidos) acontece na camada de serviço, sobre o MESMO bucket. A ordem
+// importa: sem isso, a carga da lastmiss poluiria o bucket do ffx (e
+// vice-versa), corrompendo a árvore servida. Zero value (versão vazia)
+// cai para FFX.
 func normalizeGameVersion(gameVersion common.GameVersion) common.GameVersion {
-	if gameVersion == common.GameVersionFFX2 {
+	switch gameVersion {
+	case common.GameVersionFFX, common.GameVersionEternalCalm:
+		return common.GameVersionFFX
+	case common.GameVersionFFX2, common.GameVersionLastMiss:
 		return common.GameVersionFFX2
+	default:
+		return common.GameVersionFFX
 	}
-	return common.GameVersionFFX
 }
 
 // macrosFor retorna o mapa de macros da versão indicada.

@@ -7,7 +7,7 @@ import (
 )
 
 // GameVersion é a identidade única da versão do jogo.
-// Valores válidos: "ffx", "ffx2", "lastmiss".
+// Valores válidos: "ffx", "eternalcalm", "ffx2", "lastmiss".
 // O campo s é privado — só ParseGameVersionStrict e unmarshaling JSON criam instâncias válidas.
 type GameVersion struct {
 	s string
@@ -19,9 +19,10 @@ func newGameVersion(s string) GameVersion {
 }
 
 var (
-	GameVersionFFX      = newGameVersion("ffx")
-	GameVersionFFX2     = newGameVersion("ffx2")
-	GameVersionLastMiss = newGameVersion("lastmiss")
+	GameVersionFFX         = newGameVersion("ffx")
+	GameVersionEternalCalm = newGameVersion("eternalcalm")
+	GameVersionFFX2        = newGameVersion("ffx2")
+	GameVersionLastMiss    = newGameVersion("lastmiss")
 )
 
 
@@ -32,6 +33,8 @@ func ParseGameVersionStrict(s string) (GameVersion, error) {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "ffx", "ffx-ps1", "ffx_ps1":
 		return GameVersionFFX, nil
+	case "eternalcalm", "eternal_calm", "eternal-calm", "eternal-calm-ffx":
+		return GameVersionEternalCalm, nil
 	case "ffx2", "ffx-2", "ffx_2":
 		return GameVersionFFX2, nil
 	case "lastmiss", "last_miss", "last-miss", "lastmission", "last_mission", "last-mission":
@@ -41,7 +44,7 @@ func ParseGameVersionStrict(s string) (GameVersion, error) {
 	}
 }
 
-// String retorna o rótulo canônico: "ffx", "ffx2" ou "lastmiss".
+// String retorna o rótulo canônico: "ffx", "eternalcalm", "ffx2" ou "lastmiss".
 func (g GameVersion) String() string {
 	return g.s
 }
@@ -65,19 +68,19 @@ func (g *GameVersion) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// Suffix retorna o sufixo de arquivo: _ffx, _ffx2 ou _lastmiss.
+// Suffix retorna o sufixo de arquivo: _ffx, _eternalcalm, _ffx2 ou _lastmiss.
 func (g GameVersion) Suffix() string {
 	return "_" + g.s
 }
 
 // CharsetVersion normaliza a versão para lookup nos mapas de charset
-// (bytes <-> string), que só têm buckets ffx e ffx2. LastMiss reaproveita
-// os mapas de ffx2. Qualquer outra versão (inclui zero value) causa panic:
-// versão desconhecida no encode/decode é bug, não dado ruim.
-// Uso restrito às funções de bytes para string e string para bytes.
+// (bytes <-> string), que só têm buckets ffx e ffx2. EternalCalm reaproveita
+// os mapas de ffx; LastMiss, os de ffx2. Qualquer outra versão (inclui zero
+// value) causa panic: versão desconhecida no encode/decode é bug, não dado
+// ruim. Uso restrito às funções de bytes para string e string para bytes.
 func CharsetVersion(gv GameVersion) GameVersion {
 	switch gv {
-	case GameVersionFFX:
+	case GameVersionFFX, GameVersionEternalCalm:
 		return GameVersionFFX
 	case GameVersionFFX2, GameVersionLastMiss:
 		return GameVersionFFX2

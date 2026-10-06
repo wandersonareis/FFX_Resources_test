@@ -88,6 +88,15 @@ var _ = Describe("PrepareCharset", func() {
 		})
 	})
 
+	Context("eternalcalm", func() {
+		It("normaliza eternalcalm para os mapas de ffx", func() {
+			Expect(ffxencoding.PrepareCharset(common.GameVersionEternalCalm, "us")).To(Succeed())
+			Expect(ffxencoding.GetByteToCharMap(common.GameVersionFFX, "us")).ToNot(BeNil())
+			Expect(ffxencoding.GetByteToCharMap(common.GameVersionEternalCalm, "us")).To(BeNil(),
+				"eternalcalm não tem bucket próprio: reaproveita ffx")
+		})
+	})
+
 	Context("GetCharsetForLanguage", func() {
 		It("usa tabela dedicada para ch/jp/kr", func() {
 			Expect(ffxencoding.GetCharsetForLanguage("ch")).To(Equal("ch"))

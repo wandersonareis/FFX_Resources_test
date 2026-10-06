@@ -356,13 +356,14 @@ var SkippedFilePathsFFX2 = []string{
 // IsSkippedFilePath informa se o caminho (absoluto ou relativo, com "/"
 // ou "\\") contém alguma entrada da lista da versão indicada. Todo
 // caminho de arquivo servido ao app deve passar por aqui antes de
-// decode/export/import. Lastmiss (e qualquer versão desconhecida)
-// retorna false: não há entradas de skip nessas versões.
+// decode/export/import. EternalCalm divide a lista do FFX e LastMiss a
+// do FFX-2 (mesmas árvores). Qualquer versão desconhecida retorna false:
+// não há entradas de skip nessas versões.
 func IsSkippedFilePath(path string, version GameVersion) bool {
 	s := strings.ToLower(strings.ReplaceAll(path, "\\", "/"))
 	var list []string
 	switch version {
-	case GameVersionFFX:
+	case GameVersionFFX, GameVersionEternalCalm:
 		list = SkippedFilePathsFFX
 	case GameVersionFFX2:
 		list = SkippedFilePathsFFX2

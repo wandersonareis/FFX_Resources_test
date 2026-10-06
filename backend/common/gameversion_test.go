@@ -12,6 +12,9 @@ func TestCharsetVersion(t *testing.T) {
 	if got := CharsetVersion(GameVersionLastMiss); got != GameVersionFFX2 {
 		t.Fatalf("lastmiss must resolve ffx2: got %v", got)
 	}
+	if got := CharsetVersion(GameVersionEternalCalm); got != GameVersionFFX {
+		t.Fatalf("eternalcalm must resolve ffx: got %v", got)
+	}
 }
 
 func TestCharsetVersionPanicsOnUnknown(t *testing.T) {

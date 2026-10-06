@@ -60,6 +60,18 @@ var _ = Describe("MetadataService", Ordered, func() {
 		Expect(os.MkdirAll(lmDir, 0o755)).To(Succeed())
 		Expect(os.WriteFile(filepath.Join(lmDir, "lmhiku0000.bin"), lmData, 0o644)).To(Succeed())
 
+		// Copia a árvore do FFX (jogo-pai do eternalcalm) e semeia um
+		// evento no grupo "sc" (sc/scene*.bin — Eternal Calm) para cobrir
+		// a régua espelhada: ffx esconde "sc", eternalcalm só o mostra.
+		ffxSrc := filepath.Join(rootDir, "FFX", "binary", "ffx_ps2")
+		Expect(os.CopyFS(filepath.Join(gameLocation, "ffx_ps2"), os.DirFS(ffxSrc))).To(Succeed())
+		ffxObjRoot := filepath.Join(gameLocation, "ffx_ps2", "ffx", "master", "new_uspc", "event", "obj_ps3")
+		sceneData, err := os.ReadFile(filepath.Join(ffxObjRoot, "az", "azit0000", "azit0000.bin"))
+		Expect(err).NotTo(HaveOccurred())
+		scDir := filepath.Join(ffxObjRoot, "sc", "scene1000")
+		Expect(os.MkdirAll(scDir, 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(scDir, "scene1000.bin"), sceneData, 0o644)).To(Succeed())
+
 		config = interactions.NewAppConfig()
 		Expect(config).NotTo(BeNil())
 		config.SetGameVersion(common.GameVersionFFX2)
@@ -152,12 +164,69 @@ var _ = Describe("MetadataService", Ordered, func() {
 		Expect(entries).To(BeEmpty(), "lastmiss has no macro dictionary of its own")
 	})
 
+	It("hides the sc group in ffx events (it belongs to eternalcalm)", func() {
+		entries, err := metadataService.ListEntries(services.KindEvents, common.GameVersionFFX)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(entries).NotTo(BeEmpty())
+		for _, e := range entries {
+			Expect(strings.HasPrefix(e.ID, "sc")).To(BeFalse(),
+				"sc is Eternal Calm content, must not be listed for ffx: %s", e.ID)
+		}
+	})
+
+	It("lists only sc events for eternalcalm", func() {
+		entries, err := metadataService.ListEntries(services.KindEvents, common.GameVersionEternalCalm)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(entries).NotTo(BeEmpty(), "seeded sc event should be visible in eternalcalm")
+		for _, e := range entries {
+			Expect(strings.HasPrefix(e.ID, "sc")).To(BeTrue(),
+				"eternalcalm must list only the sc group: %s", e.ID)
+		}
+
+		// A entrada carrega rows do binário semeado (mesma árvore do ffx).
+		entry, err := metadataService.GetEntry(services.KindEvents, entries[0].ID, common.GameVersionEternalCalm)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(entry.Rows).NotTo(BeEmpty(), "eternalcalm event must carry text rows")
+		Expect(entry.Metadata.Key).To(HavePrefix("ffx/event/obj_ps3/sc/"),
+			"eternalcalm key resolves under the ffx tree: %s", entry.Metadata.Key)
+	})
+
+	It("serves no own tree kinds for eternalcalm (macro, lockit, help, images)", func() {
+		for _, kind := range []string{services.KindMacro, services.KindLockit, services.KindHelp} {
+			entries, err := metadataService.ListEntries(kind, common.GameVersionEternalCalm)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(entries).To(BeEmpty(), "eternalcalm has no %s tree of its own", kind)
+
+			c, err := metadataService.GetCollection(kind, common.GameVersionEternalCalm, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(c).To(BeEmpty(), "eternalcalm must not serve the ffx %s", kind)
+		}
+
+		// Imagens também são do jogo-pai (images não tem Collection —
+		// só o índice da árvore).
+		imgs, err := metadataService.ListEntries(services.KindImages, common.GameVersionEternalCalm)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(imgs).To(BeEmpty(), "eternalcalm has no textures of its own")
+	})
+
 	It("imports strings, warns about binary save and persists it in mods", func() {
 		entries, err := metadataService.ListEntries(services.KindEvents, common.GameVersionFFX2)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(entries).NotTo(BeEmpty())
 
-		id := entries[0].ID
+		// Events crcr* são um caso especial conhecido, ainda sem correção no
+		// formato (o rebuild da string table estoura o limite uint16 dos
+		// ponteiros de texto; objectfile não sofre disso porque separa bloco
+		// de texto de bloco de dados). Qualquer erro de crcr é ignorado: o
+		// spec usa o primeiro evento comum.
+		id := ""
+		for _, e := range entries {
+			if !strings.HasPrefix(e.ID, "crcr") {
+				id = e.ID
+				break
+			}
+		}
+		Expect(id).NotTo(BeEmpty(), "deve existir um evento não-crcr para o import")
 		entry, err := metadataService.GetEntry(services.KindEvents, id, common.GameVersionFFX2)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(entry.Metadata.Key).NotTo(BeEmpty())

@@ -101,7 +101,8 @@ func CharToByte(chr rune, charset string, version common.GameVersion) (uint, err
 // EnsureCharsetLoaded verifica (só leitura, sem criar buckets) que os mapas
 // da versão/charset existem. É o fail-fast do load: mapa ausente aborta a
 // tarefa antes de produzir milhares de placeholders. A versão passa por
-// common.CharsetVersion (lastmiss usa os mapas de ffx2).
+// common.CharsetVersion (eternalcalm usa os mapas de ffx; lastmiss, os de
+// ffx2).
 func EnsureCharsetLoaded(version common.GameVersion, charset string) error {
 	version = common.CharsetVersion(version)
 	charMapsMu.RLock()

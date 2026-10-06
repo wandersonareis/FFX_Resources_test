@@ -50,29 +50,32 @@ export function locFromVbfPath(path: string): string | null {
   return m ? m[1] : null;
 }
 
-// Kinds servidos por versão na sidebar. lastmiss é expansão do ffx2 e não tem
-// dicionário próprio → sem 'macro' (a aba não mostra "Dicionário"). O lockit
-// (kit de localização do menu/launcher) existe em FFX e FFX-2. Os painéis de
-// ajuda (.sps2 em help/) são FFX-only: a árvore do ffx2 não tem a pasta help/.
+// Kinds servidos por versão na sidebar. As expansões não têm dicionário
+// próprio: eternalcalm (sob o ffx) mostra só events (scene*.bin); lastmiss
+// (sob o ffx2) mostra events + objects (kernel lm_*). O lockit (kit de
+// localização do menu/launcher) existe em FFX e FFX-2. Os painéis de ajuda
+// (.sps2 em help/) são FFX-only: a árvore do ffx2 não tem a pasta help/.
 export function entryKindsFor(version: GameVersionId): EntryKind[] {
   // battletext (battle/btl) e cloud (cloudsave) existem em FFX e FFX-2;
-  // tutorial (menu/tutorial.msb) é só FFX-2. lastmiss divide a árvore do
-  // ffx2 mas não tem essas folhas próprias.
+  // tutorial (menu/tutorial.msb) é só FFX-2. As expansões dividem a árvore
+  // do jogo-pai mas não têm essas folhas próprias.
+  if (version === 'eternalcalm') return ['events'];
   if (version === 'lastmiss') return ['events', 'objects'];
   if (version === 'ffx') return ['events', 'objects', 'macro', 'lockit', 'help', 'battletext', 'cloud', 'menumain'];
   return ['events', 'objects', 'macro', 'lockit', 'battletext', 'cloud', 'tutorial'];
 }
 
 /**
- * Kinds de IMAGEM (.dds.phyre). Só ffx e ffx2: a Last Mission divide a
- * árvore do ffx2 mas não tem texturas próprias.
+ * Kinds de IMAGEM (.dds.phyre). Só ffx e ffx2: as expansões (eternalcalm
+ * sob o ffx, lastmiss sob o ffx2) dividem a árvore do jogo-pai mas não
+ * têm texturas próprias.
  *
  * Fica separado de entryKindsFor de propósito — esse é o conjunto de kinds
  * de TEXTO (escopo do Exportar/JSON, save-all e preload), e imagem não
  * participa de nada disso.
  */
 export function imageKindsFor(version: GameVersionId): EntryKind[] {
-  if (version === 'lastmiss') return [];
+  if (version === 'lastmiss' || version === 'eternalcalm') return [];
   return ['images'];
 }
 

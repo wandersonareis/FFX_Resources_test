@@ -14,7 +14,8 @@ import (
 // exigiria rebuild dos font atlases), então a carga é determinística e
 // idempotente — chamar de novo apenas sobrescreve os mapas.
 func PrepareCharset(version common.GameVersion, charset string) error {
-	// lastmiss reaproveita os mapas de ffx2 (mesma árvore de encoding).
+	// As expansões reaproveitam os mapas do jogo-pai (mesma árvore de
+	// encoding): eternalcalm → ffx, lastmiss → ffx2.
 	version = common.CharsetVersion(version)
 	table, ok := getTable(version, charset)
 	if !ok {

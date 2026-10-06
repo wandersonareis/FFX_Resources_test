@@ -6,7 +6,7 @@ import (
 )
 
 // FileVersionSuffix retorna o sufixo unificado da versão ativa:
-// _ffx, _ffx2 ou _lastmiss.
+// _ffx, _eternalcalm, _ffx2 ou _lastmiss.
 func FileVersionSuffix() string {
 	return CurrentGameVersion().Suffix()
 }
@@ -15,7 +15,7 @@ func FileVersionSuffix() string {
 func StripVersionSuffix(fileName string) string {
 	ext := filepath.Ext(fileName)
 	base := strings.TrimSuffix(fileName, ext)
-	for _, s := range []string{"_lastmiss", "_ffx2", "_ffx"} {
+	for _, s := range []string{"_eternalcalm", "_lastmiss", "_ffx2", "_ffx"} {
 		if strings.HasSuffix(base, s) {
 			base = strings.TrimSuffix(base, s)
 			break

@@ -141,10 +141,11 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
     setVersion(GAME_VERSIONS[index].id);
   };
 
-  // Ctrl+1/2/3: trocar aba de versão.
+  // Ctrl+1/2/3/4: trocar aba de versão.
   useHotkey('Mod+1', () => switchTab(0));
   useHotkey('Mod+2', () => switchTab(1));
   useHotkey('Mod+3', () => switchTab(2));
+  useHotkey('Mod+4', () => switchTab(3));
   // Ctrl+, : abrir Configurações (convenção de settings).
   useHotkey('Mod+,', () => setConfigOpen(true));
   // Ctrl+Alt+F: alterna formato JSON ↔ Strings direto (popover não abre).

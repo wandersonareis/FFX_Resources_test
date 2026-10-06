@@ -6,7 +6,7 @@ import (
 )
 
 // TestMacroBinaryPathByVersion valida o caminho do binário de macro por
-// versão explícita: ffx na árvore ffx, ffx2/lastmiss na ffx2.
+// versão explícita: ffx/eternalcalm na árvore ffx, ffx2/lastmiss na ffx2.
 func TestMacroBinaryPath(t *testing.T) {
 	prevRoot := GameFilesRoot
 	GameFilesRoot = filepath.Join("tmp", "gamefiles")
@@ -23,6 +23,26 @@ func TestMacroBinaryPath(t *testing.T) {
 	// lastmiss divide a árvore com o ffx2.
 	if got := MacroBinaryPath(GameVersionLastMiss, "us"); !endsWith(got, wantSuffix2) {
 		t.Fatalf("lastmiss/us: got %q, want suffix %q", got, wantSuffix2)
+	}
+	// eternalcalm divide a árvore com o ffx.
+	if got := MacroBinaryPath(GameVersionEternalCalm, "us"); !endsWith(got, wantSuffix) {
+		t.Fatalf("eternalcalm/us: got %q, want suffix %q", got, wantSuffix)
+	}
+}
+
+// TestVersionPathName valida a normalização do diretório de versão:
+// expansões resolvem para o jogo-pai (eternalcalm → ffx, lastmiss → ffx2).
+func TestVersionPathName(t *testing.T) {
+	cases := map[GameVersion]string{
+		GameVersionFFX:         "ffx",
+		GameVersionEternalCalm: "ffx",
+		GameVersionFFX2:        "ffx2",
+		GameVersionLastMiss:    "ffx2",
+	}
+	for gv, want := range cases {
+		if got := VersionPathName(gv); got != want {
+			t.Fatalf("VersionPathName(%v): got %q, want %q", gv, got, want)
+		}
 	}
 }
 

@@ -46,6 +46,10 @@ const (
 // Last Mission, que mora na árvore do ffx2: "lm".
 const LastMissionShortened = "lm"
 
+// EternalCalmShortened é o prefixo (eventID[:2]) do grupo de events do
+// Eternal Calm, que mora na árvore do ffx (diretório sc/scene*): "sc".
+const EternalCalmShortened = "sc"
+
 // EntrySummary é o índice leve para sidebar/tree: id + key, sem rows.
 // row_count aparece nas entradas (GetEntry/GetCollection), nunca aqui.
 type EntrySummary struct {
@@ -793,25 +797,46 @@ func (s *MetadataService) applyObjectsEntry(version common.GameVersion, id strin
 
 // ---- texto em memória (DTO estruturado, sem disco) --------------------------
 
-// filterEventIDsForVersion aplica a régua de events por versão, porque o
-// lastmiss é expansão do ffx2 e lê a MESMA árvore de eventos:
+// filterEventIDsForVersion aplica a régua de events por versão, porque as
+// expansões leem a MESMA árvore de eventos do jogo-pai:
 //   - ffx2: esconde o grupo "lm" — é conteúdo de Last Mission;
 //   - lastmiss: mostra só o grupo "lm" (lmdn*/lmev*/lmtuto*/lmys*);
-//   - ffx: inalterado (o "lm" do FFX, lmyt*, é texto dessa versão).
+//   - ffx: esconde o grupo "sc" (sc/scene*) — é conteúdo de Eternal Calm;
+//   - eternalcalm: mostra só o grupo "sc" (scene1..scene6);
+//   - ffx/fx2 fora desses grupos: inalterado (o "lm" do FFX, lmyt*, é
+//     texto dessa versão).
 func filterEventIDsForVersion(ids []string, version common.GameVersion) []string {
-	if version != common.GameVersionFFX2 && version != common.GameVersionLastMiss {
+	hasRule := version == common.GameVersionFFX || version == common.GameVersionEternalCalm ||
+		version == common.GameVersionFFX2 || version == common.GameVersionLastMiss
+	if !hasRule {
 		return ids
 	}
 	out := make([]string, 0, len(ids))
 	for _, id := range ids {
-		isLM := len(id) >= 2 && strings.EqualFold(id[:2], LastMissionShortened)
-		if version == common.GameVersionLastMiss {
-			if isLM {
-				out = append(out, id)
-			}
+		if len(id) < 2 {
 			continue
 		}
-		if !isLM {
+		prefix := strings.ToLower(id[:2])
+		switch version {
+		case common.GameVersionEternalCalm:
+			// Mostra só os events do Eternal Calm (diretório sc).
+			if prefix == EternalCalmShortened {
+				out = append(out, id)
+			}
+		case common.GameVersionFFX:
+			// Esconde o diretório sc da árvore do FFX: é Eternal Calm.
+			if prefix == EternalCalmShortened {
+				continue
+			}
+			out = append(out, id)
+		case common.GameVersionLastMiss:
+			if prefix == LastMissionShortened {
+				out = append(out, id)
+			}
+		case common.GameVersionFFX2:
+			if prefix == LastMissionShortened {
+				continue
+			}
 			out = append(out, id)
 		}
 	}
@@ -867,9 +892,9 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 		s.emitTreeDiag(KindObjects, version, allIDs, nil)
 		return out, nil
 	case KindMacro:
-		if version == common.GameVersionLastMiss {
-			// Last Mission não tem dicionário próprio: não servir os chunks
-			// do macrodic de FFX-2 (apenas retorna vazio, sem erro).
+		if version == common.GameVersionLastMiss || version == common.GameVersionEternalCalm {
+			// Last Mission e Eternal Calm não têm dicionário próprio: não
+			// servir os chunks do macrodic do jogo-pai (vazio, sem erro).
 			return []EntrySummary{}, nil
 		}
 		// A árvore é definida por data/: o dicionário existe em data/ ou
@@ -907,9 +932,10 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 		s.emitTreeDiag(KindLockit, version, ids, nil)
 		return out, nil
 	case KindImages:
-		if version == common.GameVersionLastMiss {
-			// Last Mission não tem árvore própria: divide a do ffx2, mas os
-			// .dds.phyre vivem só no ffx2 — vazio, como macro/lockit.
+		if version == common.GameVersionLastMiss || version == common.GameVersionEternalCalm {
+			// Last Mission divide a árvore do ffx2 e Eternal Calm a do ffx,
+			// mas nenhuma tem texturas próprias: os .dds.phyre vivem só nos
+			// jogos-pai — vazio, como macro/lockit.
 			return []EntrySummary{}, nil
 		}
 		ids, onlyMods, fallback, err := ddsphyre.Scan(version)
@@ -953,9 +979,9 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 		// representante), as cópias vivem na lista "Repetidas" do painel.
 		return hideImageDuplicates(out, version), nil
 	case KindHelp:
-		// Painéis de ajuda são FFX-only: a árvore ffx2 (e a lastmiss, que
-		// divide a árvore do ffx2) não tem a pasta help/. Sem erro — vazio,
-		// como o macro/lockit para lastmiss.
+		// Painéis de ajuda são FFX-only: a árvore ffx2 (e as expansões
+		// lastmiss/eternalcalm, que dividem essas árvores) não tem a pasta
+		// help/. Sem erro — vazio, como o macro/lockit para lastmiss.
 		if version != common.GameVersionFFX {
 			return []EntrySummary{}, nil
 		}
@@ -1158,7 +1184,7 @@ func (s *MetadataService) refreshEntryStore(kind, id string, version common.Game
 		// GetEntry objects passa por lá.
 		return false
 	case KindMacro:
-		if version == common.GameVersionLastMiss {
+		if version == common.GameVersionLastMiss || version == common.GameVersionEternalCalm {
 			return false
 		}
 		return macrodic.EnsureMacrosFresh(version)
@@ -1232,8 +1258,8 @@ func (s *MetadataService) GetCollection(kind string, version common.GameVersion,
 	case KindObjects:
 		return s.buildObjectsCollection(version, ids)
 	case KindMacro:
-		if version == common.GameVersionLastMiss {
-			// Last Mission não tem dicionário próprio (macrodic do ffx2).
+		if version == common.GameVersionLastMiss || version == common.GameVersionEternalCalm {
+			// Expansões sem dicionário próprio (macrodic do jogo-pai).
 			return dto.Collection{}, nil
 		}
 		c, err := builders.BuildMacroDTO(version)
@@ -1258,15 +1284,15 @@ func (s *MetadataService) GetCollection(kind string, version common.GameVersion,
 		}
 		return out, nil
 	case KindLockit:
-		if version == common.GameVersionLastMiss {
-			// Last Mission é expansão do ffx2 e não tem lockit próprio
-			// (mesma régua do macro: vazio, sem erro).
+		if version == common.GameVersionLastMiss || version == common.GameVersionEternalCalm {
+			// Expansões sem lockit próprio (mesma régua do macro:
+			// vazio, sem erro).
 			return dto.Collection{}, nil
 		}
 		return builders.BuildLockitDTO(version, ids)
 	case KindHelp:
 		if version != common.GameVersionFFX {
-			// A árvore ffx2/lastmiss não tem a pasta help/.
+			// A árvore ffx2/expansões não tem a pasta help/.
 			return dto.Collection{}, nil
 		}
 		return builders.BuildHelpDTO(version, ids)
@@ -1445,8 +1471,9 @@ func ensureHelpLoaded(version common.GameVersion) error {
 
 // eventtableKindUsable informa se a família eventtable tem binário nesta
 // versão: battletext e cloud existem em FFX e FFX-2; tutorial.msb é FFX-2
-// only. LastMiss divide a árvore do FFX-2 — os artefatos seguem a régua:
-// essa aba não exibe estas folhas (ficar no ffx2).
+// only. LastMiss divide a árvore do FFX-2 e EternalCalm a do FFX — os
+// artefatos seguem a régua: essas abas não exibem estas folhas (ficam no
+// jogo-pai).
 func eventtableKindUsable(kind string, version common.GameVersion) bool {
 	switch kind {
 	case KindBattleText, KindCloud:

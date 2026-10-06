@@ -8,9 +8,11 @@ func GetPathRoot() string {
 }
 
 // GetPathRootForVersion monta ffx_ps2/<versão>/master para uma versão explícita.
-// LastMiss vive sob a árvore ffx2.
+// EternalCalm vive sob a árvore ffx; LastMiss, sob a ffx2.
 func GetPathRootForVersion(gv GameVersion) string {
 	switch gv {
+	case GameVersionFFX, GameVersionEternalCalm:
+		return filepath.Join("ffx_ps2", GameVersionFFX.String(), "master")
 	case GameVersionFFX2, GameVersionLastMiss:
 		return filepath.Join("ffx_ps2", GameVersionFFX2.String(), "master")
 	default:
@@ -27,24 +29,31 @@ func GetLocalizationRoot(localization string) string {
 }
 
 // VersionPathName retorna o nome do diretório de versão usado em caminhos de
-// arquivo: "ffx" ou "ffx2". LastMiss divide a árvore com FFX2 (expansão),
-// então normaliza para "ffx2". Só existem esses dois nomes, sem variação.
+// arquivo: "ffx" ou "ffx2". EternalCalm divide a árvore com o FFX e LastMiss
+// com o FFX-2 (expansões), então normalizam para o jogo-pai. Só existem
+// esses dois nomes, sem variação.
 func VersionPathName(version GameVersion) string {
-	if version == GameVersionFFX {
+	switch version {
+	case GameVersionFFX, GameVersionEternalCalm:
+		return GameVersionFFX.String()
+	case GameVersionFFX2, GameVersionLastMiss:
+		return GameVersionFFX2.String()
+	default:
 		return version.String()
 	}
-	return GameVersionFFX2.String()
 }
 
 // GetLocalizationRootForVersion monta a raiz de localização para uma versão
-// explícita, sem ler a versão global. LastMiss resolve sob a árvore ffx2.
+// explícita, sem ler a versão global. EternalCalm resolve sob a árvore ffx;
+// LastMiss, sob a ffx2.
 func GetLocalizationRootForVersion(version GameVersion, localization string) string {
 	return filepath.Join(GetPathRootForVersion(version), "new_"+localization+"pc")
 }
 
 // PackRootForVersion é o prefixo constante de build usado para montar
 // event_file_path = packRoot + localization_pattern. Varia por versão
-// (ffx vs ffx2/lastmiss) e localização, por isso é função e não const.
+// (ffx vs eternalcalm/ffx2/lastmiss) e localização, por isso é função e
+// não const.
 func PackRootForVersion(version GameVersion, localization string) string {
 	if localization == "" {
 		localization = DefaultLocalization
