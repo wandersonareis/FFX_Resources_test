@@ -128,6 +128,10 @@ export interface EntryViewState {
    * link (a tradução é registrada no rascunho do arquivo da def).
    */
   translationTarget: TranslationTarget | null;
+  /** Row-ref da entrada aberta — destino alternativo quando o usuário escolhe divergir. */
+  translationCopyRow: dto.TextRow | null;
+  /** Valor inicial do checkbox "salvar nesta cópia" ao abrir pelo ícone. */
+  translationDivergent: boolean;
   dialogOpen: boolean;
   /**
    * Diálogo de ação de imagem aberto (extrair/replicar/deletar) ou null.
@@ -164,11 +168,13 @@ export interface EntryActions {
    */
   openDialog(row: dto.TextRow, target?: TranslationTarget): void;
   /** Célula linkada: abre o editor na row da def apontada pelo link. */
-  openLinked(row: dto.TextRow): void;
+  openLinked(row: dto.TextRow, divergent?: boolean): void;
+  /** Rascunha o original desta própria row, self-target, para re-convergir. */
+  revertToOriginal(row: dto.TextRow): void;
   /** Navegação ←/→ do modal sem fechar (value aplicado como rascunho). */
   navigateRow(direction: 'prev' | 'next', value?: string): void;
   /** Fechamento do modal (value != undefined aplica a edição). */
-  commitRow(value?: string): void;
+  commitRow(value?: string, divergent?: boolean): void;
   /** Abre o diálogo de ação de imagem (extrair/replicar/deletar). */
   openImageAction(action: ImageActionState): void;
   /** Fecha o diálogo de ação de imagem (cancelar/ao concluir). */
@@ -251,6 +257,8 @@ function createEntryStore(version: GameVersionId) {
     generation: 0,
     translationRow: null,
     translationTarget: null,
+    translationCopyRow: null,
+    translationDivergent: false,
     dialogOpen: false,
     imageAction: null,
     pendingTableFocus: false,
@@ -804,13 +812,32 @@ export function createEntryView(version: GameVersionId): EntryView {
         );
         return;
       }
+      const current = entry
+        ? editDraft.editOf(
+            version,
+            entry.kind,
+            entry.id,
+            row,
+            SOURCE_LANG,
+            entry.vbf?.root ?? ''
+          )
+        : undefined;
+      const dialogRow =
+        current === undefined
+          ? row
+          : dto.TextRow.createFrom({
+              ...row,
+              text: { ...(row.text ?? {}), [SOURCE_LANG]: current },
+            });
       patch({
-        translationRow: row,
+        translationRow: dialogRow,
         translationTarget: target ?? null,
+        translationCopyRow: null,
+        translationDivergent: false,
         dialogOpen: true,
       });
     },
-    openLinked: async (row) => {
+    openLinked: async (row, divergent = false) => {
       const entry = store.state.selectedEntry;
       if (!entry) return;
       const link = store.state.refLinks[rowKey(row)];
@@ -818,31 +845,25 @@ export function createEntryView(version: GameVersionId): EntryView {
         actions.openDialog(row);
         return;
       }
-      // Def na MESMA entrada (ou sem origem anotada): abre na row real,
-      // com navegação normal do diálogo.
+      // Def na MESMA entrada (ou sem origem anotada): usa a row real.
+      let def: dto.TextRow | undefined;
       if (!link.sourceId || link.sourceId === entry.id) {
-        const def = store.state.rows.find(
+        def = store.state.rows.find(
           (r) =>
             r.index === link.sourceIndex &&
             (r.name ?? '') === (link.sourceName ?? '')
         );
-        if (def) {
-          actions.openDialog(def);
-          return;
-        }
       }
       // Def em OUTRA entrada (ex.: ref de 236 apontando o 235): row
-      // sintetizada + alvo override — o rascunho registra no arquivo da
-      // def e a navegação fica desabilitada (row única). A BASE do rascunho
-      // dela precisa existir antes do editor, ou setCell descarta a edição
-      // em silêncio.
+      // sintetizada + alvo override. Sempre prepara a base da def porque o
+      // checkbox ainda pode escolher o fluxo padrão (editar a def).
       const rKey = `${link.sourceIndex}:${link.sourceName ?? ''}`;
       const target: TranslationTarget = {
         kind: entry.kind,
         id: link.sourceId ?? entry.id,
         source: entry.vbf?.root ?? '',
       };
-      if (!(await ensureDraftBase(target))) return;
+      if (target.id !== entry.id && !(await ensureDraftBase(target))) return;
       const live = editDraft.editTextOf(
         version,
         target.kind,
@@ -851,20 +872,42 @@ export function createEntryView(version: GameVersionId): EntryView {
         SOURCE_LANG,
         target.source
       );
-      const synthetic = dto.TextRow.createFrom({
-        index: link.sourceIndex,
-        name: link.sourceName,
-        hash: { [SOURCE_LANG]: row.hash?.[SOURCE_LANG] ?? '' },
-        text: { [SOURCE_LANG]: live ?? link.text ?? '' },
-        original:
-          link.original !== undefined
-            ? { [SOURCE_LANG]: link.original }
-            : undefined,
+      const defRow =
+        def ??
+        dto.TextRow.createFrom({
+          index: link.sourceIndex,
+          name: link.sourceName,
+          hash: { [SOURCE_LANG]: row.hash?.[SOURCE_LANG] ?? '' },
+          text: { [SOURCE_LANG]: live ?? link.text ?? '' },
+          original:
+            link.original !== undefined
+              ? { [SOURCE_LANG]: link.original }
+              : undefined,
+        });
+      const defText =
+        live ??
+        editDraft.editOf(version, entry.kind, target.id, defRow, SOURCE_LANG, target.source) ??
+        link.text ??
+        '';
+      const dialogRow = dto.TextRow.createFrom({
+        ...defRow,
+        text: { ...(defRow.text ?? {}), [SOURCE_LANG]: defText },
       });
-      actions.openDialog(synthetic, target);
+      patch({
+        translationRow: dialogRow,
+        translationTarget: target.id === entry.id ? null : target,
+        translationCopyRow: row,
+        translationDivergent: divergent,
+        dialogOpen: true,
+      });
     },
     navigateRow: (direction, value) => {
-      const { translationRow: row, translationTarget: target } = store.state;
+      const {
+        translationRow: row,
+        translationTarget: target,
+        translationCopyRow,
+      } = store.state;
+      if (translationCopyRow) return;
       const entry = store.state.selectedEntry;
       if (value !== undefined && row && (target || entry)) {
         const t = target ?? {
@@ -883,19 +926,58 @@ export function createEntryView(version: GameVersionId): EntryView {
         store.state.rows[idx + (direction === 'next' ? 1 : -1)];
       if (next) patch({ translationRow: next });
     },
-    commitRow: (value) => {
-      const { translationRow: row, translationTarget: target } = store.state;
+    commitRow: (value, divergentChoice) => {
+      const {
+        translationRow: row,
+        translationTarget: target,
+        translationCopyRow,
+      } = store.state;
       const entry = store.state.selectedEntry;
       if (value !== undefined && row && (target || entry)) {
-        const t = target ?? {
-          kind: entry!.kind,
-          id: entry!.id,
-          source: entry!.vbf?.root ?? '',
-        };
-        editDraft.setCell(version, t.kind, t.id, row, SOURCE_LANG, value, t.source);
+        if (divergentChoice && translationCopyRow && entry) {
+          editDraft.setCell(
+            version,
+            entry.kind,
+            entry.id,
+            translationCopyRow,
+            SOURCE_LANG,
+            value,
+            entry.vbf?.root ?? '',
+            true
+          );
+        } else {
+          const t = target ?? {
+            kind: entry!.kind,
+            id: entry!.id,
+            source: entry!.vbf?.root ?? '',
+          };
+          editDraft.setCell(version, t.kind, t.id, row, SOURCE_LANG, value, t.source);
+        }
         patch({ rows: [...store.state.rows] });
       }
-      patch({ dialogOpen: false, translationRow: null, translationTarget: null });
+      patch({
+        dialogOpen: false,
+        translationRow: null,
+        translationTarget: null,
+        translationCopyRow: null,
+        translationDivergent: false,
+      });
+    },
+    revertToOriginal: (row) => {
+      const entry = store.state.selectedEntry;
+      const original = row.original?.[SOURCE_LANG];
+      if (!entry || original === undefined || original === '') return;
+      editDraft.setCell(
+        version,
+        entry.kind,
+        entry.id,
+        row,
+        SOURCE_LANG,
+        original,
+        entry.vbf?.root ?? '',
+        true
+      );
+      patch({ rows: [...store.state.rows] });
     },
     openImageAction: (action) => {
       // Ações de imagem agem sobre data/ + mods/: a partir do .vbf o id

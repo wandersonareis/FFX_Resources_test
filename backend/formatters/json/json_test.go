@@ -352,6 +352,73 @@ func TestMarshalDedupsDefaultLangRepeats(t *testing.T) {
 	}
 }
 
+func TestMarshalKeepsDivergentCopyLiteralAndCanonicalizesRefs(t *testing.T) {
+	const original = "Same source sentence across files"
+	const definition = "Translation A from definition"
+	const divergent = "Translation B for one copy"
+	bare := hash.Sum64Hex(original)
+	c := dto.Collection{
+		"aaa_divergent": {Metadata: dto.NewEventMetadata("aaa_divergent", common.GameVersionFFX), Rows: []dto.TextRow{{
+			Index: 0, Hash: map[string]string{"us": bare},
+			Text: map[string]string{"us": divergent}, Divergent: true,
+		}}},
+		"mmm_definition": {Metadata: dto.NewEventMetadata("mmm_definition", common.GameVersionFFX), Rows: []dto.TextRow{{
+			Index: 0, Hash: map[string]string{"us": bare}, Text: map[string]string{"us": definition},
+		}}},
+		"zzz_reference": {Metadata: dto.NewEventMetadata("zzz_reference", common.GameVersionFFX), Rows: []dto.TextRow{{
+			Index: 0, Hash: map[string]string{"us": bare}, Text: map[string]string{"us": original},
+		}}},
+	}
+	raw, err := json.NewJSONEventsFormatter().Marshal(c)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	var doc map[string]dto.FileEntry
+	if err := encodingjson.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("reparse: %v", err)
+	}
+	if got := doc["aaa_divergent"].Rows[0].Text["us"]; got != divergent {
+		t.Fatalf("divergent text must remain literal: %q", got)
+	}
+	if got := doc["zzz_reference"].Rows[0].Text["us"]; got != hash.Prefix(bare) {
+		t.Fatalf("ordinary copy must remain a ref to canonical def: got %q, want %q (bare %q)", got, hash.Prefix(bare), bare)
+	}
+	if strings.Contains(string(raw), `"divergent"`) {
+		t.Fatalf("apply-only divergent flag leaked into JSON artifact: %s", raw)
+	}
+}
+
+func TestUnmarshalInfersExternalLiteralAsDivergentCopy(t *testing.T) {
+	const original = "Canonical source text for external edit"
+	const divergent = "External copy-specific translation"
+	bare := hash.Sum64Hex(original)
+	c := map[string]dto.FileEntry{
+		"aaa_definition": {Rows: []dto.TextRow{{
+			Index: 0, Hash: map[string]string{"us": hash.Prefix(bare)}, Text: map[string]string{"us": original},
+		}}},
+		"mmm_divergent": {Rows: []dto.TextRow{{
+			Index: 0, Hash: map[string]string{"us": hash.Prefix(bare)}, Text: map[string]string{"us": divergent},
+		}}},
+		"zzz_reference": {Rows: []dto.TextRow{{
+			Index: 0, Hash: map[string]string{"us": hash.Prefix(bare)}, Text: map[string]string{"us": hash.Prefix(bare)},
+		}}},
+	}
+	raw, err := encodingjson.Marshal(c)
+	if err != nil {
+		t.Fatalf("marshal fixture: %v", err)
+	}
+	parsed, err := json.NewJSONEventsFormatter().Unmarshal(raw)
+	if err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if !parsed["mmm_divergent"].Rows[0].Divergent {
+		t.Fatal("literal text replacing $hash under the same hash should be inferred as divergent")
+	}
+	if got := parsed["zzz_reference"].Rows[0].Text["us"]; got != original {
+		t.Fatalf("remaining $hash reference must resolve to the first canonical literal: %q", got)
+	}
+}
+
 func TestMarshalSkipsShortCJKTexts(t *testing.T) {
 	// "你好" tem 2 runes mas 6 bytes: conta como curta, fica literal.
 	text := "你好"

@@ -75,6 +75,7 @@ export namespace dto {
 	    original?: Record<string, string>;
 	    missingInOriginal?: boolean;
 	    missingInTranslated?: boolean;
+	    divergent?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new TextRow(source);
@@ -89,6 +90,7 @@ export namespace dto {
 	        this.original = source["original"];
 	        this.missingInOriginal = source["missingInOriginal"];
 	        this.missingInTranslated = source["missingInTranslated"];
+	        this.divergent = source["divergent"];
 	    }
 	}
 	export class Metadata {

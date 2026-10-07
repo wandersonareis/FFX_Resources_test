@@ -233,6 +233,91 @@ func TestGetEntryRefAnnotationCarriesDefOriginal(t *testing.T) {
 	}
 }
 
+// Divergir no editor gera o mesmo estado válido que uma edição externa:
+// ao aplicar em binário, a def e as cópias normais recebem A, a cópia marcada
+// recebe B; ao recarregar, A/B são traduções literais (não refs azuis).
+func TestApplyDivergentCopyKeepsDefinitionGroupSeparate(t *testing.T) {
+	svc := seedDisplayRoot(t)
+	seedEventsSynthetic(common.GameVersionFFX2, "zev001", []string{sharedOriginal})
+	seedEventsSynthetic(common.GameVersionFFX2, "zev002", []string{sharedOriginal})
+	seedEventsSynthetic(common.GameVersionFFX2, "zev003", []string{sharedOriginal})
+	for _, id := range []string{"zev001", "zev002", "zev003"} {
+		seedEventsData(t, common.GameVersionFFX2, id)
+		stripEventMods(t, common.GameVersionFFX2, id)
+	}
+
+	def, err := svc.GetEntry(KindEvents, "zev001", common.GameVersionFFX2)
+	if err != nil {
+		t.Fatalf("get definition: %v", err)
+	}
+	copyEntry, err := svc.GetEntry(KindEvents, "zev002", common.GameVersionFFX2)
+	if err != nil {
+		t.Fatalf("get copy: %v", err)
+	}
+	if !displayRowIsRef(copyEntry.Rows[0]) {
+		t.Fatalf("pré-condição: copy deveria chegar como ref; got %q", copyEntry.Rows[0].Text["us"])
+	}
+
+	const translationA = "Translation A from definition"
+	const translationB = "Translation B for this copy"
+	def.Rows[0].Text[common.DefaultLocalization] = translationA
+	copyEntry.Rows[0].Text[common.DefaultLocalization] = translationB
+	copyEntry.Rows[0].Divergent = true
+
+	if err := svc.ApplyTextCollection(KindEvents, common.GameVersionFFX2, dto.Collection{
+		"zev001": def,
+		"zev002": copyEntry,
+	}); err != nil {
+		t.Fatalf("apply translations: %v", err)
+	}
+
+	for id, want := range map[string]string{
+		"zev001": translationA,
+		"zev002": translationB,
+		"zev003": translationA,
+	} {
+		got := event.GetEvent(common.GameVersionFFX2, id).Strings[0].GetLocalizedContent(common.DefaultLocalization).GetRegularString()
+		if got != want {
+			t.Errorf("binary %s = %q, esperado %q", id, got, want)
+		}
+	}
+
+	for id, want := range map[string]string{"zev002": translationB, "zev003": translationA} {
+		entry, err := svc.GetEntry(KindEvents, id, common.GameVersionFFX2)
+		if err != nil {
+			t.Fatalf("reload %s: %v", id, err)
+		}
+		if displayRowIsRef(entry.Rows[0]) {
+			t.Errorf("reloaded translated row %s should be literal, got ref %q", id, entry.Rows[0].Text[common.DefaultLocalization])
+		}
+		if got := entry.Rows[0].Text[common.DefaultLocalization]; got != want {
+			t.Errorf("reloaded %s = %q, esperado %q", id, got, want)
+		}
+	}
+
+	// Reverter a cópia para o pristine é outro self-target. No view seguinte
+	// ela volta a ser ref azul e espelha a tradução atual da definição.
+	reverted, err := svc.GetEntry(KindEvents, "zev002", common.GameVersionFFX2)
+	if err != nil {
+		t.Fatalf("get divergent copy to revert: %v", err)
+	}
+	reverted.Rows[0].Text[common.DefaultLocalization] = sharedOriginal
+	reverted.Rows[0].Divergent = true
+	if err := svc.ApplyTextCollection(KindEvents, common.GameVersionFFX2, dto.Collection{"zev002": reverted}); err != nil {
+		t.Fatalf("apply reversion: %v", err)
+	}
+	afterRevert, err := svc.GetEntry(KindEvents, "zev002", common.GameVersionFFX2)
+	if err != nil {
+		t.Fatalf("reload reverted copy: %v", err)
+	}
+	if !displayRowIsRef(afterRevert.Rows[0]) {
+		t.Fatalf("copy reverted to original should converge back to blue ref, got %q", afterRevert.Rows[0].Text[common.DefaultLocalization])
+	}
+	if got := afterRevert.Refs[dto.RowKey(afterRevert.Rows[0])].Text; got != translationA {
+		t.Fatalf("re-converged link should mirror definition A, got %q", got)
+	}
+}
+
 // TestGetEntryWithoutOriginalKeepsRawPointers: sem contraparte em data/
 // a entrada degrada — sem Original e sem reescrita de ponteiro; o colapso
 // cai no ramo por texto, sem ponteiros de origem mista.

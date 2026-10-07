@@ -31,6 +31,11 @@ func DedupDTO(c dto.Collection) dto.Collection {
 		dto.SortRows(rows)
 		for i := range rows {
 			r := &rows[i]
+			if r.Divergent {
+				// Divergência é conteúdo próprio: não cria/consome a def
+				// canônica do hash e permanece literal no artefato.
+				continue
+			}
 			t := r.Text[common.DefaultLocalization]
 			h := r.Hash[common.DefaultLocalization]
 			if t == "" || h == "" || !hash.IsDedupEligible(t) {
@@ -71,6 +76,9 @@ func ResolveDedupRefs(c dto.Collection) dto.Collection {
 	defs := make(map[string]string)
 	for _, k := range c.SortedKeys() {
 		for _, row := range c[k].Rows {
+			if row.Divergent {
+				continue // divergência não substitui a definição canônica
+			}
 			t := row.Text[common.DefaultLocalization]
 			if t == "" {
 				continue

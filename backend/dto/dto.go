@@ -47,7 +47,8 @@ import (
 //	                       Text fica nil — o texto nunca vaza de um lado
 //	                       para o outro).
 //
-// Como Original, os flags são de exibição e nunca entram em apply/export.
+// Original e flags Missing* são exclusivos de exibição e nunca entram em
+// apply/export. Divergent é o inverso: apply-only, ignorado em display/export.
 type TextRow struct {
 	Index    int               `json:"index"`
 	Name     string            `json:"name,omitempty"`
@@ -58,6 +59,15 @@ type TextRow struct {
 	// lados da comparação (união da tabela).
 	MissingInOriginal   bool `json:"missingInOriginal,omitempty"`
 	MissingInTranslated bool `json:"missingInTranslated,omitempty"`
+	// Divergent é APPLY-ONLY: marca a edição desta row como divergência —
+	// grava só NELA, sem expandir às cópias iguais (self-target) e sem ser
+	// arrastada pela edição da def no mesmo lote. É o caminho in-app do
+	// que o round-trip externo já permitia: conteúdo válido no lugar do
+	// $hash numa cópia. O editor de traduções o seta via checkbox
+	// "salvar nesta cópia"; reverter a divergência (escrever o original de
+	// volta) também o usa. NUNCA entra em export/display: o formatter
+	// reconstrói a row campo a campo e o dedupe de display não o lê.
+	Divergent bool `json:"divergent,omitempty"`
 }
 
 // RefLink é a anotação de EXIBIÇÃO de uma row de referência dedupada

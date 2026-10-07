@@ -21,6 +21,8 @@ export function TranslationDialog({ view }: { view: EntryView }) {
   // sintetizada da def — navegar trocaria de linha SEM trocar de arquivo, e
   // o store ignora o movimento (setas que não fazem nada).
   const target = useSelector(store, (s) => s.translationTarget);
+  const copyRow = useSelector(store, (s) => s.translationCopyRow);
+  const divergent = useSelector(store, (s) => s.translationDivergent);
   const [languages, setLanguages] = useState<Array<{ code: string; name: string }>>([]);
 
   useEffect(() => {
@@ -36,13 +38,15 @@ export function TranslationDialog({ view }: { view: EntryView }) {
       version={view.version}
       languages={languages}
       hasPrevious={
-        !target && rows.findIndex((r) => r.index === row?.index) > 0
+        !target && !copyRow && rows.findIndex((r) => r.index === row?.index) > 0
       }
       hasNext={
-        !target && rows.findIndex((r) => r.index === row?.index) < rows.length - 1
+        !target && !copyRow && rows.findIndex((r) => r.index === row?.index) < rows.length - 1
       }
+      allowDivergence={copyRow !== null}
+      initialDivergent={divergent}
       onNavigate={(direction, value) => actions.navigateRow(direction, value)}
-      onClosed={(value) => actions.commitRow(value)}
+      onClosed={(value, isDivergent) => actions.commitRow(value, isDivergent)}
     />
   );
 }

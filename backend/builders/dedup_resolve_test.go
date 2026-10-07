@@ -56,3 +56,27 @@ func TestResolveDedupRefsKeepsOrphanRefs(t *testing.T) {
 		t.Fatalf("ref órfã deveria permanecer intacta: %q", got)
 	}
 }
+
+func TestResolveDedupRefsDoesNotTreatDivergenceAsDefinition(t *testing.T) {
+	const original = "Shared original text in exported collection"
+	const definition = "A from definition"
+	const divergent = "B from one copy"
+	bare := hash.Sum64Hex(original)
+	defRow := rowOf(0, original, nil)
+	defRow.Text[common.DefaultLocalization] = definition
+	divergentRow := rowOf(0, original, nil)
+	divergentRow.Text[common.DefaultLocalization] = divergent
+	divergentRow.Divergent = true
+	refRow := rowOf(0, original, nil)
+	refRow.Text[common.DefaultLocalization] = hash.Prefix(bare)
+
+	c := dto.Collection{
+		"aaa_divergent":  {Rows: []dto.TextRow{divergentRow}},
+		"mmm_definition": {Rows: []dto.TextRow{defRow}},
+		"zzz_reference":  {Rows: []dto.TextRow{refRow}},
+	}
+	resolved := builders.ResolveDedupRefs(c)
+	if got := resolved["zzz_reference"].Rows[0].Text[common.DefaultLocalization]; got != definition {
+		t.Fatalf("ref deve continuar resolvendo para definição A, não divergência B: %q", got)
+	}
+}

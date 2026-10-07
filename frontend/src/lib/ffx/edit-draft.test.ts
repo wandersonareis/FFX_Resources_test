@@ -49,6 +49,28 @@ describe('editDraft: base é pré-requisito da edição', () => {
     expect(editDraft.hasBase(VERSION, KIND, ID, '')).toBe(false);
   });
 
+  it('preserva o modo divergente no lote de apply, sem vazar original de display', () => {
+    editDraft.setBase(VERSION, KIND, ID, defEntry(), '');
+    editDraft.setCell(VERSION, KIND, ID, defRow, 'us', 'Divergência local', '', true);
+
+    // Reabrir o diálogo preenche a row visual com o texto do rascunho; salvar
+    // sem alterar esse texto não pode confundi-lo com a base do binário.
+    const dialogRow = dto.TextRow.createFrom({
+      ...defRow,
+      text: { us: 'Divergência local' },
+    });
+    editDraft.setCell(VERSION, KIND, ID, dialogRow, 'us', 'Divergência local', '');
+
+    expect(editDraft.isDivergent(VERSION, KIND, ID, defRow, '')).toBe(true);
+    const payload = editDraft.buildSourceCollection(VERSION, KIND, '')[ID];
+    expect(payload.rows[0].text.us).toBe('Divergência local');
+    expect(payload.rows[0].divergent).toBe(true);
+    expect(payload.rows[0].original).toBeUndefined();
+
+    editDraft.clear(VERSION, KIND, ID, '');
+    expect(editDraft.isDivergent(VERSION, KIND, ID, defRow, '')).toBe(false);
+  });
+
   it('fontes têm namespaces separados (data/ e .vbf não colidem)', () => {
     editDraft.setBase(VERSION, KIND, ID, defEntry(), '');
     expect(editDraft.hasBase(VERSION, KIND, ID, 'C:\\game\\data.vbf')).toBe(false);

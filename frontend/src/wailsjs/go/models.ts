@@ -57,6 +57,7 @@ export namespace dto {
 	    // arquivo traduzido tem menos linhas) ou só na tradução.
 	    missingInOriginal?: boolean;
 	    missingInTranslated?: boolean;
+	    divergent?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new TextRow(source);
@@ -71,6 +72,7 @@ export namespace dto {
 	        this.original = source["original"];
 	        this.missingInOriginal = source["missingInOriginal"];
 	        this.missingInTranslated = source["missingInTranslated"];
+	        this.divergent = source["divergent"];
 	    }
 	}
 	export class RefLink {
@@ -529,4 +531,3 @@ export namespace services {
 	
 
 }
-

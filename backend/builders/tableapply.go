@@ -10,8 +10,8 @@ package builders
 //  2. índice pré-estado: texto 'us' → todos os FieldStrings iguais em TODOS
 //     os arquivos do ESCOPO (a alavanca da propagação: a edição de uma def
 //     alcança as cópias — mesmo fora do lote — e cada binário tocado é
-//     recompilado). Tradução divergente não participa: dedupe é de
-//     original para original, por conteúdo;
+//     recompilado). Row.Divergent faz self-target e é excluída do grupo da
+//     def, para B não ser sobrescrita por A;
 //  3. coleta: valida a estrutura de cada entrada e agenda as mudanças —
 //     um 'us' que difere do estado atual agenda TODAS as cópias dele;
 //  4. escrita + save só dos arquivos realmente tocados.
@@ -81,6 +81,12 @@ func applyTextDTO(label string, c dto.Collection, ids []string, scope TableApply
 			continue
 		}
 		for _, row := range c[id].Rows {
+			if row.Divergent {
+				// Divergência não substitui a definição canônica do hash:
+				// refs do lote continuam resolvendo para a def (A), não para
+				// a cópia divergida (B).
+				continue
+			}
 			t := row.Text[common.DefaultLocalization]
 			if t == "" {
 				continue
@@ -115,6 +121,14 @@ func applyTextDTO(label string, c dto.Collection, ids []string, scope TableApply
 		}
 	}
 
+	// Fase 2½ — divergentes do lote: cada segmento 'us' com edição
+	// DIVERGENTE é self-target — grava só nele. Anotados no pré-estado
+	// para a expansão de grupo das edições normais filtrá-los: a def
+	// editada com A não pode tocar a cópia que divergiu com B, em
+	// nenhuma ordem de escrita do lote (freeze + exclusão = cada fs é
+	// alvo de no máximo UMA mudança).
+	divergent := divergentTableTargets(c, ids, scope, defs)
+
 	// Fase 3 — coleta: valida tudo do lote antes de escrever qualquer coisa
 	// (um DTO malformado não deixa meio arquivo aplicado).
 	var failed, applied []string
@@ -129,7 +143,7 @@ func applyTextDTO(label string, c dto.Collection, ids []string, scope TableApply
 			failed = append(failed, id)
 			continue
 		}
-		us, dir, err := collectTableChanges(id, strings, c[id], defs, index)
+		us, dir, err := collectTableChanges(id, strings, c[id], defs, index, divergent)
 		if err != nil {
 			common.LogError("failed to update %s %s: %v", label, id, err)
 			failed = append(failed, id)
@@ -184,8 +198,10 @@ func applyTextDTO(label string, c dto.Collection, ids []string, scope TableApply
 }
 
 // collectTableChanges valida a entrada e agenda as mudanças dela contra o
-// estado pré-aplicação (index). Não escreve nada.
-func collectTableChanges(fileID string, strings []*event.LocalizedFieldStringObject, entry dto.FileEntry, defs map[string]string, index map[string][]applyTarget) (usChanges, dirChanges []applyChange, err error) {
+// estado pré-aplicação (index). Não escreve nada. divergent é o conjunto
+// de segmentos 'us' com edição divergente NO LOTE: self-target na própria
+// row e filtrados dos alvos de grupo das edições normais.
+func collectTableChanges(fileID string, strings []*event.LocalizedFieldStringObject, entry dto.FileEntry, defs map[string]string, index map[string][]applyTarget, divergent map[*event.FieldString]bool) (usChanges, dirChanges []applyChange, err error) {
 	dto.SortRows(entry.Rows)
 
 	// Fase 1 — validação estrutural.
@@ -250,12 +266,93 @@ func collectTableChanges(fileID string, strings []*event.LocalizedFieldStringObj
 			if newText == fs.GetRegularString() {
 				continue // sem mudança no segmento desta row: nada a agendar
 			}
+			if row.Divergent {
+				// Divergência: grava só NESTA row (self-target) — sem
+				// expandir às cópias iguais e imune à propagação da def
+				// no mesmo lote. O resultado não depende da ordem de
+				// escrita: os divergentes saem dos grupos no pré-estado.
+				usChanges = append(usChanges, applyChange{
+					targets: []applyTarget{{fileID: fileID, fs: fs}},
+					newText: newText,
+				})
+				continue
+			}
 			targets := index[fs.GetRegularString()]
 			if len(targets) == 0 {
 				targets = []applyTarget{{fileID: fileID, fs: fs}}
+			} else if len(divergent) > 0 {
+				targets = excludeDivergent(targets, divergent)
+				if len(targets) == 0 {
+					continue // o grupo inteiro divergiu: nada a replicar
+				}
 			}
 			usChanges = append(usChanges, applyChange{targets: targets, newText: newText})
 		}
 	}
 	return usChanges, dirChanges, nil
+}
+
+// divergentTableTargets anota os segmentos 'us' com edição divergente no
+// lote (row.Divergent): a expansão de grupo das edições normais os exclui,
+// então cada fs é alvo de no máximo UMA mudança — def com A e divergente
+// com B no mesmo lote convergem independente da ordem de chaves.
+func divergentTableTargets(c dto.Collection, ids []string, scope TableApplyScope, defs map[string]string) map[*event.FieldString]bool {
+	filter := make(map[string]bool)
+	if len(ids) > 0 {
+		for _, id := range ids {
+			filter[id] = true
+		}
+	}
+	inBatch := func(id string) bool { return len(filter) == 0 || filter[id] }
+
+	var divergent map[*event.FieldString]bool
+	for _, id := range c.SortedKeys() {
+		if !inBatch(id) {
+			continue
+		}
+		strings := scope.StringsFor(id)
+		for _, row := range c[id].Rows {
+			if !row.Divergent || row.Index < 0 || row.Index >= len(strings) {
+				continue
+			}
+			newText := row.Text[common.DefaultLocalization]
+			if newText == "" {
+				continue
+			}
+			if bare, isRef := refBare(row, newText); isRef {
+				resolved, ok := defs[bare]
+				if !ok {
+					continue
+				}
+				newText = resolved
+			}
+			obj := strings[row.Index]
+			if obj == nil {
+				continue
+			}
+			if fs := obj.GetLocalizedContent(common.DefaultLocalization); fs != nil {
+				if newText == fs.GetRegularString() {
+					continue
+				}
+				if divergent == nil {
+					divergent = make(map[*event.FieldString]bool)
+				}
+				divergent[fs] = true
+			}
+		}
+	}
+	return divergent
+}
+
+// excludeDivergent devolve os alvos de grupo SEM os segmentos divergentes
+// do lote. Cópia nova (alocada): index compartilha slices — filtrar no
+// lugar corromperia o índice do pré-estado.
+func excludeDivergent(targets []applyTarget, divergent map[*event.FieldString]bool) []applyTarget {
+	out := make([]applyTarget, 0, len(targets))
+	for _, t := range targets {
+		if !divergent[t.fs] {
+			out = append(out, t)
+		}
+	}
+	return out
 }

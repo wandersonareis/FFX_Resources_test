@@ -197,6 +197,11 @@ func ApplyHelpDTOWithScope(version common.GameVersion, c dto.Collection, ids []s
 			continue
 		}
 		for _, row := range c[name].Rows {
+			if row.Divergent {
+				// A cópia divergida não é definição do ponteiro: as refs
+				// devem continuar resolvendo para a def canônica do lote.
+				continue
+			}
 			t := row.Text[common.DefaultLocalization]
 			if t == "" {
 				continue
@@ -232,6 +237,13 @@ func ApplyHelpDTOWithScope(version common.GameVersion, c dto.Collection, ids []s
 		}
 	}
 
+	// Fase 2½ — divergentes do lote: cada segmento 'us' com edição
+	// DIVERGENTE é self-target — grava só nele. Anotados no pré-estado
+	// para a expansão de grupo das edições normais filtrá-los: a def
+	// editada com A não pode tocar a cópia que divergiu com B, em
+	// nenhuma ordem de escrita do lote.
+	divergent := divergentHelpSegments(c, filter, scope, defs)
+
 	// Fase 3 — coleta: valida tudo do lote antes de escrever qualquer coisa
 	// (um DTO malformado não deixa meio painel aplicado).
 	var failed []string
@@ -247,7 +259,7 @@ func ApplyHelpDTOWithScope(version common.GameVersion, c dto.Collection, ids []s
 			failed = append(failed, name)
 			continue
 		}
-		us, dir, err := collectHelpChanges(name, panel, c[name], defs, index)
+		us, dir, err := collectHelpChanges(name, panel, c[name], defs, index, divergent)
 		if err != nil {
 			common.LogError("failed to update help %s: %v", name, err)
 			failed = append(failed, name)
@@ -320,7 +332,7 @@ type helpChange struct {
 
 // collectHelpChanges valida a entrada e agenda as mudanças dela contra o
 // estado pré-aplicação (index). Não escreve nada.
-func collectHelpChanges(name string, panel *helpfile.HelpKeyedStringFile, entry dto.FileEntry, defs map[string]string, index map[string][]helpTarget) (usChanges, dirChanges []helpChange, err error) {
+func collectHelpChanges(name string, panel *helpfile.HelpKeyedStringFile, entry dto.FileEntry, defs map[string]string, index map[string][]helpTarget, divergent map[*helpfile.HelpSegment]bool) (usChanges, dirChanges []helpChange, err error) {
 	dto.SortRows(entry.Rows)
 	count := panel.SegmentCount()
 
@@ -382,12 +394,85 @@ func collectHelpChanges(name string, panel *helpfile.HelpKeyedStringFile, entry 
 			if newText == seg.Text {
 				continue // sem mudança no segmento desta row: nada a agendar
 			}
+			if row.Divergent {
+				// Divergência: grava só NESTE segmento, sem expandir às
+				// cópias iguais e sem ser sobrescrita pela def no mesmo lote.
+				usChanges = append(usChanges, helpChange{
+					targets: []helpTarget{{panel: name, seg: seg}},
+					newText: newText,
+				})
+				continue
+			}
 			targets := index[seg.Text]
 			if len(targets) == 0 {
 				targets = []helpTarget{{panel: name, seg: seg}}
+			} else if len(divergent) > 0 {
+				targets = excludeDivergentHelp(targets, divergent)
+				if len(targets) == 0 {
+					continue
+				}
 			}
 			usChanges = append(usChanges, helpChange{targets: targets, newText: newText})
 		}
 	}
 	return usChanges, dirChanges, nil
+}
+
+// divergentHelpSegments anota os segmentos 'us' com edição divergente no
+// lote. As edições normais filtram esses alvos da expansão por texto para
+// que uma mudança na def não sobrescreva uma divergência A/B.
+func divergentHelpSegments(c dto.Collection, filter map[string]bool, scope HelpApplyScope, defs map[string]string) map[*helpfile.HelpSegment]bool {
+	inBatch := func(id string) bool { return len(filter) == 0 || filter[id] }
+	var divergent map[*helpfile.HelpSegment]bool
+	for _, id := range c.SortedKeys() {
+		if !inBatch(id) {
+			continue
+		}
+		panel := scope.Panel(id)
+		if panel == nil {
+			continue
+		}
+		file := panel.Files[common.DefaultLocalization]
+		if file == nil {
+			continue
+		}
+		for _, row := range c[id].Rows {
+			if !row.Divergent || row.Index < 0 || row.Index >= len(file.Segments) {
+				continue
+			}
+			seg := file.Segments[row.Index]
+			if seg == nil {
+				continue
+			}
+			newText := row.Text[common.DefaultLocalization]
+			if newText == "" {
+				continue
+			}
+			if bare, isRef := refBare(row, newText); isRef {
+				resolved, ok := defs[bare]
+				if !ok {
+					continue
+				}
+				newText = resolved
+			}
+			if newText == seg.Text {
+				continue
+			}
+			if divergent == nil {
+				divergent = make(map[*helpfile.HelpSegment]bool)
+			}
+			divergent[seg] = true
+		}
+	}
+	return divergent
+}
+
+func excludeDivergentHelp(targets []helpTarget, divergent map[*helpfile.HelpSegment]bool) []helpTarget {
+	out := make([]helpTarget, 0, len(targets))
+	for _, target := range targets {
+		if !divergent[target.seg] {
+			out = append(out, target)
+		}
+	}
+	return out
 }

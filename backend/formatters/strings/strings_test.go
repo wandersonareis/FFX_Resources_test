@@ -113,6 +113,60 @@ func TestMarshalShapesOutput(t *testing.T) {
 	}
 }
 
+func TestMarshalKeepsDivergentCopyLiteralAndCanonicalizesRefs(t *testing.T) {
+	const original = "Same source sentence across files"
+	const definition = "Translation A from definition"
+	const divergent = "Translation B for one copy"
+	bare := hash.Sum64Hex(original)
+	c := dto.Collection{
+		"aaa_divergent": {Metadata: dto.NewEventMetadata("aaa_divergent", common.GameVersionFFX), Rows: []dto.TextRow{{
+			Index: 0, Hash: map[string]string{"us": bare},
+			Text: map[string]string{"us": divergent}, Divergent: true,
+		}}},
+		"mmm_definition": {Metadata: dto.NewEventMetadata("mmm_definition", common.GameVersionFFX), Rows: []dto.TextRow{{
+			Index: 0, Hash: map[string]string{"us": bare}, Text: map[string]string{"us": definition},
+		}}},
+		"zzz_reference": {Metadata: dto.NewEventMetadata("zzz_reference", common.GameVersionFFX), Rows: []dto.TextRow{{
+			Index: 0, Hash: map[string]string{"us": bare}, Text: map[string]string{"us": original},
+		}}},
+	}
+	raw, err := fmtstrings.Marshal(c)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	out := string(raw)
+	if !strings.Contains(out, "ffx:aaa_divergent:0:us║$"+bare+" = "+divergent) {
+		t.Fatalf("divergent text must remain literal:\n%s", out)
+	}
+	if !strings.Contains(out, "ffx:zzz_reference:0:us║$"+bare+" = $"+bare) {
+		t.Fatalf("ordinary copy must remain a ref to canonical def:\n%s", out)
+	}
+}
+
+func TestUnmarshalInfersExternalLiteralAsDivergentCopy(t *testing.T) {
+	const original = "Canonical source text for external edit"
+	const divergent = "External copy-specific translation"
+	bare := hash.Sum64Hex(original)
+	artifact := strings.Join([]string{
+		"/*key=ffx/events/aaa_definition.bin row_count=1*/",
+		"ffx:aaa_definition:0:us║$" + bare + " = " + original,
+		"/*key=ffx/events/mmm_divergent.bin row_count=1*/",
+		"ffx:mmm_divergent:0:us║$" + bare + " = " + divergent,
+		"/*key=ffx/events/zzz_reference.bin row_count=1*/",
+		"ffx:zzz_reference:0:us║$" + bare + " = $" + bare,
+	}, "\n")
+	parsed, err := fmtstrings.Unmarshal([]byte(artifact))
+	if err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if !parsed["mmm_divergent"].Rows[0].Divergent {
+		t.Fatal("literal text replacing $hash under the same hash should be inferred as divergent")
+	}
+	if got := parsed["zzz_reference"].Rows[0].Text["us"]; got != original {
+		t.Fatalf("remaining $hash reference must resolve to the first canonical literal: %q", got)
+	}
+}
+
 func TestMarshalUnmarshalRoundTrip(t *testing.T) {
 	in := sampleCollection()
 	raw, err := fmtstrings.Marshal(in)

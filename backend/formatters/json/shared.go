@@ -79,7 +79,7 @@ func marshalCollectionLangs(c dto.Collection, langs []string) ([]byte, error) {
 					r.Text[lang] = t
 				}
 			}
-			if t := r.Text[common.DefaultLocalization]; hash.IsDedupEligible(t) {
+			if t := r.Text[common.DefaultLocalization]; !row.Divergent && hash.IsDedupEligible(t) {
 				if h, _ := hash.Strip(r.Hash[common.DefaultLocalization]); h != "" {
 					if _, ok := seen[h]; ok {
 						r.Text[common.DefaultLocalization] = hash.Prefix(h)
@@ -118,6 +118,8 @@ func langSet(langs []string) map[string]bool {
 // Remove o `$` dos hashes (DTO volta a hex puro) e expande referências
 // `$hash` pelo valor atual da tabela hash→texto do próprio arquivo —
 // seja qual for o valor ali (inclusive texto editado sob hash antigo).
+// Literal diferente sob o mesmo hash é marcado Divergent (edição externa
+// da cópia); a definição canônica continua sendo a primeira literal.
 // `$` órfão (fora da tabela = JSON danificado) é mantido + LogVerbose.
 func unmarshalCollection(data []byte) (dto.Collection, error) {
 	var c dto.Collection
@@ -127,6 +129,7 @@ func unmarshalCollection(data []byte) (dto.Collection, error) {
 	table := make(map[string]string)
 	for _, k := range c.SortedKeys() {
 		entry := c[k]
+		dto.SortRows(entry.Rows)
 		for i := range entry.Rows {
 			row := &entry.Rows[i]
 			for lang, h := range row.Hash {
@@ -139,7 +142,15 @@ func unmarshalCollection(data []byte) (dto.Collection, error) {
 				continue // referência: resolve na segunda passada
 			}
 			if own := row.Hash[common.DefaultLocalization]; own != "" && t != "" {
-				table[own] = t
+				if canonical, exists := table[own]; !exists {
+					table[own] = t
+				} else if canonical != t {
+					// Um export normal tem a primeira ocorrência literal e
+					// as cópias como $hash. Se um editor externo substituiu
+					// o conteúdo $hash por texto válido, esse literal diferente
+					// é uma divergência da cópia — não uma nova definição.
+					row.Divergent = true
+				}
 			}
 		}
 		c[k] = entry

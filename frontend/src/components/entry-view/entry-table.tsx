@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTable } from '@tanstack/react-table';
 import { useSelector } from '@tanstack/react-store';
+import { GitBranch, RotateCcw } from 'lucide-react';
 import { dto } from '@/wailsjs/go/models';
 import { useEditDraft, rowKey } from '@/lib/ffx/edit-draft';
 import { SOURCE_LANG } from '@/lib/ffx/save-all';
@@ -198,8 +199,6 @@ export function EntryTable({ view }: { view: EntryView }) {
             // Ref dedupada: a célula pinta o TEXTO DA DEF (estado atual,
             // rascunho incluído) — o "$hash" entregue pelo backend é só o
             // ponteiro de collapse, nunca conteúdo exibível.
-            const linked = linkedValueOf(row);
-            if (linked !== undefined) return linked;
             const entry = selectedEntry;
             // Rascunho por FONTE: data/ ("") e o .vbf (caminho do container)
             // têm namespaces separados. Ler sem a fonte esconderia a edição
@@ -214,6 +213,20 @@ export function EntryTable({ view }: { view: EntryView }) {
                   entry.vbf?.root ?? ''
                 )
               : undefined;
+            const divergent = entry
+              ? drafts.isDivergent(
+                  version,
+                  entry.kind,
+                  entry.id,
+                  row,
+                  entry.vbf?.root ?? ''
+                )
+              : false;
+            // Enquanto a escolha de divergência está no rascunho, a edição
+            // local vence o link e a célula deixa de parecer azul.
+            if (divergent && edited !== undefined) return edited;
+            const linked = linkedValueOf(row);
+            if (linked !== undefined) return linked;
             return edited ?? row.text?.[textLoc] ?? '';
           },
           {
@@ -241,6 +254,16 @@ export function EntryTable({ view }: { view: EntryView }) {
                       entry.vbf?.root ?? ''
                     ) !== undefined
                   : false;
+              const divergentDraft =
+                !missing && entry
+                  ? drafts.isDivergent(
+                      version,
+                      entry.kind,
+                      entry.id,
+                      row,
+                      entry.vbf?.root ?? ''
+                    )
+                  : false;
               if (missing) {
                 return (
                   <div className="text-cell translated-cell" title="Linha inexistente no arquivo traduzido">
@@ -251,7 +274,7 @@ export function EntryTable({ view }: { view: EntryView }) {
               // Ref dedupada (link): texto da def em cor própria, com o
               // original dela no tooltip. O clique abre o editor NA DEF —
               // a tradução é registrada no arquivo da def, nunca aqui.
-              const link = refLinks[rowKey(row)];
+              const link = divergentDraft ? undefined : refLinks[rowKey(row)];
               if (link) {
                 const defText = linkedValueOf(row) ?? link.text ?? '';
                 // Fallback: original ausente (def sem pristine em data/)
@@ -260,33 +283,73 @@ export function EntryTable({ view }: { view: EntryView }) {
                 const original = link.original || link.text || '';
                 const defTranslated = defText !== '' && defText !== original;
                 return (
-                  <div
-                    className={`text-cell translated-cell${defTranslated ? ' edited' : ''}`}
-                    title={
-                      defTranslated
-                        ? `Repetição de: ${original}`
-                        : 'Repetição (dedup): o texto vive na def de outro ponto'
-                    }
-                    onClick={
-                      readOnly ? undefined : () => actions.openLinked(row)
-                    }
-                  >
-                    <GameTextView
-                      text={defText}
-                      fallback="—"
-                      className={LINKED_SIDE}
-                    />
+                  <div className="group flex items-center gap-1">
+                    <div
+                      className={`text-cell translated-cell min-w-0 flex-1${defTranslated ? ' edited' : ''}`}
+                      title={
+                        defTranslated
+                          ? `Repetição de: ${original}`
+                          : 'Repetição (dedup): o texto vive na def de outro ponto'
+                      }
+                      onClick={
+                        readOnly ? undefined : () => actions.openLinked(row)
+                      }
+                    >
+                      <GameTextView
+                        text={defText}
+                        fallback="—"
+                        className={LINKED_SIDE}
+                      />
+                    </div>
+                    {!readOnly ? (
+                      <button
+                        type="button"
+                        aria-label="Editar como divergência nesta cópia"
+                        title="Editar como divergência nesta cópia"
+                        className="shrink-0 rounded p-1 text-muted-foreground opacity-60 transition-opacity hover:bg-muted hover:text-foreground hover:opacity-100 focus:opacity-100 group-hover:opacity-100"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          actions.openLinked(row, true);
+                        }}
+                      >
+                        <GitBranch size={15} aria-hidden />
+                      </button>
+                    ) : null}
                   </div>
                 );
               }
+              const displayed = String(info.getValue() ?? '');
+              const original = row.original?.[SOURCE_LANG];
+              const canRevert =
+                !readOnly &&
+                textLoc === SOURCE_LANG &&
+                original !== undefined &&
+                original !== '' &&
+                displayed !== original;
               return (
-                <div
-                  className={`text-cell translated-cell${edited ? ' edited' : ''}`}
-                  onClick={
-                    readOnly ? undefined : () => actions.openDialog(row)
-                  }
-                >
-                  <GameTextView text={info.getValue()} />
+                <div className="group flex items-center gap-1">
+                  <div
+                    className={`text-cell translated-cell min-w-0 flex-1${edited || canRevert ? ' edited' : ''}`}
+                    onClick={
+                      readOnly ? undefined : () => actions.openDialog(row)
+                    }
+                  >
+                    <GameTextView text={displayed} />
+                  </div>
+                  {canRevert ? (
+                    <button
+                      type="button"
+                      aria-label="Reverter esta linha para o original"
+                      title="Reverter esta linha para o original (se for cópia, volta a convergir com a definição)"
+                      className="shrink-0 rounded p-1 text-muted-foreground opacity-60 transition-opacity hover:bg-muted hover:text-foreground hover:opacity-100 focus:opacity-100 group-hover:opacity-100"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        actions.revertToOriginal(row);
+                      }}
+                    >
+                      <RotateCcw size={15} aria-hidden />
+                    </button>
+                  ) : null}
                 </div>
               );
             },

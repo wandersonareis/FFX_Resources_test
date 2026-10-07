@@ -193,6 +193,22 @@ func TestMergeImportUsHashNeverRewritten(t *testing.T) {
 	}
 }
 
+func TestMergeImportUsPreservesInferredDivergence(t *testing.T) {
+	store := hTestStore()
+	imported := hEditRow(3, "b", "Alpha line", "Beta for this copy")
+	imported.Divergent = true
+	merged := mergeImportUs(dto.Collection{"btl": store}, map[string][]rowPair{
+		"btl": {{store: store.Rows[3], imported: imported}},
+	})
+	row := merged["btl"].Rows[3]
+	if !row.Divergent {
+		t.Fatal("merge import must preserve the parser's divergent-copy marker")
+	}
+	if got := row.Text[common.DefaultLocalization]; got != "Beta for this copy" {
+		t.Fatalf("merged copy text: %q", got)
+	}
+}
+
 func TestBlankImportRowNeverCandidate(t *testing.T) {
 	store := hTestStore()
 	art := dto.FileEntry{Metadata: hTestMeta(), Rows: []dto.TextRow{

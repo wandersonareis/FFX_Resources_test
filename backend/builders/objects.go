@@ -183,6 +183,9 @@ func ApplyObjectsEntry(objects components.IList[datastore.IGlobalLocalizedTextOb
 	// de qualquer escrita porque uma ref pode vir antes da def nas rows.
 	defs := make(map[string]string)
 	for _, row := range entry.Rows {
+		if row.Divergent {
+			continue // divergência não substitui a definição canônica do hash
+		}
 		t := row.Text[common.DefaultLocalization]
 		if t == "" {
 			continue
@@ -210,6 +213,32 @@ func ApplyObjectsEntry(objects components.IList[datastore.IGlobalLocalizedTextOb
 			index[t] = append(index[t], objectTarget{obj: obj, field: f.Key})
 		}
 	})
+	// Divergências do lote são alvos self-only. Marcar antes da coleta
+	// impede que uma edição normal do mesmo texto as arraste neste apply.
+	divergent := make(map[objectTarget]bool)
+	for _, row := range entry.Rows {
+		if !row.Divergent || row.Index < 0 || row.Index >= len(items) {
+			continue
+		}
+		obj := items[row.Index]
+		if obj == nil {
+			continue
+		}
+		newText := row.Text[common.DefaultLocalization]
+		if newText == "" {
+			continue
+		}
+		if bare, isRef := refBare(row, newText); isRef {
+			resolved, ok := defs[bare]
+			if !ok {
+				continue
+			}
+			newText = resolved
+		}
+		if newText != currentObjectText(obj, row.Name, common.DefaultLocalization) {
+			divergent[objectTarget{obj: obj, field: row.Name}] = true
+		}
+	}
 
 	// Fase 3 — coleta: valida os índices e agenda as mudanças (sem escrever;
 	// rows com índice fora da lista são logadas e puladas, como antes).
@@ -244,9 +273,21 @@ func ApplyObjectsEntry(objects components.IList[datastore.IGlobalLocalizedTextOb
 				if newText == current {
 					continue // sem mudança neste campo: nada a agendar
 				}
+				if row.Divergent {
+					usChanges = append(usChanges, objectChange{
+						targets: []objectTarget{{obj: obj, field: row.Name}},
+						newText: newText,
+					})
+					continue
+				}
 				targets := index[current]
 				if len(targets) == 0 {
 					targets = []objectTarget{{obj: obj, field: row.Name}}
+				} else if len(divergent) > 0 {
+					targets = excludeDivergentObjects(targets, divergent)
+					if len(targets) == 0 {
+						continue
+					}
 				}
 				usChanges = append(usChanges, objectChange{targets: targets, newText: newText})
 				continue
@@ -288,6 +329,16 @@ func ApplyObjectsEntry(objects components.IList[datastore.IGlobalLocalizedTextOb
 type objectTarget struct {
 	obj   datastore.IGlobalLocalizedTextObject
 	field string
+}
+
+func excludeDivergentObjects(targets []objectTarget, divergent map[objectTarget]bool) []objectTarget {
+	out := make([]objectTarget, 0, len(targets))
+	for _, target := range targets {
+		if !divergent[target] {
+			out = append(out, target)
+		}
+	}
+	return out
 }
 
 // objectChange é uma mudança agendada: newText no idioma lang para todos

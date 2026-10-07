@@ -75,7 +75,7 @@ func MarshalLangs(c dto.Collection, langs []string) ([]byte, error) {
 					h = hash.Sum64Hex(text)
 				}
 				value := escapeValue(text)
-				if lang == common.DefaultLocalization {
+				if lang == common.DefaultLocalization && !row.Divergent {
 					if hash.IsDedupEligible(text) {
 						if _, dup := seen[h]; dup {
 							value = hash.Prefix(h)

@@ -30,6 +30,8 @@ type parsedLine struct {
 // Como no JSON, o hash é ponteiro opaco no import: refs "$hash" são
 // resolvidas pela tabela hash→texto do próprio arquivo, e defs com
 // xxh64(literal) != hash da chave geram só LogVerbose (texto vence).
+// Literal diferente sob o mesmo hash é marcado Divergent: um editor externo
+// pode ter trocado o conteúdo $hash de uma cópia por texto válido.
 func Unmarshal(data []byte) (dto.Collection, error) {
 	entries := make(map[string]*dto.FileEntry)
 	rows := make(map[string]map[string]*dto.TextRow) // entryID -> "index\x00name" -> row
@@ -91,8 +93,15 @@ func Unmarshal(data []byte) (dto.Collection, error) {
 				common.LogVerbose("strings hash mismatch for %s[%d] lang %s: file %s vs text %s",
 					pl.id, pl.index, pl.lang, pl.hash, got)
 			}
-			if _, dup := table[pl.hash]; !dup && pl.value != "" {
-				table[pl.hash] = pl.value
+			if pl.value != "" {
+				if canonical, dup := table[pl.hash]; !dup {
+					table[pl.hash] = pl.value
+				} else if pl.lang == common.DefaultLocalization && canonical != pl.value {
+					// Literal diferente sob o mesmo hash: provavelmente um
+					// editor externo substituiu $hash numa cópia. Mantê-la
+					// separada do texto canônico ao aplicar o import.
+					row.Divergent = true
+				}
 			}
 		}
 		row.Text[pl.lang] = pl.value

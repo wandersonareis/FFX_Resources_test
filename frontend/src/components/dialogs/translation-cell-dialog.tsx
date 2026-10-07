@@ -35,13 +35,17 @@ export interface TranslationCellDialogProps {
   hasPrevious: boolean;
   /** Há próxima linha no ARQUIVO atual. */
   hasNext: boolean;
+  /** Modal aberto sobre uma ref azul; permite trocar o destino para a cópia. */
+  allowDivergence: boolean;
+  /** Checkbox inicia marcado quando aberto pelo botão de divergência. */
+  initialDivergent: boolean;
   /**
    * Navegação sem fechar o modal. value só vem preenchido quando há edição
    * não salva (aplicada como rascunho antes de trocar de linha).
    */
   onNavigate: (direction: 'prev' | 'next', value?: string) => void;
   /** Fechamento: value != undefined aplica a edição. */
-  onClosed: (value?: string) => void;
+  onClosed: (value?: string, divergent?: boolean) => void;
 }
 
 /** Ação interrompida pelo gate (retomada ao restaurar/voltar). */
@@ -60,15 +64,19 @@ export function TranslationCellDialog({
   languages,
   hasPrevious,
   hasNext,
+  allowDivergence,
+  initialDivergent,
   onNavigate,
   onClosed,
 }: TranslationCellDialogProps) {
   const [text, setText] = useState(row?.text?.[SOURCE_LANG] ?? '');
   const [prevRow, setPrevRow] = useState(row);
+  const [divergent, setDivergent] = useState(initialDivergent);
   const [gate, setGate] = useState<GateState | null>(null);
   if (prevRow !== row) {
     setPrevRow(row);
     setText(row?.text?.[SOURCE_LANG] ?? '');
+    setDivergent(initialDivergent);
     setGate(null);
   }
 
@@ -82,7 +90,7 @@ export function TranslationCellDialog({
   const perform = (action: PendingAction, value: string): void => {
     // value === base não gera rascunho (nada mudou em relação ao salvo).
     if (action.kind === 'save') {
-      onClosed(value !== baseText ? value : undefined);
+      onClosed(value !== baseText ? value : undefined, divergent);
       return;
     }
     onNavigate(action.direction, value !== baseText ? value : undefined);
@@ -196,8 +204,25 @@ export function TranslationCellDialog({
           </div>
         </div>
         <DialogDescription className="mt-1">
-          Tradução ({SOURCE_LANG}) — gravada no jogo ao salvar
+          Este editor salva apenas o rascunho; o botão Salvar do app grava no binário.
         </DialogDescription>
+
+        {allowDivergence ? (
+          <label className="flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
+            <input
+              type="checkbox"
+              checked={divergent}
+              onChange={(event) => setDivergent(event.currentTarget.checked)}
+              className="mt-0.5 accent-primary"
+            />
+            <span>
+              <span className="font-medium">Salvar como divergência nesta cópia</span>
+              <span className="block text-xs text-muted-foreground">
+                A edição fica só nesta cópia; as demais continuam ligadas à definição.
+              </span>
+            </span>
+          </label>
+        ) : null}
 
         <div className="flex flex-col gap-4 overflow-hidden">
           <div className="grid gap-2.5 overflow-y-auto flex-1 min-h-30 max-h-[42vh] pr-1">
@@ -221,7 +246,7 @@ export function TranslationCellDialog({
 
           <div className="grid gap-1.5">
             <span className="text-xs font-semibold opacity-75">
-              Tradução ({SOURCE_LANG}) — gravada no jogo ao salvar
+              Tradução ({SOURCE_LANG}) — rascunho até salvar em binário
             </span>
             <GameTextEditor
               value={text}

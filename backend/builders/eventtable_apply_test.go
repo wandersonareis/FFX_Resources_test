@@ -74,6 +74,64 @@ func TestApplyTextDTOResolvesRefsAndPropagates(t *testing.T) {
 	}
 }
 
+// A divergence in the same apply batch is a self-target and must be excluded
+// from the def's frozen pre-state group, regardless of sorted entry order.
+func TestApplyTextDTODivergentCopyStaysIndependent(t *testing.T) {
+	if err := ffxencoding.PrepareVersionCharsets(common.GameVersionFFX2); err != nil {
+		t.Skipf("charsets: %v", err)
+	}
+	charset := ffxencoding.GetCharsetForLanguage(common.DefaultLocalization)
+	const original = "Same original across def and copies"
+	const defText = "Translation A from the definition"
+	const divergentText = "Translation B for this copy"
+
+	str := func(us string) *event.LocalizedFieldStringObject {
+		fs := event.NewEmptyFieldString(charset, common.GameVersionFFX2)
+		fs.SetRegularString(us)
+		return event.NewLocalizedFieldStringObjectWithContent(common.DefaultLocalization, fs)
+	}
+	files := map[string]*eventtable.File{
+		// Deliberately sort the divergent entry BEFORE the def: correctness
+		// must come from the pre-state exclusion, not write order.
+		"aaa_divergent":  {Kind: eventtable.KindBattleText, ID: "aaa_divergent", Version: common.GameVersionFFX2, Strings: []*event.LocalizedFieldStringObject{str(original)}},
+		"zzz_definition": {Kind: eventtable.KindBattleText, ID: "zzz_definition", Version: common.GameVersionFFX2, Strings: []*event.LocalizedFieldStringObject{str(original)}},
+		"zzz_reference":  {Kind: eventtable.KindBattleText, ID: "zzz_reference", Version: common.GameVersionFFX2, Strings: []*event.LocalizedFieldStringObject{str(original)}},
+		"zzz_twin":       {Kind: eventtable.KindBattleText, ID: "zzz_twin", Version: common.GameVersionFFX2, Strings: []*event.LocalizedFieldStringObject{str(original)}},
+	}
+	scope := TableApplyScope{
+		Ids:        []string{"aaa_divergent", "zzz_definition", "zzz_reference", "zzz_twin"},
+		StringsFor: func(id string) []*event.LocalizedFieldStringObject { return files[id].Strings },
+		Save:       func(string) error { return nil },
+	}
+	bare := hash.Sum64Hex(original)
+	c := dto.Collection{
+		"aaa_divergent": {Rows: []dto.TextRow{{
+			Index: 0, Hash: map[string]string{"us": bare},
+			Text: map[string]string{"us": divergentText}, Divergent: true,
+		}}},
+		"zzz_definition": {Rows: []dto.TextRow{{
+			Index: 0, Hash: map[string]string{"us": bare}, Text: map[string]string{"us": defText},
+		}}},
+		"zzz_reference": {Rows: []dto.TextRow{{
+			Index: 0, Hash: map[string]string{"us": bare}, Text: map[string]string{"us": hash.Prefix(bare)},
+		}}},
+	}
+	if err := applyTextDTO(eventtable.KindBattleText, c, nil, scope); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	for id, want := range map[string]string{
+		"aaa_divergent":  divergentText,
+		"zzz_definition": defText,
+		"zzz_reference":  defText,
+		"zzz_twin":       defText,
+	} {
+		got := files[id].Strings[0].GetLocalizedContent(common.DefaultLocalization).GetRegularString()
+		if got != want {
+			t.Errorf("%s[0] = %q, esperado %q", id, got, want)
+		}
+	}
+}
+
 // Orphan ref: ref cuja def não está no lote nem no escopo não escreve
 // literal e mantém a célula como está (identidade — o save não corrompe).
 func TestApplyTextDTOOrphanRefKeepsCurrent(t *testing.T) {

@@ -387,6 +387,11 @@ func mergeImportUs(store dto.Collection, matched map[string][]rowPair) dto.Colle
 					text[common.DefaultLocalization] = t
 					nr.Text = text
 				}
+				// Parsers infer Divergent when an external editor replaces
+				// $hash in a copy with a different literal under the same
+				// original hash. Preserve that apply-only intent through the
+				// store/import merge.
+				nr.Divergent = ir.Divergent
 			}
 			rows[i] = nr
 		}

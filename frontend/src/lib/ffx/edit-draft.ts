@@ -22,6 +22,8 @@ interface DraftState {
   entry: dto.FileEntry;
   /** Edições por rowKey → idioma → texto (só o que difere do original). */
   edits: Map<string, Map<string, string>>;
+  /** Rows que devem aplicar só nesta cópia, sem replicar ao grupo. */
+  divergentRows: Set<string>;
   /**
    * Origem do rascunho: "" = data/; caminho do .vbf = tabela aberta no
    * navegador de container. O mesmo id pode existir nas duas fontes —
@@ -112,6 +114,7 @@ class EditDraftStore {
       id,
       entry,
       edits: new Map(),
+      divergentRows: new Set(),
       source,
     });
     this.touch(key, false);
@@ -146,26 +149,33 @@ class EditDraftStore {
     row: dto.TextRow,
     lang: string,
     text: string,
-    source = ''
+    source = '',
+    divergent?: boolean
   ): void {
     const key = draftKey(version, kind, id, source);
     const state = this.states.get(key);
     if (!state) return;
 
     const rKey = rowKey(row);
-    const original = row.text?.[lang] ?? '';
+    const baseRow = state.entry.rows.find((candidate) => rowKey(candidate) === rKey);
+    const original = baseRow?.text?.[lang] ?? row.text?.[lang] ?? '';
     let byLang = state.edits.get(rKey);
     if (text === original) {
       if (byLang) {
         byLang.delete(lang);
-        if (byLang.size === 0) state.edits.delete(rKey);
+        if (byLang.size === 0) {
+          state.edits.delete(rKey);
+        }
       }
+      state.divergentRows.delete(rKey);
     } else {
       if (!byLang) {
         byLang = new Map();
         state.edits.set(rKey, byLang);
       }
       byLang.set(lang, text);
+      if (divergent === true) state.divergentRows.add(rKey);
+      else if (divergent === false) state.divergentRows.delete(rKey);
     }
     this.touch(key, state.edits.size > 0);
   }
@@ -180,6 +190,18 @@ class EditDraftStore {
     source = ''
   ): string | undefined {
     return this.editTextOf(version, kind, id, rowKey(row), lang, source);
+  }
+
+  isDivergent(
+    version: GameVersionId,
+    kind: EntryKind,
+    id: string,
+    row: dto.TextRow,
+    source = ''
+  ): boolean {
+    const state = this.states.get(draftKey(version, kind, id, source));
+    const rKey = rowKey(row);
+    return !!state?.divergentRows.has(rKey) && (state.edits.get(rKey)?.size ?? 0) > 0;
   }
 
   /**
@@ -264,7 +286,10 @@ class EditDraftStore {
           }
           if (newUnclosedFragment(original, current) !== null) unclosed += 1;
         }
-        if (byLang.size === 0) state.edits.delete(rKey);
+        if (byLang.size === 0) {
+          state.edits.delete(rKey);
+          state.divergentRows.delete(rKey);
+        }
       }
       if (state.edits.size === 0) touched = true;
     }
@@ -364,6 +389,10 @@ class EditDraftStore {
         name: row.name,
         hash: row.hash,
         text,
+        divergent:
+          (edits?.size ?? 0) > 0 && state.divergentRows.has(rowKey(row))
+            ? true
+            : undefined,
       });
     });
     return dto.FileEntry.createFrom({ metadata: state.entry.metadata, rows });
