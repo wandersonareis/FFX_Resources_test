@@ -74,22 +74,7 @@ func main() {
 
 func showMainMenu() {
 	// ===== EXEMPLOS BÁSICOS =====
-	ExportMacroDictionaryExample() // Exemplo de exportação de dicionário de macros (JSON com metadados)
-	// ExampleJSONEditorUsage()
-
-	// ===== WORKFLOWS COMPLETOS =====
-	// ExampleCompleteJSONWorkflow()
-	// ===== EDIÇÃO DIRECIONADA =====
-	//writer.WriteStringsEventForAllLocalizationsJSON("znkd1500", true)
-	//ExportMacroDictionaryExample()           // Exemplo de exportação de dicionário de macros
-	writer.ExportAllLocalizationsToJSON() // Exporta todos os eventos para JSON
-	//writer.WriteStringsEventForAllLocalizationsJSON("akagi0100", true) // Exporta o evento "akagi0100" para JSON
+	ExportMacroDictionaryExample()
+	writer.ExportAllLocalizationsToJSON()
 	writer.ExportMacroDictionaryToJSON()
-	//reader.EditAndSaveMacroDictJSONFiles(true) // Exemplo de fluxo completo de exportação/importação
-	//event.ExportEventStringsToLocalizations(common.CurrentGameVersion(), "znkd1500") // Fluxo novo: exporta/reconstrói o evento via fileFormats/event
-	// ===== WORKFLOW JSON =====
-	// demoWorkflowJSON()
-	// exemploEditorEspecificoDemo()	// ===== EXEMPLO ATIVO (descomente para testar) =====
-	// Exemplo básico ativo para teste:
-	// ExampleSpecificEventJSONEdit("ev001") // Testando a nova função
 }
