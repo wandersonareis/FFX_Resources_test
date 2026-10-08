@@ -33,6 +33,19 @@ type ProgressService struct {
 	lastEmit    time.Time
 }
 
+// ProgressEvent é o payload serializável enviado ao frontend. Os campos
+// exportados e as tags JSON são necessários para que Wails transmita os
+// contadores junto com os eventos de progresso.
+type ProgressEvent struct {
+	Label       string `json:"label"`
+	Total       int    `json:"total"`
+	Processed   int    `json:"processed"`
+	Percentage  int    `json:"percentage"`
+	CurrentItem string `json:"currentItem"`
+	IssueCount  int    `json:"issueCount"`
+	Done        bool   `json:"done"`
+}
+
 const (
 	// progressEmitThrottle é a cadência máxima de eventos Progress (10/s).
 	progressEmitThrottle = 100 * time.Millisecond
@@ -92,18 +105,50 @@ func (p *ProgressService) Step(item string) {
 	p.publish(false)
 }
 
+func (p *ProgressService) SetTotal(total int) {
+	p.mu.Lock()
+	if !p.enabled {
+		p.mu.Unlock()
+		return
+	}
+	p.total = total
+	if total > 0 {
+		p.percentage = min(100, p.processed*100/total)
+	}
+	p.mu.Unlock()
+	p.publish(false)
+}
+
 // Issue registra um item pulado por erro não-catastrófico: sempre no
 // arquivo de diagnóstico (lista completa); toast individual com cap
 // anti-flood por ciclo.
 func (p *ProgressService) Issue(item, message string) {
 	p.mu.Lock()
-	p.issueCount++
+	active := p.enabled
+	if active {
+		p.issueCount++
+		if item != "" {
+			p.processed++
+			p.currentItem = item
+		}
+		if p.total > 0 {
+			p.percentage = min(100, p.processed*100/p.total)
+		}
+	}
 	count := p.issueCount
+	now := time.Now()
+	emit := active && now.Sub(p.lastEmit) >= progressEmitThrottle
+	if emit {
+		p.lastEmit = now
+	}
 	p.mu.Unlock()
 
 	loggingService.DiagWarn("carga/"+item, message, map[string]any{"item": item})
 	if count <= maxIssueToasts && p.notifier != nil {
 		p.notifier.NotifyWarn(message)
+	}
+	if emit {
+		p.publish(false)
 	}
 }
 
@@ -113,11 +158,12 @@ func (p *ProgressService) End() {
 	p.mu.Lock()
 	enabled := p.enabled
 	p.enabled = false
+	snapshot := p.snapshotLocked(true)
 	p.mu.Unlock()
 	if !enabled || isEmptyContext(p.ctx) {
 		return
 	}
-	runtime.EventsEmit(p.ctx, "Progress", p)
+	runtime.EventsEmit(p.ctx, "Progress", snapshot)
 	runtime.EventsEmit(p.ctx, "ShowProgress", false)
 }
 
@@ -128,7 +174,25 @@ func (p *ProgressService) publish(show bool) {
 	if show {
 		runtime.EventsEmit(p.ctx, "ShowProgress", true)
 	}
-	runtime.EventsEmit(p.ctx, "Progress", p)
+	runtime.EventsEmit(p.ctx, "Progress", p.snapshot(false))
+}
+
+func (p *ProgressService) snapshot(done bool) ProgressEvent {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.snapshotLocked(done)
+}
+
+func (p *ProgressService) snapshotLocked(done bool) ProgressEvent {
+	return ProgressEvent{
+		Label:       p.label,
+		Total:       p.total,
+		Processed:   p.processed,
+		Percentage:  p.percentage,
+		CurrentItem: p.currentItem,
+		IssueCount:  p.issueCount,
+		Done:        done,
+	}
 }
 
 // stateSnapshot expõe o estado corrente para testes (sem tocar no wails).

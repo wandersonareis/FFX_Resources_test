@@ -31,7 +31,9 @@ import (
 
 	"ffxresources/backend/builders"
 	"ffxresources/backend/common"
+	coreprogress "ffxresources/backend/core/progress"
 	"ffxresources/backend/dto"
+	"ffxresources/backend/fileFormats/ddsphyre"
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/fileFormats/eventtable"
 	"ffxresources/backend/fileFormats/helpfile"
@@ -699,9 +701,270 @@ func (s *MetadataService) GetVbfImageEntry(vbfPath, innerPath string) (dto.Image
 		return dto.ImageEntry{}, fmt.Errorf("não é uma textura do app: %s", cleanVbfPath(innerPath))
 	}
 
-	return vbfRun(a, t, innerPath, func() (dto.ImageEntry, error) {
+	entry, err := vbfRun(a, t, innerPath, func() (dto.ImageEntry, error) {
 		return s.GetImageFrom(t.Kind, t.ID, t.Version, common.SourceVbf)
 	})
+	if err != nil {
+		return dto.ImageEntry{}, err
+	}
+	if raw, readErr := a.Read(cleanVbfPath(innerPath)); readErr == nil {
+		effectiveRaw := raw
+		if mods, modsErr := common.NewFileAccessorFrom(ddsphyre.RelPath(t.Version, t.ID), common.SourceMods); modsErr == nil && mods.Exists {
+			if bytes, bytesErr := mods.ReadBytes(); bytesErr == nil {
+				effectiveRaw = bytes
+			}
+		}
+		entry.Duplicates, entry.DupPayload = vbfImageDuplicatesFor(vbfPath, innerPath, t, raw, effectiveRaw)
+	}
+	return entry, nil
+}
+
+// ImportVbfImage lê o container original do .vbf, repacka o DDS escolhido e
+// grava o resultado em mods/. O .vbf permanece somente leitura.
+func (s *MetadataService) ImportVbfImage(vbfPath, innerPath, ddsPath string) error {
+	a, target, err := s.vbfTargetOf(vbfPath, innerPath)
+	if err != nil {
+		return err
+	}
+	if target.Kind != KindImages {
+		return fmt.Errorf("não é uma textura do app: %s", cleanVbfPath(innerPath))
+	}
+	if !ddsphyre.ValidID(target.ID) {
+		return fmt.Errorf("textura desconhecida: %s", target.ID)
+	}
+	if err := ensureVersionReady(target.Version); err != nil {
+		return err
+	}
+	original, err := a.Read(cleanVbfPath(innerPath))
+	if err != nil {
+		return fmt.Errorf("lendo textura do .vbf: %w", err)
+	}
+	dds, err := os.ReadFile(ddsPath)
+	if err != nil {
+		return fmt.Errorf("lendo %s: %w", filepath.Base(ddsPath), err)
+	}
+	if err := ddsphyre.ImportPayloadFrom(target.Version, target.ID, original, dds); err != nil {
+		return err
+	}
+	ddsphyre.InvalidateIndex(target.Version)
+	if _, err := ddsphyre.Extract(target.Version, target.ID); err != nil {
+		common.LogWarning("images %s/%s: import do .vbf ok, mas não atualizei os .dds/.png extraídos: %v", target.Version, target.ID, err)
+	}
+	vbfSessionResetAll()
+	if s != nil && s.notifier != nil {
+		s.notifier.NotifyInfo(fmt.Sprintf("Imagem importada para mods/: %s", target.ID))
+	}
+	return nil
+}
+
+// SaveVbfImage salva DDS ou PNG da imagem atualmente servida pelo .vbf, sem
+// escrever no container nem depender de a árvore data/ estar extraída.
+func (s *MetadataService) SaveVbfImage(vbfPath, innerPath, format, destPath string) error {
+	a, target, err := s.vbfTargetOf(vbfPath, innerPath)
+	if err != nil {
+		return err
+	}
+	if target.Kind != KindImages {
+		return fmt.Errorf("não é uma textura do app: %s", cleanVbfPath(innerPath))
+	}
+	if !ddsphyre.ValidID(target.ID) {
+		return fmt.Errorf("textura desconhecida: %s", target.ID)
+	}
+	resolved, err := vbfRun(a, target, innerPath, func() (*ddsphyre.Resolved, error) {
+		return ddsphyre.ResolveFrom(target.Version, target.ID, common.SourceVbf)
+	})
+	if err != nil {
+		return err
+	}
+	var payload []byte
+	switch strings.ToLower(strings.TrimSpace(format)) {
+	case "dds":
+		payload = resolved.DDS
+		if payload == nil && resolved.Texture != nil {
+			payload, err = resolved.Texture.ExtractToDDS()
+		}
+	case "png":
+		payload = resolved.PNG
+	default:
+		return fmt.Errorf("formato %q inválido (esperado dds ou png)", format)
+	}
+	if err != nil {
+		return err
+	}
+	if len(payload) == 0 {
+		return fmt.Errorf("imagem %s: conteúdo %s indisponível", target.ID, format)
+	}
+	if err := common.CheckWritablePath(destPath); err != nil {
+		return err
+	}
+	if err := common.EnsurePathExists(destPath); err != nil {
+		return err
+	}
+	return os.WriteFile(destPath, payload, 0o644)
+}
+
+// ReplicateVbfImage propaga o DDS visível da imagem aberta no .vbf para as
+// cópias que também foram abertas e identificadas na sessão. O container é
+// apenas lido; cada repack é gravado em mods/.
+func (s *MetadataService) ReplicateVbfImage(vbfPath, sourcePath string, targetPaths []string) (dto.BatchResult, error) {
+	a, source, err := s.vbfTargetOf(vbfPath, sourcePath)
+	if err != nil {
+		return dto.BatchResult{}, err
+	}
+	if source.Kind != KindImages || !ddsphyre.ValidID(source.ID) {
+		return dto.BatchResult{}, fmt.Errorf("não é uma textura válida do .vbf: %s", cleanVbfPath(sourcePath))
+	}
+
+	archiveKey := filepath.Clean(vbfPath)
+	type vbfReplicaTarget struct {
+		target vbfTarget
+		path   string
+	}
+	selection := make([]vbfReplicaTarget, 0, len(targetPaths))
+	seen := make(map[string]struct{}, len(targetPaths))
+	vbfImageDedup.Lock()
+	opened := vbfImageDedup.byArchive[archiveKey]
+	sourceOpened, sourceWasOpened := opened[cleanVbfPath(sourcePath)]
+	if !sourceWasOpened {
+		vbfImageDedup.Unlock()
+		return dto.BatchResult{}, fmt.Errorf("abra a imagem do .vbf antes de replicá-la")
+	}
+	for _, path := range targetPaths {
+		key := cleanVbfPath(path)
+		if key == cleanVbfPath(sourcePath) {
+			continue
+		}
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		candidate, wasOpened := opened[key]
+		if !wasOpened || candidate.originalHash != sourceOpened.originalHash {
+			vbfImageDedup.Unlock()
+			return dto.BatchResult{}, fmt.Errorf("replicação recusada: %s não é uma cópia já identificada de %s", key, source.ID)
+		}
+		target, ok := matchVbfPath(filepath.Base(vbfPath), key)
+		if !ok || target.Kind != KindImages || target.Version != source.Version || !ddsphyre.ValidID(target.ID) {
+			vbfImageDedup.Unlock()
+			return dto.BatchResult{}, fmt.Errorf("alvo de replicação inválido no .vbf: %s", key)
+		}
+		seen[key] = struct{}{}
+		selection = append(selection, vbfReplicaTarget{target: target, path: key})
+	}
+	vbfImageDedup.Unlock()
+	if len(selection) == 0 {
+		return dto.BatchResult{}, fmt.Errorf("textura %s não tem cópias abertas para replicar", source.ID)
+	}
+
+	resolved, err := vbfRun(a, source, sourcePath, func() (*ddsphyre.Resolved, error) {
+		return ddsphyre.ResolveFrom(source.Version, source.ID, common.SourceVbf)
+	})
+	if err != nil {
+		return dto.BatchResult{}, fmt.Errorf("lendo imagem %s do .vbf: %w", source.ID, err)
+	}
+	dds := resolved.DDS
+	if dds == nil && resolved.Texture != nil {
+		dds, err = resolved.Texture.ExtractToDDS()
+	}
+	if err != nil || dds == nil {
+		if err == nil {
+			err = fmt.Errorf("DDS indisponível")
+		}
+		return dto.BatchResult{}, fmt.Errorf("textura %s: %w", source.ID, err)
+	}
+
+	result := dto.BatchResult{Done: []string{}, Failed: []string{}, Total: len(selection)}
+	coreprogress.Begin(fmt.Sprintf("Replicando para %d cópia(s)", len(selection)), len(selection))
+	defer coreprogress.End()
+	for _, replica := range selection {
+		target := replica.target
+		original, readErr := a.Read(replica.path)
+		if readErr == nil {
+			readErr = ddsphyre.ImportPayloadFrom(target.Version, target.ID, original, dds)
+		}
+		if readErr != nil {
+			result.Failed = append(result.Failed, target.ID+": "+readErr.Error())
+			coreprogress.Issue(target.ID, readErr.Error())
+			continue
+		}
+		if _, extractErr := ddsphyre.Extract(target.Version, target.ID); extractErr != nil {
+			common.LogWarning("vbf images %s/%s: replicação ok, mas falhou a atualização dos .dds/.png: %v", target.Version, target.ID, extractErr)
+		}
+		result.Done = append(result.Done, target.ID)
+		coreprogress.Step(target.ID)
+	}
+	if len(result.Done) > 0 {
+		ddsphyre.InvalidateIndex(source.Version)
+		vbfSessionResetAll()
+		if s != nil && s.notifier != nil {
+			s.notifier.NotifyInfo(fmt.Sprintf("Imagem do .vbf replicada em %d de %d cópia(s)", len(result.Done), result.Total))
+		}
+	}
+	return result, nil
+}
+
+type openedVbfImage struct {
+	id            string
+	path          string
+	originalHash  string
+	effectiveHash string
+}
+
+var vbfImageDedup = struct {
+	sync.Mutex
+	byArchive map[string]map[string]openedVbfImage
+}{byArchive: make(map[string]map[string]openedVbfImage)}
+
+// Dedupe do .vbf é incremental: só compara imagens que já foram abertas por
+// clique nesta sessão/container. Não força uma varredura completa do arquivo.
+func vbfImageDuplicatesFor(vbfPath, innerPath string, target vbfTarget, raw, effectiveRaw []byte) ([]dto.ImageDuplicate, int64) {
+	hash, size, err := ddsphyre.PayloadHash(raw)
+	if err != nil {
+		common.LogWarning("vbf images %s: payload inválido para dedupe: %v", target.ID, err)
+		return []dto.ImageDuplicate{}, 0
+	}
+	effectiveHash, _, err := ddsphyre.PayloadHash(effectiveRaw)
+	if err != nil {
+		common.LogWarning("vbf images %s: payload efetivo inválido para dedupe: %v", target.ID, err)
+		return []dto.ImageDuplicate{}, size
+	}
+	archiveKey := filepath.Clean(vbfPath)
+	pathKey := cleanVbfPath(innerPath)
+	vbfImageDedup.Lock()
+	defer vbfImageDedup.Unlock()
+	opened := vbfImageDedup.byArchive[archiveKey]
+	if opened == nil {
+		opened = make(map[string]openedVbfImage)
+		vbfImageDedup.byArchive[archiveKey] = opened
+	}
+	opened[pathKey] = openedVbfImage{
+		id:            target.ID,
+		path:          pathKey,
+		originalHash:  hash,
+		effectiveHash: effectiveHash,
+	}
+
+	duplicates := make([]dto.ImageDuplicate, 0)
+	for path, candidate := range opened {
+		if path == pathKey || candidate.originalHash != hash {
+			continue
+		}
+		_, modded := ddsphyre.Exists(target.Version, candidate.id)
+		duplicates = append(duplicates, dto.ImageDuplicate{
+			ID:        candidate.id,
+			Key:       dto.NewImageMetadata(candidate.id, target.Version).Key,
+			VbfPath:   candidate.path,
+			Modded:    modded,
+			Identical: candidate.effectiveHash == effectiveHash,
+		})
+	}
+	sort.Slice(duplicates, func(i, j int) bool { return duplicates[i].ID < duplicates[j].ID })
+	return duplicates, size
+}
+
+func clearVbfImageDedup() {
+	vbfImageDedup.Lock()
+	vbfImageDedup.byArchive = make(map[string]map[string]openedVbfImage)
+	vbfImageDedup.Unlock()
 }
 
 // ---------------------------------------------------------------------------

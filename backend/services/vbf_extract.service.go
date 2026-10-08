@@ -32,6 +32,7 @@ import (
 	"ffxresources/backend/common"
 	coreprogress "ffxresources/backend/core/progress"
 	"ffxresources/backend/dto"
+	"ffxresources/backend/fileFormats/ddsphyre"
 	"ffxresources/backend/fileFormats/helpfile"
 	"ffxresources/backend/fileFormats/vbf"
 	jsonfmt "ffxresources/backend/formatters/json"
@@ -283,6 +284,100 @@ func (s *MetadataService) ExtractVbfSelection(vbfPath string, paths []string, de
 	return out, nil
 }
 
+// ExtractVbfImagesSelection decodifica somente as imagens escolhidas (ou
+// encontradas sob diretórios marcados) e grava DDS/PNG em
+// destRoot/<caminho-interno-no-vbf>, sem alterar o container.
+// destRoot vazio usa mods/edits/images, o destino padrão dos artefatos de
+// trabalho quando uma imagem é extraída da árvore data/.
+func (s *MetadataService) ExtractVbfImagesSelection(vbfPath string, paths []string, destRoot string) (dto.BatchResult, error) {
+	a, err := vbfArchiveFor(vbfPath)
+	if err != nil {
+		return dto.BatchResult{}, err
+	}
+	entries, err := expandVbfSelection(a, paths)
+	if err != nil {
+		return dto.BatchResult{}, err
+	}
+	base := filepath.Base(vbfPath)
+	images := make([]vbf.Entry, 0, len(entries))
+	for _, entry := range entries {
+		target, ok := matchVbfPath(base, entry.Path)
+		if ok && target.Kind == KindImages {
+			images = append(images, entry)
+		}
+	}
+	out := dto.BatchResult{Done: []string{}, Failed: []string{}, Total: len(images)}
+	if len(images) == 0 {
+		return out, nil
+	}
+	if strings.TrimSpace(destRoot) == "" {
+		destRoot = filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "images")
+	}
+	if err := common.EnsurePathExists(destRoot); err != nil {
+		return dto.BatchResult{}, fmt.Errorf("criando destino %s: %w", destRoot, err)
+	}
+
+	coreprogress.Begin(fmt.Sprintf("Extraindo %d imagem(ns) de %s", len(images), base), len(images))
+	defer coreprogress.End()
+	for _, entry := range images {
+		raw, err := a.Read(entry.Path)
+		if err != nil {
+			out.Failed = append(out.Failed, entry.Path+": "+err.Error())
+			coreprogress.Issue(entry.Path, err.Error())
+			continue
+		}
+		texture, err := ddsphyre.Parse(raw)
+		if err != nil {
+			out.Failed = append(out.Failed, entry.Path+": "+err.Error())
+			coreprogress.Issue(entry.Path, err.Error())
+			continue
+		}
+		dds, err := texture.ExtractToDDS()
+		if err != nil {
+			out.Failed = append(out.Failed, entry.Path+": "+err.Error())
+			coreprogress.Issue(entry.Path, err.Error())
+			continue
+		}
+		png, err := ddsphyre.DDSToPNG(dds)
+		if err != nil {
+			out.Failed = append(out.Failed, entry.Path+": "+err.Error())
+			coreprogress.Issue(entry.Path, err.Error())
+			continue
+		}
+		if !strings.HasSuffix(strings.ToLower(entry.Path), strings.ToLower(ddsphyre.Suffix)) {
+			err = fmt.Errorf("caminho de imagem inválido no .vbf: %s", entry.Path)
+		} else {
+			stem := entry.Path[:len(entry.Path)-len(ddsphyre.Suffix)]
+			err = writeVbfImageArtifact(destRoot, stem+".dds", dds)
+			if err == nil {
+				err = writeVbfImageArtifact(destRoot, stem+".png", png)
+			}
+		}
+		if err != nil {
+			out.Failed = append(out.Failed, entry.Path+": "+err.Error())
+			coreprogress.Issue(entry.Path, err.Error())
+			continue
+		}
+		out.Done = append(out.Done, entry.Path)
+		coreprogress.Step(entry.Path)
+	}
+	return out, nil
+}
+
+func writeVbfImageArtifact(destRoot, innerPath string, data []byte) error {
+	target, err := vbfExtractTarget(destRoot, innerPath, true)
+	if err != nil {
+		return err
+	}
+	if err := common.CheckWritablePath(target); err != nil {
+		return err
+	}
+	if err := os.WriteFile(target, data, 0o644); err != nil {
+		return fmt.Errorf("gravando %s: %w", filepath.Base(target), err)
+	}
+	return nil
+}
+
 // ExportVbfSelection decodifica os kinds de TEXTO da seleção e grava os
 // artefatos JSON ou .strings em mods/edits — mesmo lugar, mesma convenção
 // de nomes do export de data/. Arquivos fora do escopo do app (áudio,
@@ -338,7 +433,9 @@ func (s *MetadataService) ExportVbfSelection(vbfPath, format string, paths []str
 			map[string]any{"count": len(skipped), "first": skipped[0]})
 	}
 	if len(byKind) == 0 {
-		return nil, fmt.Errorf("nenhum arquivo de texto do app na seleção — use Extrair binário para formatos fora do escopo")
+		// Pastas e arquivos fora dos kinds de texto são seleções válidas; a
+		// ação de texto simplesmente não produz saída para eles.
+		return []string{}, nil
 	}
 
 	// Versão do container (um .vbf só tem conteúdo de uma árvore).
@@ -352,7 +449,11 @@ func (s *MetadataService) ExportVbfSelection(vbfPath, format string, paths []str
 		KindEvents, KindBattleText, KindCloud, KindTutorial, KindMenuMain,
 		KindHelp, KindMacro, KindObjects, KindLockit,
 	}
-	coreprogress.Begin(fmt.Sprintf("Exportando %s", base), 0)
+	selectedCount := 0
+	for _, selected := range byKind {
+		selectedCount += len(selected)
+	}
+	coreprogress.Begin(fmt.Sprintf("Extraindo texto de %s", base), selectedCount)
 	defer coreprogress.End()
 	var written []string
 	for _, kind := range order {
@@ -390,6 +491,7 @@ func (s *MetadataService) ExportVbfSelection(vbfPath, format string, paths []str
 			macroPath := selected[""]
 			chunks, cerr := s.ListVbfMacroChunks(vbfPath, macroPath)
 			if cerr != nil {
+				coreprogress.Issue(kind, cerr.Error())
 				return written, fmt.Errorf("listando chunks de macro do .vbf: %w", cerr)
 			}
 			ids = ids[:0]
@@ -426,6 +528,7 @@ func (s *MetadataService) ExportVbfSelection(vbfPath, format string, paths []str
 		}
 		outputs, werr := writeVbfExport(kind, version, ids, collection, format, langs)
 		if werr != nil {
+			coreprogress.Issue(kind, werr.Error())
 			return written, fmt.Errorf("export %s do .vbf: %w", kind, werr)
 		}
 		written = append(written, outputs...)

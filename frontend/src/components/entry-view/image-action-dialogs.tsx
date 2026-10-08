@@ -7,10 +7,13 @@ import { AlertTriangle, Download, Info, Trash2 } from 'lucide-react';
 import type { dto } from '@/wailsjs/go/models';
 import { resolveEntryLabel } from '@/lib/ffx/display-names';
 import { parseError } from '@/lib/ffx/error-handler';
+import { exportSelection } from '@/lib/ffx/export-selection';
 import {
+  deleteImageSelection,
   deleteImages,
   extractImageGroup,
   imageDuplicates,
+  imageSelectionCopies,
   replicateImage,
 } from '@/lib/ffx/tree-data';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -28,8 +31,10 @@ import {
 import { Label } from '@/components/ui/label';
 import { copyState } from './image-duplicates';
 import type { EntryView, ImageActionState } from './entry-view-store';
+import { invalidateVbfImage, replicateVbfImage } from '@/lib/ffx/vbf';
 
 type ActionProps = { view: EntryView; action: ImageActionState };
+const EMPTY_IMAGE_IDS: string[] = [];
 
 /**
  * Diálogos das ações de imagem (extrair / replicar / deletar).
@@ -47,6 +52,14 @@ export function ImageActionDialogs({ view }: { view: EntryView }) {
       return <ExtractImageDialog view={view} action={action} />;
     case 'replicate':
       return <ReplicateImageDialog view={view} action={action} />;
+    case 'delete-selection':
+      return (
+        <DeleteImageSelectionDialog
+          key={`${view.version}:${action.ids?.join('\0') ?? ''}`}
+          view={view}
+          action={action}
+        />
+      );
     default:
       return <DeleteImageDialog view={view} action={action} />;
   }
@@ -141,6 +154,8 @@ function ExtractImageDialog({ view, action }: ActionProps) {
   const list = useActionDuplicates(view, action);
   const [busy, setBusy] = useState(false);
   const copies = list ?? [];
+  const divergent = copies.filter((d) => !d.identical).length;
+  const identical = copies.length - divergent;
   const close = () => actions.closeImageAction();
 
   const run = async (targets: string[]) => {
@@ -164,7 +179,7 @@ function ExtractImageDialog({ view, action }: ActionProps) {
         if (!open && !busy) close();
       }}
     >
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg" showCloseButton={!busy}>
         <DialogHeader>
           <DialogTitle>Extrair {action.label}?</DialogTitle>
           <DialogDescription>
@@ -183,9 +198,15 @@ function ExtractImageDialog({ view, action }: ActionProps) {
           <>
             <p className="text-sm">
               Esta imagem tem {copies.length} cópia
-              {copies.length > 1 ? 's' : ''} idêntica
-              {copies.length > 1 ? 's' : ''} — extrair todas deixa os arquivos
-              lado a lado para conferir a duplicata.
+              {copies.length > 1 ? 's' : ''}:{' '}
+              {identical > 0
+                ? `${identical} idêntica${identical > 1 ? 's' : ''}${divergent > 0 ? ' e ' : ''}`
+                : ''}
+              {divergent > 0
+                ? `${divergent} com edição própria (divergente${divergent > 1 ? 's' : ''})`
+                : ''}
+              {' '}— extrair todas deixa os arquivos lado a lado para conferir
+              a duplicata.
             </p>
             <DuplicateList id={action.id} list={copies} />
           </>
@@ -231,13 +252,27 @@ function ReplicateImageDialog({ view, action }: ActionProps) {
   const run = async () => {
     setBusy(true);
     try {
-      const res = await replicateImage(
-        action.id,
-        copies.map((d) => d.id),
-        version
-      );
+      const res = action.vbf
+        ? await replicateVbfImage(
+            action.vbf.root,
+            action.vbf.path,
+            copies.map((d) => d.vbfPath ?? '').filter(Boolean)
+          )
+        : await replicateImage(
+            action.id,
+            copies.map((d) => d.id),
+            version
+          );
       reportBatch(res, 'Replicada', 'Replicadas');
-      await actions.reload();
+      if (action.vbf) {
+        invalidateVbfImage(action.vbf.root, action.vbf.path);
+        const selected = view.store.state.selectedEntry;
+        if (selected?.vbf?.root === action.vbf.root && selected.id === action.id) {
+          await actions.selectEntry(selected);
+        }
+      } else {
+        await actions.reload();
+      }
       close();
     } catch (error) {
       toast.error(parseError(error));
@@ -263,10 +298,9 @@ function ReplicateImageDialog({ view, action }: ActionProps) {
             ?
           </DialogTitle>
           <DialogDescription>
-            O conteúdo já carregado é reempacotado sobre o container pristine
-            de cada cópia e gravado em mods/. Nenhum arquivo é escolhido: a
-            fonte é a própria imagem na tela, e a textura de origem não é
-            tocada.
+            {action.vbf
+              ? 'A imagem lida do .vbf é reempacotada sobre o binário original de cada cópia e gravada em mods/. O container .vbf não é alterado.'
+              : 'O conteúdo já carregado é reempacotado sobre o container pristine de cada cópia e gravado em mods/. Nenhum arquivo é escolhido: a fonte é a própria imagem na tela, e a textura de origem não é tocada.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -365,6 +399,7 @@ function DeleteImageDialog({ view, action }: ActionProps) {
   const [busy, setBusy] = useState(false);
   const copies = list ?? [];
   const targets = withCopies ? copies.map((d) => d.id) : [];
+  const divergent = copies.filter((d) => !d.identical).length;
   const close = () => actions.closeImageAction();
 
   const run = async () => {
@@ -436,18 +471,32 @@ function DeleteImageDialog({ view, action }: ActionProps) {
         </fieldset>
 
         {copies.length > 0 ? (
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="delete-copies"
-              checked={withCopies}
-              onCheckedChange={(value) => setWithCopies(value === true)}
-            />
-            <Label htmlFor="delete-copies" className="cursor-pointer text-sm">
-              Apagar também as {copies.length} cópia
-              {copies.length > 1 ? 's' : ''} idêntica
-              {copies.length > 1 ? 's' : ''}
-            </Label>
-          </div>
+          <>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="delete-copies"
+                checked={withCopies}
+                onCheckedChange={(value) => setWithCopies(value === true)}
+              />
+              <Label htmlFor="delete-copies" className="cursor-pointer text-sm">
+                Apagar também as {copies.length} cópia
+                {copies.length > 1 ? 's' : ''}
+              </Label>
+            </div>
+            {withCopies && divergent > 0 ? (
+              <Alert variant="warning">
+                <AlertTriangle />
+                <AlertTitle>
+                  {divergent} cópia{divergent > 1 ? 's' : ''} diverge
+                  {divergent > 1 ? 'm' : ''} do original
+                </AlertTitle>
+                <AlertDescription>
+                  Estão divergentes porque foram editadas em separado — a
+                  edição delas também será apagada.
+                </AlertDescription>
+              </Alert>
+            ) : null}
+          </>
         ) : (
           <p className="text-sm opacity-70">Imagem única: sem cópias.</p>
         )}
@@ -467,6 +516,174 @@ function DeleteImageDialog({ view, action }: ActionProps) {
               : `Deletar ${targets.length + 1} textura${
                   targets.length > 0 ? 's' : ''
                 }`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteImageSelectionDialog({ view, action }: ActionProps) {
+  const { version, actions } = view;
+  const ids = action.ids ?? EMPTY_IMAGE_IDS;
+  const [scope, setScope] = useState<'both' | 'data' | 'mods'>('both');
+  const [withCopies, setWithCopies] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [copyIDs, setCopyIDs] = useState<string[]>([]);
+  const [duplicatesReady, setDuplicatesReady] = useState(false);
+  const [copyLookupError, setCopyLookupError] = useState<string | null>(null);
+  const close = () => actions.closeImageAction();
+
+  useEffect(() => {
+    let cancelled = false;
+    void imageSelectionCopies(ids, version)
+      .then((copies) => {
+        if (cancelled) return;
+        setCopyIDs(copies ?? []);
+        setDuplicatesReady(true);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setCopyIDs([]);
+        setCopyLookupError(parseError(error));
+        setDuplicatesReady(true);
+        toast.error(parseError(error));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ids, version]);
+
+  const targets = withCopies ? copyIDs : [];
+  const deleteCount = ids.length + targets.length;
+  const run = async () => {
+    if (ids.length === 0) return;
+    setBusy(true);
+    try {
+      const res = await deleteImageSelection(ids, withCopies, scope, version);
+      reportBatch(res, 'Apagada', 'Apagadas');
+      exportSelection.setMany(version, 'images', res.done ?? [], false);
+      await actions.reload();
+      close();
+    } catch (error) {
+      toast.error(parseError(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !busy) close();
+      }}
+    >
+      <DialogContent className="sm:max-w-lg" showCloseButton={!busy}>
+        <DialogHeader>
+          <DialogTitle>
+            Deletar {ids.length} {ids.length === 1 ? 'imagem selecionada' : 'imagens selecionadas'}?
+          </DialogTitle>
+          <DialogDescription>
+            O escopo escolhido será aplicado a todas as imagens selecionadas.
+            As cópias só serão incluídas se a opção abaixo estiver marcada.
+          </DialogDescription>
+        </DialogHeader>
+
+        <Alert variant="destructive">
+          <AlertTriangle />
+          <AlertTitle>Irreversível</AlertTitle>
+          <AlertDescription>
+            Os arquivos são removidos do disco, fora da lixeira, e não há
+            desfazer. Os `.dds` e `.png` extraídos também serão apagados.
+          </AlertDescription>
+        </Alert>
+
+        <fieldset className="space-y-1.5">
+          <legend className="mb-1 text-xs uppercase tracking-wide opacity-60">
+            Escopo para todas as selecionadas
+          </legend>
+          {DELETE_SCOPES.map((option) => (
+            <label
+              key={option.value}
+              className={`flex cursor-pointer items-start gap-2 rounded border p-2 text-sm ${
+                scope === option.value
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border'
+              }`}
+            >
+              <input
+                type="radio"
+                name="image-delete-selection-scope"
+                className="mt-0.5"
+                checked={scope === option.value}
+                onChange={() => setScope(option.value)}
+              />
+              <span className="min-w-0">
+                <span className="block font-medium">{option.title}</span>
+                <span className="block text-xs opacity-70">{option.hint}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+
+        {duplicatesReady ? (
+          copyLookupError ? (
+            <Alert variant="warning">
+              <AlertTriangle />
+              <AlertTitle>Não foi possível verificar as cópias</AlertTitle>
+              <AlertDescription>
+                A confirmação ainda pode apagar somente as imagens marcadas.
+                Cópias adicionais não serão incluídas.
+              </AlertDescription>
+            </Alert>
+          ) : copyIDs.length > 0 ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="delete-selection-copies"
+                  checked={withCopies}
+                  onCheckedChange={(value) => setWithCopies(value === true)}
+                />
+                <Label htmlFor="delete-selection-copies" className="cursor-pointer text-sm">
+                  Apagar também {copyIDs.length} cópia
+                  {copyIDs.length === 1 ? '' : 's'} adicional
+                  {copyIDs.length === 1 ? '' : 'is'}
+                </Label>
+              </div>
+              {withCopies ? (
+                <Alert variant="warning">
+                  <AlertTriangle />
+                  <AlertTitle>
+                    {targets.length} cópia(s) adicionais serão incluídas
+                  </AlertTitle>
+                  <AlertDescription>
+                    Cópias podem ter sido editadas separadamente. Todas as
+                    cópias adicionais serão apagadas com o mesmo escopo.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-sm opacity-70">As imagens selecionadas não têm cópias.</p>
+          )
+        ) : (
+          <p className="text-sm opacity-70">Verificando cópias das selecionadas…</p>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" disabled={busy} onClick={close}>
+            Cancelar
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={busy || !duplicatesReady || ids.length === 0}
+            onClick={() => void run()}
+          >
+            <Trash2 size={16} />
+            {busy
+              ? 'Apagando…'
+              : `Deletar ${deleteCount} ${deleteCount === 1 ? 'imagem' : 'imagens'}`}
           </Button>
         </DialogFooter>
       </DialogContent>

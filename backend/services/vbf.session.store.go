@@ -162,6 +162,7 @@ func (s *vbfSession) kind(kind string, version common.GameVersion) *vbfSessionKi
 // O custo é re-decodificar na próxima carga — o comportamento original do
 // fluxo por clique.
 func vbfSessionResetAll() {
+	clearVbfImageDedup()
 	vbfSessionMu.Lock()
 	defer vbfSessionMu.Unlock()
 	vbfSessions = map[string]*vbfSession{}

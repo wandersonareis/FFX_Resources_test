@@ -66,3 +66,11 @@ func End() {
 		r.End()
 	}
 }
+
+// SetTotal atualiza o total quando a operação só consegue conhecê-lo após
+// carregar/filtrar a seleção. Reporters antigos podem omitir este método.
+func SetTotal(total int) {
+	if r, ok := get().(interface{ SetTotal(int) }); ok {
+		r.SetTotal(total)
+	}
+}

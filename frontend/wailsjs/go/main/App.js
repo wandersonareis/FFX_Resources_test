@@ -14,6 +14,10 @@ export function CountChangedTexts(arg1, arg2) {
   return window['go']['main']['App']['CountChangedTexts'](arg1, arg2);
 }
 
+export function DeleteImageSelection(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['DeleteImageSelection'](arg1, arg2, arg3, arg4, arg5);
+}
+
 export function DeleteImages(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['DeleteImages'](arg1, arg2, arg3, arg4, arg5);
 }
@@ -40,6 +44,14 @@ export function ExtractImage(arg1, arg2, arg3) {
 
 export function ExtractImageGroup(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ExtractImageGroup'](arg1, arg2, arg3, arg4);
+}
+
+export function ExtractImageSelection(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ExtractImageSelection'](arg1, arg2, arg3);
+}
+
+export function ExtractVbfImagesSelection(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ExtractVbfImagesSelection'](arg1, arg2, arg3);
 }
 
 export function ExtractVbfSelection(arg1, arg2, arg3) {
@@ -98,6 +110,10 @@ export function ImageExists(arg1, arg2, arg3) {
   return window['go']['main']['App']['ImageExists'](arg1, arg2, arg3);
 }
 
+export function ImageSelectionCopies(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ImageSelectionCopies'](arg1, arg2, arg3);
+}
+
 export function ImportEntry(arg1, arg2, arg3) {
   return window['go']['main']['App']['ImportEntry'](arg1, arg2, arg3);
 }
@@ -112,6 +128,10 @@ export function ImportImage(arg1, arg2, arg3, arg4) {
 
 export function ImportImageGroup(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['ImportImageGroup'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function ImportVbfImage(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ImportVbfImage'](arg1, arg2, arg3);
 }
 
 export function ListLanguages() {
@@ -162,12 +182,20 @@ export function ReplicateImage(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ReplicateImage'](arg1, arg2, arg3, arg4);
 }
 
+export function ReplicateVbfImage(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ReplicateVbfImage'](arg1, arg2, arg3);
+}
+
 export function RevealEntryFile(arg1, arg2, arg3) {
   return window['go']['main']['App']['RevealEntryFile'](arg1, arg2, arg3);
 }
 
 export function SaveImage(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['SaveImage'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function SaveVbfImage(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['SaveVbfImage'](arg1, arg2, arg3, arg4);
 }
 
 export function SelectDirectory(arg1) {
@@ -192,6 +220,10 @@ export function SelectImportFile() {
 
 export function SelectVbfExtractDir() {
   return window['go']['main']['App']['SelectVbfExtractDir']();
+}
+
+export function SelectVbfImageExtractDir() {
+  return window['go']['main']['App']['SelectVbfImageExtractDir']();
 }
 
 export function SetEnableMods(arg1) {

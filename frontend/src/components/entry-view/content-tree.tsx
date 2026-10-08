@@ -1,17 +1,25 @@
 'use client';
 
 import { useCallback, useMemo, useRef, useState } from 'react';
+import { useHotkey } from '@tanstack/react-hotkeys';
 import { loggedToast as toast } from '@/lib/ffx/toast-logged';
 import { RefreshCw } from 'lucide-react';
 import { useSelector } from '@tanstack/react-store';
 import type { EntryKind } from '@/lib/ffx/display-names';
 import {
   entryKindsFor,
+  imageKindsFor,
   exportDestination,
   exportJSON,
   exportStrings,
+  extractImageSelection,
 } from '@/lib/ffx/tree-data';
-import { exportVbfSelection } from '@/lib/ffx/vbf';
+import {
+  exportVbfSelection,
+  extractVbfImagesSelection,
+  invalidateVbfImage,
+  selectVbfImageExtractDir,
+} from '@/lib/ffx/vbf';
 import { parseError } from '@/lib/ffx/error-handler';
 import {
   EXPORT_FORMAT_LABELS,
@@ -24,7 +32,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { EntryActionsMenu, menuTargetOf } from './entry-actions-menu';
 import { VbfExtractDialog, type VbfExtractRequest } from './vbf-extract-dialog';
 import type { EntryView } from './entry-view-store';
-import { entryNodeId, type SideNode } from './types';
+import { entryIdsInNode, entryNodeId, type SideNode } from './types';
 import { TreeItem } from './tree-item';
 
 /**
@@ -40,6 +48,7 @@ export function ContentTree({ view }: { view: EntryView }) {
   const expanded = useSelector(store, (s) => s.expanded);
   const selectedEntry = useSelector(store, (s) => s.selectedEntry);
   const image = useSelector(store, (s) => s.image);
+  const imageAction = useSelector(store, (s) => s.imageAction);
   const loading = useSelector(store, (s) => s.loading);
   const [ctxNode, setCtxNode] = useState<{
     id: string;
@@ -61,11 +70,15 @@ export function ContentTree({ view }: { view: EntryView }) {
   // Seleção de exportação por kind (checkbox tri-state + menu de contexto).
   const selectedByKind = useMemo(() => {
     const out = new Map<EntryKind, ReadonlySet<string>>();
-    for (const kind of entryKindsFor(version)) {
+    for (const kind of [...entryKindsFor(version), ...imageKindsFor(version)]) {
       out.set(kind, new Set(selection.byKind.get(`${version}|${kind}`) ?? []));
     }
     return out;
   }, [selection, version]);
+  const selectedImageIds = useMemo(
+    () => [...(selection.byKind.get(`${version}|images`) ?? [])],
+    [selection, version]
+  );
   // Alvo do menu: o nó clicado (folha leva o id; grupo/raiz, não).
   const ctxTarget = useMemo(() => menuTargetOf(ctxNode), [ctxNode]);
 
@@ -139,15 +152,65 @@ export function ContentTree({ view }: { view: EntryView }) {
         if (root) vbfSelection.set(root, path, checked);
         return;
       }
-      if (!node.kind || node.kind === 'images') return;
-      const ids = node.entry
-        ? [node.entry.id]
-        : (node.children ?? [])
-            .filter((child) => child.entry)
-            .map((child) => child.entry!.id);
+      if (!node.kind) return;
+      const ids = entryIdsInNode(node);
       exportSelection.setMany(version, node.kind, ids, checked);
     },
     [version]
+  );
+
+  const onExtractSelectedImages = useCallback(async () => {
+    if (selectedImageIds.length === 0) {
+      toast.message('Nenhuma imagem marcada para extrair.');
+      return;
+    }
+    try {
+      const result = await extractImageSelection(selectedImageIds, version);
+      if (result.failed.length > 0) {
+        toast.warning(`Extraídas ${result.done.length} de ${result.total} imagens.`, {
+          description: result.failed.slice(0, 3).join('; '),
+        });
+      } else {
+        toast.success(`Extraídas ${result.done.length} imagens selecionadas.`);
+      }
+      await actions.reload();
+    } catch (error) {
+      toast.error(parseError(error));
+    }
+  }, [actions, selectedImageIds, version]);
+
+  const onDeleteSelectedImages = useCallback(() => {
+    if (selectedImageIds.length === 0) return;
+    actions.openImageAction({
+      type: 'delete-selection',
+      id: selectedImageIds[0],
+      ids: selectedImageIds,
+      label: `${selectedImageIds.length} imagens selecionadas`,
+      duplicates: null,
+    });
+  }, [actions, selectedImageIds]);
+
+  useHotkey(
+    'Delete',
+    () => {
+      if (imageAction) return;
+      if (selectedImageIds.length > 0) {
+        onDeleteSelectedImages();
+        return;
+      }
+      if (selectedEntry?.kind !== 'images' || selectedEntry.vbf) return;
+      actions.openImageAction({
+        type: 'delete',
+        id: selectedEntry.id,
+        label: selectedEntry.label,
+        duplicates: image?.duplicates ?? [],
+      });
+    },
+    {
+      enabled: !imageAction &&
+        (selectedImageIds.length > 0 || (selectedEntry?.kind === 'images' && !selectedEntry.vbf)),
+      ignoreInputs: true,
+    }
   );
 
   // Exporta só o que está marcado na árvore de data/, no FORMATO SELECIONADO
@@ -207,6 +270,9 @@ export function ContentTree({ view }: { view: EntryView }) {
           if (!open) setCtxNode(null);
         }}
         onExport={() => void onCtxExport()}
+        selectedImageCount={selectedImageIds.length}
+        onExtractImageSelection={() => void onExtractSelectedImages()}
+        onDeleteImageSelection={onDeleteSelectedImages}
         onVbfExtract={(mode) => {
           if (!ctxNode?.vbfRoot || vbfPathsForContext.length === 0) return;
           setExtractRequest({
@@ -216,6 +282,41 @@ export function ContentTree({ view }: { view: EntryView }) {
             mode,
           });
           setCtxNode(null);
+        }}
+        onVbfExtractImages={(mode) => {
+          if (!ctxNode?.vbfRoot || vbfPathsForContext.length === 0) return;
+          const root = ctxNode.vbfRoot;
+          const paths = [...vbfPathsForContext];
+          setCtxNode(null);
+          void (async () => {
+            let destRoot = '';
+            if (mode === 'choose') {
+              destRoot = await selectVbfImageExtractDir();
+              if (!destRoot) return;
+            }
+            try {
+              const result = await extractVbfImagesSelection(root, paths, destRoot);
+              if (result.total === 0) {
+                toast.info('A seleção não contém imagens compatíveis para extrair.');
+              } else if (result.failed.length > 0) {
+                toast.warning(
+                  `Extraídas ${result.done.length} de ${result.total} imagens.`,
+                  { description: result.failed.slice(0, 3).join('; ') }
+                );
+              } else {
+                toast.success(`Extraídas ${result.done.length} imagens do .vbf.`);
+              }
+              if (
+                selectedEntry?.vbf &&
+                result.done?.includes(selectedEntry.vbf.path)
+              ) {
+                invalidateVbfImage(selectedEntry.vbf.root, selectedEntry.vbf.path);
+                await actions.selectEntry(selectedEntry);
+              }
+            } catch (error) {
+              toast.error(parseError(error));
+            }
+          })();
         }}
         onVbfExport={() => {
           if (!ctxNode?.vbfRoot || vbfPathsForContext.length === 0) return;
@@ -229,6 +330,12 @@ export function ContentTree({ view }: { view: EntryView }) {
                 format,
                 vbfPathsForContext
               );
+              if (paths.length === 0) {
+                toast.info('A seleção não contém textos compatíveis para extrair.', {
+                  id: 'export',
+                });
+                return;
+              }
               const dest = exportDestination(paths);
               toast.success(
                 `Exportado (${label}): ${dest || `${paths.length} arquivo(s)`}.`,
@@ -260,16 +367,24 @@ export function ContentTree({ view }: { view: EntryView }) {
             if (isVbf) {
               const vbfRoot = row.getAttribute('data-node-vbf-root') ?? '';
               const selectedVbfPaths = vbfSelection.pathsOf(vbfRoot);
-              // Sem seleção marcada não há menu de contexto VBF, como no
-              // fluxo de exportação por seleção da árvore data/.
+              const clickedPath = row.getAttribute('data-node-vbf-path') ?? '';
+              const isFile = row.getAttribute('data-node-vbf-file') === 'true';
+              // Checkboxes têm prioridade e podem conter arquivos ou pastas.
+              // Sem checkbox, o menu opera apenas no arquivo clicado; uma
+              // pasta precisa ser marcada para expandir sua subárvore.
+              const paths = vbfSelection.countOf(vbfRoot) > 0
+                ? selectedVbfPaths
+                : isFile && clickedPath
+                  ? [clickedPath]
+                  : [];
               setCtxNode(
-                vbfRoot && vbfSelection.countOf(vbfRoot) > 0
+                vbfRoot && paths.length > 0
                   ? {
                       id: row.getAttribute('data-node-id') ?? '',
                       label: row.getAttribute('data-node-label') ?? '',
                       vbfRoot,
-                      vbfPath: row.getAttribute('data-node-vbf-path') ?? '',
-                      selectedVbfPaths,
+                      vbfPath: clickedPath,
+                      selectedVbfPaths: paths,
                     }
                   : null
               );

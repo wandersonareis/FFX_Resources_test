@@ -1,12 +1,15 @@
 import {
   DeleteImages,
+  DeleteImageSelection,
   ExportEntry,
   ExportJSON,
   ExportStrings,
   ExtractImageGroup,
+  ExtractImageSelection,
   GetImageEntry,
   GetTextEntry,
   ImageDuplicates,
+  ImageSelectionCopies,
   ImageExists,
   ImportEntry,
   ImportFile,
@@ -213,6 +216,18 @@ export function imageDuplicates(
   );
 }
 
+/** União de cópias adicionais dos ids selecionados, sem carregar imagens. */
+export function imageSelectionCopies(
+  ids: string[],
+  version: GameVersionId
+): Promise<string[]> {
+  return ImageSelectionCopies(
+    'images',
+    ids,
+    version as Parameters<typeof ImageSelectionCopies>[2]
+  );
+}
+
 /** Extrai .dds + .png desta textura e das cópias escolhidas (lote). */
 export function extractImageGroup(
   id: string,
@@ -224,6 +239,18 @@ export function extractImageGroup(
     id,
     targets,
     version as Parameters<typeof ExtractImageGroup>[3]
+  );
+}
+
+/** Extrai somente as imagens marcadas, sem incluir cópias não selecionadas. */
+export function extractImageSelection(
+  ids: string[],
+  version: GameVersionId
+): Promise<dto.BatchResult> {
+  return ExtractImageSelection(
+    'images',
+    ids,
+    version as Parameters<typeof ExtractImageSelection>[2]
   );
 }
 
@@ -260,6 +287,22 @@ export function deleteImages(
     targets,
     scope,
     version as Parameters<typeof DeleteImages>[4]
+  );
+}
+
+/** Delete em lote das imagens marcadas; a opção de cópias vale para cada id. */
+export function deleteImageSelection(
+  ids: string[],
+  withCopies: boolean,
+  scope: 'data' | 'mods' | 'both',
+  version: GameVersionId
+): Promise<dto.BatchResult> {
+  return DeleteImageSelection(
+    'images',
+    ids,
+    withCopies,
+    scope,
+    version as Parameters<typeof DeleteImageSelection>[4]
   );
 }
 

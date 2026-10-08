@@ -1,13 +1,18 @@
 import {
   ExportVbfSelection,
+  ExtractVbfImagesSelection,
   ExtractVbfSelection,
   GetVbfImageEntry,
   GetVbfTextEntry,
+  ImportVbfImage,
   ListVbfDir,
   ListVbfMacroChunks,
   ListVbfRoots,
   PreviewVbfExtraction,
+  ReplicateVbfImage,
   SelectVbfExtractDir,
+  SelectVbfImageExtractDir,
+  SaveVbfImage,
 } from '@/wailsjs/go/main/App';
 import { dto } from '@/wailsjs/go/models';
 
@@ -57,6 +62,10 @@ class Lru<T> {
 
   clear(): void {
     this.map.clear();
+  }
+
+  delete(key: string): void {
+    this.map.delete(key);
   }
 }
 
@@ -128,10 +137,39 @@ export function loadVbfImage(
   const key = `${root}|${path.toLowerCase()}`;
   const cached = imageCache.get(key);
   if (cached) return Promise.resolve(cached);
+  // A imagem recém-aberta pode ter acrescentado novas duplicatas conhecidas
+  // ao índice incremental do backend. Não manter previews antigos com listas
+  // de cópias obsoletas.
+  imageCache.clear();
   return GetVbfImageEntry(root, path).then((image) => {
     imageCache.set(key, image);
     return image;
   });
+}
+
+export function invalidateVbfImage(root: string, path: string): void {
+  imageCache.delete(`${root}|${path.toLowerCase()}`);
+}
+
+export function importVbfImage(root: string, path: string, ddsPath: string): Promise<void> {
+  return ImportVbfImage(root, path, ddsPath);
+}
+
+export function saveVbfImage(
+  root: string,
+  path: string,
+  format: 'dds' | 'png',
+  destPath: string
+): Promise<void> {
+  return SaveVbfImage(root, path, format, destPath);
+}
+
+export function replicateVbfImage(
+  root: string,
+  sourcePath: string,
+  targetPaths: string[]
+): Promise<dto.BatchResult> {
+  return ReplicateVbfImage(root, sourcePath, targetPaths);
 }
 
 /**
@@ -168,9 +206,23 @@ export function extractVbfSelection(
   return ExtractVbfSelection(root, paths, destRoot);
 }
 
+/** Extrai DDS/PNG somente das imagens compatíveis nos caminhos selecionados. */
+export function extractVbfImagesSelection(
+  root: string,
+  paths: string[],
+  destRoot: string
+): Promise<dto.BatchResult> {
+  return ExtractVbfImagesSelection(root, paths, destRoot);
+}
+
 /** Seletor nativo de pasta do "Extrair para…" (default data/). "" = cancelou. */
 export function selectVbfExtractDir(): Promise<string> {
   return SelectVbfExtractDir();
+}
+
+/** Seletor nativo do destino customizado para DDS/PNG. */
+export function selectVbfImageExtractDir(): Promise<string> {
+  return SelectVbfImageExtractDir();
 }
 
 /**

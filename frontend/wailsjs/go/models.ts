@@ -148,6 +148,7 @@ export namespace dto {
 	export class ImageDuplicate {
 	    id: string;
 	    key: string;
+	    vbfPath?: string;
 	    modded: boolean;
 	    identical: boolean;
 	
@@ -159,6 +160,7 @@ export namespace dto {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.key = source["key"];
+	        this.vbfPath = source["vbfPath"];
 	        this.modded = source["modded"];
 	        this.identical = source["identical"];
 	    }

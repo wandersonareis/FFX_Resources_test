@@ -234,6 +234,73 @@ func TestExtractImageGroupCoversChosenCopies(t *testing.T) {
 	}
 }
 
+func TestExtractImageSelectionOnlyExtractsSelectedIDs(t *testing.T) {
+	_, idA, idB, idC := dupTreeFixture(t)
+	res, err := NewMetadataService(nil).ExtractImageSelection(KindImages, []string{idA, idC}, common.GameVersionFFX)
+	if err != nil {
+		t.Fatalf("ExtractImageSelection: %v", err)
+	}
+	if res.Total != 2 || len(res.Done) != 2 || len(res.Failed) != 0 {
+		t.Fatalf("resultado = %+v, esperado apenas os 2 ids selecionados", res)
+	}
+	for _, id := range []string{idA, idC} {
+		ddsPath, pngPath := ddsphyre.ExportPaths(common.GameVersionFFX, id)
+		for _, path := range []string{ddsPath, pngPath} {
+			if _, err := os.Stat(path); err != nil {
+				t.Errorf("artefato selecionado ausente %s: %v", path, err)
+			}
+		}
+	}
+	copyDDS, _ := ddsphyre.ExportPaths(common.GameVersionFFX, idB)
+	if _, err := os.Stat(copyDDS); !os.IsNotExist(err) {
+		t.Errorf("cópia não selecionada foi extraída: %s", copyDDS)
+	}
+}
+
+func TestDeleteImageSelectionAppliesCopyOptionToEverySelectedID(t *testing.T) {
+	_, idA, idB, idC := dupTreeFixture(t)
+	svc := NewMetadataService(nil)
+	copies, err := svc.ImageSelectionCopies(KindImages, []string{idA}, common.GameVersionFFX)
+	if err != nil || !reflect.DeepEqual(copies, []string{idB}) {
+		t.Fatalf("cópias do lote = %v, err=%v; esperado apenas %s", copies, err, idB)
+	}
+	copies, err = svc.ImageSelectionCopies(KindImages, []string{idA, idB}, common.GameVersionFFX)
+	if err != nil || len(copies) != 0 {
+		t.Fatalf("cópias já selecionadas não devem ser contadas novamente: %v, err=%v", copies, err)
+	}
+	res, err := svc.DeleteImageSelection(KindImages, []string{idA}, false, ddsphyre.DeleteMods, common.GameVersionFFX)
+	if err != nil {
+		t.Fatalf("DeleteImageSelection sem cópias: %v", err)
+	}
+	if res.Total != 1 || len(res.Done) != 1 || len(res.Failed) != 0 {
+		t.Fatalf("resultado sem cópias = %+v", res)
+	}
+	if inData, inMods := ddsphyre.Exists(common.GameVersionFFX, idA); !inData || inMods {
+		t.Errorf("DeleteMods não preservou apenas o original: data=%v mods=%v", inData, inMods)
+	}
+	if inData, inMods := ddsphyre.Exists(common.GameVersionFFX, idB); !inData || inMods {
+		t.Errorf("cópia não selecionada foi alterada: data=%v mods=%v", inData, inMods)
+	}
+
+	// Com a opção de cópias, remove a selecionada e a sua cópia, mas não o
+	// arquivo independente.
+	res, err = svc.DeleteImageSelection(KindImages, []string{idA}, true, ddsphyre.DeleteBoth, common.GameVersionFFX)
+	if err != nil {
+		t.Fatalf("DeleteImageSelection com cópias: %v", err)
+	}
+	if res.Total != 2 || len(res.Done) != 2 || len(res.Failed) != 0 {
+		t.Fatalf("resultado com cópias = %+v, esperado 2 ids únicos", res)
+	}
+	for _, id := range []string{idA, idB} {
+		if inData, inMods := ddsphyre.Exists(common.GameVersionFFX, id); inData || inMods {
+			t.Errorf("%s permaneceu após delete both: data=%v mods=%v", id, inData, inMods)
+		}
+	}
+	if inData, inMods := ddsphyre.Exists(common.GameVersionFFX, idC); !inData || inMods {
+		t.Errorf("arquivo não selecionado foi alterado: data=%v mods=%v", inData, inMods)
+	}
+}
+
 // Replicar leva a IMAGEM ABERTA para as cópias em mods/, sem tocar na
 // origem e sem diálogo de arquivo.
 func TestReplicateImageCopiesOpenedTexture(t *testing.T) {

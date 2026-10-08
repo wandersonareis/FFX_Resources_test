@@ -50,7 +50,11 @@ export function EntryActionsMenu({
   initialDuplicates,
   onExport,
   onVbfExtract,
+  onVbfExtractImages,
   onVbfExport,
+  selectedImageCount = 0,
+  onExtractImageSelection,
+  onDeleteImageSelection,
   children,
 }: {
   view: EntryView;
@@ -63,8 +67,14 @@ export function EntryActionsMenu({
   onExport?: () => void;
   /** Extrai os caminhos marcados do container em data/ ou pasta escolhida. */
   onVbfExtract?: (mode: 'data' | 'choose') => void;
+  /** Extrai DDS/PNG das imagens VBF selecionadas. */
+  onVbfExtractImages?: (mode: 'default' | 'choose') => void;
   /** Exporta em JSON/.strings os caminhos marcados no container. */
   onVbfExport?: () => void;
+  /** Operações em lote na seleção de imagens da árvore data/. */
+  selectedImageCount?: number;
+  onExtractImageSelection?: () => void;
+  onDeleteImageSelection?: () => void;
   children: ReactNode;
 }) {
   const { version, actions } = view;
@@ -159,9 +169,19 @@ export function EntryActionsMenu({
               <FolderOpen size={16} />
               Extrair para…
             </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem onSelect={() => onVbfExtractImages?.('default')}>
+              <Download size={16} />
+              Extrair imagens (.dds + .png)
+            </ContextMenuItem>
+            <ContextMenuItem onSelect={() => onVbfExtractImages?.('choose')}>
+              <FolderOpen size={16} />
+              Extrair imagens para…
+            </ContextMenuItem>
+            <ContextMenuSeparator />
             <ContextMenuItem onSelect={onVbfExport}>
               <Download size={16} />
-              Exportar ({EXPORT_FORMAT_LABELS[exportSelection.formatOf()]})
+              Extrair texto ({EXPORT_FORMAT_LABELS[exportSelection.formatOf()]})
             </ContextMenuItem>
           </>
         ) : null}
@@ -188,6 +208,23 @@ export function EntryActionsMenu({
                   {replicateLabel}
                 </ContextMenuItem>
                 <ContextMenuSeparator />
+              </>
+            ) : null}
+            {isImage && selectedImageCount > 0 ? (
+              <>
+                <ContextMenuItem onSelect={onExtractImageSelection}>
+                  <Download size={16} />
+                  Extrair {selectedImageCount}{' '}
+                  {selectedImageCount === 1 ? 'imagem selecionada' : 'imagens selecionadas'}
+                </ContextMenuItem>
+                <ContextMenuItem
+                  variant="destructive"
+                  onSelect={onDeleteImageSelection}
+                >
+                  <Trash2 size={16} />
+                  Deletar {selectedImageCount}{' '}
+                  {selectedImageCount === 1 ? 'imagem selecionada' : 'imagens selecionadas'}
+                </ContextMenuItem>
               </>
             ) : null}
             <ContextMenuItem

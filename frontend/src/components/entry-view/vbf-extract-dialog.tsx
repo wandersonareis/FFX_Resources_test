@@ -56,6 +56,7 @@ export function VbfExtractDialog({
   const [preview, setPreview] = useState<dto.VbfExtractPreview | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [extracting, setExtracting] = useState(false);
+  const [runError, setRunError] = useState<string | null>(null);
 
   // "Extrair para…" abre o diálogo nativo imediatamente; o diálogo de
   // confirmação só aparece depois de a pasta ser escolhida.
@@ -99,6 +100,7 @@ export function VbfExtractDialog({
   const runExtraction = async () => {
     if (!request || !preview || preview.files === 0 || extracting) return;
     setExtracting(true);
+    setRunError(null);
     const toastId = 'vbf-extract';
     toast.loading(`Extraindo ${preview.files} arquivo(s)…`, { id: toastId });
     try {
@@ -121,7 +123,9 @@ export function VbfExtractDialog({
       }
       onDone();
     } catch (error) {
-      toast.error(parseError(error), { id: toastId });
+      const message = parseError(error);
+      toast.error(message, { id: toastId });
+      setRunError(message);
       setExtracting(false);
     }
   };
@@ -134,7 +138,7 @@ export function VbfExtractDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && !extracting && onClose()}>
-      <DialogContent>
+      <DialogContent showCloseButton={!extracting}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <HardDriveDownload size={18} />
@@ -145,7 +149,9 @@ export function VbfExtractDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {loadingPreview ? (
+        {runError ? (
+          <p role="alert" className="text-destructive">{runError}</p>
+        ) : loadingPreview ? (
           <div className="flex items-center gap-2 py-3 text-muted-foreground" role="status">
             <Loader2 size={16} className="animate-spin" />
             Calculando arquivos e possíveis sobrescritas…
@@ -190,11 +196,14 @@ export function VbfExtractDialog({
             Cancelar
           </Button>
           <Button
-            disabled={loadingPreview || Boolean(previewError) || !preview || preview.files === 0 || extracting}
-            onClick={() => void runExtraction()}
+            disabled={extracting || (!runError && (loadingPreview || Boolean(previewError) || !preview || preview.files === 0))}
+            onClick={() => {
+              if (runError) onClose();
+              else void runExtraction();
+            }}
           >
-            {extracting ? <Loader2 size={16} className="animate-spin" /> : <HardDriveDownload size={16} />}
-            {extracting ? 'Extraindo…' : 'Confirmar extração'}
+            {extracting ? <Loader2 size={16} className="animate-spin" /> : runError ? null : <HardDriveDownload size={16} />}
+            {extracting ? 'Extraindo…' : runError ? 'Fechar' : 'Confirmar extração'}
           </Button>
         </DialogFooter>
       </DialogContent>

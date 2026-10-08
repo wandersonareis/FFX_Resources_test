@@ -1321,16 +1321,24 @@ func helpExportIDs(kind string, ids []string) []string {
 // ids vazio = tudo; langs nil/vazio = todos os idiomas. O dedup do marshal
 // é por arquivo: o escopo do pedido vira o escopo do dedup (self-contained,
 // sem refs órfãs), e o nome do artefato reflete o escopo (eventsExportPath).
-func (s *MetadataService) ExportStrings(kind string, version common.GameVersion, ids, langs []string) ([]string, error) {
+func (s *MetadataService) ExportStrings(kind string, version common.GameVersion, ids, langs []string) (paths []string, retErr error) {
 	kind = strings.ToLower(strings.TrimSpace(kind))
 	if kind == KindEvents || kind == KindMacro {
 		ids = s.normalizeIDs(ids)
 	}
+	progress.Begin(fmt.Sprintf("Extraindo texto (%s)", kind), len(ids))
+	defer func() {
+		if retErr != nil {
+			progress.Issue("", retErr.Error())
+		}
+		progress.End()
+	}()
 	c, err := s.GetCollection(kind, version, helpExportIDs(kind, ids))
 	if err != nil {
 		return nil, err
 	}
 	c = filterExportRows(c)
+	progress.SetTotal(len(c))
 	f := strfmt.NewStringsFormatter()
 	switch kind {
 	case KindEvents:

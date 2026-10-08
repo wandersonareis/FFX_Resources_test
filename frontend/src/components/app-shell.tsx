@@ -48,13 +48,6 @@ import { ConfigDialog } from '@/components/dialogs/config-dialog';
 import { ImportSummaryDialog } from '@/components/dialogs/import-summary-dialog';
 import { ProgressDialog } from '@/components/dialogs/progress-dialog';
 
-/**
- * Histerese de fecho do modal de progresso: o export do topo roda um
- * Begin/End por kind — sem intervalo de fechamento o modal piscaria a cada
- * ciclo. ShowProgress(false) agenda o fecho; um ciclo novo cancela e
- * mantém aberto.
- */
-const PROGRESS_CLOSE_DELAY_MS = 400;
 /** Cap da fila de toasts de ciclo aberto (descarta o mais antigo). */
 const NOTIFY_QUEUE_CAP = 50;
 
@@ -98,17 +91,20 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
     open: false,
     value: 0,
     label: '',
+    processed: 0,
+    total: 0,
+    issueCount: 0,
+    complete: false,
   });
   // Guard do toast de export: só consome Progress enquanto um export roda
   // (evita pegar progresso de carga de árvore alheia).
   const exportProgress = useRef({ active: false, processed: 0, total: 0 });
   // Modal de progresso aberto bloqueia interação fora do diálogo (o radix
   // modal põe pointer-events: none no body): notificações que chegarem
-  // durante um ciclo vão para a fila e estouram empilhadas quando o
-  // processo termina e o app volta a ficar disponível.
+  // durante um ciclo vão para a fila e aparecem quando o usuário fecha o
+  // modal de resultado.
   const progressOpen = useRef(false);
   const notifyQueue = useRef<NotifyPayload[]>([]);
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Escopo de exportação por versão (kinds marcados no dropdown Exportar).
   const [scopes, setScopes] = useState<Record<string, EntryKind[]>>(() =>
     Object.fromEntries(GAME_VERSIONS.map((tab) => [tab.id, entryKindsFor(tab.id)]))
@@ -120,6 +116,24 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
 
   const selection = useExportSelection();
   const exportFormat = selection.format;
+
+  const closeProgress = useCallback(() => {
+    progressOpen.current = false;
+    setProgress({
+      open: false,
+      value: 0,
+      label: '',
+      processed: 0,
+      total: 0,
+      issueCount: 0,
+      complete: false,
+    });
+    if (notifyQueue.current.length > 0) {
+      const pending = notifyQueue.current;
+      notifyQueue.current = [];
+      for (const q of pending) emitNotify(q);
+    }
+  }, []);
 
   useEffect(() => {
     // Hydration-safe: localStorage só existe no cliente.
@@ -176,27 +190,21 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
 
   useWailsEvent('ShowProgress', (visible) => {
     if (Boolean(visible)) {
-      if (closeTimer.current) clearTimeout(closeTimer.current);
-      closeTimer.current = null;
       progressOpen.current = true;
-      setProgress((p) => ({ ...p, open: true }));
+      setProgress({
+        open: true,
+        value: 0,
+        label: '',
+        processed: 0,
+        total: 0,
+        issueCount: 0,
+        complete: false,
+      });
       return;
     }
-    // Fecho com histerese: passou o intervalo sem ciclo novo, fecha,
-    // reseta o estado e solta a fila de toasts acumulados.
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    closeTimer.current = setTimeout(() => {
-      closeTimer.current = null;
-      progressOpen.current = false;
-      setProgress(() => ({ open: false, value: 0, label: '' }));
-      if (notifyQueue.current.length > 0) {
-        const pending = notifyQueue.current;
-        notifyQueue.current = [];
-        for (const q of pending) {
-          emitNotify(q);
-        }
-      }
-    }, PROGRESS_CLOSE_DELAY_MS);
+    // O modal permanece visível após o fim para mostrar o resultado e só
+    // libera o app quando o usuário o fecha.
+    setProgress((p) => ({ ...p, complete: true }));
   });
 
   useWailsEvent('Progress', (data) => {
@@ -205,11 +213,17 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
       percentage?: number;
       processed?: number;
       total?: number;
+      issueCount?: number;
+      done?: boolean;
     };
     setProgress((p) => ({
       ...p,
       value: payload?.percentage ?? p.value,
       label: payload?.label ?? p.label,
+      processed: payload?.processed ?? p.processed,
+      total: payload?.total ?? p.total,
+      issueCount: payload?.issueCount ?? p.issueCount,
+      complete: payload?.done ?? p.complete,
     }));
     // Toast de export com barra embutida: re-render a cada Progress com a
     // contagem corrente (guard: só quando um export está ativo).
@@ -450,7 +464,16 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
       <StatusBar />
 
       <ConfigDialog open={configOpen} onOpenChange={setConfigOpen} />
-      <ProgressDialog open={progress.open} value={progress.value} label={progress.label} />
+      <ProgressDialog
+        open={progress.open}
+        value={progress.value}
+        label={progress.label}
+        processed={progress.processed}
+        total={progress.total}
+        issueCount={progress.issueCount}
+        complete={progress.complete}
+        onClose={closeProgress}
+      />
       <ImportSummaryDialog
         summary={importSummary}
         open={importSummary !== null}

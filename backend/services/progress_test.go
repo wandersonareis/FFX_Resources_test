@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -137,11 +138,26 @@ func TestProgressServiceCycle(t *testing.T) {
 	if _, _, processed, pct, item := p.stateSnapshot(); processed != 2 || pct != 66 || item != "zev002" {
 		t.Fatalf("step: processed=%d pct=%d item=%q", processed, pct, item)
 	}
+	p.Issue("zev003", "fixture failure")
+	if event := p.snapshot(false); event.Processed != 3 || event.IssueCount != 1 || event.Percentage != 100 {
+		t.Fatalf("issue deve contar como item concluído com falha: %+v", event)
+	}
+	encoded, err := json.Marshal(p.snapshot(true))
+	if err != nil {
+		t.Fatalf("serializando evento de progresso: %v", err)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(encoded, &payload); err != nil {
+		t.Fatalf("lendo evento de progresso: %v", err)
+	}
+	if payload["total"] != float64(3) || payload["processed"] != float64(3) || payload["issueCount"] != float64(1) || payload["done"] != true {
+		t.Fatalf("payload JSON incompleto: %s", encoded)
+	}
 
 	// End encerra: Steps fora de ciclo são ignorados.
 	p.End()
 	p.Step("depois-do-end")
-	if _, _, processed, _, _ := p.stateSnapshot(); processed != 2 {
+	if _, _, processed, _, _ := p.stateSnapshot(); processed != 3 {
 		t.Fatalf("step após end deveria ser ignorado (processed=%d)", processed)
 	}
 	p.End() // idempotente

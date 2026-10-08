@@ -17,7 +17,12 @@ import {
   vbfNodeCheckState,
   type VbfSelectionTreeNode,
 } from '@/lib/ffx/vbf-selection';
-import { EMPTY_IDS, entryNodeId, type SideNode } from './types';
+import {
+  EMPTY_IDS,
+  entryCheckState,
+  entryNodeId,
+  type SideNode,
+} from './types';
 
 export function TreeItem({
   node,
@@ -51,8 +56,6 @@ export function TreeItem({
   // Raiz de kind (Eventos/Sistema/Dicionário) não tem checkbox: "extrair o
   // kind inteiro" é papel do botão Exportar na linha das abas.
   const isKindRoot = node.id.startsWith('kind:');
-  // Imagem não é texto: não entra na seleção de exportação (JSON/.strings).
-  const isImage = node.kind === 'images';
   // O container .vbf é somente leitura, mas seus caminhos podem ser
   // selecionados para extração/exportação sem alterar o arquivo.
   const isVbf = node.vbf === true;
@@ -66,19 +69,7 @@ export function TreeItem({
     : EMPTY_IDS;
 
   let checked: boolean | 'indeterminate' = false;
-  if (!isKindRoot && !isImage && !isVbf) {
-    if (node.entry) {
-      checked = selected.has(node.entry.id);
-    } else {
-      // Grupo: tri-state sobre os ids dos filhos (raiz de evento tem folhas).
-      const childIds = (node.children ?? [])
-        .filter((child) => child.entry)
-        .map((child) => child.entry!.id);
-      const count = childIds.filter((id) => selected.has(id)).length;
-      checked =
-        count === 0 ? false : count === childIds.length ? true : 'indeterminate';
-    }
-  }
+  if (!isKindRoot && !isVbf) checked = entryCheckState(node, selected);
 
   if (isVbf && !isVbfContainerRoot) {
     const paths = vbfRoot ? (vbfSelectionByRoot.get(vbfRoot) ?? []) : [];
@@ -101,7 +92,9 @@ export function TreeItem({
         data-node-id={node.id}
         data-node-kind={node.kind}
         data-node-label={node.label}
+        data-node-entry={node.entry ? 'true' : undefined}
         data-node-vbf={isVbf ? 'true' : undefined}
+        data-node-vbf-file={isVbf && !hasChildren && !isVbfContainerRoot ? 'true' : undefined}
         data-node-vbf-root={vbfRoot}
         data-node-vbf-path={vbfPath}
       >
@@ -125,7 +118,7 @@ export function TreeItem({
         ) : (
           <span className="w-8 shrink-0" />
         )}
-        {isKindRoot || isVbfContainerRoot || (!isVbf && isImage) ? null : (
+        {isKindRoot || isVbfContainerRoot ? null : (
           <Checkbox
             className="mr-1"
             checked={checked}

@@ -31,6 +31,22 @@ export interface SideNode {
   unsupported?: boolean;
 }
 
+/** IDs das folhas de entrada contidas no nó; grupos de imagens são aninhados. */
+export function entryIdsInNode(node: SideNode): string[] {
+  if (node.entry) return [node.entry.id];
+  return (node.children ?? []).flatMap(entryIdsInNode);
+}
+
+/** Estado tri-state do checkbox de um nó data/ sobre todas as folhas abaixo. */
+export function entryCheckState(
+  node: SideNode,
+  selected: ReadonlySet<string>
+): boolean | 'indeterminate' {
+  const ids = entryIdsInNode(node);
+  const count = ids.filter((id) => selected.has(id)).length;
+  return count === 0 ? false : count === ids.length ? true : 'indeterminate';
+}
+
 /**
  * Id estável de uma folha da árvore. Folhas de .vbf são identificadas pelo
  * CAMINHO no container (o mesmo id de data/ pode existir nos dois lados e

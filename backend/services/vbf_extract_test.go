@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"ffxresources/backend/common"
+	"ffxresources/backend/fileFormats/ddsphyre"
 	"ffxresources/backend/fileFormats/vbf"
 	"ffxresources/backend/interactions"
 )
@@ -222,6 +223,226 @@ func TestVbfPreviewEExtracaoSelecao(t *testing.T) {
 	}
 }
 
+func TestExtractVbfImagesSelectionPreservesInnerPathAndSkipsOtherKinds(t *testing.T) {
+	phyre, _ := realSampleWithPayload(t)
+	imagePath := "ffx_data/gamedata/ps3data/yonishi_data/dat_et/et_ffx/tex/d3d11/15040_19_0_0_128_128.dds.phyre"
+	otherPath := "ffx_data/gamedata/ps3data/a_dir/not-an-image.bin"
+	vbfPath := seedVbfExtractRoot(t, map[string][]byte{
+		imagePath: phyre,
+		otherPath: []byte("binary"),
+	})
+	dest := t.TempDir()
+	prevRoot := common.GameFilesRoot
+	common.GameFilesRoot = t.TempDir()
+	t.Cleanup(func() { common.GameFilesRoot = prevRoot })
+
+	res, err := NewMetadataService(nil).ExtractVbfImagesSelection(vbfPath, []string{"ffx_data/gamedata/ps3data"}, dest)
+	if err != nil {
+		t.Fatalf("ExtractVbfImagesSelection: %v", err)
+	}
+	if res.Total != 1 || len(res.Done) != 1 || len(res.Failed) != 0 {
+		t.Fatalf("resultado = %+v, esperado uma imagem e ignorar o binário", res)
+	}
+	stem := strings.TrimSuffix(imagePath, ddsphyre.Suffix)
+	for _, ext := range []string{".dds", ".png"} {
+		if _, err := os.Stat(filepath.Join(dest, filepath.FromSlash(stem+ext))); err != nil {
+			t.Errorf("artefato %s não preservou caminho interno: %v", ext, err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dest, filepath.FromSlash(otherPath))); !os.IsNotExist(err) {
+		t.Errorf("extração de imagens escreveu arquivo incompatível: %v", err)
+	}
+}
+
+func TestVbfImageDuplicatesAreDiscoveredAsImagesAreOpened(t *testing.T) {
+	phyre, _ := realSampleWithPayload(t)
+	pathA := "ffx_data/gamedata/ps3data/yonishi_data/dat_et/et_ffx/tex/d3d11/15040_19_0_0_128_128.dds.phyre"
+	pathB := "ffx_data/gamedata/ps3data/yonishi_data/dat_et/et_ffx/tex/d3d11/15041_19_0_0_128_128.dds.phyre"
+	vbfPath := seedVbfExtractRoot(t, map[string][]byte{
+		pathA: phyre,
+		pathB: append([]byte(nil), phyre...),
+	})
+	prevRoot := common.GameFilesRoot
+	common.GameFilesRoot = t.TempDir()
+	t.Cleanup(func() { common.GameFilesRoot = prevRoot })
+	vbfSessionResetAll()
+	t.Cleanup(vbfSessionResetAll)
+
+	svc := NewMetadataService(nil)
+	first, err := svc.GetVbfImageEntry(vbfPath, pathA)
+	if err != nil {
+		t.Fatalf("abrindo primeira imagem: %v", err)
+	}
+	if len(first.Duplicates) != 0 {
+		t.Fatalf("primeira imagem não deveria conhecer arquivos ainda não abertos: %+v", first.Duplicates)
+	}
+	second, err := svc.GetVbfImageEntry(vbfPath, pathB)
+	if err != nil {
+		t.Fatalf("abrindo segunda imagem: %v", err)
+	}
+	if len(second.Duplicates) != 1 || second.Duplicates[0].ID != first.Metadata.ID || second.Duplicates[0].VbfPath != pathA {
+		t.Fatalf("segunda imagem não encontrou a primeira cópia aberta: %+v", second.Duplicates)
+	}
+	first, err = svc.GetVbfImageEntry(vbfPath, pathA)
+	if err != nil {
+		t.Fatalf("reabrindo primeira imagem: %v", err)
+	}
+	if len(first.Duplicates) != 1 || first.Duplicates[0].ID != second.Metadata.ID {
+		t.Fatalf("primeira imagem não encontrou a segunda após reabertura: %+v", first.Duplicates)
+	}
+}
+
+func TestVbfImageDedupMarksModsOverlayAsDivergent(t *testing.T) {
+	phyre, _ := realSampleWithPayload(t)
+	pathA := "ffx_data/gamedata/ps3data/yonishi_data/dat_et/et_ffx/tex/d3d11/15040_19_0_0_128_128.dds.phyre"
+	pathB := "ffx_data/gamedata/ps3data/yonishi_data/dat_et/et_ffx/tex/d3d11/15041_19_0_0_128_128.dds.phyre"
+	vbfPath := seedVbfExtractRoot(t, map[string][]byte{
+		pathA: phyre,
+		pathB: append([]byte(nil), phyre...),
+	})
+	prevRoot := common.GameFilesRoot
+	common.GameFilesRoot = t.TempDir()
+	t.Cleanup(func() { common.GameFilesRoot = prevRoot })
+	vbfSessionResetAll()
+	t.Cleanup(vbfSessionResetAll)
+
+	texture, err := ddsphyre.Parse(phyre)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dds, err := texture.ExtractToDDS()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(dds) <= 128 {
+		t.Fatalf("fixture DDS curto demais: %d", len(dds))
+	}
+	dds[len(dds)-1] ^= 0xff // mantém dimensões/formato, altera o payload efetivo.
+	ddsPath := filepath.Join(t.TempDir(), "divergente.dds")
+	if err := os.WriteFile(ddsPath, dds, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	svc := NewMetadataService(nil)
+	if _, err := svc.GetVbfImageEntry(vbfPath, pathA); err != nil {
+		t.Fatalf("abrindo imagem original: %v", err)
+	}
+	if err := svc.ImportVbfImage(vbfPath, pathB, ddsPath); err != nil {
+		t.Fatalf("importando overlay em mods: %v", err)
+	}
+	if _, err := svc.GetVbfImageEntry(vbfPath, pathA); err != nil {
+		t.Fatalf("reabrindo imagem original após invalidar a sessão: %v", err)
+	}
+	entry, err := svc.GetVbfImageEntry(vbfPath, pathB)
+	if err != nil {
+		t.Fatalf("abrindo imagem divergente: %v", err)
+	}
+	if len(entry.Duplicates) != 1 || entry.Duplicates[0].ID != matchImageID(t, vbfPath, pathA) || entry.Duplicates[0].Identical {
+		t.Fatalf("overlay deveria aparecer como duplicata divergente: %+v", entry.Duplicates)
+	}
+}
+
+func TestReplicateVbfImageWritesOnlyModsForOpenedDuplicates(t *testing.T) {
+	phyre, _ := realSampleWithPayload(t)
+	pathA := "ffx_data/gamedata/ps3data/yonishi_data/dat_et/et_ffx/tex/d3d11/15040_19_0_0_128_128.dds.phyre"
+	pathB := "ffx_data/gamedata/ps3data/yonishi_data/dat_et/et_ffx/tex/d3d11/15041_19_0_0_128_128.dds.phyre"
+	vbfPath := seedVbfExtractRoot(t, map[string][]byte{
+		pathA: phyre,
+		pathB: append([]byte(nil), phyre...),
+	})
+	gameRoot := t.TempDir()
+	prevRoot := common.GameFilesRoot
+	common.GameFilesRoot = gameRoot
+	t.Cleanup(func() { common.GameFilesRoot = prevRoot })
+	vbfSessionResetAll()
+	t.Cleanup(vbfSessionResetAll)
+
+	svc := NewMetadataService(nil)
+	if _, err := svc.GetVbfImageEntry(vbfPath, pathA); err != nil {
+		t.Fatalf("abrindo fonte: %v", err)
+	}
+	if _, err := svc.GetVbfImageEntry(vbfPath, pathB); err != nil {
+		t.Fatalf("abrindo cópia: %v", err)
+	}
+	res, err := svc.ReplicateVbfImage(vbfPath, pathA, []string{pathB})
+	if err != nil {
+		t.Fatalf("ReplicateVbfImage: %v", err)
+	}
+	if res.Total != 1 || len(res.Done) != 1 || len(res.Failed) != 0 {
+		t.Fatalf("resultado = %+v", res)
+	}
+	target, ok := matchVbfPath("FFX_Data.vbf", pathB)
+	if !ok {
+		t.Fatal("path de imagem não reconhecido")
+	}
+	modsPath := filepath.Join(gameRoot, common.ModsFolder, ddsphyre.RelPath(target.Version, target.ID))
+	if _, err := os.Stat(modsPath); err != nil {
+		t.Fatalf("réplica deveria ser gravada em mods/: %v", err)
+	}
+	archive, err := vbfArchiveFor(vbfPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := archive.Read(pathB)
+	if err != nil || !bytes.Equal(got, phyre) {
+		t.Fatalf("replicar modificou o .vbf: err=%v", err)
+	}
+}
+
+func matchImageID(t *testing.T, vbfPath, innerPath string) string {
+	t.Helper()
+	_, target, err := NewMetadataService(nil).vbfTargetOf(vbfPath, innerPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return target.ID
+}
+
+func TestVbfImageImportWritesModsAndSaveReadsVbfImage(t *testing.T) {
+	phyre, _ := realSampleWithPayload(t)
+	inner := "ffx_data/gamedata/ps3data/yonishi_data/dat_et/et_ffx/tex/d3d11/15040_19_0_0_128_128.dds.phyre"
+	vbfPath := seedVbfExtractRoot(t, map[string][]byte{inner: phyre})
+	gameRoot := t.TempDir()
+	prevRoot := common.GameFilesRoot
+	common.GameFilesRoot = gameRoot
+	t.Cleanup(func() { common.GameFilesRoot = prevRoot })
+
+	texture, err := ddsphyre.Parse(phyre)
+	if err != nil {
+		t.Fatalf("parseando fixture: %v", err)
+	}
+	dds, err := texture.ExtractToDDS()
+	if err != nil {
+		t.Fatalf("extraindo DDS fixture: %v", err)
+	}
+	ddsPath := filepath.Join(t.TempDir(), "edited.dds")
+	if err := os.WriteFile(ddsPath, dds, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	svc := NewMetadataService(nil)
+	if err := svc.ImportVbfImage(vbfPath, inner, ddsPath); err != nil {
+		t.Fatalf("ImportVbfImage: %v", err)
+	}
+	_, target, err := svc.vbfTargetOf(vbfPath, inner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	modsPath := filepath.Join(gameRoot, common.ModsFolder, ddsphyre.RelPath(target.Version, target.ID))
+	if _, err := os.Stat(modsPath); err != nil {
+		t.Fatalf("a importação deveria gravar em mods/: %v", err)
+	}
+
+	for _, format := range []string{"dds", "png"} {
+		dest := filepath.Join(t.TempDir(), "saved."+format)
+		if err := svc.SaveVbfImage(vbfPath, inner, format, dest); err != nil {
+			t.Fatalf("SaveVbfImage(%s): %v", format, err)
+		}
+		if info, err := os.Stat(dest); err != nil || info.Size() == 0 {
+			t.Errorf("arquivo salvo %s ausente/vazio: info=%v err=%v", format, info, err)
+		}
+	}
+}
+
 func TestVbfExtracaoRaizEAquivoSoltos(t *testing.T) {
 	vbfPath := seedVbfExtractRoot(t, vbfExtractFixture())
 	svc := NewMetadataService(nil)
@@ -350,18 +571,17 @@ func TestVbfExtracaoDestinoDefaultEData(t *testing.T) {
 	}
 }
 
-func TestVbfExportSelecaoRecusaForaDeEscopo(t *testing.T) {
+func TestVbfExportSelecaoIgnoraForaDeEscopo(t *testing.T) {
 	vbfPath := seedVbfExtractRoot(t, vbfExtractFixture())
 	svc := NewMetadataService(nil)
 
-	// Só arquivo fora do escopo (sem kind): export recusa com orientação.
-	_, err := svc.ExportVbfSelection(vbfPath, "json", []string{"version_config/config.bin"}, nil)
-	if err == nil {
-		t.Fatal("export de arquivo fora do escopo deveria recusar")
+	// Formatos incompatíveis são ignorados silenciosamente numa seleção de texto.
+	outputs, err := svc.ExportVbfSelection(vbfPath, "json", []string{"version_config/config.bin"}, nil)
+	if err != nil {
+		t.Fatalf("arquivos incompatíveis devem ser ignorados: %v", err)
 	}
-	if !strings.Contains(err.Error(), "fora do escopo") &&
-		!strings.Contains(err.Error(), "nenhum arquivo de texto") {
-		t.Errorf("erro inesperado: %v", err)
+	if len(outputs) != 0 {
+		t.Fatalf("não esperava outputs para arquivo incompatível: %v", outputs)
 	}
 }
 

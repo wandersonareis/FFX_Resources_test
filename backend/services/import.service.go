@@ -37,6 +37,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/converter"
 	ffxencoding "ffxresources/backend/core/encoding"
+	coreprogress "ffxresources/backend/core/progress"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/event"
@@ -1000,16 +1001,24 @@ func (s *MetadataService) ImportFile(path string, version common.GameVersion) (i
 // usado na importação (seletor nativo). O dedup do marshal é por arquivo:
 // o escopo do pedido vira o escopo do dedup (self-contained, sem refs
 // órfãs), e o nome do artefato reflete o escopo (eventsExportPath).
-func (s *MetadataService) ExportJSON(kind string, version common.GameVersion, ids, langs []string) ([]string, error) {
+func (s *MetadataService) ExportJSON(kind string, version common.GameVersion, ids, langs []string) (paths []string, retErr error) {
 	kind = strings.ToLower(strings.TrimSpace(kind))
 	if kind == KindEvents || kind == KindMacro {
 		ids = s.normalizeIDs(ids)
 	}
+	coreprogress.Begin(fmt.Sprintf("Extraindo texto (%s)", kind), len(ids))
+	defer func() {
+		if retErr != nil {
+			coreprogress.Issue("", retErr.Error())
+		}
+		coreprogress.End()
+	}()
 	c, err := s.GetCollection(kind, version, helpExportIDs(kind, ids))
 	if err != nil {
 		return nil, err
 	}
 	c = filterExportRows(c)
+	coreprogress.SetTotal(len(c))
 	switch kind {
 	case KindEvents:
 		path, perr := eventsExportPath(version, ids)

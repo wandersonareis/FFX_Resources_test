@@ -45,6 +45,12 @@ import {
 import { EntryActionsMenu, type EntryMenuTarget } from './entry-actions-menu';
 import { copyState } from './image-duplicates';
 import type { EntryView } from './entry-view-store';
+import {
+  extractVbfImagesSelection,
+  importVbfImage,
+  invalidateVbfImage,
+  saveVbfImage,
+} from '@/lib/ffx/vbf';
 
 /** De onde veio a imagem servida (o backend decide, por preferência). */
 const SOURCE_LABELS: Record<string, string> = {
@@ -87,7 +93,7 @@ export function ImagePanel({ view }: { view: EntryView }) {
   const image = useSelector(store, (s) => s.image);
   const imageAction = useSelector(store, (s) => s.imageAction);
   const loading = useSelector(store, (s) => s.loading);
-  const [busy, setBusy] = useState<'import' | 'save' | 'refresh' | null>(null);
+  const [busy, setBusy] = useState<'extract' | 'import' | 'save' | 'refresh' | null>(null);
   /**
    * Textura com o preview espelhado (id) — SÓ VISUAL, um transform no
    * <img>: nenhum byte muda e nada é mandado de volta ao backend, que já
@@ -147,24 +153,8 @@ export function ImagePanel({ view }: { view: EntryView }) {
     entry !== null &&
     pendingImport === null &&
     imageAction === null &&
-    menuTarget === null;
-
-  // Tecla Delete: exclusão da textura em exibição pelo teclado — abre o
-  // MESMO diálogo do menu de contexto (escopo data/mods/ambos + cópias, com
-  // confirmação); nada é apagado direto. Substitui o botão Deletar.
-  useHotkey(
-    'Delete',
-    () => {
-      if (!entry) return;
-      actions.openImageAction({
-        type: 'delete',
-        id: entry.id,
-        label: entry.label,
-        duplicates: image?.duplicates ?? [],
-      });
-    },
-    { enabled: panelIdle, ignoreInputs: true },
-  );
+    menuTarget === null &&
+    busy === null;
 
   // Zoom por teclado (TanStack Hotkeys): Mod+= / Mod+- andam no ciclo,
   // Mod+0 volta ao ajuste; 1–4 vão direto ao nível SEM Mod (Mod+1/2/3 já
@@ -195,16 +185,15 @@ export function ImagePanel({ view }: { view: EntryView }) {
   if (!entry) return null;
   const flipped = flippedId === entry.id;
   /**
-   * Textura aberta pelo navegador de .vbf: pré-visualização, zoom e
-   * pixelado funcionam (são só leitura/visualização), mas extrair, importar
-   * e deletar agem sobre data/ + mods/ — isso só faz sentido a partir da
-   * árvore de data/. O container nunca é alvo de escrita.
+   * Textura aberta pelo navegador de .vbf: o container é somente leitura;
+   * extrair usa o caminho interno e importar/salvar grava fora dele. Delete e
+   * replicate de grupos continuam restritos à árvore data/.
    */
   const readOnly = Boolean(entry.vbf);
   const refuseVbf = (): boolean => {
     if (!readOnly) return false;
     toast.message(
-      'Este arquivo veio do .vbf (somente leitura) — use a árvore de data/ para extrair ou importar.',
+      'Exclusão e replicação estão disponíveis apenas para imagens da árvore de data/.',
       { duration: 4000 }
     );
     return true;
@@ -221,12 +210,19 @@ export function ImagePanel({ view }: { view: EntryView }) {
   const wasted = image.dupPayload * duplicates.length;
 
   /** Navega para uma cópia (a árvore já tem o entry — é só selecionar). */
-  const goToCopy = async (id: string, key: string): Promise<void> => {
+  const goToCopy = async (
+    id: string,
+    key: string,
+    vbfPath?: string
+  ): Promise<void> => {
     const target: EntryRow = {
       kind: 'images',
       id,
       key,
       label: resolveEntryLabel('images', id),
+      ...(entry.vbf && vbfPath
+        ? { vbf: { root: entry.vbf.root, path: vbfPath } }
+        : {}),
     };
     await actions.selectEntry(target);
   };
@@ -237,7 +233,40 @@ export function ImagePanel({ view }: { view: EntryView }) {
    * escolha de alcance, o aviso de irreversível e a contagem de cópias.
    */
   const openAction = (type: 'extract' | 'replicate' | 'delete') => {
-    if (refuseVbf()) return;
+    if (readOnly) {
+      if (type === 'extract' && entry.vbf) {
+        setBusy('extract');
+        void extractVbfImagesSelection(entry.vbf.root, [entry.vbf.path], '')
+          .then((result) => {
+            if (result.failed.length > 0) {
+              toast.warning(`Extraídas ${result.done.length} de ${result.total} imagens.`, {
+                description: result.failed.slice(0, 3).join('; '),
+              });
+            } else if (result.total > 0) {
+              toast.success('Imagem extraída como .dds e .png.');
+            }
+            if (result.done.length > 0 && entry.vbf) {
+              invalidateVbfImage(entry.vbf.root, entry.vbf.path);
+              void actions.selectEntry(entry);
+            }
+          })
+          .catch((error) => toast.error(parseError(error)))
+          .finally(() => setBusy(null));
+        return;
+      }
+      if (type === 'replicate' && entry.vbf) {
+        actions.openImageAction({
+          type: 'replicate',
+          id: entry.id,
+          label: entry.label,
+          duplicates,
+          vbf: entry.vbf,
+        });
+        return;
+      }
+      refuseVbf();
+      return;
+    }
     actions.openImageAction({
       type,
       id: entry.id,
@@ -247,12 +276,15 @@ export function ImagePanel({ view }: { view: EntryView }) {
   };
 
   const onSave = async (format: 'dds' | 'png') => {
-    if (refuseVbf()) return;
     setBusy('save');
     try {
       const dest = await selectImageSavePath(format, `${name}.${format}`);
       if (!dest) return;
-      await saveImage(entry.id, format, dest, version);
+      if (entry.vbf) {
+        await saveVbfImage(entry.vbf.root, entry.vbf.path, format, dest);
+      } else {
+        await saveImage(entry.id, format, dest, version);
+      }
       toast.success(`Imagem salva: ${dest}`);
     } catch (error) {
       toast.error(parseError(error));
@@ -268,6 +300,13 @@ export function ImagePanel({ view }: { view: EntryView }) {
   const runImport = async (path: string, all: boolean) => {
     setBusy('import');
     try {
+      if (entry.vbf) {
+        await importVbfImage(entry.vbf.root, entry.vbf.path, path);
+        invalidateVbfImage(entry.vbf.root, entry.vbf.path);
+        toast.success(`Textura importada em mods/: ${entry.label}`);
+        await actions.selectEntry(entry);
+        return;
+      }
       if (!all) {
         await importImage(entry.id, path, version);
         toast.success(`Textura importada: ${path}`);
@@ -298,10 +337,13 @@ export function ImagePanel({ view }: { view: EntryView }) {
   };
 
   const onImport = async () => {
-    if (refuseVbf()) return;
     try {
       const path = await selectImageFile();
       if (!path) return;
+      if (readOnly) {
+        await runImport(path, false);
+        return;
+      }
       // Com cópias idênticas o usuário escolhe o alcance antes de gravar.
       if (duplicates.length > 0) {
         setPendingImport(path);
@@ -315,6 +357,7 @@ export function ImagePanel({ view }: { view: EntryView }) {
 
   /** Reconstrói o índice de duplicatas (edição externa no hex editor). */
   const onRefresh = async () => {
+    if (refuseVbf()) return;
     setBusy('refresh');
     try {
       await refreshImageDuplicates(version);
@@ -351,7 +394,7 @@ export function ImagePanel({ view }: { view: EntryView }) {
                     type="button"
                     className="flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left text-xs hover:bg-muted"
                     title={`${d.id} — abrir esta cópia`}
-                    onClick={() => void goToCopy(d.id, d.key)}
+                    onClick={() => void goToCopy(d.id, d.key, d.vbfPath)}
                   >
                     <span className="min-w-0 flex-1 truncate underline-offset-2 hover:underline">
                       {resolveEntryLabel('images', d.id)}
@@ -444,7 +487,9 @@ export function ImagePanel({ view }: { view: EntryView }) {
             size="sm"
             variant="outline"
             disabled={busy !== null}
-            title="Gera .dds e .png em mods/edits/images — o diálogo pergunta se é só esta ou todas as cópias"
+            title={readOnly
+              ? 'Extrai esta imagem do .vbf como .dds e .png, preservando o caminho interno'
+              : 'Gera .dds e .png na pasta de imagens de trabalho — o diálogo pergunta se é só esta ou todas as cópias'}
             onClick={() => openAction('extract')}
           >
             <Download size={16} />
@@ -483,7 +528,7 @@ export function ImagePanel({ view }: { view: EntryView }) {
             <FolderInput size={16} />
             {busy === 'import'
               ? 'Importando…'
-              : duplicates.length > 0
+              : !readOnly && duplicates.length > 0
                 ? `Importar .dds… (${copyTotal} idênticas)`
                 : 'Importar .dds…'}
           </Button>
@@ -492,7 +537,9 @@ export function ImagePanel({ view }: { view: EntryView }) {
               size="sm"
               variant="outline"
               disabled={busy !== null}
-              title="Reempacota a imagem aberta em mods/ de cada cópia idêntica — sem escolher arquivo"
+              title={readOnly
+                ? 'Reempacota a imagem aberta em mods/ das cópias do .vbf já identificadas'
+                : 'Reempacota a imagem aberta em mods/ de cada cópia idêntica — sem escolher arquivo'}
               onClick={() => openAction('replicate')}
             >
               <Copy size={16} />
@@ -510,16 +557,18 @@ export function ImagePanel({ view }: { view: EntryView }) {
             <FlipVertical size={16} />
             {flipped ? 'Flip (on)' : 'Flip'}
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={busy !== null}
-            title="Reconstrói o índice de duplicatas — para textura editada fora do app (hex editor)"
-            onClick={() => void onRefresh()}
-          >
-            <RefreshCw size={16} />
-            {busy === 'refresh' ? 'Reanalisando…' : 'Reanalisar'}
-          </Button>
+          {!readOnly ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={busy !== null}
+              title="Reconstrói o índice de duplicatas — para textura editada fora do app (hex editor)"
+              onClick={() => void onRefresh()}
+            >
+              <RefreshCw size={16} />
+              {busy === 'refresh' ? 'Reanalisando…' : 'Reanalisar'}
+            </Button>
+          ) : null}
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">

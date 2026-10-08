@@ -56,6 +56,9 @@ type ImageDuplicate struct {
 	// ID/Key são o id e a key canônica da cópia (navegação na árvore).
 	ID  string `json:"id"`
 	Key string `json:"key"`
+	// VbfPath identifica a entrada no container quando a duplicata foi
+	// descoberta pelo navegador .vbf (data/ não precisa deste campo).
+	VbfPath string `json:"vbfPath,omitempty"`
 	// Modded indica que a cópia já foi importada (existe em mods/).
 	Modded bool `json:"modded"`
 	// Identical indica que a cópia ainda está SINCRONIZADA com a textura

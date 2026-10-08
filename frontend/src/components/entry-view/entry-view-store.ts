@@ -77,10 +77,14 @@ export interface TranslationTarget {
  * as cópias do nó sob o cursor); `label` é o nome exibido no título.
  */
 export type ImageActionState = {
-  type: 'extract' | 'replicate' | 'delete';
+  type: 'extract' | 'replicate' | 'delete' | 'delete-selection';
   id: string;
   label: string;
   duplicates: dto.ImageDuplicate[] | null;
+  /** Presente apenas em delete-selection: arquivos explicitamente marcados. */
+  ids?: string[];
+  /** A origem veio de um container .vbf somente leitura. */
+  vbf?: { root: string; path: string };
 };
 
 export interface EntryViewState {
@@ -991,14 +995,6 @@ export function createEntryView(version: GameVersionId): EntryView {
       patch({ rows: [...store.state.rows] });
     },
     openImageAction: (action) => {
-      // Ações de imagem agem sobre data/ + mods/: a partir do .vbf o id
-      // pode nem existir lá, e o container não é alvo de escrita.
-      if (store.state.selectedEntry?.vbf) {
-        sendErrorNotificationWithMessage(
-          'Ações de imagem estão disponíveis na árvore de data/ — o .vbf é somente leitura.'
-        );
-        return;
-      }
       patch({ imageAction: action });
     },
     closeImageAction: () => patch({ imageAction: null }),

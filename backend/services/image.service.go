@@ -4,9 +4,11 @@ import (
 	"encoding/base64"
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"ffxresources/backend/common"
+	coreprogress "ffxresources/backend/core/progress"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/ddsphyre"
 )
@@ -331,16 +333,52 @@ func (s *MetadataService) ExtractImageGroup(kind, id string, targets []string, v
 		return dto.BatchResult{}, err
 	}
 	res := dto.BatchResult{Done: []string{}, Failed: []string{}, Total: len(list)}
+	coreprogress.Begin(fmt.Sprintf("Extraindo %d textura(s)", len(list)), len(list))
+	defer coreprogress.End()
 	for _, t := range list {
 		if _, eerr := ddsphyre.Extract(version, t); eerr != nil {
 			res.Failed = append(res.Failed, t+": "+eerr.Error())
+			coreprogress.Issue(t, eerr.Error())
 			continue
 		}
 		res.Done = append(res.Done, t)
+		coreprogress.Step(t)
 	}
 	if len(res.Done) > 0 && s != nil && s.notifier != nil {
 		s.notifier.NotifyInfo(fmt.Sprintf(
 			"Imagem exportada em %d de %d textura(s)", len(res.Done), res.Total))
+	}
+	return res, nil
+}
+
+// ExtractImageSelection extrai somente os ids explicitamente marcados na
+// árvore. Ao contrário de ExtractImageGroup, não expande duplicatas.
+func (s *MetadataService) ExtractImageSelection(kind string, ids []string, version common.GameVersion) (dto.BatchResult, error) {
+	if !isImageKind(kind) {
+		return dto.BatchResult{}, fmt.Errorf("kind desconhecido: %s", kind)
+	}
+	if err := ensureVersionReady(version); err != nil {
+		return dto.BatchResult{}, err
+	}
+	list, err := uniqueImageSelection(ids)
+	if err != nil {
+		return dto.BatchResult{}, err
+	}
+	if len(list) == 0 {
+		return dto.BatchResult{}, fmt.Errorf("nenhuma imagem selecionada")
+	}
+
+	res := dto.BatchResult{Done: []string{}, Failed: []string{}, Total: len(list)}
+	coreprogress.Begin(fmt.Sprintf("Extraindo %d imagem(ns)", len(list)), len(list))
+	defer coreprogress.End()
+	for _, id := range list {
+		if _, err := ddsphyre.Extract(version, id); err != nil {
+			res.Failed = append(res.Failed, id+": "+err.Error())
+			coreprogress.Issue(id, err.Error())
+			continue
+		}
+		res.Done = append(res.Done, id)
+		coreprogress.Step(id)
 	}
 	return res, nil
 }
@@ -371,7 +409,6 @@ func (s *MetadataService) ReplicateImage(kind, id string, targets []string, vers
 		return dto.BatchResult{}, fmt.Errorf("textura %s não tem cópias para replicar", id)
 	}
 	res := dto.BatchResult{Done: []string{}, Failed: []string{}, Total: len(list) - 1}
-
 	// Resolve é mods-first: a origem carrega a VERSÃO VISÍVEL (importada ou
 	// pristine). Pré-requisito do repack é o container pristine de data/,
 	// exigido por ImportPayload — nesse caso já vem embutido no erro.
@@ -458,6 +495,125 @@ func (s *MetadataService) DeleteImages(kind, id string, targets []string, scope 
 		}
 	}
 	return res, nil
+}
+
+// DeleteImageSelection aplica o mesmo escopo e a mesma opção de cópias a
+// cada imagem marcada. Cópias sobrepostas são deduplicadas antes de qualquer
+// remoção; sem withCopies, apenas os ids marcados são apagados.
+func (s *MetadataService) DeleteImageSelection(kind string, ids []string, withCopies bool, scope string, version common.GameVersion) (dto.BatchResult, error) {
+	if !isImageKind(kind) {
+		return dto.BatchResult{}, fmt.Errorf("kind desconhecido: %s", kind)
+	}
+	if err := ensureVersionReady(version); err != nil {
+		return dto.BatchResult{}, err
+	}
+	switch scope {
+	case ddsphyre.DeleteData, ddsphyre.DeleteMods, ddsphyre.DeleteBoth:
+	default:
+		return dto.BatchResult{}, fmt.Errorf("escopo %q inválido (esperado data, mods ou both)", scope)
+	}
+	selected, err := uniqueImageSelection(ids)
+	if err != nil {
+		return dto.BatchResult{}, err
+	}
+	if len(selected) == 0 {
+		return dto.BatchResult{}, fmt.Errorf("nenhuma imagem selecionada")
+	}
+	list := selected
+	if withCopies {
+		index, err := ddsphyre.IndexFor(version)
+		if err != nil {
+			return dto.BatchResult{}, fmt.Errorf("índice de duplicatas: %w", err)
+		}
+		seen := make(map[string]struct{}, len(selected))
+		list = make([]string, 0, len(selected))
+		for _, id := range selected {
+			group := index.OriginalGroup(id)
+			if len(group) == 0 {
+				group = []string{id}
+			}
+			for _, member := range group {
+				if _, exists := seen[member]; exists {
+					continue
+				}
+				seen[member] = struct{}{}
+				list = append(list, member)
+			}
+		}
+	}
+
+	res := dto.BatchResult{Done: []string{}, Failed: []string{}, Total: len(list)}
+	for _, id := range list {
+		if _, err := ddsphyre.Delete(version, id, scope); err != nil {
+			res.Failed = append(res.Failed, id+": "+err.Error())
+			continue
+		}
+		res.Done = append(res.Done, id)
+	}
+	if len(res.Done) > 0 {
+		ddsphyre.InvalidateIndex(version)
+		if s != nil && s.notifier != nil {
+			s.notifier.NotifyInfo(fmt.Sprintf("Imagem(ns) apagada(s) em %d de %d no escopo %s", len(res.Done), res.Total, scope))
+		}
+	}
+	return res, nil
+}
+
+// ImageSelectionCopies devolve as cópias adicionais únicas dos ids marcados,
+// sem carregar imagens, para o modal mostrar a contagem antes da confirmação.
+func (s *MetadataService) ImageSelectionCopies(kind string, ids []string, version common.GameVersion) ([]string, error) {
+	if !isImageKind(kind) {
+		return nil, fmt.Errorf("kind desconhecido: %s", kind)
+	}
+	if err := ensureVersionReady(version); err != nil {
+		return nil, err
+	}
+	selected, err := uniqueImageSelection(ids)
+	if err != nil {
+		return nil, err
+	}
+	if len(selected) == 0 {
+		return []string{}, nil
+	}
+	index, err := ddsphyre.IndexFor(version)
+	if err != nil {
+		return nil, fmt.Errorf("índice de duplicatas: %w", err)
+	}
+	selectedSet := make(map[string]struct{}, len(selected))
+	for _, id := range selected {
+		selectedSet[id] = struct{}{}
+	}
+	copies := make(map[string]struct{})
+	for _, id := range selected {
+		for _, copyID := range index.OriginalGroup(id) {
+			if _, included := selectedSet[copyID]; !included {
+				copies[copyID] = struct{}{}
+			}
+		}
+	}
+	result := make([]string, 0, len(copies))
+	for id := range copies {
+		result = append(result, id)
+	}
+	sort.Strings(result)
+	return result, nil
+}
+
+func uniqueImageSelection(ids []string) ([]string, error) {
+	seen := make(map[string]struct{}, len(ids))
+	result := make([]string, 0, len(ids))
+	for _, id := range ids {
+		id = strings.TrimSpace(id)
+		if !ddsphyre.ValidID(id) {
+			return nil, fmt.Errorf("textura desconhecida: %s", id)
+		}
+		if _, exists := seen[id]; exists {
+			continue
+		}
+		seen[id] = struct{}{}
+		result = append(result, id)
+	}
+	return result, nil
 }
 
 // RefreshImageDuplicates descarta o índice de duplicatas em cache — a

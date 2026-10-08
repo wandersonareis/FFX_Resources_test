@@ -341,6 +341,14 @@ func ImportPayload(version common.GameVersion, id string, dds []byte) error {
 	if err != nil {
 		return fmt.Errorf("lendo %s: %w", id, err)
 	}
+	return ImportPayloadFrom(version, id, original, dds)
+}
+
+// ImportPayloadFrom reempacota um DDS sobre bytes pristine fornecidos pelo
+// chamador. É usado quando a fonte original é um .vbf e ainda não existe em
+// data/; a saída continua sendo exclusivamente mods/.
+func ImportPayloadFrom(version common.GameVersion, id string, original, dds []byte) error {
+	rel := RelPath(version, id)
 	packed, err := PackDDS(original, dds)
 	if err != nil {
 		return fmt.Errorf("%s: %w", id, err)

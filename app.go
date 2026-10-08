@@ -318,6 +318,27 @@ func (a *App) GetVbfImageEntry(vbfPath, innerPath string) (dto.ImageEntry, error
 	return a.MetadataService.GetVbfImageEntry(vbfPath, innerPath)
 }
 
+func (a *App) ImportVbfImage(vbfPath, innerPath, ddsPath string) error {
+	if a.MetadataService == nil {
+		return fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ImportVbfImage(vbfPath, innerPath, ddsPath)
+}
+
+func (a *App) SaveVbfImage(vbfPath, innerPath, format, destPath string) error {
+	if a.MetadataService == nil {
+		return fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.SaveVbfImage(vbfPath, innerPath, format, destPath)
+}
+
+func (a *App) ReplicateVbfImage(vbfPath, sourcePath string, targets []string) (dto.BatchResult, error) {
+	if a.MetadataService == nil {
+		return dto.BatchResult{}, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ReplicateVbfImage(vbfPath, sourcePath, targets)
+}
+
 // ---- extração/export da SELEÇÃO da árvore do .vbf --------------------------
 //
 // A seleção é uma lista de caminhos internos (arquivos e diretórios);
@@ -345,12 +366,34 @@ func (a *App) ExtractVbfSelection(vbfPath string, paths []string, destRoot strin
 	return a.MetadataService.ExtractVbfSelection(vbfPath, paths, destRoot)
 }
 
+// ExtractVbfImagesSelection extrai DDS/PNG das imagens marcadas, preservando
+// os caminhos internos do .vbf sob destRoot (vazio = mods/edits/images).
+func (a *App) ExtractVbfImagesSelection(vbfPath string, paths []string, destRoot string) (dto.BatchResult, error) {
+	if a.MetadataService == nil {
+		return dto.BatchResult{}, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ExtractVbfImagesSelection(vbfPath, paths, destRoot)
+}
+
 // SelectVbfExtractDir abre o seletor nativo de pasta para o "Extrair
 // para…", começando em data/ do jogo. Devolve "" no cancelamento.
 func (a *App) SelectVbfExtractDir() string {
 	selection, err := runtime.OpenDirectoryDialog(interactions.NewInteractionService().Ctx, runtime.OpenDialogOptions{
 		Title:            "Extrair para…",
 		DefaultDirectory: filepath.Join(common.GameFilesRoot, common.DirData),
+	})
+	if err != nil {
+		return ""
+	}
+	return selection
+}
+
+// SelectVbfImageExtractDir escolhe a raiz onde DDS/PNG extraídos do .vbf
+// serão gravados, preservando abaixo dela o caminho interno do container.
+func (a *App) SelectVbfImageExtractDir() string {
+	selection, err := runtime.OpenDirectoryDialog(interactions.NewInteractionService().Ctx, runtime.OpenDialogOptions{
+		Title:            "Escolher destino das imagens extraídas",
+		DefaultDirectory: common.GameFilesRoot,
 	})
 	if err != nil {
 		return ""
@@ -520,6 +563,14 @@ func (a *App) ExtractImageGroup(kind, id string, targets []string, version commo
 	return a.MetadataService.ExtractImageGroup(kind, id, targets, version)
 }
 
+// ExtractImageSelection extrai somente as imagens explicitamente selecionadas.
+func (a *App) ExtractImageSelection(kind string, ids []string, version common.GameVersion) (dto.BatchResult, error) {
+	if a.MetadataService == nil {
+		return dto.BatchResult{}, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ExtractImageSelection(kind, ids, version)
+}
+
 // ReplicateImage reempacota a imagem ABERTA em mods/ das cópias escolhidas
 // — o dupe sem diálogo de arquivo: fonte é o próprio conteúdo do painel.
 func (a *App) ReplicateImage(kind, id string, targets []string, version common.GameVersion) (dto.BatchResult, error) {
@@ -537,6 +588,24 @@ func (a *App) DeleteImages(kind, id string, targets []string, scope string, vers
 		return dto.BatchResult{}, fmt.Errorf("metadata service not initialized")
 	}
 	return a.MetadataService.DeleteImages(kind, id, targets, scope, version)
+}
+
+// DeleteImageSelection deleta as imagens selecionadas no mesmo escopo. A
+// opção withCopies inclui, uma vez cada, as cópias de payload de cada seleção.
+func (a *App) DeleteImageSelection(kind string, ids []string, withCopies bool, scope string, version common.GameVersion) (dto.BatchResult, error) {
+	if a.MetadataService == nil {
+		return dto.BatchResult{}, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.DeleteImageSelection(kind, ids, withCopies, scope, version)
+}
+
+// ImageSelectionCopies retorna, sem decodificar imagens, a união única das
+// cópias adicionais dos ids selecionados.
+func (a *App) ImageSelectionCopies(kind string, ids []string, version common.GameVersion) ([]string, error) {
+	if a.MetadataService == nil {
+		return nil, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ImageSelectionCopies(kind, ids, version)
 }
 
 // RevealEntryFile abre o explorador com o arquivo da entrada selecionado
