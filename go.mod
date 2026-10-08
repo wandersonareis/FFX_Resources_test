@@ -9,6 +9,7 @@ require (
 	github.com/rs/zerolog v1.35.1
 	github.com/wailsapp/wails/v2 v2.16.0
 	github.com/woozymasta/bcn v0.7.0
+	golang.org/x/sys v0.48.0
 	golang.org/x/text v0.42.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
@@ -45,7 +46,6 @@ require (
 	github.com/wailsapp/mimetype v1.4.1 // indirect
 	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/net v0.59.0 // indirect
-	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/tools v0.49.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
