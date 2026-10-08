@@ -41,3 +41,14 @@ type VbfNode struct {
 	// Image marca uma textura: abre o painel de imagem, não a tabela.
 	Image bool `json:"image,omitempty"`
 }
+
+// VbfExtractPreview é o resumo ANTES de extrair a seleção da árvore do
+// .vbf: quantos arquivos, quantos bytes e quantos já existem no destino
+// (o aviso de sobrescrita do diálogo de confirmação).
+type VbfExtractPreview struct {
+	Files    int    `json:"files"`
+	Bytes    uint64 `json:"bytes"`
+	Existing int    `json:"existing"`
+	// DestRoot é o destino considerado no preview (o frontend replica).
+	DestRoot string `json:"destRoot"`
+}

@@ -2,9 +2,10 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { loggedToast as toast } from '@/lib/ffx/toast-logged';
-import { Copy, Download, FolderOpen, Trash2 } from 'lucide-react';
+import { Copy, Download, FolderOpen, HardDriveDownload, Trash2 } from 'lucide-react';
 import type { dto } from '@/wailsjs/go/models';
 import { resolveEntryLabel, type EntryKind } from '@/lib/ffx/display-names';
+import { EXPORT_FORMAT_LABELS, exportSelection } from '@/lib/ffx/export-selection';
 import { imageDuplicates, revealEntry } from '@/lib/ffx/tree-data';
 import { parseError } from '@/lib/ffx/error-handler';
 import {
@@ -19,9 +20,12 @@ import type { EntryView } from './entry-view-store';
 
 /** O nó sob o cursor: folha tem id (arquivo); grupo/raiz, não. */
 export type EntryMenuTarget = {
-  kind: EntryKind;
-  id: string | null;
+  kind?: EntryKind;
+  id?: string | null;
   label: string;
+  /** Presente para nó do navegador .vbf. */
+  vbfRoot?: string;
+  vbfPath?: string;
 };
 
 /**
@@ -45,6 +49,8 @@ export function EntryActionsMenu({
   initialId,
   initialDuplicates,
   onExport,
+  onVbfExtract,
+  onVbfExport,
   children,
 }: {
   view: EntryView;
@@ -55,6 +61,10 @@ export function EntryActionsMenu({
   initialDuplicates?: dto.ImageDuplicate[] | null;
   /** Exportar de TEXTO — a lógica de seleção/formato fica no chamador. */
   onExport?: () => void;
+  /** Extrai os caminhos marcados do container em data/ ou pasta escolhida. */
+  onVbfExtract?: (mode: 'data' | 'choose') => void;
+  /** Exporta em JSON/.strings os caminhos marcados no container. */
+  onVbfExport?: () => void;
   children: ReactNode;
 }) {
   const { version, actions } = view;
@@ -64,6 +74,7 @@ export function EntryActionsMenu({
   } | null>(null);
 
   const targetId = target?.id ?? null;
+  const isVbf = Boolean(target?.vbfRoot);
   const isImage = target?.kind === 'images';
 
   const duplicates =
@@ -119,7 +130,7 @@ export function EntryActionsMenu({
   };
 
   const onReveal = () => {
-    if (!targetId || !target) return;
+    if (!targetId || !target?.kind) return;
     void revealEntry(target.kind, targetId, version)
       .then(() => toast.success(`Exibido no Explorer: ${target.label}`))
       .catch((error) => toast.error(parseError(error)));
@@ -138,37 +149,57 @@ export function EntryActionsMenu({
         {target?.label ? (
           <ContextMenuLabel>{target.label}</ContextMenuLabel>
         ) : null}
-        <ContextMenuItem
-          disabled={isImage && !canExtract}
-          onSelect={() => (isImage ? openAction('extract') : onExport?.())}
-        >
-          <Download size={16} />
-          Exportar
-        </ContextMenuItem>
-        <ContextMenuItem disabled={!canFile} onSelect={onReveal}>
-          <FolderOpen size={16} />
-          Abrir até o arquivo
-        </ContextMenuItem>
-        {isImage ? (
+        {isVbf ? (
           <>
-            <ContextMenuItem
-              disabled={!canReplicate}
-              onSelect={() => openAction('replicate')}
-            >
-              <Copy size={16} />
-              {replicateLabel}
+            <ContextMenuItem onSelect={() => onVbfExtract?.('data')}>
+              <HardDriveDownload size={16} />
+              Extrair binário em data/
             </ContextMenuItem>
-            <ContextMenuSeparator />
+            <ContextMenuItem onSelect={() => onVbfExtract?.('choose')}>
+              <FolderOpen size={16} />
+              Extrair para…
+            </ContextMenuItem>
+            <ContextMenuItem onSelect={onVbfExport}>
+              <Download size={16} />
+              Exportar ({EXPORT_FORMAT_LABELS[exportSelection.formatOf()]})
+            </ContextMenuItem>
           </>
         ) : null}
-        <ContextMenuItem
-          variant="destructive"
-          disabled={!canDelete}
-          onSelect={() => openAction('delete')}
-        >
-          <Trash2 size={16} />
-          Deletar
-        </ContextMenuItem>
+        {!isVbf ? (
+          <>
+            <ContextMenuItem
+              disabled={isImage && !canExtract}
+              onSelect={() => (isImage ? openAction('extract') : onExport?.())}
+            >
+              <Download size={16} />
+              Exportar
+            </ContextMenuItem>
+            <ContextMenuItem disabled={!canFile} onSelect={onReveal}>
+              <FolderOpen size={16} />
+              Abrir até o arquivo
+            </ContextMenuItem>
+            {isImage ? (
+              <>
+                <ContextMenuItem
+                  disabled={!canReplicate}
+                  onSelect={() => openAction('replicate')}
+                >
+                  <Copy size={16} />
+                  {replicateLabel}
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+              </>
+            ) : null}
+            <ContextMenuItem
+              variant="destructive"
+              disabled={!canDelete}
+              onSelect={() => openAction('delete')}
+            >
+              <Trash2 size={16} />
+              Deletar
+            </ContextMenuItem>
+          </>
+        ) : null}
       </ContextMenuContent>
     </ContextMenu>
   );
@@ -176,9 +207,23 @@ export function EntryActionsMenu({
 
 /** Nó da árvore → alvo do menu (folha carrega o id, grupo não). */
 export function menuTargetOf(
-  node: { id: string; kind: EntryKind; label?: string } | null
+  node: {
+    id: string;
+    kind?: EntryKind;
+    label?: string;
+    vbfRoot?: string;
+    vbfPath?: string;
+  } | null
 ): EntryMenuTarget | null {
   if (!node) return null;
+  if (node.vbfRoot) {
+    return {
+      label: node.label ?? '',
+      vbfRoot: node.vbfRoot,
+      vbfPath: node.vbfPath ?? '',
+    };
+  }
+  if (!node.kind) return null;
   const prefix = `leaf:${node.kind}:`;
   const isLeaf = node.id.startsWith(prefix);
   const id = isLeaf ? node.id.slice(prefix.length) : null;

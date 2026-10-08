@@ -30,12 +30,20 @@ export function ExportStrings(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ExportStrings'](arg1, arg2, arg3, arg4);
 }
 
+export function ExportVbfSelection(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['ExportVbfSelection'](arg1, arg2, arg3, arg4);
+}
+
 export function ExtractImage(arg1, arg2, arg3) {
   return window['go']['main']['App']['ExtractImage'](arg1, arg2, arg3);
 }
 
 export function ExtractImageGroup(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ExtractImageGroup'](arg1, arg2, arg3, arg4);
+}
+
+export function ExtractVbfSelection(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ExtractVbfSelection'](arg1, arg2, arg3);
 }
 
 export function GetEnableMods() {
@@ -134,6 +142,10 @@ export function PreviewImport(arg1, arg2) {
   return window['go']['main']['App']['PreviewImport'](arg1, arg2);
 }
 
+export function PreviewVbfExtraction(arg1, arg2, arg3) {
+  return window['go']['main']['App']['PreviewVbfExtraction'](arg1, arg2, arg3);
+}
+
 export function QuitApp() {
   return window['go']['main']['App']['QuitApp']();
 }
@@ -176,6 +188,10 @@ export function SelectImageSavePath(arg1, arg2) {
 
 export function SelectImportFile() {
   return window['go']['main']['App']['SelectImportFile']();
+}
+
+export function SelectVbfExtractDir() {
+  return window['go']['main']['App']['SelectVbfExtractDir']();
 }
 
 export function SetEnableMods(arg1) {

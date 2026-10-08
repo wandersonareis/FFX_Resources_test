@@ -1,9 +1,13 @@
 import {
+  ExportVbfSelection,
+  ExtractVbfSelection,
   GetVbfImageEntry,
   GetVbfTextEntry,
   ListVbfDir,
   ListVbfMacroChunks,
   ListVbfRoots,
+  PreviewVbfExtraction,
+  SelectVbfExtractDir,
 } from '@/wailsjs/go/main/App';
 import { dto } from '@/wailsjs/go/models';
 
@@ -139,4 +143,45 @@ export function invalidateVbfCache(): void {
   entryCache.clear();
   imageCache.clear();
   rootsPromise = null;
+}
+
+// ---- extração/export da SELEÇÃO da árvore do .vbf --------------------------
+//
+// A seleção é uma lista de caminhos internos (arquivos e diretórios);
+// diretório = toda a subárvore (expandida contra o índice no backend).
+
+/** Resumo antes de extrair: arquivos, bytes e quantos já existem no destino. */
+export function previewVbfExtraction(
+  root: string,
+  paths: string[],
+  destRoot: string
+): Promise<dto.VbfExtractPreview> {
+  return PreviewVbfExtraction(root, paths, destRoot);
+}
+
+/** Extrai a seleção preservando a estrutura de caminhos em destRoot. */
+export function extractVbfSelection(
+  root: string,
+  paths: string[],
+  destRoot: string
+): Promise<dto.BatchResult> {
+  return ExtractVbfSelection(root, paths, destRoot);
+}
+
+/** Seletor nativo de pasta do "Extrair para…" (default data/). "" = cancelou. */
+export function selectVbfExtractDir(): Promise<string> {
+  return SelectVbfExtractDir();
+}
+
+/**
+ * Exporta os kinds de TEXTO da seleção em JSON ou .strings — mesmo lugar
+ * (mods/edits) e convenção do export de data/.
+ */
+export function exportVbfSelection(
+  root: string,
+  format: 'json' | 'strings',
+  paths: string[],
+  langs: string[] = []
+): Promise<string[]> {
+  return ExportVbfSelection(root, format, paths, langs);
 }

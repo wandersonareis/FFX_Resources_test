@@ -47,6 +47,24 @@ export namespace dto {
 	        this.total = source["total"];
 	    }
 	}
+	export class VbfExtractPreview {
+	    files: number;
+	    bytes: number;
+	    existing: number;
+	    destRoot: string;
+
+	    static createFrom(source: any = {}) {
+	        return new VbfExtractPreview(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.files = source["files"];
+	        this.bytes = source["bytes"];
+	        this.existing = source["existing"];
+	        this.destRoot = source["destRoot"];
+	    }
+	}
 	export class TextRow {
 	    index: number;
 	    name?: string;

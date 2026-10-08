@@ -18,9 +18,13 @@ export function ExportJSON(arg1:string,arg2:common.GameVersion,arg3:Array<string
 
 export function ExportStrings(arg1:string,arg2:common.GameVersion,arg3:Array<string>,arg4:Array<string>):Promise<Array<string>>;
 
+export function ExportVbfSelection(arg1:string,arg2:string,arg3:Array<string>,arg4:Array<string>):Promise<Array<string>>;
+
 export function ExtractImage(arg1:string,arg2:string,arg3:common.GameVersion):Promise<Array<string>>;
 
 export function ExtractImageGroup(arg1:string,arg2:string,arg3:Array<string>,arg4:common.GameVersion):Promise<dto.BatchResult>;
+
+export function ExtractVbfSelection(arg1:string,arg2:Array<string>,arg3:string):Promise<dto.BatchResult>;
 
 export function GetEnableMods():Promise<boolean>;
 
@@ -70,6 +74,8 @@ export function PreloadVersions(arg1:Array<string>):Promise<void>;
 
 export function PreviewImport(arg1:string,arg2:common.GameVersion):Promise<dto.ImportSummary>;
 
+export function PreviewVbfExtraction(arg1:string,arg2:Array<string>,arg3:string):Promise<dto.VbfExtractPreview>;
+
 export function QuitApp():Promise<void>;
 
 export function ReadFileAsString(arg1:string):Promise<string>;
@@ -91,6 +97,8 @@ export function SelectImageFile():Promise<string>;
 export function SelectImageSavePath(arg1:string,arg2:string):Promise<string>;
 
 export function SelectImportFile():Promise<string>;
+
+export function SelectVbfExtractDir():Promise<string>;
 
 export function SetEnableMods(arg1:boolean):Promise<void>;
 

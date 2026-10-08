@@ -11,15 +11,18 @@ import {
   exportJSON,
   exportStrings,
 } from '@/lib/ffx/tree-data';
+import { exportVbfSelection } from '@/lib/ffx/vbf';
 import { parseError } from '@/lib/ffx/error-handler';
 import {
   EXPORT_FORMAT_LABELS,
   exportSelection,
   useExportSelection,
 } from '@/lib/ffx/export-selection';
+import { vbfSelection, useVbfSelection } from '@/lib/ffx/vbf-selection';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { EntryActionsMenu, menuTargetOf } from './entry-actions-menu';
+import { VbfExtractDialog, type VbfExtractRequest } from './vbf-extract-dialog';
 import type { EntryView } from './entry-view-store';
 import { entryNodeId, type SideNode } from './types';
 import { TreeItem } from './tree-item';
@@ -40,13 +43,21 @@ export function ContentTree({ view }: { view: EntryView }) {
   const loading = useSelector(store, (s) => s.loading);
   const [ctxNode, setCtxNode] = useState<{
     id: string;
-    kind: EntryKind;
+    kind?: EntryKind;
     label: string;
+    vbfRoot?: string;
+    vbfPath?: string;
+    selectedVbfPaths?: string[];
   } | null>(null);
+  const [extractRequest, setExtractRequest] =
+    useState<VbfExtractRequest | null>(null);
+  const extractRequestCounter = useRef(0);
+  const closeExtractDialog = useCallback(() => setExtractRequest(null), []);
   // Container da árvore, para ordenar os nós visíveis no foco por setas.
   const treeRef = useRef<HTMLDivElement>(null);
 
   const selection = useExportSelection();
+  const vbfSelectionSnapshot = useVbfSelection();
   // Seleção de exportação por kind (checkbox tri-state + menu de contexto).
   const selectedByKind = useMemo(() => {
     const out = new Map<EntryKind, ReadonlySet<string>>();
@@ -116,13 +127,19 @@ export function ContentTree({ view }: { view: EntryView }) {
     [actions, expanded]
   );
 
-  // Checkbox: folha = 1 id; grupo = todos os filhos (uma notificação só).
-  // Imagem não tem checkbox (não é exportável como JSON/.strings).
+  // Checkbox de data/: folha = 1 id; grupo = todos os filhos.
+  // Checkbox do .vbf: guarda o caminho (diretório = subárvore, expandida
+  // pelo backend); inclui imagens e formatos fora do escopo de texto para
+  // permitir a extração dos binários originais.
   const checkNode = useCallback(
     (node: SideNode, checked: boolean) => {
-      // Nós do .vbf não participam da seleção de exportação: o export lê de
-      // data/ + mods/, nunca do container (somente leitura).
-      if (node.vbf || !node.kind || node.kind === 'images') return;
+      if (node.vbf) {
+        const root = node.vbfRoot ?? node.entry?.vbf?.root;
+        const path = node.vbfPath ?? node.entry?.vbf?.path ?? '';
+        if (root) vbfSelection.set(root, path, checked);
+        return;
+      }
+      if (!node.kind || node.kind === 'images') return;
       const ids = node.entry
         ? [node.entry.id]
         : (node.children ?? [])
@@ -133,7 +150,7 @@ export function ContentTree({ view }: { view: EntryView }) {
     [version]
   );
 
-  // Exporta só o que está marcado na árvore invocada, no FORMATO SELECIONADO
+  // Exporta só o que está marcado na árvore de data/, no FORMATO SELECIONADO
   // no topo (JSON | Strings) — leitura imperativa do store compartilhado.
   const onCtxExport = useCallback(async () => {
     const kind = ctxNode?.kind;
@@ -162,6 +179,13 @@ export function ContentTree({ view }: { view: EntryView }) {
     }
   }, [ctxNode, version]);
 
+  // O menu do .vbf opera somente sobre os caminhos marcados no container
+  // clicado — o nó sob o cursor apenas determina qual container recebe o
+  // menu, não troca a seleção por esse nó.
+  const vbfPathsForContext = ctxNode?.vbfRoot
+    ? (ctxNode.selectedVbfPaths ?? vbfSelection.pathsOf(ctxNode.vbfRoot))
+    : [];
+
   return (
     <aside className="w-70 shrink-0 border-r p-2 flex flex-col min-h-0">
       <div className="flex items-center justify-between font-semibold px-2 py-1">
@@ -183,6 +207,39 @@ export function ContentTree({ view }: { view: EntryView }) {
           if (!open) setCtxNode(null);
         }}
         onExport={() => void onCtxExport()}
+        onVbfExtract={(mode) => {
+          if (!ctxNode?.vbfRoot || vbfPathsForContext.length === 0) return;
+          setExtractRequest({
+            requestId: ++extractRequestCounter.current,
+            root: ctxNode.vbfRoot,
+            paths: vbfPathsForContext,
+            mode,
+          });
+          setCtxNode(null);
+        }}
+        onVbfExport={() => {
+          if (!ctxNode?.vbfRoot || vbfPathsForContext.length === 0) return;
+          void (async () => {
+            const format = exportSelection.formatOf();
+            const label = EXPORT_FORMAT_LABELS[format];
+            toast.loading(`Exportando (${label})…`, { id: 'export' });
+            try {
+              const paths = await exportVbfSelection(
+                ctxNode.vbfRoot!,
+                format,
+                vbfPathsForContext
+              );
+              const dest = exportDestination(paths);
+              toast.success(
+                `Exportado (${label}): ${dest || `${paths.length} arquivo(s)`}.`,
+                { id: 'export' }
+              );
+            } catch (error) {
+              toast.error(parseError(error), { id: 'export' });
+            }
+          })();
+          setCtxNode(null);
+        }}
       >
         <ScrollArea
           id="entry-tree"
@@ -199,11 +256,27 @@ export function ContentTree({ view }: { view: EntryView }) {
             const kind = row.getAttribute(
               'data-node-kind'
             ) as EntryKind | null;
-            // Nós do .vbf não têm menu de contexto: exportar/deletar agem
-            // sobre data/ + mods/, e o container é somente leitura.
             const isVbf = row.getAttribute('data-node-vbf') === 'true';
+            if (isVbf) {
+              const vbfRoot = row.getAttribute('data-node-vbf-root') ?? '';
+              const selectedVbfPaths = vbfSelection.pathsOf(vbfRoot);
+              // Sem seleção marcada não há menu de contexto VBF, como no
+              // fluxo de exportação por seleção da árvore data/.
+              setCtxNode(
+                vbfRoot && vbfSelection.countOf(vbfRoot) > 0
+                  ? {
+                      id: row.getAttribute('data-node-id') ?? '',
+                      label: row.getAttribute('data-node-label') ?? '',
+                      vbfRoot,
+                      vbfPath: row.getAttribute('data-node-vbf-path') ?? '',
+                      selectedVbfPaths,
+                    }
+                  : null
+              );
+              return;
+            }
             setCtxNode(
-              kind && !isVbf
+              kind
                 ? {
                     id: row.getAttribute('data-node-id') ?? '',
                     kind,
@@ -232,6 +305,7 @@ export function ContentTree({ view }: { view: EntryView }) {
               onSelect={(n) => void actions.selectNode(n)}
               onCheck={checkNode}
               onNodeKeyDown={onNodeKeyDown}
+              vbfSelectionByRoot={vbfSelectionSnapshot.byRoot}
             />
           ))}
           {roots.length > 0 && vbfRoots.length > 0 ? (
@@ -251,10 +325,20 @@ export function ContentTree({ view }: { view: EntryView }) {
               onSelect={(n) => void actions.selectNode(n)}
               onCheck={checkNode}
               onNodeKeyDown={onNodeKeyDown}
+              vbfSelectionByRoot={vbfSelectionSnapshot.byRoot}
             />
           ))}
         </ScrollArea>
       </EntryActionsMenu>
+      <VbfExtractDialog
+        key={extractRequest?.requestId ?? 'closed'}
+        request={extractRequest}
+        onClose={closeExtractDialog}
+        onDone={() => {
+          setExtractRequest(null);
+          void actions.coldReload();
+        }}
+      />
     </aside>
   );
 }

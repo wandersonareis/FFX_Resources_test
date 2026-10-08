@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -265,9 +266,10 @@ func (a *App) SelectGameExeFile() string {
 
 // ---- navegador de .vbf (SOMENTE LEITURA) ---------------------------------
 //
-// O container nunca é lido inteiro nem extraído: a árvore sai do índice
-// (cabeçalho) e só o arquivo clicado é decodificado, em memória. Nenhum
-// binding abaixo escreve no .vbf — export e import continuam em mods/.
+// O container nunca é materializado inteiro em memória: a árvore sai do
+// índice e a extração selecionada decodifica/grava um arquivo por vez. O
+// .vbf nunca é escrito; export de texto vai para mods/edits, e extração de
+// binários vai para data/ ou para a pasta escolhida pelo usuário.
 
 // ListVbfRoots devolve os .vbf encontrados ao lado do executável do jogo
 // (raízes da sidebar), com o total de arquivos do índice. Lista vazia =
@@ -314,6 +316,55 @@ func (a *App) GetVbfImageEntry(vbfPath, innerPath string) (dto.ImageEntry, error
 		return dto.ImageEntry{}, fmt.Errorf("metadata service not initialized")
 	}
 	return a.MetadataService.GetVbfImageEntry(vbfPath, innerPath)
+}
+
+// ---- extração/export da SELEÇÃO da árvore do .vbf --------------------------
+//
+// A seleção é uma lista de caminhos internos (arquivos e diretórios);
+// diretório = toda a subárvore, expandida contra o índice no backend.
+// Extrair preserva a estrutura de caminhos no destino (default data/ do
+// jogo); exportar grava JSON/.strings em mods/edits, como o export de
+// data/. O container continua somente leitura.
+
+// PreviewVbfExtraction devolve o resumo da seleção (arquivos, bytes e
+// quantos já existem no destino) para o diálogo de confirmação — destRoot
+// vazio significa data/ do jogo.
+func (a *App) PreviewVbfExtraction(vbfPath string, paths []string, destRoot string) (dto.VbfExtractPreview, error) {
+	if a.MetadataService == nil {
+		return dto.VbfExtractPreview{}, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.PreviewVbfExtraction(vbfPath, paths, destRoot)
+}
+
+// ExtractVbfSelection extrai os binários da seleção para destRoot (vazio =
+// data/ do jogo), preservando a estrutura interna de caminhos.
+func (a *App) ExtractVbfSelection(vbfPath string, paths []string, destRoot string) (dto.BatchResult, error) {
+	if a.MetadataService == nil {
+		return dto.BatchResult{}, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ExtractVbfSelection(vbfPath, paths, destRoot)
+}
+
+// SelectVbfExtractDir abre o seletor nativo de pasta para o "Extrair
+// para…", começando em data/ do jogo. Devolve "" no cancelamento.
+func (a *App) SelectVbfExtractDir() string {
+	selection, err := runtime.OpenDirectoryDialog(interactions.NewInteractionService().Ctx, runtime.OpenDialogOptions{
+		Title:            "Extrair para…",
+		DefaultDirectory: filepath.Join(common.GameFilesRoot, common.DirData),
+	})
+	if err != nil {
+		return ""
+	}
+	return selection
+}
+
+// ExportVbfSelection decodifica os kinds de TEXTO da seleção e grava os
+// artefatos em mods/edits no formato pedido ("json" | "strings").
+func (a *App) ExportVbfSelection(vbfPath, format string, paths []string, langs []string) ([]string, error) {
+	if a.MetadataService == nil {
+		return nil, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.ExportVbfSelection(vbfPath, format, paths, langs)
 }
 
 // GetMetadata expõe a metadata nova (key, row_count, id, is_dir) ao frontend.

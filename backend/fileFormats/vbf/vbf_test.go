@@ -276,6 +276,117 @@ func TestErrNotFound(t *testing.T) {
 	}
 }
 
+func TestFilesUnder(t *testing.T) {
+	a := openFixture(t, true)
+	if !a.IsDir("ffx_data/gamedata/ps3data/a_dir") {
+		t.Error("IsDir não reconheceu diretório")
+	}
+	if a.IsDir("ffx_data/gamedata/ps3data/a_dir/other.txt") {
+		t.Error("IsDir reconheceu arquivo como diretório")
+	}
+
+	// Raiz ("" = tudo).
+	if got := len(a.FilesUnder("")); got != len(fixture()) {
+		t.Errorf("FilesUnder(\"\") = %d, esperado %d", got, len(fixture()))
+	}
+
+	// Diretório: só o que está ABAIXO do prefixo (o próprio dir não conta).
+	aDir := a.FilesUnder("ffx_data/gamedata/ps3data/a_dir")
+	if len(aDir) != 2 {
+		t.Fatalf("a_dir: %d entries, esperado 2", len(aDir))
+	}
+	want := map[string]bool{
+		"ffx_data/gamedata/ps3data/a_dir/deep/leaf.txt": true,
+		"ffx_data/gamedata/ps3data/a_dir/other.txt":     true,
+	}
+	for _, e := range aDir {
+		if !want[e.Path] {
+			t.Errorf("entry inesperada: %s", e.Path)
+		}
+	}
+
+	// Case-insensitive e separador do Windows.
+	if got := len(a.FilesUnder(`FFX_DATA\Gamedata\PS3DATA\A_DIR`)); got != 2 {
+		t.Errorf("FilesUnder com caixa/separador misto = %d, esperado 2", got)
+	}
+
+	// Diretório inexistente: nada.
+	if got := a.FilesUnder("nao/existe"); len(got) != 0 {
+		t.Errorf("FilesUnder inexistente = %d entries, esperado 0", len(got))
+	}
+}
+
+func TestExtractEntryRoundTrip(t *testing.T) {
+	// Os DOIS caminhos de bloco (cru e compactado) — a extração tem as
+	// mesmas regras de detecção do ReadEntry.
+	for _, compress := range []bool{false, true} {
+		a := openFixture(t, compress)
+		dest := t.TempDir()
+		for name, want := range fixture() {
+			e, ok := a.Entry(name)
+			if !ok {
+				t.Fatalf("Entry(%s): ausente no índice", name)
+			}
+			target := filepath.Join(dest, filepath.FromSlash(e.Path))
+			if err := a.ExtractEntry(e, target); err != nil {
+				t.Fatalf("ExtractEntry(%s): %v", name, err)
+			}
+			got, err := os.ReadFile(target)
+			if err != nil {
+				t.Fatalf("lendo %s: %v", target, err)
+			}
+			if !bytes.Equal(got, want) {
+				t.Errorf("ExtractEntry(%s): %d bytes, esperado %d",
+					name, len(got), len(want))
+			}
+		}
+	}
+}
+
+func TestExtractEntryGrandeSemLimite(t *testing.T) {
+	// Arquivo que DECLARA mais que MaxDecodeBytes: a extração NÃO recusa
+	// (o cap é só do decode em memória) — mas o tamanho declarado é
+	// irreal para montar aqui, então basta conferir que o erro NÃO é
+	// ErrTooLarge (falha depois, no payload inexistente).
+	files := map[string][]byte{"grande.bin": {}}
+	p := buildVBFWithDeclaredSize(t, files, MaxDecodeBytes+1)
+	a, err := Open(p)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer a.Close()
+	e, ok := a.Entry("grande.bin")
+	if !ok {
+		t.Fatal("entry ausente")
+	}
+	err = a.ExtractEntry(e, filepath.Join(t.TempDir(), "grande.bin"))
+	if errors.Is(err, ErrTooLarge) {
+		t.Errorf("extração recusou com ErrTooLarge: %v", err)
+	}
+}
+
+func TestExtractEntryNaoDeixaTmp(t *testing.T) {
+	a := openFixture(t, true)
+	// Entry apontando para bloco fora do índice: a extração falha no meio
+	// e o .tmp tem que sumir (nada de arquivo meiado no destino).
+	e, ok := a.Entry("ffx_ps2/ffx/master/new_uspc/menu/macrodic.dcp")
+	if !ok {
+		t.Fatal("entry ausente")
+	}
+	e.StartBlock = uint32(len(a.blocks)) + 10
+	dest := filepath.Join(t.TempDir(), "fora.bin")
+	if err := a.ExtractEntry(e, dest); err == nil {
+		t.Fatal("esperado erro de bloco fora do índice")
+	}
+	if _, serr := os.Stat(dest); serr == nil {
+		t.Error("destino existe apesar do erro")
+	}
+	matches, _ := filepath.Glob(filepath.Join(filepath.Dir(dest), ".vbf-extract-*.tmp"))
+	if len(matches) > 0 {
+		t.Errorf("tmp deixado para trás: %v", matches)
+	}
+}
+
 func TestErrTooLarge(t *testing.T) {
 	// Entry que DECLARA mais que MaxDecodeBytes: o leitor recusa antes de
 	// tocar no payload (nada de alocar 64 MiB num teste).

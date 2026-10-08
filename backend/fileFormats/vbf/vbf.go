@@ -39,6 +39,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -97,6 +98,7 @@ type Archive struct {
 	size     int64
 	entries  []Entry
 	index    map[string]int // chave: caminho normalizado (minúsculo, "/")
+	dirs     map[string]struct{}
 	blocks   []uint16
 	numFiles int
 }
@@ -177,6 +179,7 @@ func Open(filePath string) (*Archive, error) {
 		numFiles: int(numFiles),
 		entries:  make([]Entry, 0, numFiles),
 		index:    make(map[string]int, numFiles),
+		dirs:     make(map[string]struct{}),
 	}
 
 	// Leitor do corpo do cabeçalho, a partir do offset 16 (o head já lido).
@@ -275,6 +278,14 @@ func Open(filePath string) (*Archive, error) {
 			a.index[key] = i
 		}
 		a.entries = append(a.entries, e)
+		for slash := strings.IndexByte(key, '/'); slash >= 0; {
+			a.dirs[key[:slash]] = struct{}{}
+			next := strings.IndexByte(key[slash+1:], '/')
+			if next < 0 {
+				break
+			}
+			slash += next + 1
+		}
 	}
 
 	// 6. MD5 do cabeçalho vs. os 16 últimos bytes do arquivo.
@@ -335,6 +346,20 @@ func (a *Archive) Entry(name string) (Entry, bool) {
 // Has confere a presença de um caminho no índice.
 func (a *Archive) Has(name string) bool {
 	_, ok := a.Entry(name)
+	return ok
+}
+
+// IsDir informa se o caminho tem filhos no índice (mesmo se existir uma
+// entry de arquivo com o mesmo caminho; List trata o diretório como vencedor).
+func (a *Archive) IsDir(dir string) bool {
+	if a == nil {
+		return false
+	}
+	d := normaliza(dir)
+	if d == "" {
+		return len(a.entries) > 0
+	}
+	_, ok := a.dirs[d]
 	return ok
 }
 
@@ -414,6 +439,125 @@ func (a *Archive) Read(name string) ([]byte, error) {
 		return nil, fmt.Errorf("%w: %s", ErrNotFound, name)
 	}
 	return a.ReadEntry(e)
+}
+
+// FilesUnder devolve as entries do índice cujo caminho está DENTRO de dir
+// ("" = raiz = todas as entries). A ordem é a do índice (caminho do
+// container). É a expansão da seleção da árvore: um diretório marcado vira
+// todos os arquivos abaixo dele.
+func (a *Archive) FilesUnder(dir string) []Entry {
+	prefix := ""
+	if d := normaliza(dir); d != "" {
+		prefix = d + "/"
+	}
+	out := make([]Entry, 0, len(a.entries))
+	for _, e := range a.entries {
+		if prefix == "" || strings.HasPrefix(normaliza(e.Path), prefix) {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+// ExtractEntry decodifica a entry (índice → blocos) gravando direto em
+// destPath, bloco a bloco — sem carregar o arquivo em memória e SEM o
+// limite MaxDecodeBytes (é o caminho da EXTRAÇÃO: vídeos e executáveis de
+// centenas de MB saem inteiros). O arquivo é gravado em .tmp e renomeado
+// no fim: uma extração interrompida nunca deixa meio arquivo com cara de
+// pronto.
+func (a *Archive) ExtractEntry(e Entry, destPath string) error {
+	if a == nil || a.file == nil {
+		return fmt.Errorf("%w: container fechado", ErrCorrupt)
+	}
+	count := blocksFor(e.Size)
+	remainder := e.Size % blockSize
+	if remainder == 0 {
+		remainder = blockSize
+	}
+	if int(e.StartBlock)+count > len(a.blocks) {
+		return fmt.Errorf("%w: %s aponta para bloco fora do índice", ErrCorrupt, e.Path)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+		return fmt.Errorf("criando diretório de %s: %w", e.Path, err)
+	}
+	f, err := os.CreateTemp(filepath.Dir(destPath), ".vbf-extract-*.tmp")
+	if err != nil {
+		return fmt.Errorf("criando %s: %w", destPath, err)
+	}
+	tmp := f.Name()
+	ok := false
+	defer func() {
+		if !ok {
+			_ = f.Close()
+			_ = os.Remove(tmp)
+		}
+	}()
+	if err := f.Chmod(0o644); err != nil {
+		return fmt.Errorf("ajustando permissões de %s: %w", destPath, err)
+	}
+
+	w := bufio.NewWriterSize(f, blockSize)
+	off := int64(e.DataOffset)
+	for i := 0; i < count; i++ {
+		stored := int(a.blocks[int(e.StartBlock)+i])
+		if stored == 0 {
+			stored = blockSize
+		}
+		if stored < 0 || off < 0 || off+int64(stored) > a.size {
+			return fmt.Errorf("%w: %s: bloco %d fora do arquivo", ErrCorrupt, e.Path, i)
+		}
+		buf := make([]byte, stored)
+		if _, err := a.file.ReadAt(buf, off); err != nil {
+			return fmt.Errorf("%w: %s: lendo bloco %d: %v", ErrCorrupt, e.Path, i, err)
+		}
+		off += int64(stored)
+
+		want := blockSize
+		last := i == count-1
+		if last {
+			want = int(remainder)
+		}
+		// Mesma regra do ReadEntry: bloco cru quando o u16 vale o tamanho
+		// de bloco cheio (ou o exato resto no último bloco).
+		if stored == blockSize || (last && stored == want) {
+			if len(buf) < want {
+				return fmt.Errorf("%w: %s: bloco %d trucado", ErrCorrupt, e.Path, i)
+			}
+			if _, err := w.Write(buf[:want]); err != nil {
+				return fmt.Errorf("gravando %s: %w", destPath, err)
+			}
+			continue
+		}
+		if len(buf) < 2 {
+			return fmt.Errorf("%w: %s: bloco %d compactado inválido", ErrCorrupt, e.Path, i)
+		}
+		dec, err := inflateExact(buf[2:], want)
+		if err != nil {
+			return fmt.Errorf("%w: %s: descompactando bloco %d: %v", ErrCorrupt, e.Path, i, err)
+		}
+		if _, err := w.Write(dec); err != nil {
+			return fmt.Errorf("gravando %s: %w", destPath, err)
+		}
+	}
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("gravando %s: %w", destPath, err)
+	}
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("fechando %s: %w", destPath, err)
+	}
+	if info, err := os.Lstat(destPath); err == nil {
+		if info.Mode()&os.ModeSymlink != 0 || info.IsDir() {
+			return fmt.Errorf("destino não é um arquivo regular: %s", destPath)
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("verificando destino %s: %w", destPath, err)
+	}
+	if err := os.Rename(tmp, destPath); err != nil {
+		return fmt.Errorf("renomeando para %s: %w", destPath, err)
+	}
+	ok = true
+	return nil
 }
 
 // ReadEntry decodifica uma entry do índice.

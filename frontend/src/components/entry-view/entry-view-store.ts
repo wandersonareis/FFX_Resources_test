@@ -320,8 +320,15 @@ function vbfSideNode(root: string, node: VbfNode): SideNode {
       expandable: true,
     };
   }
-  if (!node.kind) {
-    return { id, label: node.name, vbf: true, unsupported: true };
+  if (!node.kind || !node.id) {
+    return {
+      id,
+      label: node.name,
+      vbf: true,
+      vbfRoot: root,
+      vbfPath: node.path,
+      unsupported: true,
+    };
   }
   const kind = node.kind as EntryKind;
   const label = resolveEntryLabel(kind, node.id);

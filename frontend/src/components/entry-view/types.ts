@@ -13,8 +13,8 @@ export interface SideNode {
   /** Raiz de kind em carga: spinner no lugar do chevron, filhos a caminho. */
   loading?: boolean;
 
-  // ---- Navegador de .vbf (somente leitura) ----
-  /** true = nó do container, não da árvore data/ (sem checkbox, sem menu). */
+  // ---- Navegador do container .vbf (fonte somente leitura) ----
+  /** true = nó que pertence ao container .vbf. */
   vbf?: boolean;
   /** Caminho absoluto do container — só nas raízes. */
   vbfRoot?: string;
