@@ -2,9 +2,7 @@ package services
 
 import (
 	"fmt"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 
 	"ffxresources/backend/common"
 )
@@ -26,6 +24,28 @@ func (s *MetadataService) RevealEntryFile(kind, id string, version common.GameVe
 		return err
 	}
 	return revealInExplorer(abs)
+}
+
+// revealInExplorer é a casca portátil do "revelar no explorador": resolve o
+// caminho absoluto, registra o que foi revelado (rastreabilidade — sem isso,
+// uma falha da shell aparece como "abriu a pasta errada", sem diagnóstico) e
+// delega a chamada real para revealFileOnOS, implementada UMA vez por sistema,
+// cada uma no seu arquivo com build tag.
+//
+// O runtime nunca é comutado por runtime.GOOS: um GOOS sem o seu arquivo falha
+// na compilação (undefined: revealFileOnOS) em vez de rodar em silêncio a
+// chamada errada.
+func revealInExplorer(path string) error {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return fmt.Errorf("caminho inválido: %w", err)
+	}
+	common.LogVerbose("reveal: revelando arquivo no explorador: %s", abs)
+	if err := revealFileOnOS(abs); err != nil {
+		common.LogWarning("reveal: falha ao revelar %s: %v", abs, err)
+		return err
+	}
+	return nil
 }
 
 // revealTargetPath devolve o caminho absoluto que o "Abrir até o arquivo"
@@ -50,27 +70,4 @@ func revealTargetPath(kind, id string, version common.GameVersion) (string, erro
 		}
 	}
 	return acc.ResolvedPath, nil
-}
-
-// revealInExplorer abre a pasta contendo path com o arquivo selecionado.
-//
-// Windows: `explorer.exe /select,"<path>"` é o modo de FOCAR um item —
-// `explorer <pasta>` só abriria a pasta e o usuário teria de procurar.
-// Não se faz Wait(): o explorer pode devolver exit code 1 depois de abrir a
-// janela, e o app não deve ficar preso junto com o explorador.
-func revealInExplorer(path string) error {
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		return fmt.Errorf("caminho inválido: %w", err)
-	}
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "windows":
-		cmd = exec.Command("explorer.exe", `/select,"`+abs+`"`)
-	case "darwin":
-		cmd = exec.Command("open", "-R", abs)
-	default:
-		cmd = exec.Command("xdg-open", filepath.Dir(abs))
-	}
-	return cmd.Start()
 }
