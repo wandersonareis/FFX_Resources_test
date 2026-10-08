@@ -153,7 +153,8 @@ export interface EntryActions {
   coldReload(): Promise<void>;
   /** Abre um arquivo na tabela (carrega rows e registra a base do rascunho). */
   selectEntry(entry: EntryRow): Promise<void>;
-  /** Clique/Enter num nó da árvore: folha abre, raiz/kind só troca o kind. */
+  /** Clique/Enter num nó da árvore: folha abre; grupo/raiz expande (como
+   * no .vbf) e raiz de kind também troca o kind ativo. */
   selectNode(node: SideNode): Promise<void>;
   /** Alterna expandir/colapsar grupo ou raiz. */
   toggleNode(node: SideNode): void;
@@ -802,6 +803,9 @@ export function createEntryView(version: GameVersionId): EntryView {
       if (node.entry && node.kind) {
         await selectEntry(node.entry);
       } else if (node.kind) {
+        // Grupo/raiz de kind de data/: igual ao .vbf, o clique no nome
+        // também expande/colapsa (além de ativar o kind da aba).
+        toggleNode(node);
         patch({ activeKind: node.kind });
       }
     },
