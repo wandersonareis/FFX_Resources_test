@@ -104,7 +104,7 @@ export function ContentTree({ view }: { view: EntryView }) {
   };
 
   return (
-    <aside className="w-70 shrink-0 border-r p-2 flex flex-col min-h-0">
+    <aside className="w-[290px] shrink-0 border-r p-2 flex flex-col min-h-0">
       <div className="flex items-center justify-between font-semibold px-2 py-1">
         <span>Conteúdo</span>
         <Button
