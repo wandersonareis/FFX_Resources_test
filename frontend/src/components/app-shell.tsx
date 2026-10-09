@@ -144,7 +144,7 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
   useEffect(() => {
     // Hydration-safe: localStorage só existe no cliente.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSelectedIndex(tabStorage.load());
+    setSelectedIndex(tabStorage.load(GAME_VERSIONS.length));
   }, []);
 
   const setVersion = useCallback((version: GameVersionId) => {
