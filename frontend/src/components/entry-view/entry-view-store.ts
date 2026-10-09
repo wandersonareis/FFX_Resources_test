@@ -6,7 +6,11 @@ import {
   resolveEntryLabel,
   type EntryKind,
 } from '@/lib/ffx/display-names';
-import { resolveEventGroup, shortenedOf } from '@/lib/ffx/event-group-names';
+import {
+  formatEventGroupLabel,
+  resolveEventGroup,
+  shortenedOf,
+} from '@/lib/ffx/event-group-names';
 import type { GameVersionId } from '@/lib/ffx/game-version';
 import {
   type EntryRow,
@@ -195,7 +199,7 @@ export interface EntryView {
 /**
  * Agrupa os arquivos de events por fragmento do eventID. Fragmentos com nome
  * no dicionário viram nós próprios; sem nome, fundem-se no primeiro fragmento
- * nomeado do mesmo shortened (azmm entra em azit = Al Bhed Home). Órfão sem
+ * nomeado do mesmo shortened (azmm entra em azit = Home). Órfão sem
  * irmão nomeado exibe o próprio fragmento, igual ao nome da pasta no disco.
  */
 function eventGroups(version: GameVersionId, entries: EntryRow[]): SideNode[] {
@@ -227,9 +231,7 @@ function eventGroups(version: GameVersionId, entries: EntryRow[]): SideNode[] {
     const name = targetNames.get(target);
     nodes.push({
       id: `group:events:${target}`,
-      label: name
-        ? `${name} (${target.slice(0, 2)}) - ${files.length}`
-        : `${target} - ${files.length}`,
+      label: formatEventGroupLabel(name ?? '', target, files.length),
       kind: 'events' as EntryKind,
       children: files.map((entry) => ({
         id: `leaf:events:${entry.id}`,

@@ -1,62 +1,69 @@
 // Nomes de exibição dos GRUPOS de events (fragmento eventID[:4]).
 // O backend envia só o id canônico; o label mora aqui (view decide).
 //
-// Chaves = os 4 primeiros caracteres do eventID (o mesmo nome da pasta em
-// event/obj_ps3/<xx>/<fragmento>/<fragmento>####/). Fragmentos sem nome na
-// tabela caem no fallback: o próprio fragmento é exibido (ex.: azmm, bsyt,
-// gemm, isho, kamm...). Troque pelo nome verdadeiro quando souber.
+// Chaves = os 4 primeiros caracteres do eventID, que é o nome da pasta em
+// event/obj_ps3/<xx>/<id>/<id>.bin (azit0000 → "azit"; dream0000 → "drea").
+// O valor é o LOCAL REAL e vale para TODAS as versões: o casamento é pelo
+// fragmento EXATO, nunca por prefixo. Quem não tem nome cai no fallback de
+// resolveEventGroup — primeiro fragmento nomeado do mesmo shortened (azmm
+// entra em azit), depois o nome legado de 2 letras, senão o fragmento cru
+// (ex.: isho). Troque pelo nome verdadeiro quando souber.
 // Este arquivo é o único dono dos nomes de grupo, para não poluir o resto.
 
 import type { GameVersionId } from './game-version';
 
-/** Fragmento do eventID: azit0000 → "azit" (mesmo nome da pasta no disco). */
+/** Fragmento do eventID: os 4 primeiros caracteres (azit0000 → "azit"). */
 export function shortenedOf(id: string): string {
   return id.slice(0, 4).toLowerCase();
 }
 
-/** FFX (ffx/event/obj_ps3/<fragmento>/<id>/<id>.bin). */
+/** FFX (ffx/event/obj_ps3/<xx>/<id>/<id>.bin). */
 const FFX_GROUPS: Record<string, string> = {
-  // Locais do jogo (nome por fragmento da pasta).
-  azit: 'Al Bhed Home',
-  bika: 'Bikanel Desert',
+  // Locais do jogo: nome real do local. O sufixo "(xx)" do diretório pai é
+  // montado no rótulo, não aqui.
+  azit: 'Home',
+  bika: 'Bikanel Island',
   bjyt: 'Baaj Temple',
-  bltz: 'Blitzball Stadium',
+  bltz: 'Luca — Blitzball Stadium',
   bsil: 'Besaid Island',
-  bsmm: 'Besaid Beach (Flashback)',
+  bsmm: 'Besaid Island — Flashback',
   bsvr: 'Besaid Village',
   bvyt: 'Besaid Temple',
-  cdsp: 'Al Bhed Boat & Underwater Ruins',
+  cdsp: 'Salvage Ship & Underwater Ruins',
   djyt: 'Djose Temple',
   dome: 'Zanarkand Dome',
-  dream: 'Unknown',
+  // A pasta é dream#### e shortenedOf corta em 4 → a chave exata é `drea`.
+  drea: 'Dream Zanarkand',
   genk: 'Moonflow',
-  grid: 'Sphere Grid Plane',
+  grid: 'Sphere Grid',
   guad: 'Guadosalam',
-  hiku: 'Airship & World Map',
+  hiku: 'Fahrenheit — Airship & World Map',
   ikai: 'Farplane',
   kami: 'Thunder Plains',
-  kino: 'Mushroom Rock',
-  klyt: 'Kilika Woods & Temple',
+  kino: 'Mushroom Rock Road',
+  klyt: 'Kilika Woods & Kilika Temple',
   lchb: 'Luca',
   lmyt: 'Remiem Temple',
-  luca: 'Luca Square & Pre-Rendered Backgrounds',
+  luca: 'Luca',
   maca: 'Lake Macalania',
-  mcfr: 'Macalania Forest',
+  mcfr: 'Macalania Woods',
   mcyt: 'Macalania Temple',
   mihn: "Mi'hen Highroad",
-  mmmc: 'Unknown',
-  msmm: 'Via Purifico (Maze)',
-  mtgz: 'Mt. Gagazet, Caves, Upper Zanarkand',
+  // Sem local conhecido (lembrança de Jyscal e da mãe de Seymour): mostra só
+  // o diretório pai, sem inventar nome — o rótulo omite o "(mm)" redundante.
+  mmmc: 'mm',
+  msmm: 'Via Purifico',
+  mtgz: 'Mt. Gagazet, Mountain Cave & Zanarkand',
   nagi: 'Calm Lands & Cavern of the Stolen Fayth',
   omeg: 'Omega Ruins',
-  ptkl: 'Kilika Town',
+  ptkl: 'Kilika Port',
   sins: 'Inside Sin',
-  slik: 'SS Liki',
-  ssbt: 'Airship Model',
-  stbv: 'Bevelle Highbridge, Via Purifico (Sewer), FFX-2 Map',
-  swin: 'SS Winno',
+  slik: 'S.S. Liki',
+  ssbt: 'Fahrenheit — Airship Model',
+  stbv: 'Bevelle & Via Purifico',
+  swin: 'S.S. Winno',
   titl: 'Main Menu',
-  zkrn: 'Zanarkand Ruins',
+  zkrn: 'Zanarkand',
   znkd: 'Dream Zanarkand',
   zzzz: 'Unknown',
 
@@ -86,9 +93,11 @@ const FFX2_EXTRA: Record<string, string> = {
 };
 const FFX2_GROUPS: Record<string, string> = { ...FFX_GROUPS, ...FFX2_EXTRA };
 
-// eternalcalm é expansão do ffx e lê a MESMA árvore de events: mostra só
-// o grupo "scen" (sc/scene*.bin — os arquivos .bin do Eternal Calm).
+// eternalcalm é expansão do ffx e lê a MESMA árvore de events: os nomes de
+// locais valem igual; o grupo "scen" (sc/scene*.bin — os arquivos do Eternal
+// Calm) entra em cena nesta aba.
 const ETERNAL_CALM_GROUPS: Record<string, string> = {
+  ...FFX_GROUPS,
   scen: 'Eternal Calm',
 };
 
@@ -125,7 +134,7 @@ export interface EventGroupResolution {
  * Resolve o nó de um fragmento de eventID:
  * - fragmento nomeado → nó próprio com o nome;
  * - sem nome → entra no PRIMEIRO fragmento nomeado do mesmo shortened
- *   (2 letras, ordem alfabética): azmm → azit (Al Bhed Home), bsyt → bsil
+ *   (2 letras, ordem alfabética): azmm → azit (Home), bsyt → bsil
  *   (Besaid Island);
  * - nenhum nomeado no shortened → nome legado do shortened (Cartas...);
  * - senão → nó anônimo exibindo o próprio fragmento, igual ao nome da pasta
@@ -149,4 +158,22 @@ export function resolveEventGroup(
   if (legacy) return { target: fragment, name: legacy };
 
   return { target: fragment, name: '' };
+}
+
+/**
+ * Rótulo do nó de um grupo: `Nome (xx) - N`, em que `xx` é o diretório pai
+ * (2 primeiras letras do fragmento). Quando o próprio nome É esse código
+ * (mmmc → "mm", local sem nome conhecido), o sufixo seria redundante e sai.
+ * Sem nome → o fragmento cru, igual à pasta no disco (aí a busca encontra).
+ */
+export function formatEventGroupLabel(
+  name: string,
+  target: string,
+  count: number
+): string {
+  if (!name) return `${target} - ${count}`;
+  const parent = target.slice(0, 2);
+  return name === parent
+    ? `${name} - ${count}`
+    : `${name} (${parent}) - ${count}`;
 }
