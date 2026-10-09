@@ -183,7 +183,7 @@ function ExtractImageDialog({ view, action }: ActionProps) {
         <DialogHeader>
           <DialogTitle>Extrair {action.label}?</DialogTitle>
           <DialogDescription>
-            Gera .dds e .png em mods/edits/images (a cópia de trabalho, sem
+            Gera .dds e .png em mods/images (a cópia de trabalho, sem
             tocar em data/ nem em mods/*.dds.phyre). Escolha o alcance.
           </DialogDescription>
         </DialogHeader>
@@ -394,7 +394,7 @@ const DELETE_SCOPES: Array<{
  *
  * Os textos espelham o que `ddsphyre.Delete` realmente remove: o container
  * `.dds.phyre` de data/ e/ou de mods/ conforme o escopo, e SEMPRE os
- * derivados `.dds`/`.png` de mods/edits/images/ — por isso os derivados
+ * derivados `.dds`/`.png` de mods/images/ — por isso os derivados
  * aparecem nos três itens.
  */
 const DELETE_IRREVERSIBLE =
@@ -404,16 +404,16 @@ const DELETE_IRREVERSIBLE =
 const DELETE_SCOPE_NOTICES: Record<DeleteScope, string> = {
   data:
     'Sai da árvore o binário .dds.phyre original em data/. Os derivados ' +
-    '.dds e .png em mods/edits/images/ também são apagados, e a ' +
+    '.dds e .png em mods/images/ também são apagados, e a ' +
     'substituição em mods/ permanece.',
   mods:
     'Sai a substituição .dds.phyre em mods/, junto com os derivados ' +
-    '.dds e .png em mods/edits/images/. O binário original em data/ ' +
+    '.dds e .png em mods/images/. O binário original em data/ ' +
     'permanece e a textura volta ao conteúdo original.',
   both:
     'Sai dos dois lados: o binário .dds.phyre original em data/ E a ' +
     'substituição .dds.phyre em mods/, além dos derivados .dds e .png ' +
-    'em mods/edits/images/. A textura sai da árvore por completo.',
+    'em mods/images/. A textura sai da árvore por completo.',
 };
 
 /** Alerta destrutivo cuja descrição acompanha o escopo escolhido. */

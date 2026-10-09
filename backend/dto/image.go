@@ -8,7 +8,7 @@ import "ffxresources/backend/common"
 // em <img>, sem decoder JS. `Source` diz de onde veio o conteúdo, na ordem
 // de preferência acordada:
 //
-//	dds   → cópia extraída em disco (mods/edits/images);
+//	dds   → cópia extraída em disco (mods/images);
 //	png   → idem, formato .png;
 //	phyre → decodificado do próprio .dds.phyre EM MEMÓRIA, sem gravar nada.
 type ImageEntry struct {

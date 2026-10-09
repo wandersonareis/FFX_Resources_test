@@ -287,7 +287,7 @@ func (s *MetadataService) ExtractVbfSelection(vbfPath string, paths []string, de
 // ExtractVbfImagesSelection decodifica somente as imagens escolhidas (ou
 // encontradas sob diretórios marcados) e grava DDS/PNG em
 // destRoot/<caminho-interno-no-vbf>, sem alterar o container.
-// destRoot vazio usa mods/edits/images, o destino padrão dos artefatos de
+// destRoot vazio usa mods/images, o destino padrão dos artefatos de
 // trabalho quando uma imagem é extraída da árvore data/.
 func (s *MetadataService) ExtractVbfImagesSelection(vbfPath string, paths []string, destRoot string) (dto.BatchResult, error) {
 	a, err := vbfArchiveFor(vbfPath)
@@ -311,7 +311,7 @@ func (s *MetadataService) ExtractVbfImagesSelection(vbfPath string, paths []stri
 		return out, nil
 	}
 	if strings.TrimSpace(destRoot) == "" {
-		destRoot = filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits", "images")
+		destRoot = filepath.Join(common.GameFilesRoot, common.ModsFolder, common.ModsImagesDir)
 	}
 	if err := common.EnsurePathExists(destRoot); err != nil {
 		return dto.BatchResult{}, fmt.Errorf("criando destino %s: %w", destRoot, err)

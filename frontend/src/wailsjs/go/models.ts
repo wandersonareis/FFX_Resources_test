@@ -47,22 +47,28 @@ export namespace dto {
 	        this.total = source["total"];
 	    }
 	}
-	export class VbfExtractPreview {
-	    files: number;
-	    bytes: number;
-	    existing: number;
-	    destRoot: string;
-
+	export class RefLink {
+	    // Anotação de link de ref dedupada: o texto ATUAL da def, o pristine
+	    // dela e onde ela vive (arquivo + Index/Name) — alimenta o texto
+	    // linkado (cor própria), o tooltip "repetição" e o editor aberto na
+	    // def através do link.
+	    text: string;
+	    original?: string;
+	    sourceId?: string;
+	    sourceIndex: number;
+	    sourceName?: string;
+	
 	    static createFrom(source: any = {}) {
-	        return new VbfExtractPreview(source);
+	        return new RefLink(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.files = source["files"];
-	        this.bytes = source["bytes"];
-	        this.existing = source["existing"];
-	        this.destRoot = source["destRoot"];
+	        this.text = source["text"];
+	        this.original = source["original"];
+	        this.sourceId = source["sourceId"];
+	        this.sourceIndex = source["sourceIndex"];
+	        this.sourceName = source["sourceName"];
 	    }
 	}
 	export class TextRow {
@@ -91,30 +97,6 @@ export namespace dto {
 	        this.missingInOriginal = source["missingInOriginal"];
 	        this.missingInTranslated = source["missingInTranslated"];
 	        this.divergent = source["divergent"];
-	    }
-	}
-	export class RefLink {
-	    // Anotação de link de ref dedupada: o texto ATUAL da def, o pristine
-	    // dela e onde ela vive (arquivo + Index/Name) — alimenta o texto
-	    // linkado (cor própria), o tooltip "repetição" e o editor aberto na
-	    // def através do link.
-	    text: string;
-	    original?: string;
-	    sourceId?: string;
-	    sourceIndex: number;
-	    sourceName?: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new RefLink(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.text = source["text"];
-	        this.original = source["original"];
-	        this.sourceId = source["sourceId"];
-	        this.sourceIndex = source["sourceIndex"];
-	        this.sourceName = source["sourceName"];
 	    }
 	}
 	export class Metadata {
@@ -150,7 +132,7 @@ export namespace dto {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.metadata = this.convertValues(source["metadata"], Metadata);
 	        this.rows = this.convertValues(source["rows"], TextRow);
-	        this.refs = source["refs"];
+	        this.refs = this.convertValues(source["refs"], RefLink, true);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -339,58 +321,6 @@ export namespace dto {
 	        this.over = source["over"];
 	    }
 	}
-	// VbfRoot é uma raiz de árvore da sidebar: um .vbf encontrado perto do
-	// executável do jogo.
-	export class VbfRoot {
-	    name: string;
-	    path: string;
-	    version: string;
-	    size: number;
-	    entries: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new VbfRoot(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.path = source["path"];
-	        this.version = source["version"];
-	        this.size = source["size"];
-	        this.entries = source["entries"];
-	    }
-	}
-	// VbfNode é um filho imediato de um diretório do .vbf — ou um chunk do
-	// macrodic. kind/id/vazios = formato fora do escopo do app.
-	export class VbfNode {
-	    name: string;
-	    path: string;
-	    isDir: boolean;
-	    size: number;
-	    kind: string;
-	    id: string;
-	    version: string;
-	    macro: boolean;
-	    image: boolean;
-	
-	    static createFrom(source: any = {}) {
-	        return new VbfNode(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.path = source["path"];
-	        this.isDir = source["isDir"];
-	        this.size = source["size"];
-	        this.kind = source["kind"];
-	        this.id = source["id"];
-	        this.version = source["version"];
-	        this.macro = source["macro"];
-	        this.image = source["image"];
-	    }
-	}
 	export class ImportSummary {
 	    path: string;
 	    format: string;
@@ -445,6 +375,78 @@ export namespace dto {
 	}
 	
 	
+	
+	
+	export class VbfExtractPreview {
+	    files: number;
+	    bytes: number;
+	    existing: number;
+	    destRoot: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new VbfExtractPreview(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.files = source["files"];
+	        this.bytes = source["bytes"];
+	        this.existing = source["existing"];
+	        this.destRoot = source["destRoot"];
+	    }
+	}
+	// VbfNode é um filho imediato de um diretório do .vbf — ou um chunk do
+	// macrodic. kind/id/vazios = formato fora do escopo do app.
+	export class VbfNode {
+	    name: string;
+	    path: string;
+	    isDir: boolean;
+	    size?: number;
+	    kind?: string;
+	    id?: string;
+	    version?: string;
+	    macro?: boolean;
+	    image?: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new VbfNode(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.isDir = source["isDir"];
+	        this.size = source["size"];
+	        this.kind = source["kind"];
+	        this.id = source["id"];
+	        this.version = source["version"];
+	        this.macro = source["macro"];
+	        this.image = source["image"];
+	    }
+	}
+	// VbfRoot é uma raiz de árvore da sidebar: um .vbf encontrado perto do
+	// executável do jogo.
+	export class VbfRoot {
+	    name: string;
+	    path: string;
+	    version: string;
+	    size: number;
+	    entries: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new VbfRoot(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.version = source["version"];
+	        this.size = source["size"];
+	        this.entries = source["entries"];
+	    }
+	}
 
 }
 
@@ -551,3 +553,4 @@ export namespace services {
 	
 
 }
+

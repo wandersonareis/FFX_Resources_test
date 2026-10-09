@@ -10,9 +10,9 @@ export function ApplyVbfTextCollection(arg1:string,arg2:string,arg3:common.GameV
 
 export function CountChangedTexts(arg1:dto.Collection,arg2:dto.Collection):Promise<number>;
 
-export function DeleteImages(arg1:string,arg2:string,arg3:Array<string>,arg4:string,arg5:common.GameVersion):Promise<dto.BatchResult>;
-
 export function DeleteImageSelection(arg1:string,arg2:Array<string>,arg3:boolean,arg4:string,arg5:common.GameVersion):Promise<dto.BatchResult>;
+
+export function DeleteImages(arg1:string,arg2:string,arg3:Array<string>,arg4:string,arg5:common.GameVersion):Promise<dto.BatchResult>;
 
 export function ExportEntry(arg1:string,arg2:string,arg3:common.GameVersion,arg4:Array<string>):Promise<Array<string>>;
 
@@ -28,9 +28,9 @@ export function ExtractImageGroup(arg1:string,arg2:string,arg3:Array<string>,arg
 
 export function ExtractImageSelection(arg1:string,arg2:Array<string>,arg3:common.GameVersion):Promise<dto.BatchResult>;
 
-export function ExtractVbfSelection(arg1:string,arg2:Array<string>,arg3:string):Promise<dto.BatchResult>;
-
 export function ExtractVbfImagesSelection(arg1:string,arg2:Array<string>,arg3:string):Promise<dto.BatchResult>;
+
+export function ExtractVbfSelection(arg1:string,arg2:Array<string>,arg3:string):Promise<dto.BatchResult>;
 
 export function GetEnableMods():Promise<boolean>;
 
@@ -56,9 +56,9 @@ export function GetVbfTextEntry(arg1:string,arg2:string,arg3:string):Promise<dto
 
 export function ImageDuplicates(arg1:string,arg2:string,arg3:common.GameVersion):Promise<dto.ImageDuplicates>;
 
-export function ImageSelectionCopies(arg1:string,arg2:Array<string>,arg3:common.GameVersion):Promise<Array<string>>;
-
 export function ImageExists(arg1:string,arg2:string,arg3:common.GameVersion):Promise<boolean>;
+
+export function ImageSelectionCopies(arg1:string,arg2:Array<string>,arg3:common.GameVersion):Promise<Array<string>>;
 
 export function ImportEntry(arg1:string,arg2:string,arg3:common.GameVersion):Promise<Array<string>>;
 
@@ -106,9 +106,9 @@ export function SelectDirectory(arg1:string):Promise<string>;
 
 export function SelectGameExeFile():Promise<string>;
 
-export function SelectImageFile():Promise<string>;
+export function SelectImageFile(arg1:string,arg2:common.GameVersion):Promise<string>;
 
-export function SelectImageSavePath(arg1:string,arg2:string):Promise<string>;
+export function SelectImageSavePath(arg1:string,arg2:string,arg3:string,arg4:common.GameVersion):Promise<string>;
 
 export function SelectImportFile():Promise<string>;
 

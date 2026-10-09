@@ -367,7 +367,7 @@ func (a *App) ExtractVbfSelection(vbfPath string, paths []string, destRoot strin
 }
 
 // ExtractVbfImagesSelection extrai DDS/PNG das imagens marcadas, preservando
-// os caminhos internos do .vbf sob destRoot (vazio = mods/edits/images).
+// os caminhos internos do .vbf sob destRoot (vazio = mods/images).
 func (a *App) ExtractVbfImagesSelection(vbfPath string, paths []string, destRoot string) (dto.BatchResult, error) {
 	if a.MetadataService == nil {
 		return dto.BatchResult{}, fmt.Errorf("metadata service not initialized")
@@ -388,12 +388,14 @@ func (a *App) SelectVbfExtractDir() string {
 	return selection
 }
 
-// SelectVbfImageExtractDir escolhe a raiz onde DDS/PNG extraídos do .vbf
-// serão gravados, preservando abaixo dela o caminho interno do container.
+// SelectVbfImageExtractDir escolhe a RAIZ onde DDS/PNG extraídos do .vbf
+// serão gravados — mods/images por padrão; abaixo dela o caminho interno do
+// container é somado na gravação (por isso o picker abre na raiz e não já
+// com o caminho interno, que duplicaria a raiz).
 func (a *App) SelectVbfImageExtractDir() string {
 	selection, err := runtime.OpenDirectoryDialog(interactions.NewInteractionService().Ctx, runtime.OpenDialogOptions{
 		Title:            "Escolher destino das imagens extraídas",
-		DefaultDirectory: common.GameFilesRoot,
+		DefaultDirectory: filepath.Join(common.GameFilesRoot, common.ModsFolder, common.ModsImagesDir),
 	})
 	if err != nil {
 		return ""
@@ -496,7 +498,7 @@ func (a *App) GetImageEntry(kind, id string, version common.GameVersion) (dto.Im
 	return a.MetadataService.GetImage(kind, id, version)
 }
 
-// ExtractImage grava .dds e .png em mods/edits/images (cópia de trabalho) e
+// ExtractImage grava .dds e .png em mods/images (cópia de trabalho) e
 // devolve os caminhos escritos.
 func (a *App) ExtractImage(kind, id string, version common.GameVersion) ([]string, error) {
 	if a.MetadataService == nil {
@@ -626,13 +628,16 @@ func (a *App) SaveImage(kind, id, format, destPath string, version common.GameVe
 	return a.MetadataService.SaveImage(kind, id, format, destPath, version)
 }
 
-// SelectImageFile abre o seletor nativo para escolher um .dds a importar.
-// Só .dds: é o único formato aceito no importe (o repack usa os bytes crus —
-// um PNG/PDV teria de ser re-encodado para DXT, com perda e sem mips).
+// SelectImageFile abre o seletor nativo para escolher um .dds a importar,
+// começando no diretório de trabalho da textura (mods/images/<raiz>/<dir do
+// id>) — o lugar onde o .dds extraído dela já mora. Só .dds: é o único
+// formato aceito no importe (o repack usa os bytes crus — um PNG/PDV teria
+// de ser re-encodado para DXT, com perda e sem mips).
 // Devolve "" quando o usuário cancela.
-func (a *App) SelectImageFile() string {
+func (a *App) SelectImageFile(id string, version common.GameVersion) string {
 	selection, err := runtime.OpenFileDialog(interactions.NewInteractionService().Ctx, runtime.OpenDialogOptions{
-		Title: "Selecionar textura para importar",
+		Title:            "Selecionar textura para importar",
+		DefaultDirectory: services.ImageWorkDir(version, id),
 		Filters: []runtime.FileFilter{
 			{DisplayName: "DDS (*.dds)", Pattern: "*.dds"},
 		},
@@ -643,17 +648,19 @@ func (a *App) SelectImageFile() string {
 	return selection
 }
 
-// SelectImageSavePath abre o diálogo "Salvar como" para .dds/.png.
-// Devolve "" quando o usuário cancela.
-func (a *App) SelectImageSavePath(format string, suggestedName string) string {
+// SelectImageSavePath abre o diálogo "Salvar como" para .dds/.png já no
+// diretório de trabalho da textura, para o arquivo nunca sair solto em
+// mods/images. Devolve "" quando o usuário cancela.
+func (a *App) SelectImageSavePath(format, suggestedName, id string, version common.GameVersion) string {
 	pattern := "*.dds"
 	display := "DDS (*.dds)"
 	if format == "png" {
 		pattern, display = "*.png", "PNG (*.png)"
 	}
 	selection, err := runtime.SaveFileDialog(interactions.NewInteractionService().Ctx, runtime.SaveDialogOptions{
-		Title:           "Salvar imagem",
-		DefaultFilename: suggestedName,
+		Title:            "Salvar imagem",
+		DefaultDirectory: services.ImageWorkDir(version, id),
+		DefaultFilename:  suggestedName,
 		Filters: []runtime.FileFilter{
 			{DisplayName: display, Pattern: pattern},
 			{DisplayName: "Todos os arquivos (*.*)", Pattern: "*.*"},

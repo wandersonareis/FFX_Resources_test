@@ -24,7 +24,7 @@ import (
 // A imagem servida vem SEMPRE nesta ordem de preferência (determinada pelo
 // pacote ddsphyre.Resolve, não aqui):
 //
-//	1. .dds em disco (mods/edits/images/... — extração anterior);
+//	1. .dds em disco (mods/images/... — extração anterior);
 //	2. .png em disco (idem);
 //	3. decode do próprio .dds.phyre EM MEMÓRIA (nada é gravado).
 //
@@ -204,7 +204,7 @@ func batchTargets(id string, targets []string, version common.GameVersion) ([]st
 	return groupTargets(id, group, targets)
 }
 
-// ExtractImage grava .dds e .png em mods/edits/images (a cópia de trabalho
+// ExtractImage grava .dds e .png em mods/images (a cópia de trabalho
 // que o translator edita) e devolve os caminhos escritos.
 func (s *MetadataService) ExtractImage(kind, id string, version common.GameVersion) ([]string, error) {
 	if !isImageKind(kind) {
@@ -313,7 +313,7 @@ func (s *MetadataService) ImportImageGroup(kind, id, ddsPath string, targets []s
 
 // ExtractImageGroup extrai .dds + .png de uma textura e das cópias
 // escolhidas — o diálogo de extração pergunta "só esta ou todas as cópias",
-// e o resultado sai com os arquivos lado a lado em mods/edits/images (é o
+// e o resultado sai com os arquivos lado a lado em mods/images (é o
 // que confirma a duplicata, olhando os dois arquivos).
 //
 // Extração só grava artefatos derivados: não muda payload algum, então o
@@ -432,7 +432,7 @@ func (s *MetadataService) ReplicateImage(kind, id string, targets []string, vers
 			continue
 		}
 		// Mesmo cuidado do import: sem extrair agora, a próxima abertura
-		// serviria o .dds órfão ANTIGO de mods/edits/images.
+		// serviria o .dds órfão ANTIGO de mods/images.
 		if _, eerr := ddsphyre.Extract(version, t); eerr != nil {
 			common.LogWarning("images %s/%s: replicate ok, mas não atualizei os .dds/.png extraídos: %v", version, t, eerr)
 		}
@@ -691,6 +691,29 @@ func (s *MetadataService) SaveImage(kind, id, format, destPath string, version c
 		return err
 	}
 	return ddsphyre.Save(version, id, format, destPath)
+}
+
+// ImageWorkDir devolve o diretório de trabalho da textura em
+// mods/images/<raiz>/<caminho interno> — o mesmo onde ExportPaths grava os
+// .dds/.png extraídos. É por onde os diálogos nativos de ARQUIVO devem
+// abrir (escolher .dds para importar / Salvar como), para a imagem nunca
+// cair solta na raiz de mods/images.
+//
+// Cria o diretório se faltar (mods/ é gravável); id inválido cai na raiz de
+// imagens.
+func ImageWorkDir(version common.GameVersion, id string) string {
+	root := filepath.Join(common.GameFilesRoot, common.ModsFolder, common.ModsImagesDir)
+	if !ddsphyre.ValidID(id) {
+		_ = common.EnsurePathExists(root)
+		return root
+	}
+	ddsPath, _ := ddsphyre.ExportPaths(version, id)
+	dir := filepath.Dir(ddsPath)
+	if err := common.EnsurePathExists(dir); err != nil {
+		common.LogWarning("images %s/%s: destino %s não pôde ser criado (%v)", version, id, dir, err)
+		return root
+	}
+	return dir
 }
 
 func isImageKind(kind string) bool {

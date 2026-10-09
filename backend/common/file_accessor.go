@@ -9,10 +9,13 @@ import (
 const (
 	ModsFolder        = "mods/"
 	ModsTranslatedDir = "translated"
-	DirData           = "data"
-	DirExtracted      = "extracted"
-	DirTranslated     = "translated"
-	DirReimported     = "reimported"
+	// ModsImagesDir guarda os artefatos de imagem extraídos (.dds/.png) com
+	// o caminho interno do .vbf — irmão de mods/edits, que é SÓ de texto.
+	ModsImagesDir = "images"
+	DirData       = "data"
+	DirExtracted  = "extracted"
+	DirTranslated = "translated"
+	DirReimported = "reimported"
 )
 
 // DefaultTranslatedDir deriva o diretório de tradução de um gamefiles:

@@ -338,17 +338,27 @@ export function saveImage(
   );
 }
 
-/** Seletor nativo para escolher um .dds a importar. "" = cancelado. */
-export function selectImageFile(): Promise<string> {
-  return SelectImageFile();
+/** Seletor nativo para escolher um .dds a importar (abre em mods/images/<raiz>/<dir do id>). */
+export function selectImageFile(id: string, version: GameVersionId): Promise<string> {
+  return SelectImageFile(
+    id,
+    version as Parameters<typeof SelectImageFile>[1]
+  );
 }
 
-/** Diálogo "Salvar como" para .dds/.png. "" = cancelado. */
+/** Diálogo "Salvar como" para .dds/.png, já no diretório de trabalho da textura. */
 export function selectImageSavePath(
   format: 'dds' | 'png',
-  suggestedName: string
+  suggestedName: string,
+  id: string,
+  version: GameVersionId
 ): Promise<string> {
-  return SelectImageSavePath(format, suggestedName);
+  return SelectImageSavePath(
+    format,
+    suggestedName,
+    id,
+    version as Parameters<typeof SelectImageSavePath>[3]
+  );
 }
 
 /** Exporta a entrada em JSON + .strings (mods/edits). */

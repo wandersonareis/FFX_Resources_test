@@ -265,7 +265,7 @@ func TestExtractResolveImportFlow(t *testing.T) {
 		t.Errorf("fonte inicial = %q, esperado phyre", r.Source)
 	}
 
-	// 2. extrair grava .dds e .png em mods/edits/images.
+	// 2. extrair grava .dds e .png em mods/images.
 	paths, err := Extract(common.GameVersionFFX, id)
 	if err != nil {
 		t.Fatalf("Extract: %v", err)
@@ -278,7 +278,7 @@ func TestExtractResolveImportFlow(t *testing.T) {
 			t.Errorf("Extract não gravou %s", p)
 		}
 	}
-	if !strings.Contains(filepath.ToSlash(paths[0]), "/mods/edits/images/ffx_data/") {
+	if !strings.Contains(filepath.ToSlash(paths[0]), "/mods/images/ffx_data/") {
 		t.Errorf("caminho do extract fora do padrão: %s", paths[0])
 	}
 

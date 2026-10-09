@@ -14,12 +14,12 @@ export function CountChangedTexts(arg1, arg2) {
   return window['go']['main']['App']['CountChangedTexts'](arg1, arg2);
 }
 
-export function DeleteImages(arg1, arg2, arg3, arg4, arg5) {
-  return window['go']['main']['App']['DeleteImages'](arg1, arg2, arg3, arg4, arg5);
-}
-
 export function DeleteImageSelection(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['DeleteImageSelection'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function DeleteImages(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['DeleteImages'](arg1, arg2, arg3, arg4, arg5);
 }
 
 export function ExportEntry(arg1, arg2, arg3, arg4) {
@@ -50,12 +50,12 @@ export function ExtractImageSelection(arg1, arg2, arg3) {
   return window['go']['main']['App']['ExtractImageSelection'](arg1, arg2, arg3);
 }
 
-export function ExtractVbfSelection(arg1, arg2, arg3) {
-  return window['go']['main']['App']['ExtractVbfSelection'](arg1, arg2, arg3);
-}
-
 export function ExtractVbfImagesSelection(arg1, arg2, arg3) {
   return window['go']['main']['App']['ExtractVbfImagesSelection'](arg1, arg2, arg3);
+}
+
+export function ExtractVbfSelection(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ExtractVbfSelection'](arg1, arg2, arg3);
 }
 
 export function GetEnableMods() {
@@ -106,12 +106,12 @@ export function ImageDuplicates(arg1, arg2, arg3) {
   return window['go']['main']['App']['ImageDuplicates'](arg1, arg2, arg3);
 }
 
-export function ImageSelectionCopies(arg1, arg2, arg3) {
-  return window['go']['main']['App']['ImageSelectionCopies'](arg1, arg2, arg3);
-}
-
 export function ImageExists(arg1, arg2, arg3) {
   return window['go']['main']['App']['ImageExists'](arg1, arg2, arg3);
+}
+
+export function ImageSelectionCopies(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ImageSelectionCopies'](arg1, arg2, arg3);
 }
 
 export function ImportEntry(arg1, arg2, arg3) {
@@ -206,12 +206,12 @@ export function SelectGameExeFile() {
   return window['go']['main']['App']['SelectGameExeFile']();
 }
 
-export function SelectImageFile() {
-  return window['go']['main']['App']['SelectImageFile']();
+export function SelectImageFile(arg1, arg2) {
+  return window['go']['main']['App']['SelectImageFile'](arg1, arg2);
 }
 
-export function SelectImageSavePath(arg1, arg2) {
-  return window['go']['main']['App']['SelectImageSavePath'](arg1, arg2);
+export function SelectImageSavePath(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['SelectImageSavePath'](arg1, arg2, arg3, arg4);
 }
 
 export function SelectImportFile() {

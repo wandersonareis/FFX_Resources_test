@@ -9,7 +9,7 @@ import (
 )
 
 // Delete precisa cobrir os três escopos E os artefatos derivados: Resolve
-// prefere mods/edits/images, então apagar só o container deixaria um .dds
+// prefere mods/images, então apagar só o container deixaria um .dds
 // órfão servindo imagem fantasma no lugar da textura apagada.
 func TestDeleteRemovesContainerAndDerivedArtifacts(t *testing.T) {
 	root, a, _, _, _ := withDupTree(t)

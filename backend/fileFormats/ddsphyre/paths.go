@@ -44,10 +44,11 @@ func ValidID(id string) bool {
 }
 
 // ExportPaths devolve os caminhos dos artefatos extraídos (.dds e .png) em
-// mods/edits/images/<raiz>/<id>, o mesmo diretório-base do export de texto.
+// mods/images/<raiz>/<id> — o caminho interno do .vbf preservado sob a raiz
+// de imagens de mods/ (mods/edits é só de texto).
 func ExportPaths(version common.GameVersion, id string) (ddsPath, pngPath string) {
 	base := filepath.Join(
-		common.GameFilesRoot, common.ModsFolder, "edits", "images",
+		common.GameFilesRoot, common.ModsFolder, common.ModsImagesDir,
 		RootForVersion(version), filepath.FromSlash(id),
 	)
 	return base + ".dds", base + ".png"
@@ -254,7 +255,7 @@ func fileExists(path string) bool {
 	return err == nil && !st.IsDir()
 }
 
-// Extract grava .dds e .png em mods/edits/images e devolve os caminhos.
+// Extract grava .dds e .png em mods/images e devolve os caminhos.
 func Extract(version common.GameVersion, id string) ([]string, error) {
 	r, err := Resolve(version, id)
 	if err != nil {
@@ -368,7 +369,7 @@ const (
 )
 
 // Delete apaga o container da textura conforme scope (data|mods|both) e
-// SEMPRE os artefatos derivados (.dds/.png extraídos em mods/edits/images) —
+// SEMPRE os artefatos derivados (.dds/.png extraídos em mods/images) —
 // senão Resolve passaria a servir um .dds órfão, ou falharia no container
 // apagado.
 //

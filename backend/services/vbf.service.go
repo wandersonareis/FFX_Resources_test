@@ -230,13 +230,15 @@ func isContentVbf(name string) bool {
 }
 
 // modsTreeIgnored são subdiretórios de mods/ que NÃO são arquivos do jogo:
-// artefatos de export (edits/) e a árvore de tradução reimportável
-// (translated/). Tudo o resto em mods/ é o espelho de um caminho do jogo.
+// artefatos de export (edits/), imagens extraídas (images/) e a árvore de
+// tradução reimportável (translated/). Tudo o resto em mods/ é o espelho de
+// um caminho do jogo.
 var modsTreeIgnored = map[string]bool{
-	"edits":      true,
-	"translated": true,
-	"extracted":  true,
-	"reimported": true,
+	"edits":              true,
+	common.ModsImagesDir: true,
+	"translated":         true,
+	"extracted":          true,
+	"reimported":         true,
 }
 
 // vbfSyncSeen guarda a assinatura (lista ordenada dos órfãos) já avisada

@@ -206,12 +206,12 @@ export function SelectGameExeFile() {
   return window['go']['main']['App']['SelectGameExeFile']();
 }
 
-export function SelectImageFile() {
-  return window['go']['main']['App']['SelectImageFile']();
+export function SelectImageFile(arg1, arg2) {
+  return window['go']['main']['App']['SelectImageFile'](arg1, arg2);
 }
 
-export function SelectImageSavePath(arg1, arg2) {
-  return window['go']['main']['App']['SelectImageSavePath'](arg1, arg2);
+export function SelectImageSavePath(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['SelectImageSavePath'](arg1, arg2, arg3, arg4);
 }
 
 export function SelectImportFile() {

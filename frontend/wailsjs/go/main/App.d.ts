@@ -106,9 +106,9 @@ export function SelectDirectory(arg1:string):Promise<string>;
 
 export function SelectGameExeFile():Promise<string>;
 
-export function SelectImageFile():Promise<string>;
+export function SelectImageFile(arg1:string,arg2:common.GameVersion):Promise<string>;
 
-export function SelectImageSavePath(arg1:string,arg2:string):Promise<string>;
+export function SelectImageSavePath(arg1:string,arg2:string,arg3:string,arg4:common.GameVersion):Promise<string>;
 
 export function SelectImportFile():Promise<string>;
 

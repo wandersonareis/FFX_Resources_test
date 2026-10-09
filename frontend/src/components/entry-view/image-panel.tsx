@@ -77,7 +77,7 @@ const ZOOM_LEVELS = [1, 2, 3, 4];
  * Traduzido e mostra a pré-visualização PNG que o backend já devolve
  * (data URL — nenhum decoder de imagem no JS).
  *
- * Ações: extrair cópias de trabalho (.dds + .png em mods/edits/images),
+ * Ações: extrair cópias de trabalho (.dds + .png em mods/images),
  * salvar em qualquer lugar do disco, importar um .dds editado (repack só do
  * mesmo formato/dimensão nesta etapa) e, quando a imagem tem cópias
  * idênticas (otimização do DVD), propagar o import para elas.
@@ -278,7 +278,7 @@ export function ImagePanel({ view }: { view: EntryView }) {
   const onSave = async (format: 'dds' | 'png') => {
     setBusy('save');
     try {
-      const dest = await selectImageSavePath(format, `${name}.${format}`);
+      const dest = await selectImageSavePath(format, `${name}.${format}`, entry.id, version);
       if (!dest) return;
       if (entry.vbf) {
         await saveVbfImage(entry.vbf.root, entry.vbf.path, format, dest);
@@ -338,7 +338,7 @@ export function ImagePanel({ view }: { view: EntryView }) {
 
   const onImport = async () => {
     try {
-      const path = await selectImageFile();
+      const path = await selectImageFile(entry.id, version);
       if (!path) return;
       if (readOnly) {
         await runImport(path, false);
