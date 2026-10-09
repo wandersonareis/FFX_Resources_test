@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useHotkey } from '@tanstack/react-hotkeys';
+import { useHotkey, useHotkeys } from '@tanstack/react-hotkeys';
 import { loggedToast as toast } from '@/lib/ffx/toast-logged';
+import { SHORTCUTS, shortcutTip } from '@/lib/ffx/shortcuts';
 import { ChevronDown, Download, Settings, Upload } from 'lucide-react';
 import { QuitApp } from '@/wailsjs/go/main/App';
 import { EventsEmit } from '@/wailsjs/runtime/runtime';
@@ -30,6 +31,11 @@ import {
 import { parseError } from '@/lib/ffx/error-handler';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -155,14 +161,28 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
     setVersion(GAME_VERSIONS[index].id);
   };
 
-  // Ctrl+1/2/3/4: trocar aba de versão.
-  useHotkey('Mod+1', () => switchTab(0));
-  useHotkey('Mod+2', () => switchTab(1));
-  useHotkey('Mod+3', () => switchTab(2));
-  useHotkey('Mod+4', () => switchTab(3));
+  // A tecla vem do catálogo lib/ffx/shortcuts.ts, que é a mesma fonte do
+  // tooltip de cada controle (nenhuma tecla é escrita em dois lugares).
+  // Ctrl+1..4: trocar aba de versão — uma tecla por GAME_VERSIONS (a lista
+  // deriva do catálogo: acrescentar versão é acrescentar uma tecla ali).
+  useHotkeys(
+    SHORTCUTS.versionTabs.keys.map((hotkey, index) => ({
+      hotkey,
+      callback: () => switchTab(index),
+      options: {
+        meta: {
+          name: `${SHORTCUTS.versionTabs.label}: ${GAME_VERSIONS[index].label}`,
+          group: 'Abas',
+        },
+      },
+    }))
+  );
   // Ctrl+, : abrir Configurações (convenção de settings).
-  useHotkey('Mod+,', () => setConfigOpen(true));
+  useHotkey(SHORTCUTS.config.keys, () => setConfigOpen(true), {
+    meta: { name: SHORTCUTS.config.label, group: 'Global' },
+  });
   // Ctrl+Alt+F: alterna formato JSON ↔ Strings direto (popover não abre).
+  // Fora do catálogo: não é exibido em texto nenhum.
   useHotkey('Mod+Alt+F', () => {
     const next =
       exportSelection.formatOf() === 'json' ? 'strings' : 'json';
@@ -170,9 +190,13 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
     toast.info(`Formato de exportação: ${EXPORT_FORMAT_LABELS[next]}`);
   });
   // Ctrl+S: salvar rascunhos (mesma ação do botão Salvar; sem fechar o app).
-  useHotkey('Mod+S', () => {
-    void saveAllDrafts(() => saving, setSaving);
-  });
+  useHotkey(
+    SHORTCUTS.save.keys,
+    () => {
+      void saveAllDrafts(() => saving, setSaving);
+    },
+    { meta: { name: SHORTCUTS.save.label, group: 'Global' } }
+  );
 
   useWailsEvent('Notify', (data) => {
     const payload = data as NotifyPayload;
@@ -369,9 +393,21 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
       <header className="sticky top-0 z-10 flex items-center gap-2 bg-background px-4 py-2 border-b">
         <span className="text-lg font-semibold">FFX Resources</span>
         <span className="flex-1" />
-        <Button variant="ghost" size="icon" onClick={() => setConfigOpen(true)} aria-label="Configurações">
-          <Settings size={22} />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setConfigOpen(true)}
+              aria-label="Configurações"
+            >
+              <Settings size={22} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {shortcutTip(SHORTCUTS.config.label, SHORTCUTS.config.keys)}
+          </TooltipContent>
+        </Tooltip>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -407,9 +443,17 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
         <div className="mx-4 mt-2 flex items-center justify-between gap-2">
           <TabsList className="w-fit">
             {GAME_VERSIONS.map((tab, index) => (
-              <TabsTrigger key={tab.id} value={String(index)}>
-                {tab.label}
-              </TabsTrigger>
+              <Tooltip key={tab.id}>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value={String(index)}>{tab.label}</TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {shortcutTip(
+                    SHORTCUTS.versionTabs.label,
+                    SHORTCUTS.versionTabs.keys[index]
+                  )}
+                </TooltipContent>
+              </Tooltip>
             ))}
           </TabsList>
           <div className="flex items-center gap-2">

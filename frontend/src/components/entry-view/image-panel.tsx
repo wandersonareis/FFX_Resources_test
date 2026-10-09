@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { parseError } from '@/lib/ffx/error-handler';
 import { resolveEntryLabel } from '@/lib/ffx/display-names';
+import { hotkeyLabel, SHORTCUTS, shortcutTip } from '@/lib/ffx/shortcuts';
 import {
   importImage,
   importImageGroup,
@@ -158,12 +159,22 @@ export function ImagePanel({ view }: { view: EntryView }) {
 
   // Zoom por teclado (TanStack Hotkeys): Mod+= / Mod+- andam no ciclo,
   // Mod+0 volta ao ajuste; 1–4 vão direto ao nível SEM Mod (Mod+1/2/3 já
-  // trocam de aba no app-shell).
-  useHotkey('Mod+=', zoomIn, { enabled: panelIdle, ignoreInputs: true });
-  useHotkey('Mod+-', zoomOut, { enabled: panelIdle, ignoreInputs: true });
-  useHotkey('Mod+0', () => setZoom(null), {
+  // trocam de aba no app-shell). As três teclas de ciclo vêm do catálogo —
+  // elas aparecem no `title` da lupa.
+  useHotkey(SHORTCUTS.zoomIn.keys, zoomIn, {
     enabled: panelIdle,
     ignoreInputs: true,
+    meta: { name: SHORTCUTS.zoomIn.label, group: 'Painel de imagem' },
+  });
+  useHotkey(SHORTCUTS.zoomOut.keys, zoomOut, {
+    enabled: panelIdle,
+    ignoreInputs: true,
+    meta: { name: SHORTCUTS.zoomOut.label, group: 'Painel de imagem' },
+  });
+  useHotkey(SHORTCUTS.zoomReset.keys, () => setZoom(null), {
+    enabled: panelIdle,
+    ignoreInputs: true,
+    meta: { name: SHORTCUTS.zoomReset.label, group: 'Painel de imagem' },
   });
   useHotkey('1', () => setZoom({ id: entry?.id ?? '', level: 1 }), {
     enabled: panelIdle,
@@ -181,6 +192,21 @@ export function ImagePanel({ view }: { view: EntryView }) {
     enabled: panelIdle,
     ignoreInputs: true,
   });
+  // Ctrl+Alt+V: espelha a pré-visualização — a mesma ação do botão Flip.
+  // `panelIdle` já cobre `entry === null` (painel fechado) junto com diálogo
+  // de escopo, diálogo de ação, menu de contexto e gravação em andamento.
+  useHotkey(
+    SHORTCUTS.imageFlip.keys,
+    () => {
+      if (!entry) return;
+      setFlippedId((id) => (id === entry.id ? null : entry.id));
+    },
+    {
+      enabled: panelIdle,
+      ignoreInputs: true,
+      meta: { name: SHORTCUTS.imageFlip.label, group: 'Painel de imagem' },
+    }
+  );
 
   if (!entry) return null;
   const flipped = flippedId === entry.id;
@@ -551,7 +577,7 @@ export function ImagePanel({ view }: { view: EntryView }) {
             size="sm"
             variant={flipped ? 'default' : 'outline'}
             aria-pressed={flipped}
-            title="Espelha a pré-visualização — só na tela, não altera nem reenvia a imagem"
+            title={`${shortcutTip(SHORTCUTS.imageFlip.label, SHORTCUTS.imageFlip.keys)} — só na tela: não altera nem reenvia a imagem`}
             onClick={() => setFlippedId(flipped ? null : entry.id)}
           >
             <FlipVertical size={16} />
@@ -627,7 +653,7 @@ export function ImagePanel({ view }: { view: EntryView }) {
                   size="icon"
                   variant="ghost"
                   className="size-7"
-                  title="Lupa: tamanho real → 2× → 3× → 4× → tamanho real (teclado: Mod+= / Mod+-; Mod+0 volta ao ajuste)"
+                  title={`Lupa: tamanho real → 2× → 3× → 4× → tamanho real (teclado: ${hotkeyLabel(SHORTCUTS.zoomIn.keys)} / ${hotkeyLabel(SHORTCUTS.zoomOut.keys)}; ${hotkeyLabel(SHORTCUTS.zoomReset.keys)} volta ao ajuste)`}
                   onClick={zoomIn}
                 >
                   <ZoomIn size={16} />

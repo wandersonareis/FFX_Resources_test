@@ -13,6 +13,12 @@ import { setActiveFile } from '@/lib/ffx/active-file-store';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { SHORTCUTS, shortcutTip } from '@/lib/ffx/shortcuts';
+import {
   createEntryView,
   type EntryView,
 } from '@/components/entry-view/entry-view-store';
@@ -103,10 +109,24 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
               </Badge>
             ) : null}
           </h3>
-          <Button disabled={!hasDirty || saving} onClick={() => void onSaveAll()}>
-            <Save size={18} />
-            {saving ? 'Salvando…' : 'Salvar'}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              {/* O botão desabilitado não dispara pointer events, então o
+                  trigger é o span envoltório (padrão Radix p/ disabled). */}
+              <span className="inline-flex">
+                <Button
+                  disabled={!hasDirty || saving}
+                  onClick={() => void onSaveAll()}
+                >
+                  <Save size={18} />
+                  {saving ? 'Salvando…' : 'Salvar'}
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              {shortcutTip(SHORTCUTS.save.label, SHORTCUTS.save.keys)}
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         {selectedEntry ? (
