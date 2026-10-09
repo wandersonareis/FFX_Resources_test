@@ -1,28 +1,28 @@
-'use client';
+"use client";
 
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
-import { useSelector } from '@tanstack/react-store';
-import type { EntryKind } from '@/lib/ffx/display-names';
-import { entryKindsFor, imageKindsFor } from '@/lib/ffx/tree-data';
-import { useExportSelection } from '@/lib/ffx/export-selection';
-import { useVbfSelection } from '@/lib/ffx/vbf-selection';
+import { useCallback, useMemo, useRef, useState } from "react";
+import { RefreshCw } from "lucide-react";
+import { useSelector } from "@tanstack/react-store";
+import type { EntryKind } from "@/lib/ffx/display-names";
+import { entryKindsFor, imageKindsFor } from "@/lib/ffx/tree-data";
+import { useExportSelection } from "@/lib/ffx/export-selection";
+import { useVbfSelection } from "@/lib/ffx/vbf-selection";
 import {
   buildContentRoots,
   highlightedNodeId,
-} from '@/lib/ffx/content-tree/model';
+} from "@/lib/ffx/content-tree/model";
 import {
   menuTargetOf,
   type TreeCtxNode,
-} from '@/lib/ffx/content-tree/menu-target';
-import { Button } from '@/components/ui/button';
-import type { EntryView } from '../entry-view-store';
-import { EntryActionsMenu } from '../entry-actions-menu';
-import { VbfExtractDialog, type VbfExtractRequest } from './vbf-extract-dialog';
-import { ContentTreeProvider, type ContentTreeValue } from './tree-context';
-import { TreeList } from './tree-list';
-import { useContentTreeActions } from './use-content-tree-actions';
-import { useContentTreeHotkeys } from './use-content-tree-hotkeys';
+} from "@/lib/ffx/content-tree/menu-target";
+import { Button } from "@/components/ui/button";
+import type { EntryView } from "../entry-view-store";
+import { EntryActionsMenu } from "../entry-actions-menu";
+import { VbfExtractDialog, type VbfExtractRequest } from "./vbf-extract-dialog";
+import { ContentTreeProvider, type ContentTreeValue } from "./tree-context";
+import { TreeList } from "./tree-list";
+import { useContentTreeActions } from "./use-content-tree-actions";
+import { useContentTreeHotkeys } from "./use-content-tree-hotkeys";
 
 /**
  * Sidebar da aba: árvore de kinds/grupos/arquivos com expandir, seleção de
@@ -68,13 +68,13 @@ export function ContentTree({ view }: { view: EntryView }) {
   }, [selection.byKind, version]);
   const selectedImageIds = useMemo(
     () => [...(selection.byKind.get(`${version}|images`) ?? [])],
-    [selection.byKind, version]
+    [selection.byKind, version],
   );
   // Alvo do menu: o nó clicado (folha leva o id; grupo/raiz, não).
   const ctxTarget = useMemo(() => menuTargetOf(ctxNode), [ctxNode]);
   const selectedId = useMemo(
     () => highlightedNodeId(selectedEntry, image),
-    [selectedEntry, image]
+    [selectedEntry, image],
   );
 
   const treeActions = useContentTreeActions({
@@ -104,7 +104,9 @@ export function ContentTree({ view }: { view: EntryView }) {
   };
 
   return (
-    <aside className="w-[290px] shrink-0 border-r p-2 flex flex-col min-h-0">
+    // A largura vem do ResizablePanel (o `defaultSize`/layout salvo fica no
+    // grupo); o `border-r` saiu daqui porque a própria divisória é o handle.
+    <aside className="h-full w-full p-2 flex flex-col min-h-0">
       <div className="flex items-center justify-between font-semibold px-2 py-1">
         <span>Conteúdo</span>
         <Button
@@ -114,7 +116,10 @@ export function ContentTree({ view }: { view: EntryView }) {
           onClick={() => void actions.coldReload()}
           aria-label="Recarregar"
         >
-          <RefreshCw size={20} className={loading ? 'animate-spin' : undefined} />
+          <RefreshCw
+            size={20}
+            className={loading ? "animate-spin" : undefined}
+          />
         </Button>
       </div>
       <EntryActionsMenu
@@ -125,7 +130,9 @@ export function ContentTree({ view }: { view: EntryView }) {
         }}
         onExport={() => void treeActions.onCtxExport()}
         selectedImageCount={selectedImageIds.length}
-        onExtractImageSelection={() => void treeActions.onExtractSelectedImages()}
+        onExtractImageSelection={() =>
+          void treeActions.onExtractSelectedImages()
+        }
         onDeleteImageSelection={treeActions.onDeleteSelectedImages}
         onVbfExtract={treeActions.onVbfExtract}
         onVbfExtractImages={treeActions.onVbfExtractImages}
@@ -148,7 +155,7 @@ export function ContentTree({ view }: { view: EntryView }) {
         </div>
       </EntryActionsMenu>
       <VbfExtractDialog
-        key={extractRequest?.requestId ?? 'closed'}
+        key={extractRequest?.requestId ?? "closed"}
         request={extractRequest}
         onClose={closeExtractDialog}
         onDone={() => {

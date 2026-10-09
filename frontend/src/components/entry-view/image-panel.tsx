@@ -18,6 +18,11 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/components/ui/resizable';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -33,6 +38,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { parseError } from '@/lib/ffx/error-handler';
 import { resolveEntryLabel } from '@/lib/ffx/display-names';
+import { LAYOUT_DEFAULTS_PX } from '@/lib/ffx/layout-storage';
+import { usePersistedLayout } from '@/lib/ffx/use-persisted-layout';
 import { hotkeyLabel, SHORTCUTS, shortcutTip } from '@/lib/ffx/shortcuts';
 import {
   importImage,
@@ -132,6 +139,12 @@ export function ImagePanel({ view }: { view: EntryView }) {
    * aberto e null quando fechado.
    */
   const [menuTarget, setMenuTarget] = useState<EntryMenuTarget | null>(null);
+  /**
+   * Largura da coluna de informações persistida. O painel monta/desmonta ao
+   * trocar de kind, então o initializer relê o localStorage a cada abertura —
+   * idempotente e já no cliente (sem SSR).
+   */
+  const { defaultLayout, onLayoutChanged } = usePersistedLayout('imageInfo');
 
   const zoomLevel = zoom && zoom.id === entry?.id ? zoom.level : 'fit';
   /** Lupa: próximo nível do ciclo — depois de 4× volta ao tamanho real. */
@@ -598,8 +611,18 @@ export function ImagePanel({ view }: { view: EntryView }) {
           ) : null}
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <div className="relative">
+        {/* O react-resizable-panels fixa height/width:100% no grupo por style
+            inline; dentro do <main> que rola, um wrapper SEM altura faz a
+            porcentagem colapsar para auto — o grupo então mede pelo conteúdo,
+            como o grid anterior fazia. */}
+        <div>
+          <ResizablePanelGroup
+            orientation="horizontal"
+            defaultLayout={defaultLayout}
+            onLayoutChanged={onLayoutChanged}
+          >
+            <ResizablePanel id="preview" minSize={280}>
+              <div className="relative">
             {/* Área de exibição com altura fixa: no zoom a imagem cresce
                 além do container e rola em ambas as direções (comportamento
                 de visualizador de imagem na web), por escolha do usuário. */}
@@ -700,18 +723,28 @@ export function ImagePanel({ view }: { view: EntryView }) {
                 </div>
               ) : null}
             </div>
-          </div>
-
-          <dl className="space-y-2 text-sm">
-            {meta.map(([label, value]) => (
-              <div key={label} className="flex flex-col gap-1">
-                <dt className="text-xs uppercase tracking-wide opacity-60">
-                  {label}
-                </dt>
-                <dd className="min-w-0">{value}</dd>
               </div>
-            ))}
-          </dl>
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+
+            <ResizablePanel
+              id="info"
+              defaultSize={LAYOUT_DEFAULTS_PX.imageInfo}
+              minSize={180}
+              maxSize={480}
+            >
+              <dl className="space-y-2 text-sm">
+                {meta.map(([label, value]) => (
+                  <div key={label} className="flex flex-col gap-1">
+                    <dt className="text-xs uppercase tracking-wide opacity-60">
+                      {label}
+                    </dt>
+                    <dd className="min-w-0">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
 
         <Dialog

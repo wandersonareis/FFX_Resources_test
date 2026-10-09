@@ -1,34 +1,41 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { Save } from 'lucide-react';
-import { useSelector } from '@tanstack/react-store';
-import { SetUnsavedEdits } from '@/wailsjs/go/main/App';
-import { KIND_LABELS } from '@/lib/ffx/display-names';
-import type { GameVersionId } from '@/lib/ffx/game-version';
-import { useEditDraft } from '@/lib/ffx/edit-draft';
-import { useWailsEvent } from '@/lib/ffx/use-wails-event';
-import { saveAllDrafts } from '@/lib/ffx/save-all';
-import { setActiveFile } from '@/lib/ffx/active-file-store';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { useEffect, useMemo, useState } from "react";
+import { Save } from "lucide-react";
+import { useSelector } from "@tanstack/react-store";
+import { SetUnsavedEdits } from "@/wailsjs/go/main/App";
+import { KIND_LABELS } from "@/lib/ffx/display-names";
+import type { GameVersionId } from "@/lib/ffx/game-version";
+import { useEditDraft } from "@/lib/ffx/edit-draft";
+import { useWailsEvent } from "@/lib/ffx/use-wails-event";
+import { saveAllDrafts } from "@/lib/ffx/save-all";
+import { setActiveFile } from "@/lib/ffx/active-file-store";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { SHORTCUTS, shortcutTip } from '@/lib/ffx/shortcuts';
+} from "@/components/ui/tooltip";
+import { LAYOUT_DEFAULTS_PX } from "@/lib/ffx/layout-storage";
+import { usePersistedLayout } from "@/lib/ffx/use-persisted-layout";
+import { SHORTCUTS, shortcutTip } from "@/lib/ffx/shortcuts";
 import {
   createEntryView,
   type EntryView,
-} from '@/components/entry-view/entry-view-store';
-import { ContentTree } from '@/components/entry-view/content-tree';
-import { EntryTable } from '@/components/entry-view/entry-table';
-import { ImageActionDialogs } from '@/components/entry-view/image-action-dialogs';
-import { ImagePanel } from '@/components/entry-view/image-panel';
-import { TranslationDialog } from '@/components/entry-view/translation-dialog';
-import { PreloadVersions } from '@/wailsjs/go/main/App';
-import { GAME_VERSIONS } from '@/lib/ffx/game-version';
+} from "@/components/entry-view/entry-view-store";
+import { ContentTree } from "@/components/entry-view/content-tree";
+import { EntryTable } from "@/components/entry-view/entry-table";
+import { ImageActionDialogs } from "@/components/entry-view/image-action-dialogs";
+import { ImagePanel } from "@/components/entry-view/image-panel";
+import { TranslationDialog } from "@/components/entry-view/translation-dialog";
+import { PreloadVersions } from "@/wailsjs/go/main/App";
+import { GAME_VERSIONS } from "@/lib/ffx/game-version";
 
 /**
  * Aba de uma versão do jogo: só orquestra. O estado compartilhado entre
@@ -43,6 +50,8 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
   const loading = useSelector(view.store, (s) => s.loading);
   const progress = useSelector(view.store, (s) => s.progress);
   const [saving, setSaving] = useState(false);
+  // Largura da sidebar persistida (percentual do grupo por id de painel).
+  const { defaultLayout, onLayoutChanged } = usePersistedLayout("sidebar");
 
   const hasDirty = snapshot.hasDirty;
 
@@ -68,18 +77,18 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
     // trocar de aba depois cai no caminho rápido (cache do backend).
     void view.actions.reload().then(() => {
       void PreloadVersions(
-        GAME_VERSIONS.filter((t) => t.id !== version).map((t) => t.id)
+        GAME_VERSIONS.filter((t) => t.id !== version).map((t) => t.id),
       );
     });
   }, [view, version]);
 
   useEffect(
     () => drafts.onSaved(() => void view.actions.reload()),
-    [drafts, view]
+    [drafts, view],
   );
 
   // Após importar, o backend emite ImportDone → recarrega árvore e tabela.
-  useWailsEvent('ImportDone', () => void view.actions.reload());
+  useWailsEvent("ImportDone", () => void view.actions.reload());
 
   const onSaveAll = () => {
     void saveAllDrafts(() => saving, setSaving);
@@ -87,62 +96,86 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
 
   return (
     <div className="flex h-full min-h-0 border-t">
-      <ContentTree view={view} />
+      <ResizablePanelGroup
+        orientation="horizontal"
+        className="min-w-0"
+        defaultLayout={defaultLayout}
+        onLayoutChanged={onLayoutChanged}
+      >
+        <ResizablePanel
+          id="tree"
+          defaultSize={LAYOUT_DEFAULTS_PX.sidebar}
+          minSize={200}
+          maxSize={600}
+        >
+          <ContentTree view={view} />
+        </ResizablePanel>
+        <ResizableHandle withHandle />
 
-      <main className="flex-1 min-w-0 p-3 px-4 overflow-auto">
-        <div className="flex items-center justify-between gap-4">
-          <h3 className="text-lg font-semibold flex items-center gap-3">
-            {KIND_LABELS[activeKind]}
+        <ResizablePanel id="main" minSize={300}>
+          <main className="h-full min-w-0 p-3 px-4 overflow-auto">
+            <div className="flex items-center justify-between gap-4">
+              <h3 className="text-lg font-semibold flex items-center gap-3">
+                {KIND_LABELS[activeKind]}
+                {selectedEntry ? (
+                  <span className="font-normal opacity-70">
+                    {" "}
+                    · {selectedEntry.label}
+                  </span>
+                ) : null}
+                {progress ? (
+                  <Badge
+                    variant="outline"
+                    className={
+                      progress.translated >= progress.total &&
+                      progress.total > 0
+                        ? "text-emerald-700 border-emerald-300 dark:text-emerald-400 dark:border-emerald-800"
+                        : "text-muted-foreground"
+                    }
+                  >
+                    {progress.translated}/{progress.total} linhas traduzidas (
+                    {progress.pct}%)
+                  </Badge>
+                ) : null}
+              </h3>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  {/* O botão desabilitado não dispara pointer events, então o
+                      trigger é o span envoltório (padrão Radix p/ disabled). */}
+                  <span className="inline-flex">
+                    <Button
+                      disabled={!hasDirty || saving}
+                      onClick={() => void onSaveAll()}
+                    >
+                      <Save size={18} />
+                      {saving ? "Salvando…" : "Salvar"}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {shortcutTip(SHORTCUTS.save.label, SHORTCUTS.save.keys)}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+
             {selectedEntry ? (
-              <span className="font-normal opacity-70"> · {selectedEntry.label}</span>
-            ) : null}
-            {progress ? (
-              <Badge
-                variant="outline"
-                className={
-                  progress.translated >= progress.total && progress.total > 0
-                    ? 'text-emerald-700 border-emerald-300 dark:text-emerald-400 dark:border-emerald-800'
-                    : 'text-muted-foreground'
-                }
-              >
-                {progress.translated}/{progress.total} linhas traduzidas ({progress.pct}%)
-              </Badge>
-            ) : null}
-          </h3>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              {/* O botão desabilitado não dispara pointer events, então o
-                  trigger é o span envoltório (padrão Radix p/ disabled). */}
-              <span className="inline-flex">
-                <Button
-                  disabled={!hasDirty || saving}
-                  onClick={() => void onSaveAll()}
-                >
-                  <Save size={18} />
-                  {saving ? 'Salvando…' : 'Salvar'}
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              {shortcutTip(SHORTCUTS.save.label, SHORTCUTS.save.keys)}
-            </TooltipContent>
-          </Tooltip>
-        </div>
-
-        {selectedEntry ? (
-          // images não tem rows: ocupa o lugar da tabela a pré-visualização
-          // + ações (extrair/salvar/importar) da textura.
-          activeKind === 'images' ? (
-            <ImagePanel view={view} />
-          ) : (
-            <EntryTable view={view} />
-          )
-        ) : loading ? (
-          <p className="mt-8 opacity-70">Carregando…</p>
-        ) : (
-          <p className="mt-8 opacity-70">Selecione um arquivo no sidebar.</p>
-        )}
-      </main>
+              // images não tem rows: ocupa o lugar da tabela a pré-visualização
+              // + ações (extrair/salvar/importar) da textura.
+              activeKind === "images" ? (
+                <ImagePanel view={view} />
+              ) : (
+                <EntryTable view={view} />
+              )
+            ) : loading ? (
+              <p className="mt-8 opacity-70">Carregando…</p>
+            ) : (
+              <p className="mt-8 opacity-70">
+                Selecione um arquivo no sidebar.
+              </p>
+            )}
+          </main>
+        </ResizablePanel>
+      </ResizablePanelGroup>
 
       <TranslationDialog view={view} />
       {/* Ações de imagem (extrair/replicar/deletar): um diálogo só, aberto
