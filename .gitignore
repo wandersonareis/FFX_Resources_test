@@ -10,6 +10,7 @@ package.json.md5
 ffxhdbats
 dds-phyre-tool-master/*
 edits
+**/mods/images
 *.log
 # Logs do app: um arquivo por início de app em logs/ ao lado do executável
 # (a rotação também deixa .gz aqui)
