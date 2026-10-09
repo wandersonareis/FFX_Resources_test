@@ -3,7 +3,10 @@
 import { useMemo, type RefObject } from 'react';
 import { useHotkey, useHotkeys } from '@tanstack/react-hotkeys';
 import { useSelector } from '@tanstack/react-store';
-import { buildNodeIndex } from '@/lib/ffx/content-tree/model';
+import {
+  buildContentRoots,
+  buildNodeIndex,
+} from '@/lib/ffx/content-tree/model';
 import type { EntryView } from '../entry-view-store';
 
 /**
@@ -27,6 +30,7 @@ export function useContentTreeHotkeys({
 }) {
   const { store, actions } = view;
   const roots = useSelector(store, (s) => s.roots);
+  const contentRoots = useMemo(() => buildContentRoots(roots), [roots]);
   const vbfRoots = useSelector(store, (s) => s.vbfRoots);
   const expanded = useSelector(store, (s) => s.expanded);
   const selectedEntry = useSelector(store, (s) => s.selectedEntry);
@@ -35,8 +39,8 @@ export function useContentTreeHotkeys({
 
   // Índice id → nó: devolvido pelo [data-node-id] do evento.
   const nodeById = useMemo(
-    () => buildNodeIndex(roots, vbfRoots),
-    [roots, vbfRoots]
+    () => buildNodeIndex(contentRoots, vbfRoots),
+    [contentRoots, vbfRoots]
   );
 
   /**

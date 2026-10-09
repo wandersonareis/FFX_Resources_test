@@ -38,7 +38,7 @@ import {
   loadVbfRoots,
   type VbfNode,
 } from '@/lib/ffx/vbf';
-import type { SideNode } from '@/lib/ffx/content-tree/model';
+import { TEXT_ROOT_NODE_ID, type SideNode } from '@/lib/ffx/content-tree/model';
 
 /** Estado de carga de um item principal da árvore. */
 export type KindLoadStatus = 'loading' | 'ready' | 'error';
@@ -249,7 +249,8 @@ function createEntryStore(version: GameVersionId) {
   return createStore<EntryViewState>({
     roots: kinds.map((kind) => loadingRootNode(kind)),
     vbfRoots: [],
-    expanded: new Set<string>(),
+    // Mantem os kinds de texto visiveis dentro do grupo de apresentacao.
+    expanded: new Set([TEXT_ROOT_NODE_ID]),
     activeKind: 'events',
     selectedEntry: null,
     rows: [],
@@ -704,7 +705,8 @@ export function createEntryView(version: GameVersionId): EntryView {
     patch({
       roots: kinds.map((kind) => loadingRootNode(kind)),
       vbfRoots: [],
-      expanded: new Set<string>(),
+      // Mantem os kinds de texto visiveis apos reload frio.
+      expanded: new Set([TEXT_ROOT_NODE_ID]),
       selectedEntry: null,
       rows: [],
       image: null,
@@ -813,6 +815,9 @@ export function createEntryView(version: GameVersionId): EntryView {
         // também expande/colapsa (além de ativar o kind da aba).
         toggleNode(node);
         patch({ activeKind: node.kind });
+      } else if (node.children?.length || node.expandable) {
+        // Grupo visual sem kind de backend apenas alterna a expansao.
+        toggleNode(node);
       }
     },
     toggleNode,

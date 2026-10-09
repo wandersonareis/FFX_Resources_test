@@ -66,6 +66,30 @@ export function entryNodeId(entry: EntryRow): string {
 
 export const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
 
+/** ID visual do grupo de kinds textuais de data/. */
+export const TEXT_ROOT_NODE_ID = 'kind:text';
+
+/**
+ * Agrupa as raizes reais para exibicao. `Texto` e apenas um no visual sem
+ * `kind`, portanto nao e enviado ao backend como EntryKind. Imagens e todos
+ * os kinds textuais preservam seus nos/kinds originais.
+ */
+export function buildContentRoots(kindRoots: readonly SideNode[]): SideNode[] {
+  const textRoots: SideNode[] = [];
+  const imageRoots: SideNode[] = [];
+  for (const root of kindRoots) {
+    if (root.kind === 'images') imageRoots.push(root);
+    else textRoots.push(root);
+  }
+
+  return [
+    ...(textRoots.length > 0
+      ? [{ id: TEXT_ROOT_NODE_ID, label: 'Texto', children: textRoots }]
+      : []),
+    ...imageRoots,
+  ];
+}
+
 /**
  * Índice id → nó de TODOS os nós visíveis (containers .vbf e data/). O
  * callback dos hotkeys recebe só o evento, então o nó é resolvido pelo DOM

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'bun:test';
-import { buildNodeIndex, entryCheckState, entryIdsInNode, type SideNode } from './model';
+import {
+  buildContentRoots,
+  buildNodeIndex,
+  entryCheckState,
+  entryIdsInNode,
+  type SideNode,
+} from './model';
 
 const imageTree: SideNode = {
   id: 'category',
@@ -54,5 +60,31 @@ describe('buildNodeIndex', () => {
     const index = buildNodeIndex([imageTree], [vbfRoot]);
     expect(index.size).toBe(5);
     expect(index.get('vbf-root')?.vbfRoot).toBe('/mod.vbf');
+  });
+});
+
+describe('buildContentRoots', () => {
+  it('groups text kinds under Texto and leaves Imagens as its own root', () => {
+    const events: SideNode = { id: 'kind:events', label: 'Eventos', kind: 'events' };
+    const objects: SideNode = { id: 'kind:objects', label: 'Sistema', kind: 'objects' };
+    const images: SideNode = { id: 'kind:images', label: 'Imagens', kind: 'images' };
+
+    const roots = buildContentRoots([events, objects, images]);
+
+    expect(roots).toEqual([
+      { id: 'kind:text', label: 'Texto', children: [events, objects] },
+      images,
+    ]);
+    expect(roots[0].kind).toBeUndefined();
+    expect(roots[1].kind).toBe('images');
+
+    const index = buildNodeIndex(roots, []);
+    expect(index.get('kind:text')?.children).toEqual([events, objects]);
+    expect(index.get('kind:images')).toBe(images);
+  });
+
+  it('does not create an empty Texto root if there are no text kinds', () => {
+    const images: SideNode = { id: 'kind:images', label: 'Imagens', kind: 'images' };
+    expect(buildContentRoots([images])).toEqual([images]);
   });
 });

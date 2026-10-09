@@ -7,7 +7,10 @@ import type { EntryKind } from '@/lib/ffx/display-names';
 import { entryKindsFor, imageKindsFor } from '@/lib/ffx/tree-data';
 import { useExportSelection } from '@/lib/ffx/export-selection';
 import { useVbfSelection } from '@/lib/ffx/vbf-selection';
-import { highlightedNodeId } from '@/lib/ffx/content-tree/model';
+import {
+  buildContentRoots,
+  highlightedNodeId,
+} from '@/lib/ffx/content-tree/model';
 import {
   menuTargetOf,
   type TreeCtxNode,
@@ -34,6 +37,7 @@ import { useContentTreeHotkeys } from './use-content-tree-hotkeys';
 export function ContentTree({ view }: { view: EntryView }) {
   const { version, store, actions } = view;
   const roots = useSelector(store, (s) => s.roots);
+  const contentRoots = useMemo(() => buildContentRoots(roots), [roots]);
   const vbfRoots = useSelector(store, (s) => s.vbfRoots);
   const expanded = useSelector(store, (s) => s.expanded);
   const selectedEntry = useSelector(store, (s) => s.selectedEntry);
@@ -131,7 +135,7 @@ export function ContentTree({ view }: { view: EntryView }) {
           <TreeList
             treeRef={treeRef}
             vbfRoots={vbfRoots}
-            roots={roots}
+            roots={contentRoots}
             onNodeContextMenu={treeActions.onNodeContextMenu}
           />
         </ContentTreeProvider>
