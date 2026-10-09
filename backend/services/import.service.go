@@ -813,7 +813,7 @@ func (s *MetadataService) prepareImport(path string, version common.GameVersion)
 	}
 
 	var imported dto.Collection
-	format := ""
+	var format string
 	switch ext := strings.ToLower(filepath.Ext(path)); ext {
 	case ".json":
 		format = "json"
@@ -918,7 +918,8 @@ func (s *MetadataService) prepareImport(path string, version common.GameVersion)
 	merged := mergeImportUs(valid, matched)
 
 	// Capacidades sobre as entradas que serão gravadas; estouro bloqueia.
-	if kind == KindMacro {
+	switch kind {
+	case KindMacro:
 		if len(matched) > 0 && macroFull != nil {
 			usage, uerr := importMacroUsage(version, macroFull, matched)
 			if uerr != nil {
@@ -932,13 +933,13 @@ func (s *MetadataService) prepareImport(path string, version common.GameVersion)
 				}
 			}
 		}
-	} else if kind == KindLockit || kind == KindHelp {
+	case KindLockit, KindHelp:
 		// O lockit é uma lista CRLF sem offsets uint16 nem cabeçalho; não há
 		// limite de capacidade a medir (o import grava apenas o us).
 		// O help tem ponteiros u32 com textEnd/footer recalculados no
 		// rebuild — nenhum limite uint16 a medir; a validação estrutural
 		// acontece no próprio rebuild (reader revalida ao aplicar).
-	} else {
+	default:
 		for _, id := range merged.SortedKeys() {
 			var usage dto.ImportUsage
 			var uerr error
