@@ -136,15 +136,27 @@ function reportBatch(
   singular: string,
   plural: string
 ): void {
-  const label = res.done.length === 1 ? singular : plural;
+  // Mensagem na ordem "4 texturas apagadas.": a contagem vem antes e o
+  // participio concorda com ela (a ordem antiga, "Apagadas 4 texturas.",
+  // ficava invertida).
+  const done = res.done.length;
+  const form = (n: number, one: string, many: string) =>
+    n === 1 ? one : many;
   if (res.failed.length > 0) {
-    toast.warning(`${label} ${res.done.length} de ${res.total} textura(s).`, {
-      description: res.failed.slice(0, 3).join('; '),
-    });
+    // Com falha parcial o substantivo é o total (quem falhou aparece na
+    // descrição): "3 de 4 texturas apagadas."
+    toast.warning(
+      `${done} de ${res.total} ${form(res.total, 'textura', 'texturas')} ` +
+        `${form(res.total, singular, plural).toLowerCase()}.`,
+      {
+        description: res.failed.slice(0, 3).join('; '),
+      }
+    );
     return;
   }
   toast.success(
-    `${label} ${res.done.length} textura${res.done.length === 1 ? '' : 's'}.`
+    `${done} ${form(done, 'textura', 'texturas')} ` +
+      `${form(done, singular, plural).toLowerCase()}.`
   );
 }
 

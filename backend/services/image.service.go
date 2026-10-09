@@ -488,12 +488,10 @@ func (s *MetadataService) DeleteImages(kind, id string, targets []string, scope 
 		// Apagar em data/ muda quem tem original: o índice e a própria
 		// árvore passam a enxergar grupos diferentes.
 		ddsphyre.InvalidateIndex(version)
-		if s != nil && s.notifier != nil {
-			s.notifier.NotifyInfo(fmt.Sprintf(
-				"Imagem(ns) apagada(s) em %d de %d no escopo %s",
-				len(res.Done), res.Total, scope))
-		}
 	}
+	// O aviso é do frontend (reportBatch): ele distingue sucesso de falha
+	// parcial e lista os erros. NotifyInfo aqui emitia um SEGUNDO toast
+	// ("Imagem(ns) apagada(s)… escopo …") sobre o mesmo resultado.
 	return res, nil
 }
 
@@ -552,10 +550,9 @@ func (s *MetadataService) DeleteImageSelection(kind string, ids []string, withCo
 	}
 	if len(res.Done) > 0 {
 		ddsphyre.InvalidateIndex(version)
-		if s != nil && s.notifier != nil {
-			s.notifier.NotifyInfo(fmt.Sprintf("Imagem(ns) apagada(s) em %d de %d no escopo %s", len(res.Done), res.Total, scope))
-		}
 	}
+	// Um só toast por delete: quem reporta é o frontend (reportBatch),
+	// como no delete de textura única — ver DeleteImages.
 	return res, nil
 }
 
