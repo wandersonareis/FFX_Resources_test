@@ -33,7 +33,6 @@ export function TreeItem({
   onToggle,
   onSelect,
   onCheck,
-  onNodeKeyDown,
   vbfSelectionByRoot,
 }: {
   node: SideNode;
@@ -44,7 +43,6 @@ export function TreeItem({
   onToggle: (node: SideNode) => void;
   onSelect: (node: SideNode) => void;
   onCheck: (node: SideNode, checked: boolean) => void;
-  onNodeKeyDown: (event: React.KeyboardEvent<HTMLElement>, node: SideNode) => void;
   vbfSelectionByRoot: ReadonlyMap<string, readonly string[]>;
 }) {
   // Diretório do .vbf ainda sem filhos (ou grupo de macrodic) também é
@@ -134,7 +132,6 @@ export function TreeItem({
             isSelected ? 'bg-sky-100 ring-1 ring-sky-400' : ''
           }`}
           onClick={() => onSelect(node)}
-          onKeyDown={(event) => onNodeKeyDown(event, node)}
         >
           {/* Ícone do nó: diretório FECHADO quando colapsado e ABERTO quando
               expandido; arquivo de texto para binário com texto; imagem para
@@ -167,7 +164,6 @@ export function TreeItem({
               onToggle={onToggle}
               onSelect={onSelect}
               onCheck={onCheck}
-              onNodeKeyDown={onNodeKeyDown}
               vbfSelectionByRoot={vbfSelectionByRoot}
             />
           ))

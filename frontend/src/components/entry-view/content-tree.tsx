@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { useHotkey } from '@tanstack/react-hotkeys';
+import { useHotkey, useHotkeys } from '@tanstack/react-hotkeys';
 import { loggedToast as toast } from '@/lib/ffx/toast-logged';
 import { RefreshCw } from 'lucide-react';
 import { useSelector } from '@tanstack/react-store';
@@ -62,7 +62,9 @@ export function ContentTree({ view }: { view: EntryView }) {
     useState<VbfExtractRequest | null>(null);
   const extractRequestCounter = useRef(0);
   const closeExtractDialog = useCallback(() => setExtractRequest(null), []);
-  // Container da árvore, para ordenar os nós visíveis no foco por setas.
+  // Container da árvore: consulta os nós visíveis para o foco por setas e é o
+  // ALVO dos hotkeys — o listener só vê eventos que borbulham por aqui (foco
+  // dentro da árvore), sem gate por `enabled` que ficaria obsoleto no foco.
   const treeRef = useRef<HTMLDivElement>(null);
 
   const selection = useExportSelection();
@@ -104,40 +106,98 @@ export function ContentTree({ view }: { view: EntryView }) {
   }, [selectedEntry, image]);
 
   // ---- Teclado: sidebar — ↑/↓ movem o foco entre nós visíveis; Enter
-  // alterna expandir/fechar (grupo/raiz) ou abre o arquivo na tabela (folha).
-  const onNodeKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLElement>, node: SideNode) => {
-      const buttons = Array.from(
-        treeRef.current?.querySelectorAll<HTMLElement>('[data-node-button]') ??
-          []
-      );
-      const idx = buttons.indexOf(event.currentTarget);
-      if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        buttons[idx + 1]?.focus();
-      } else if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        buttons[idx - 1]?.focus();
-      } else if (event.key === 'Enter') {
-        event.preventDefault();
-        // Folha abre; arquivo fora do escopo avisa; grupo/raiz alterna.
-        if (node.entry || node.unsupported) void actions.selectNode(node);
-        else actions.toggleNode(node);
-      } else if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        if (node.entry) {
-          // Folha: abre o arquivo e já leva o foco para a tabela (↑/↓ direto).
-          actions.requestTableFocus();
-          void actions.selectNode(node);
-        } else if (node.unsupported) {
-          void actions.selectNode(node);
-        } else if (!expanded.has(node.id)) {
-          // Grupo/raiz: expande se colapsado (convenção de treeview).
-          actions.toggleNode(node);
-        }
+  // alterna expandir/fechar (grupo/raiz) ou abre o arquivo na tabela (folha);
+  // → folha leva o foco para a tabela (↑/↓ direto).
+
+  // Índice id → nó: o callback do hotkey recebe só o evento, então o nó é
+  // resolvido pelo DOM ([data-node-id]) e devolvido por este mapa.
+  const nodeById = useMemo(() => {
+    const map = new Map<string, SideNode>();
+    const walk = (node: SideNode) => {
+      map.set(node.id, node);
+      node.children?.forEach(walk);
+    };
+    vbfRoots.forEach(walk);
+    roots.forEach(walk);
+    return map;
+  }, [roots, vbfRoots]);
+
+  /**
+   * Botão de nó sob o foco. `null` = chevron/checkbox/viewport: esses casos
+   * ficam com o comportamento nativo do botão (Enter alterna de verdade).
+   */
+  const focusedNodeButton = (event: KeyboardEvent) =>
+    event.target instanceof Element
+      ? event.target.closest<HTMLElement>('[data-node-button]')
+      : null;
+
+  const moveFocus = (event: KeyboardEvent, delta: number) => {
+    const button = focusedNodeButton(event);
+    const buttons = Array.from(
+      treeRef.current?.querySelectorAll<HTMLElement>('[data-node-button]') ?? []
+    );
+    const idx = button ? buttons.indexOf(button) : -1;
+    if (idx < 0) return;
+    event.preventDefault();
+    buttons[idx + delta]?.focus();
+  };
+
+  const activate = (event: KeyboardEvent, mode: 'enter' | 'right') => {
+    const button = focusedNodeButton(event);
+    if (!button) return;
+    const id = button.closest('[data-node-id]')?.getAttribute('data-node-id');
+    const node = id ? nodeById.get(id) : undefined;
+    if (!node) return;
+    // Folha abre; arquivo fora do escopo avisa; grupo/raiz alterna.
+    // `preventDefault: false` no registro: o cancelamento é manual e SÓ aqui,
+    // para matar o click nativo do <button> sem matar Enter no checkbox/chevron.
+    event.preventDefault();
+    if (mode === 'right') {
+      if (node.entry) {
+        // Folha: abre o arquivo e já leva o foco para a tabela (↑/↓ direto).
+        actions.requestTableFocus();
+        void actions.selectNode(node);
+      } else if (node.unsupported) {
+        void actions.selectNode(node);
+      } else if (!expanded.has(node.id)) {
+        // Grupo/raiz: expande se colapsado (convenção de treeview).
+        actions.toggleNode(node);
       }
-    },
-    [actions, expanded]
+      return;
+    }
+    if (node.entry || node.unsupported) void actions.selectNode(node);
+    else actions.toggleNode(node);
+  };
+
+  // Callbacks e options são sincronizados a cada render pelo hook, então não
+  // há closure velha de `actions`/`expanded` (dispensa useCallback).
+  useHotkeys(
+    [
+      {
+        hotkey: 'ArrowDown',
+        callback: (event) => moveFocus(event, 1),
+        options: { meta: { name: 'Próximo nó', group: 'Árvore' } },
+      },
+      {
+        hotkey: 'ArrowUp',
+        callback: (event) => moveFocus(event, -1),
+        options: { meta: { name: 'Nó anterior', group: 'Árvore' } },
+      },
+      {
+        hotkey: 'Enter',
+        callback: (event) => activate(event, 'enter'),
+        options: { meta: { name: 'Abrir/alternar nó', group: 'Árvore' } },
+      },
+      {
+        hotkey: 'ArrowRight',
+        callback: (event) => activate(event, 'right'),
+        options: { meta: { name: 'Expandir ou ir para a tabela', group: 'Árvore' } },
+      },
+    ],
+    // `preventDefault`/`stopPropagation` desligados: senão Enter morre no
+    // checkbox/chevron e o evento deixa de subir (cortando o Delete em
+    // document e os handlers sintéticos dos ancestres).
+    { target: treeRef, preventDefault: false, stopPropagation: false, ignoreInputs: true }
   );
 
   // Checkbox de data/: folha = 1 id; grupo = todos os filhos.
@@ -419,7 +479,6 @@ export function ContentTree({ view }: { view: EntryView }) {
               onToggle={actions.toggleNode}
               onSelect={(n) => void actions.selectNode(n)}
               onCheck={checkNode}
-              onNodeKeyDown={onNodeKeyDown}
               vbfSelectionByRoot={vbfSelectionSnapshot.byRoot}
             />
           ))}
@@ -439,7 +498,6 @@ export function ContentTree({ view }: { view: EntryView }) {
               onToggle={actions.toggleNode}
               onSelect={(n) => void actions.selectNode(n)}
               onCheck={checkNode}
-              onNodeKeyDown={onNodeKeyDown}
               vbfSelectionByRoot={vbfSelectionSnapshot.byRoot}
             />
           ))}
