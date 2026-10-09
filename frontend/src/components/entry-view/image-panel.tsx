@@ -43,7 +43,8 @@ import {
   selectImageSavePath,
   type EntryRow,
 } from '@/lib/ffx/tree-data';
-import { EntryActionsMenu, type EntryMenuTarget } from './entry-actions-menu';
+import { EntryActionsMenu } from './entry-actions-menu';
+import type { EntryMenuTarget } from '@/lib/ffx/content-tree/menu-target';
 import { copyState } from './image-duplicates';
 import type { EntryView } from './entry-view-store';
 import {

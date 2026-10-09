@@ -10,7 +10,6 @@ import {
   Image as ImageIcon,
   Loader2,
 } from 'lucide-react';
-import type { EntryKind } from '@/lib/ffx/display-names';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -22,29 +21,25 @@ import {
   entryCheckState,
   entryNodeId,
   type SideNode,
-} from './types';
+} from '@/lib/ffx/content-tree/model';
+import { useContentTree } from './tree-context';
 
-export function TreeItem({
-  node,
-  depth,
-  expanded,
-  selectedId,
-  selectedByKind,
-  onToggle,
-  onSelect,
-  onCheck,
-  vbfSelectionByRoot,
-}: {
-  node: SideNode;
-  depth: number;
-  expanded: Set<string>;
-  selectedId: string | null;
-  selectedByKind: ReadonlyMap<EntryKind, ReadonlySet<string>>;
-  onToggle: (node: SideNode) => void;
-  onSelect: (node: SideNode) => void;
-  onCheck: (node: SideNode, checked: boolean) => void;
-  vbfSelectionByRoot: ReadonlyMap<string, readonly string[]>;
-}) {
+/**
+ * Item recursivo da árvore. `node` e `depth` são as ÚNICAS props: expansão,
+ * seleção, checkboxes e ações vêm do contexto, então a recursão não repassa
+ * nada adiante.
+ */
+export function TreeItem({ node, depth }: { node: SideNode; depth: number }) {
+  const {
+    expanded,
+    selectedId,
+    selectedByKind,
+    vbfSelectionByRoot,
+    onToggle,
+    onSelect,
+    onCheck,
+  } = useContentTree();
+
   // Diretório do .vbf ainda sem filhos (ou grupo de macrodic) também é
   // expansível: o chevron aparece ANTES da listagem chegar.
   const hasChildren =
@@ -154,18 +149,7 @@ export function TreeItem({
       </div>
       {hasChildren && isExpanded
         ? (node.children ?? []).map((child) => (
-            <TreeItem
-              key={child.id}
-              node={child}
-              depth={depth + 1}
-              expanded={expanded}
-              selectedId={selectedId}
-              selectedByKind={selectedByKind}
-              onToggle={onToggle}
-              onSelect={onSelect}
-              onCheck={onCheck}
-              vbfSelectionByRoot={vbfSelectionByRoot}
-            />
+            <TreeItem key={child.id} node={child} depth={depth + 1} />
           ))
         : null}
     </div>

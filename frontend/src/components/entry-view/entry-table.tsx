@@ -20,7 +20,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { type EntryView } from './entry-view-store';
-import { columnHelper, entryNodeId, features } from './types';
+import { columnHelper, features } from './table-types';
+import { entryNodeId } from '@/lib/ffx/content-tree/model';
 import { locFromVbfPath } from '@/lib/ffx/tree-data';
 
 /**

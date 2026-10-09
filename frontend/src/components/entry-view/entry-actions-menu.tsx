@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { loggedToast as toast } from '@/lib/ffx/toast-logged';
 import { Copy, Download, FolderOpen, HardDriveDownload, Trash2 } from 'lucide-react';
 import type { dto } from '@/wailsjs/go/models';
-import { resolveEntryLabel, type EntryKind } from '@/lib/ffx/display-names';
+import type { EntryMenuTarget } from '@/lib/ffx/content-tree/menu-target';
 import { EXPORT_FORMAT_LABELS, exportSelection } from '@/lib/ffx/export-selection';
 import { imageDuplicates, revealEntry } from '@/lib/ffx/tree-data';
 import { parseError } from '@/lib/ffx/error-handler';
@@ -17,16 +17,6 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import type { EntryView } from './entry-view-store';
-
-/** O nó sob o cursor: folha tem id (arquivo); grupo/raiz, não. */
-export type EntryMenuTarget = {
-  kind?: EntryKind;
-  id?: string | null;
-  label: string;
-  /** Presente para nó do navegador .vbf. */
-  vbfRoot?: string;
-  vbfPath?: string;
-};
 
 /**
  * Menu de contexto compartilhado da árvore e do painel de imagem — MESMO
@@ -242,31 +232,3 @@ export function EntryActionsMenu({
   );
 }
 
-/** Nó da árvore → alvo do menu (folha carrega o id, grupo não). */
-export function menuTargetOf(
-  node: {
-    id: string;
-    kind?: EntryKind;
-    label?: string;
-    vbfRoot?: string;
-    vbfPath?: string;
-  } | null
-): EntryMenuTarget | null {
-  if (!node) return null;
-  if (node.vbfRoot) {
-    return {
-      label: node.label ?? '',
-      vbfRoot: node.vbfRoot,
-      vbfPath: node.vbfPath ?? '',
-    };
-  }
-  if (!node.kind) return null;
-  const prefix = `leaf:${node.kind}:`;
-  const isLeaf = node.id.startsWith(prefix);
-  const id = isLeaf ? node.id.slice(prefix.length) : null;
-  return {
-    kind: node.kind,
-    id,
-    label: id ? resolveEntryLabel(node.kind, id) : (node.label ?? ''),
-  };
-}

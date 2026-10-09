@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { entryCheckState, entryIdsInNode, type SideNode } from './types';
+import { describe, expect, it } from 'bun:test';
+import { buildNodeIndex, entryCheckState, entryIdsInNode, type SideNode } from './model';
 
 const imageTree: SideNode = {
   id: 'category',
@@ -37,5 +37,22 @@ describe('data tree checkbox selection', () => {
     expect(entryCheckState(imageTree, new Set())).toBe(false);
     expect(entryCheckState(imageTree, new Set(['a']))).toBe('indeterminate');
     expect(entryCheckState(imageTree, new Set(['a', 'b']))).toBe(true);
+  });
+});
+
+describe('buildNodeIndex', () => {
+  it('indexes nested nodes so the keyboard can resolve [data-node-id]', () => {
+    const index = buildNodeIndex([imageTree], []);
+    expect(index.get('category')).toBe(imageTree);
+    expect(index.get('directory')?.id).toBe('directory');
+    expect(index.get('leaf:b')?.entry?.id).toBe('b');
+    expect(index.get('missing')).toBeUndefined();
+  });
+
+  it('merges data/ roots with .vbf roots', () => {
+    const vbfRoot: SideNode = { id: 'vbf-root', label: 'mod.vbf', vbf: true, vbfRoot: '/mod.vbf' };
+    const index = buildNodeIndex([imageTree], [vbfRoot]);
+    expect(index.size).toBe(5);
+    expect(index.get('vbf-root')?.vbfRoot).toBe('/mod.vbf');
   });
 });

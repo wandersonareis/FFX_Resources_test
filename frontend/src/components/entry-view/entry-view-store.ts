@@ -34,7 +34,7 @@ import {
   loadVbfRoots,
   type VbfNode,
 } from '@/lib/ffx/vbf';
-import type { SideNode } from './types';
+import type { SideNode } from '@/lib/ffx/content-tree/model';
 
 /** Estado de carga de um item principal da árvore. */
 export type KindLoadStatus = 'loading' | 'ready' | 'error';
