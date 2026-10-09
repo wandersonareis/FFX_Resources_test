@@ -86,7 +86,14 @@ class ExportSelectionStore {
     } catch {
       // localStorage indisponível — segue só em memória
     }
-    this.notify();
+    // Formato não mexe em quem está marcado: `byKind` mantém a identidade
+    // (só `revision`/`format` mudam), para o consumidor memoizado por
+    // `byKind` não refazer os mapas de seleção a cada troca JSON/Strings.
+    exportStore.setState((prev) => ({
+      revision: prev.revision + 1,
+      byKind: prev.byKind,
+      format: this.format,
+    }));
   }
 
   formatOf(): ExportFormat {
