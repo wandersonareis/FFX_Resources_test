@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FFX Resources",
-  description: "Editor de recursos de Final Fantasy X e X-2",
+  title: "FINAL FANTASY X/X-2 HD Remaster Resources Editor",
+  description: "FINAL FANTASY X/X-2 HD Remaster Resources Editor",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

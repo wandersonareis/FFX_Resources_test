@@ -391,7 +391,7 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
   return (
     <div className="flex h-screen flex-col">
       <header className="sticky top-0 z-10 flex items-center gap-2 bg-background px-4 py-2 border-b">
-        <span className="text-lg font-semibold">FFX Resources</span>
+        <span className="text-lg font-semibold">FINAL FANTASY X/X-2 HD Remaster Resources Editor</span>
         <span className="flex-1" />
         <Tooltip>
           <TooltipTrigger asChild>

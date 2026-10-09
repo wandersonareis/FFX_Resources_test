@@ -47,7 +47,7 @@ func (a *App) startup(ctx context.Context) {
 	// A linha abaixo garante conteúdo desde o primeiro instante (e deixa
 	// o caminho do log à vista no próprio arquivo).
 	loggingService.Init()
-	loggingService.Info("FFX Resources iniciado — log em %s", loggingService.LogDir())
+	loggingService.Info("FINAL FANTASY X/X-2 HD Remaster Resources Editor iniciado — log em %s", loggingService.LogDir())
 
 	// Perform your setup here
 	defer func() {

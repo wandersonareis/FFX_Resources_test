@@ -1,7 +1,7 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "FFX Resources",
-  "outputfilename": "ffx-resources",
+  "name": "FINAL FANTASY X/X-2 HD Remaster Resources Editor",
+  "outputfilename": "ffx_ffx2_hd_remaster_resources_editor",
   "frontend:install": "bun install",
   "frontend:build": "bun run build",
   "frontend:dev:watcher": "bun run dev",

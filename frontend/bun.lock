@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "ffx-resources-frontend",
+      "name": "ffx_ffx2_hd_remaster_resources_editor_frontend",
       "dependencies": {
         "@tanstack/react-hotkeys": "^0.13.0",
         "@tanstack/react-store": "^0.11.2",
