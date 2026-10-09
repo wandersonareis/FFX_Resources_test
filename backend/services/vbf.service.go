@@ -753,9 +753,6 @@ func (s *MetadataService) ImportVbfImage(vbfPath, innerPath, ddsPath string) err
 		common.LogWarning("images %s/%s: import do .vbf ok, mas não atualizei os .dds/.png extraídos: %v", target.Version, target.ID, err)
 	}
 	vbfSessionResetAll()
-	if s != nil && s.notifier != nil {
-		s.notifier.NotifyInfo(fmt.Sprintf("Imagem importada para mods/: %s", target.ID))
-	}
 	return nil
 }
 
@@ -897,10 +894,8 @@ func (s *MetadataService) ReplicateVbfImage(vbfPath, sourcePath string, targetPa
 	if len(result.Done) > 0 {
 		ddsphyre.InvalidateIndex(source.Version)
 		vbfSessionResetAll()
-		if s != nil && s.notifier != nil {
-			s.notifier.NotifyInfo(fmt.Sprintf("Imagem do .vbf replicada em %d de %d cópia(s)", len(result.Done), result.Total))
-		}
 	}
+	// O aviso é do frontend (reportBatch → "N texturas replicadas.").
 	return result, nil
 }
 

@@ -253,9 +253,6 @@ func (s *MetadataService) ImportImage(kind, id, ddsPath string, version common.G
 	if _, err := ddsphyre.Extract(version, id); err != nil {
 		common.LogWarning("images %s/%s: import ok, mas não atualizei os .dds/.png extraídos: %v", version, id, err)
 	}
-	if s != nil && s.notifier != nil {
-		s.notifier.NotifyInfo(fmt.Sprintf("Imagem importada: ddsphyre/%s", id))
-	}
 	return nil
 }
 
@@ -301,13 +298,9 @@ func (s *MetadataService) ImportImageGroup(kind, id, ddsPath string, targets []s
 		// Vários payloads efetivos mudaram: o índice é reconstruído na
 		// próxima consulta.
 		ddsphyre.InvalidateIndex(version)
-		if s != nil && s.notifier != nil {
-			s.notifier.NotifyInfo(fmt.Sprintf(
-				"Imagem importada em %d de %d textura(s): %s",
-				len(res.Updated), res.Total, filepath.Base(ddsPath),
-			))
-		}
 	}
+	// O aviso é do frontend ("Importadas N de M texturas.", com a lista de
+	// falhas na descrição) — ver reportBatch.
 	return res, nil
 }
 
@@ -344,10 +337,7 @@ func (s *MetadataService) ExtractImageGroup(kind, id string, targets []string, v
 		res.Done = append(res.Done, t)
 		coreprogress.Step(t)
 	}
-	if len(res.Done) > 0 && s != nil && s.notifier != nil {
-		s.notifier.NotifyInfo(fmt.Sprintf(
-			"Imagem exportada em %d de %d textura(s)", len(res.Done), res.Total))
-	}
+	// O aviso é do frontend (reportBatch → "N texturas extraídas.").
 	return res, nil
 }
 
@@ -440,11 +430,8 @@ func (s *MetadataService) ReplicateImage(kind, id string, targets []string, vers
 	}
 	if len(res.Done) > 0 {
 		ddsphyre.InvalidateIndex(version)
-		if s != nil && s.notifier != nil {
-			s.notifier.NotifyInfo(fmt.Sprintf(
-				"Imagem replicada em %d de %d cópia(s)", len(res.Done), res.Total))
-		}
 	}
+	// O aviso é do frontend (reportBatch → "N texturas replicadas.").
 	return res, nil
 }
 
