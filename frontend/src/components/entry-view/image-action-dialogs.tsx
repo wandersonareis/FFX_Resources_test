@@ -364,8 +364,10 @@ function ReplicateImageDialog({ view, action }: ActionProps) {
 }
 
 /** Escopos do delete: onde os containers são apagados. */
+type DeleteScope = 'both' | 'data' | 'mods';
+
 const DELETE_SCOPES: Array<{
-  value: 'both' | 'data' | 'mods';
+  value: DeleteScope;
   title: string;
   hint: string;
 }> = [
@@ -387,6 +389,48 @@ const DELETE_SCOPES: Array<{
 ];
 
 /**
+ * Aviso do alerta, em duas partes: a primeira é fixa (por que não há
+ * desfazer) e a segunda muda com o escopo selecionado.
+ *
+ * Os textos espelham o que `ddsphyre.Delete` realmente remove: o container
+ * `.dds.phyre` de data/ e/ou de mods/ conforme o escopo, e SEMPRE os
+ * derivados `.dds`/`.png` de mods/edits/images/ — por isso os derivados
+ * aparecem nos três itens.
+ */
+const DELETE_IRREVERSIBLE =
+  'Os arquivos são removidos do disco, fora da lixeira, e não há ' +
+  'como desfazer.';
+
+const DELETE_SCOPE_NOTICES: Record<DeleteScope, string> = {
+  data:
+    'Sai da árvore o binário .dds.phyre original em data/. Os derivados ' +
+    '.dds e .png em mods/edits/images/ também são apagados, e a ' +
+    'substituição em mods/ permanece.',
+  mods:
+    'Sai a substituição .dds.phyre em mods/, junto com os derivados ' +
+    '.dds e .png em mods/edits/images/. O binário original em data/ ' +
+    'permanece e a textura volta ao conteúdo original.',
+  both:
+    'Sai dos dois lados: o binário .dds.phyre original em data/ E a ' +
+    'substituição .dds.phyre em mods/, além dos derivados .dds e .png ' +
+    'em mods/edits/images/. A textura sai da árvore por completo.',
+};
+
+/** Alerta destrutivo cuja descrição acompanha o escopo escolhido. */
+function DeleteIrreversibleAlert({ scope }: { scope: DeleteScope }) {
+  return (
+    <Alert variant="destructive">
+      <AlertTriangle />
+      <AlertTitle>Irreversível</AlertTitle>
+      <AlertDescription className="gap-2">
+        <p>{DELETE_IRREVERSIBLE}</p>
+        <p className="font-medium">{DELETE_SCOPE_NOTICES[scope]}</p>
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+/**
  * Deletar: escopo explícito (nunca cascata implícita) + cópias só se
  * marcadas, com o aviso de irreversível antes de qualquer gravação. Sempre
  * leva junto os .dds/.png extraídos — senão Resolve serviria imagem órfã.
@@ -394,7 +438,7 @@ const DELETE_SCOPES: Array<{
 function DeleteImageDialog({ view, action }: ActionProps) {
   const { version, actions } = view;
   const list = useActionDuplicates(view, action);
-  const [scope, setScope] = useState<'both' | 'data' | 'mods'>('both');
+  const [scope, setScope] = useState<DeleteScope>('both');
   const [withCopies, setWithCopies] = useState(false);
   const [busy, setBusy] = useState(false);
   const copies = list ?? [];
@@ -427,20 +471,12 @@ function DeleteImageDialog({ view, action }: ActionProps) {
         <DialogHeader>
           <DialogTitle>Deletar {action.label}?</DialogTitle>
           <DialogDescription>
-            Escolha o escopo. Os .dds/.png extraídos desta textura são
-            apagados junto em qualquer escopo.
+            Escolha o escopo — o aviso abaixo lista exatamente o que sai do
+            disco.
           </DialogDescription>
         </DialogHeader>
 
-        <Alert variant="destructive">
-          <AlertTriangle />
-          <AlertTitle>Irreversível</AlertTitle>
-          <AlertDescription>
-            Os arquivos são removidos do disco, fora da lixeira, e não há
-            desfazer — nem o app consegue reconstruí-los sem extrair o
-            FFX_Data.vbf de novo.
-          </AlertDescription>
-        </Alert>
+        <DeleteIrreversibleAlert scope={scope} />
 
         <fieldset className="space-y-1.5">
           <legend className="mb-1 text-xs uppercase tracking-wide opacity-60">
@@ -526,7 +562,7 @@ function DeleteImageDialog({ view, action }: ActionProps) {
 function DeleteImageSelectionDialog({ view, action }: ActionProps) {
   const { version, actions } = view;
   const ids = action.ids ?? EMPTY_IMAGE_IDS;
-  const [scope, setScope] = useState<'both' | 'data' | 'mods'>('both');
+  const [scope, setScope] = useState<DeleteScope>('both');
   const [withCopies, setWithCopies] = useState(false);
   const [busy, setBusy] = useState(false);
   const [copyIDs, setCopyIDs] = useState<string[]>([]);
@@ -590,14 +626,7 @@ function DeleteImageSelectionDialog({ view, action }: ActionProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <Alert variant="destructive">
-          <AlertTriangle />
-          <AlertTitle>Irreversível</AlertTitle>
-          <AlertDescription>
-            Os arquivos são removidos do disco, fora da lixeira, e não há
-            desfazer. Os `.dds` e `.png` extraídos também serão apagados.
-          </AlertDescription>
-        </Alert>
+        <DeleteIrreversibleAlert scope={scope} />
 
         <fieldset className="space-y-1.5">
           <legend className="mb-1 text-xs uppercase tracking-wide opacity-60">
