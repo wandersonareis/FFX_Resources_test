@@ -419,6 +419,27 @@ func Delete(version common.GameVersion, id, scope string) (removed bool, err err
 	if err := remove(pngPath); err != nil {
 		return removed, err
 	}
+
+	// Poda do que ficou vazio: remove() só apaga ARQUIVOS e o ramo criado
+	// pela gravação sobrava (ffx_data/…, mods/… e mods/images/… vazios no
+	// Explorer). Floor único = GameFilesRoot, então só a raiz da árvore é
+	// intocável. Roda mesmo com removed=false (limpa o que um delete antigo
+	// deixou), é best-effort e cobre só o ramo destes caminhos — faxina é
+	// fora do app, aqui não se caminha árvore.
+	//
+	// Ordem importa: mods/images/ fica DENTRO de mods/, então as imagens
+	// saem primeiro — é o que permite mods/ esvaziar de verdade numa leva.
+	common.PruneEmptyDirs(filepath.Dir(ddsPath), common.GameFilesRoot)
+	if scope == DeleteMods || scope == DeleteBoth {
+		common.PruneEmptyDirs(
+			filepath.Dir(filepath.Join(common.GameFilesRoot, common.ModsFolder, rel)),
+			common.GameFilesRoot)
+	}
+	if scope == DeleteData || scope == DeleteBoth {
+		common.PruneEmptyDirs(
+			filepath.Dir(filepath.Join(common.GameFilesRoot, rel)),
+			common.GameFilesRoot)
+	}
 	return removed, nil
 }
 

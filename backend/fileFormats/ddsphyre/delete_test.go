@@ -8,6 +8,18 @@ import (
 	"ffxresources/backend/common"
 )
 
+// seedFile cria o caminho (com diretórios) e grava conteúdo qualquer: é o
+// que simula o arquivo que a gravação deixou para trás.
+func seedFile(t *testing.T, path string) {
+	t.Helper()
+	if err := common.EnsurePathExists(path); err != nil {
+		t.Fatalf("criando %s: %v", path, err)
+	}
+	if err := os.WriteFile(path, []byte("conteudo"), 0o644); err != nil {
+		t.Fatalf("gravando %s: %v", path, err)
+	}
+}
+
 // Delete precisa cobrir os três escopos E os artefatos derivados: Resolve
 // prefere mods/images, então apagar só o container deixaria um .dds
 // órfão servindo imagem fantasma no lugar da textura apagada.
@@ -17,23 +29,14 @@ func TestDeleteRemovesContainerAndDerivedArtifacts(t *testing.T) {
 	modsPath := filepath.Join(root, common.ModsFolder, RelPath(common.GameVersionFFX, a))
 	ddsPath, pngPath := ExportPaths(common.GameVersionFFX, a)
 
-	seed := func(path string) {
-		t.Helper()
-		if err := common.EnsurePathExists(path); err != nil {
-			t.Fatalf("criando %s: %v", path, err)
-		}
-		if err := os.WriteFile(path, []byte("conteudo"), 0o644); err != nil {
-			t.Fatalf("gravando %s: %v", path, err)
-		}
-	}
 	gone := func(path string) bool {
 		_, err := os.Stat(path)
 		return os.IsNotExist(err)
 	}
 
-	seed(modsPath)
-	seed(ddsPath)
-	seed(pngPath)
+	seedFile(t, modsPath)
+	seedFile(t, ddsPath)
+	seedFile(t, pngPath)
 
 	// mods: some o overlay e os artefatos; o pristine fica intacto.
 	removed, err := Delete(common.GameVersionFFX, a, DeleteMods)
@@ -116,5 +119,58 @@ func TestDeleteRefusesInvalidID(t *testing.T) {
 	}
 	if _, err := Delete(common.GameVersionFFX, "outros/dados/x", DeleteBoth); err == nil {
 		t.Error("id fora de gamedata/ps3data aceito")
+	}
+}
+
+// O delete apaga arquivos; a poda (floor = GameFilesRoot) remove o ramo que
+// ficou vazio. Irmão no mesmo diretório segura a poda: só esvaziado é que
+// some, e o piso nunca cai junto.
+func TestDeletePrunesEmptyParentDirs(t *testing.T) {
+	root, a, b, _, _ := withDupTree(t)
+	// a e b são irmãos em gamedata/ps3data/dup.
+	dataDir := filepath.Dir(filepath.Join(root, RelPath(common.GameVersionFFX, a)))
+	modsPath := filepath.Join(root, common.ModsFolder, RelPath(common.GameVersionFFX, a))
+	ddsPath, pngPath := ExportPaths(common.GameVersionFFX, a)
+
+	seedFile(t, modsPath)
+	seedFile(t, ddsPath)
+	seedFile(t, pngPath)
+
+	if _, err := Delete(common.GameVersionFFX, a, DeleteBoth); err != nil {
+		t.Fatalf("Delete(both): %v", err)
+	}
+
+	// b segue em dup/: o irmão segura a poda do lado de data/.
+	if _, err := os.Stat(dataDir); err != nil {
+		t.Errorf("diretório com irmão foi apagado: %v", err)
+	}
+	// mods/ e mods/images/ só tinham a: o ramo some inteiro (imagens poda
+	// antes de mods/, que é onde elas moram — por isso mods/ também cai).
+	for _, p := range []string{
+		filepath.Dir(modsPath),
+		filepath.Dir(ddsPath),
+		filepath.Join(root, common.ModsFolder),
+	} {
+		if _, err := os.Stat(p); !os.IsNotExist(err) {
+			t.Errorf("ramo esvazio sobreviveu: %s (err=%v)", p, err)
+		}
+	}
+	// Piso (GameFilesRoot) e ffx_data/ seguem de pé.
+	if _, err := os.Stat(root); err != nil {
+		t.Errorf("piso GameFilesRoot foi apagado: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "ffx_data")); err != nil {
+		t.Errorf("ffx_data com conteúdo foi apagado: %v", err)
+	}
+
+	// Sem o irmão, dup/ esvazia e some; ffx_data/ continua por other/c.
+	if _, err := Delete(common.GameVersionFFX, b, DeleteData); err != nil {
+		t.Fatalf("Delete(data): %v", err)
+	}
+	if _, err := os.Stat(dataDir); !os.IsNotExist(err) {
+		t.Errorf("ramo esvazio sobreviveu: %s (err=%v)", dataDir, err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "ffx_data")); err != nil {
+		t.Errorf("ffx_data com other/c foi junto: %v", err)
 	}
 }

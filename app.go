@@ -393,9 +393,14 @@ func (a *App) SelectVbfExtractDir() string {
 // container é somado na gravação (por isso o picker abre na raiz e não já
 // com o caminho interno, que duplicaria a raiz).
 func (a *App) SelectVbfImageExtractDir() string {
+	defaultDir := filepath.Join(common.GameFilesRoot, common.ModsFolder, common.ModsImagesDir)
+	// O delete poda ramos vazios até GameFilesRoot: garante a raiz para o
+	// picker não abrir em pasta fallback (ImageWorkDir faz o mesmo nos
+	// outros dois pickers de arquivo).
+	_ = common.EnsurePathExists(defaultDir)
 	selection, err := runtime.OpenDirectoryDialog(interactions.NewInteractionService().Ctx, runtime.OpenDialogOptions{
 		Title:            "Escolher destino das imagens extraídas",
-		DefaultDirectory: filepath.Join(common.GameFilesRoot, common.ModsFolder, common.ModsImagesDir),
+		DefaultDirectory: defaultDir,
 	})
 	if err != nil {
 		return ""
