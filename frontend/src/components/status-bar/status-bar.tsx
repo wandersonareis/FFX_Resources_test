@@ -16,7 +16,13 @@ import {
   type StatusBarWarning,
 } from '@/lib/ffx/statusbar-store';
 import { useWailsEvent } from '@/lib/ffx/use-wails-event';
+import { SHORTCUTS, hotkeyLabel, shortcutTip } from '@/lib/ffx/shortcuts';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 /**
  * Intervalo da rotação de avisos do backend (ms) — mais de um aviso ativo
@@ -25,11 +31,43 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 const WARNING_ROTATION_MS = 3000;
 
 /**
- * Barra de status do rodapé:
+ * Ordem exibida na faixa: cima, baixo, direita, esquerda. A tecla vem do
+ * catálogo (SHORTCUTS.navigation) — a MESMA fonte do registro das
+ * hotkeys na árvore e na tabela.
+ */
+const NAV_HINTS = [
+  SHORTCUTS.navigation.up,
+  SHORTCUTS.navigation.down,
+  SHORTCUTS.navigation.right,
+  SHORTCUTS.navigation.left,
+] as const;
+
+/**
+ * Tecla de navegação como DICA visual (não como botão): ↑/↓ movem
+ * entre nós na árvore e entre linhas na tabela, → expande/segue e ←
+ * volta — o sentido depende do FOCO, então um clique aqui seria
+ * ambíguo.
+ */
+function ArrowHint({ hotkey, label }: { hotkey: string; label: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded border bg-muted px-1 text-[11px] leading-none font-medium text-muted-foreground">
+          {hotkeyLabel(hotkey)}
+        </kbd>
+      </TooltipTrigger>
+      <TooltipContent>{shortcutTip(label, hotkey)}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+/**
+ * Barra de status do rodapé — três faixas, da esquerda para a direita:
  *
- *  - ESQUERDA: progresso de tradução do arquivo aberto (fixo, sempre que
- *    um arquivo está aberto). Clicável → alert com os detalhes ao lado da
- *    barra.
+ *  - ESQUERDA, na mesma margem da sidebar: as setas de navegação, só como
+ *    dica das teclas.
+ *  - MEIO: progresso de tradução do arquivo aberto (fixo na abertura).
+ *    Clicável → alert com os detalhes ao lado da barra.
  *  - DIREITA: avisos do backend (desalinhamentos). Mais de um → alterna
  *    temporizado (3s). Clicável → alert com os detalhes; fechar o alert
  *    DESCARTA o aviso (some da barra e não volta por reemissão na sessão).
@@ -91,65 +129,80 @@ export function StatusBar() {
 
   return (
     <footer className="relative z-20 border-t bg-background">
-      <div className="flex h-8 items-center gap-2 px-3 text-xs">
-        {/* Progresso (esquerda): fixo na abertura do arquivo. */}
-        {activeFile.progress && activeFile.kind ? (
-          <Alert
-            variant={progressPanelOpen ? 'info' : 'default'}
-            role="button"
-            tabIndex={0}
-            aria-expanded={progressPanelOpen}
-            onClick={() =>
-              setOpenPanel((p) => (p === 'progress' ? null : 'progress'))
-            }
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                setOpenPanel((p) => (p === 'progress' ? null : 'progress'));
-              }
-            }}
-            className="h-6 w-fit max-w-[min(45ch,50vw)] cursor-pointer items-center border-0 bg-transparent px-2 py-0 grid-cols-[auto_auto] shadow-none"
-          >
-            <Info className="shrink-0 opacity-70" />
-            <span className="truncate">
-              {activeFile.entryLabel}:{' '}
-              <span className="font-medium">
-                {activeFile.progress.translated}/{activeFile.progress.total}
-              </span>{' '}
-              linhas traduzidas ({activeFile.progress.pct}%)
-            </span>
-          </Alert>
-        ) : null}
+      <div className="flex h-8 items-center gap-2 text-xs">
+        {/* Três colunas iguais: as setas começam na MESMA margem da
+            sidebar (pl-3), o progresso cai no centro exato da janela e o
+            aviso encosta à direita. */}
+        <div
+          className="flex min-w-0 flex-1 items-center gap-1 pl-3"
+          role="group"
+          aria-label={SHORTCUTS.navigation.label}
+        >
+          {NAV_HINTS.map((hint) => (
+            <ArrowHint key={hint.key} hotkey={hint.key} label={hint.label} />
+          ))}
+        </div>
 
-        <span className="flex-1" />
+        {/* Progresso (meio): fixo na abertura do arquivo. */}
+        <div className="flex min-w-0 flex-1 items-center justify-center">
+          {activeFile.progress && activeFile.kind ? (
+            <Alert
+              variant={progressPanelOpen ? 'info' : 'default'}
+              role="button"
+              tabIndex={0}
+              aria-expanded={progressPanelOpen}
+              onClick={() =>
+                setOpenPanel((p) => (p === 'progress' ? null : 'progress'))
+              }
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setOpenPanel((p) => (p === 'progress' ? null : 'progress'));
+                }
+              }}
+              className="h-6 w-fit max-w-full cursor-pointer items-center border-0 bg-transparent px-2 py-0 grid-cols-[auto_auto] shadow-none"
+            >
+              <Info className="shrink-0 opacity-70" />
+              <span className="truncate">
+                {activeFile.entryLabel}:{' '}
+                <span className="font-medium">
+                  {activeFile.progress.translated}/{activeFile.progress.total}
+                </span>{' '}
+                linhas traduzidas ({activeFile.progress.pct}%)
+              </span>
+            </Alert>
+          ) : null}
+        </div>
 
         {/* Aviso do backend (direita): rotação temporizada. */}
-        {warning ? (
-          <Alert
-            variant={warning.severity === 'error' ? 'destructive' : 'warning'}
-            role="button"
-            tabIndex={0}
-            aria-expanded={warningPanelOpen}
-            onClick={() =>
-              setOpenPanel((p) => (p === 'warning' ? null : 'warning'))
-            }
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                setOpenPanel((p) => (p === 'warning' ? null : 'warning'));
+        <div className="flex min-w-0 flex-1 items-center justify-end pr-3">
+          {warning ? (
+            <Alert
+              variant={warning.severity === 'error' ? 'destructive' : 'warning'}
+              role="button"
+              tabIndex={0}
+              aria-expanded={warningPanelOpen}
+              onClick={() =>
+                setOpenPanel((p) => (p === 'warning' ? null : 'warning'))
               }
-            }}
-            className={cn(
-              'h-6 w-fit max-w-[min(70ch,55vw)] cursor-pointer items-center border-0 bg-transparent px-2 py-0 grid-cols-[auto_auto] shadow-none',
-              warningPanelOpen && 'font-medium'
-            )}
-          >
-            <AlertTriangle className="shrink-0" />
-            <span className="truncate" title={warning.message}>
-              {warning.message}
-            </span>
-          </Alert>
-        ) : null}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setOpenPanel((p) => (p === 'warning' ? null : 'warning'));
+                }
+              }}
+              className={cn(
+                'h-6 w-fit max-w-full cursor-pointer items-center border-0 bg-transparent px-2 py-0 grid-cols-[auto_auto] shadow-none',
+                warningPanelOpen && 'font-medium'
+              )}
+            >
+              <AlertTriangle className="shrink-0" />
+              <span className="truncate" title={warning.message}>
+                {warning.message}
+              </span>
+            </Alert>
+          ) : null}
+        </div>
       </div>
 
       {/* Alert detalhado — próximo à barra, ancorado à esquerda. */}

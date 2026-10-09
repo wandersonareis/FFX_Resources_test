@@ -8,9 +8,9 @@ import { formatForDisplay } from '@tanstack/react-hotkeys';
  * `as const` é obrigatório: `useHotkey` exige o tipo literal `Hotkey`
  * (`string` não compila) e um `Mod+${i}` dinâmico também não serviria.
  *
- * Fica de fora a navegação contextual (setas/Enter da árvore e da tabela,
- * ←/→ do diálogo): não aparece em texto nenhum e só faz sentido dentro do
- * contexto de cada componente.
+ * Enter da árvore/tabela e ←/→ do diálogo de tradução ficam de fora: não
+ * aparecem em texto nenhum e só fazem sentido dentro do próprio componente.
+ * As SETAS estão em `navigation` porque a barra de status as exibe.
  */
 export const SHORTCUTS = {
   /** app-shell → grava os rascunhos no binário (botão "Salvar" da aba). */
@@ -28,6 +28,20 @@ export const SHORTCUTS = {
   zoomIn: { keys: 'Mod+=', label: 'Aumentar o zoom' },
   zoomOut: { keys: 'Mod+-', label: 'Diminuir o zoom' },
   zoomReset: { keys: 'Mod+0', label: 'Voltar ao ajuste' },
+  /**
+   * Setas da árvore/tabela: a MESMA tecla muda de sentido com o foco (nó ou
+   * linha), então o `key` é a fonte única da tecla, o `label` de cada seta
+   * é o rótulo neutro do tooltip e o `label` do grupo é o nome da faixa na
+   * barra de status — o que cada tecla faz em cada contexto continua no
+   * `meta.name` do registro.
+   */
+  navigation: {
+    label: 'Setas de navegação',
+    up: { key: 'ArrowUp', label: 'Item anterior' },
+    down: { key: 'ArrowDown', label: 'Próximo item' },
+    right: { key: 'ArrowRight', label: 'Expandir ou abrir' },
+    left: { key: 'ArrowLeft', label: 'Voltar' },
+  },
 } as const;
 
 /** Tecla formatada para a plataforma: `Ctrl+S` no Windows, `⌘S` no macOS. */

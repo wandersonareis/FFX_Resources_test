@@ -7,6 +7,7 @@ import {
   buildContentRoots,
   buildNodeIndex,
 } from '@/lib/ffx/content-tree/model';
+import { SHORTCUTS } from '@/lib/ffx/shortcuts';
 import type { EntryView } from '../entry-view-store';
 
 /**
@@ -95,12 +96,12 @@ export function useContentTreeHotkeys({
   useHotkeys(
     [
       {
-        hotkey: 'ArrowDown',
+        hotkey: SHORTCUTS.navigation.down.key,
         callback: (event) => moveFocus(event, 1),
         options: { meta: { name: 'Próximo nó', group: 'Árvore' } },
       },
       {
-        hotkey: 'ArrowUp',
+        hotkey: SHORTCUTS.navigation.up.key,
         callback: (event) => moveFocus(event, -1),
         options: { meta: { name: 'Nó anterior', group: 'Árvore' } },
       },
@@ -110,7 +111,7 @@ export function useContentTreeHotkeys({
         options: { meta: { name: 'Abrir/alternar nó', group: 'Árvore' } },
       },
       {
-        hotkey: 'ArrowRight',
+        hotkey: SHORTCUTS.navigation.right.key,
         callback: (event) => activate(event, 'right'),
         options: { meta: { name: 'Expandir ou ir para a tabela', group: 'Árvore' } },
       },

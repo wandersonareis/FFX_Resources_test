@@ -22,6 +22,7 @@ import {
 import { type EntryView } from './entry-view-store';
 import { columnHelper, features } from './table-types';
 import { entryNodeId } from '@/lib/ffx/content-tree/model';
+import { SHORTCUTS } from '@/lib/ffx/shortcuts';
 import { locFromVbfPath } from '@/lib/ffx/tree-data';
 
 /**
@@ -164,12 +165,12 @@ export function EntryTable({ view }: { view: EntryView }) {
   useHotkeys(
     [
       {
-        hotkey: 'ArrowDown',
+        hotkey: SHORTCUTS.navigation.down.key,
         callback: (event) => moveRow(event, 1),
         options: { meta: { name: 'Próxima linha', group: 'Tabela' } },
       },
       {
-        hotkey: 'ArrowUp',
+        hotkey: SHORTCUTS.navigation.up.key,
         callback: (event) => moveRow(event, -1),
         options: { meta: { name: 'Linha anterior', group: 'Tabela' } },
       },
@@ -179,7 +180,7 @@ export function EntryTable({ view }: { view: EntryView }) {
         options: { meta: { name: 'Abrir o editor da linha', group: 'Tabela' } },
       },
       {
-        hotkey: 'ArrowLeft',
+        hotkey: SHORTCUTS.navigation.left.key,
         callback: backToTree,
         options: { meta: { name: 'Voltar para a árvore', group: 'Tabela' } },
       },
