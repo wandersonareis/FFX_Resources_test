@@ -149,7 +149,7 @@ func TestVbfSessionApplyPropagatesToOpenedCopies(t *testing.T) {
 		sessEntry("bika07_237", sessRow(0, orig, orig)),
 		[]*event.LocalizedFieldStringObject{sessStr(t, version, orig)})
 
-	scope, ok := vbfSessionApplyScope("fake.vbf", KindBattleText, version)
+	scope, ok := vbfSessionApplyScope("fake.vbf", KindBattleText)
 	if !ok {
 		t.Fatal("escopo da sessão indisponível")
 	}

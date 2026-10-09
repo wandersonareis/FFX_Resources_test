@@ -650,7 +650,7 @@ func applyVbfCollectionInSession(vbfPath, kind string, version common.GameVersio
 	base := filepath.Base(vbfPath)
 	switch kind {
 	case KindEvents, KindBattleText, KindCloud, KindTutorial, KindMenuMain:
-		scope, ok := vbfSessionApplyScope(vbfPath, kind, version)
+		scope, ok := vbfSessionApplyScope(vbfPath, kind)
 		if !ok {
 			return fmt.Errorf("nenhum arquivo %s aberto na sessão de %s", kind, base)
 		}

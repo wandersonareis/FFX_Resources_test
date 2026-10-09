@@ -28,8 +28,6 @@ var (
 	treeGeneration atomic.Int64
 )
 
-func currentTreeGeneration() int64 { return treeGeneration.Load() }
-
 func markPreloaded(version common.GameVersion) (first bool) {
 	key := version.String()
 	preloadMu.Lock()

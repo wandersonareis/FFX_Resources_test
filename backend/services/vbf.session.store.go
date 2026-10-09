@@ -265,7 +265,7 @@ func vbfSessionForKind(vbfPath, kind string) (*vbfSession, *vbfSessionKind, bool
 // vbfSessionApplyScope monta o escopo do motor de apply com os arquivos
 // ABERTOS na sessão do container: é por essa limitação que a propagação do
 // .vbf alcança só as cópias que foram carregadas no clique.
-func vbfSessionApplyScope(vbfPath, kind string, version common.GameVersion) (builders.TableApplyScope, bool) {
+func vbfSessionApplyScope(vbfPath, kind string) (builders.TableApplyScope, bool) {
 	vbfSessionMu.Lock()
 	defer vbfSessionMu.Unlock()
 	sess, k, ok := vbfSessionForKind(vbfPath, kind)
