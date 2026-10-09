@@ -131,14 +131,21 @@ export function ContentTree({ view }: { view: EntryView }) {
         onVbfExtractImages={treeActions.onVbfExtractImages}
         onVbfExport={treeActions.onVbfExport}
       >
-        <ContentTreeProvider value={treeValue}>
-          <TreeList
-            treeRef={treeRef}
-            vbfRoots={vbfRoots}
-            roots={contentRoots}
-            onNodeContextMenu={treeActions.onNodeContextMenu}
-          />
-        </ContentTreeProvider>
+        {/* O filho direto do ContextMenuTrigger precisa ser ELEMENTO DOM: o
+            `asChild` do Radix encaminha a ele o `onContextMenu` que grava a
+            posição do clique e cancela o menu do navegador. ContentTreeProvider
+            não é DOM e descarta essas props — sem este wrapper o menu abre em
+            (0,0) e o menu nativo aparece por cima. */}
+        <div className="flex min-h-0 flex-1 flex-col">
+          <ContentTreeProvider value={treeValue}>
+            <TreeList
+              treeRef={treeRef}
+              vbfRoots={vbfRoots}
+              roots={contentRoots}
+              onNodeContextMenu={treeActions.onNodeContextMenu}
+            />
+          </ContentTreeProvider>
+        </div>
       </EntryActionsMenu>
       <VbfExtractDialog
         key={extractRequest?.requestId ?? 'closed'}

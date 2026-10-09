@@ -144,6 +144,11 @@ export function EntryActionsMenu({
 
   return (
     <ContextMenu open={target !== null} onOpenChange={onOpenChange}>
+      {/* `asChild` encaminha ao FILHO as props do trigger — entre elas o
+          `onContextMenu` que grava a posição do clique e chama
+          preventDefault(). O filho precisa, portanto, ser (ou renderizar) um
+          ELEMENTO DOM que repasse props: um componente que só ignora props
+          desconhecidas quebra o posicionamento e libera o menu do navegador. */}
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent>
         {target?.label ? (
