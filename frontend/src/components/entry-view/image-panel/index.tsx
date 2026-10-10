@@ -1,0 +1,208 @@
+'use client';
+
+import { useState } from 'react';
+import { useSelector } from '@tanstack/react-store';
+import type { EntryRow } from '@/lib/ffx/tree-data';
+import { resolveEntryLabel } from '@/lib/ffx/display-names';
+import { usePersistedLayout } from '@/lib/ffx/use-persisted-layout';
+import { LAYOUT_DEFAULTS_PX } from '@/lib/ffx/layout-storage';
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/components/ui/resizable';
+import type { EntryMenuTarget } from '@/lib/ffx/content-tree/menu-target';
+import type { EntryView } from '@/components/entry-view/entry-view-store';
+import { EntryActionsMenu } from '@/components/entry-view/entry-actions-menu';
+import { ImageToolbar } from './toolbar';
+import { ImagePreview } from './image-preview';
+import { ImageInfoPanel } from './image-info-panel';
+import { ImageImportDialog } from './import-dialog';
+import { useImagePreview } from './use-image-preview';
+import { useImageActions } from './use-image-actions';
+
+/**
+ * Painel da textura (kind=images): ocupa o lugar da tabela Original/
+ * Traduzido e mostra a pré-visualização PNG que o backend já devolve
+ * (data URL — nenhum decoder de imagem no JS).
+ *
+ * Ações: extrair cópias de trabalho (.dds + .png em mods/images),
+ * salvar em qualquer lugar do disco, importar um .dds editado (repack só do
+ * mesmo formato/dimensão nesta etapa) e, quando a imagem tem cópias
+ * idênticas (otimização do DVD), propagar o import para elas.
+ *
+ * As duplicatas vêm do índice de duplicatas do backend (hash do PAYLOAD, não
+ * do arquivo: o namespace embute o nome e tornaria inútil o hash do
+ * arquivo). O índice é memoizado; "Reanalisar" o reconstrói para pegar
+ * edição externa em hex editor.
+ */
+export function ImagePanel({ view }: { view: EntryView }) {
+  const { store } = view;
+  const entry = useSelector(store, (s) => s.selectedEntry);
+  const image = useSelector(store, (s) => s.image);
+  const imageAction = useSelector(store, (s) => s.imageAction);
+  const loading = useSelector(store, (s) => s.loading);
+  /**
+   * Menu de contexto do painel (o mesmo da árvore). O alvo é SEMPRE a
+   * textura aberta — todo o painel é o nó — então o target é fixo quando
+   * aberto e null quando fechado.
+   */
+  const [menuTarget, setMenuTarget] = useState<EntryMenuTarget | null>(null);
+  /**
+   * Largura da coluna de informações persistida. O painel monta/desmonta ao
+   * trocar de kind, então o initializer relê o localStorage a cada abertura —
+   * idempotente e já no cliente (sem SSR).
+   */
+  const { defaultLayout, onLayoutChanged } = usePersistedLayout('imageInfo');
+
+  const {
+    busy,
+    readOnly,
+    pendingImport,
+    setPendingImport,
+    openAction,
+    onSave,
+    onImport,
+    runImport,
+    onRefresh,
+  } = useImageActions({
+    view,
+    entry,
+    duplicates: image?.duplicates ?? [],
+  });
+
+  // Painel sem overlay por cima (diálogo de escopo, diálogo de ação ou menu
+  // de contexto) — os atalhos só valem para a textura em exibição.
+  const panelIdle =
+    entry !== null &&
+    pendingImport === null &&
+    imageAction === null &&
+    menuTarget === null &&
+    busy === null;
+
+  const preview = useImagePreview({ entryId: entry?.id ?? '', enabled: panelIdle });
+
+  if (!entry) return null;
+  if (loading && !image) return <p className="mt-8 opacity-70">Carregando…</p>;
+  if (!image) {
+    return (
+      <p className="mt-8 opacity-70">Não foi possível carregar a textura.</p>
+    );
+  }
+
+  const duplicates = image.duplicates ?? [];
+  const copyTotal = duplicates.length + 1;
+
+  /** Navega para uma cópia (a árvore já tem o entry — é só selecionar). */
+  const goToCopy = async (
+    id: string,
+    key: string,
+    vbfPath?: string
+  ): Promise<void> => {
+    const target: EntryRow = {
+      kind: 'images',
+      id,
+      key,
+      label: resolveEntryLabel('images', id),
+      ...(entry.vbf && vbfPath
+        ? { vbf: { root: entry.vbf.root, path: vbfPath } }
+        : {}),
+    };
+    await view.actions.selectEntry(target);
+  };
+
+  // Alvo do menu de contexto: o painel inteiro é a textura aberta. Textura
+  // vinda do .vbf não tem menu (as ações são sobre data/ + mods/).
+  const panelTarget: EntryMenuTarget | null = readOnly
+    ? null
+    : {
+        kind: 'images',
+        id: entry.id,
+        label: entry.label,
+      };
+
+  // Botão direito em QUALQUER ponto do painel abre o mesmo menu da árvore
+  // (Exportar / Abrir até o arquivo / Replicar / Deletar).
+  return (
+    <EntryActionsMenu
+      view={view}
+      target={menuTarget}
+      onOpenChange={(open) => setMenuTarget(open ? panelTarget : null)}
+      initialId={entry.id}
+      initialDuplicates={duplicates}
+    >
+      <div
+        className="mt-4 flex flex-col gap-4"
+        onContextMenuCapture={() =>
+          setMenuTarget(readOnly ? null : panelTarget)
+        }
+      >
+        <ImageToolbar
+          busy={busy}
+          readOnly={readOnly}
+          flipped={preview.flipped}
+          duplicateCount={duplicates.length}
+          onExtract={() => openAction('extract')}
+          onSave={(format) => void onSave(format)}
+          onImport={() => void onImport()}
+          onReplicate={() => openAction('replicate')}
+          onToggleFlip={preview.toggleFlip}
+          onRefresh={() => void onRefresh()}
+        />
+
+        {/* O react-resizable-panels fixa height/width:100% no grupo por style
+            inline; dentro do <main> que rola, um wrapper SEM altura faz a
+            porcentagem colapsar para auto — o grupo então mede pelo conteúdo,
+            como o grid anterior fazia. */}
+        <div>
+          <ResizablePanelGroup
+            orientation="horizontal"
+            defaultLayout={defaultLayout}
+            onLayoutChanged={onLayoutChanged}
+          >
+            <ResizablePanel id="preview" minSize={280}>
+              <ImagePreview
+                src={image.pngData}
+                alt={entry.label}
+                width={image.width}
+                height={image.height}
+                zoomLevel={preview.zoomLevel}
+                flipped={preview.flipped}
+                pixelated={preview.pixelated}
+                onZoomIn={preview.zoomIn}
+                onResetZoom={preview.resetZoom}
+                onSetZoomLevel={preview.setZoomLevel}
+                onTogglePixelated={preview.togglePixelated}
+              />
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+
+            <ResizablePanel
+              id="info"
+              defaultSize={LAYOUT_DEFAULTS_PX.imageInfo}
+              minSize={180}
+              maxSize={480}
+            >
+              <ImageInfoPanel
+                image={image}
+                duplicates={duplicates}
+                onGoToCopy={(id, key, vbfPath) => void goToCopy(id, key, vbfPath)}
+              />
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </div>
+
+        <ImageImportDialog
+          open={pendingImport !== null}
+          entryId={entry.id}
+          duplicates={duplicates}
+          total={copyTotal}
+          busy={busy}
+          onCancel={() => setPendingImport(null)}
+          onImportOne={() => pendingImport && void runImport(pendingImport, false)}
+          onImportAll={() => pendingImport && void runImport(pendingImport, true)}
+        />
+      </div>
+    </EntryActionsMenu>
+  );
+}

@@ -31,9 +31,9 @@ import {
 } from "@/components/entry-view/entry-view-store";
 import { ContentTree } from "@/components/entry-view/content-tree";
 import { EntryTable } from "@/components/entry-view/entry-table";
-import { ImageActionDialogs } from "@/components/entry-view/image-action-dialogs";
+import { ImageActionDialogs } from "@/components/dialogs/image-action-dialogs";
 import { ImagePanel } from "@/components/entry-view/image-panel";
-import { TranslationDialog } from "@/components/entry-view/translation-dialog";
+import { TranslationDialog } from "@/components/dialogs/translation-dialog";
 import { PreloadVersions } from "@/wailsjs/go/main/App";
 import { GAME_VERSIONS } from "@/lib/ffx/game-version";
 

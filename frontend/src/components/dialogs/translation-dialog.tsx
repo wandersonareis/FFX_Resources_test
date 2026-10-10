@@ -5,7 +5,7 @@ import { useSelector } from '@tanstack/react-store';
 import { ListLanguages } from '@/wailsjs/go/main/App';
 import { SOURCE_LANG } from '@/lib/ffx/save-all';
 import { TranslationCellDialog } from '@/components/dialogs/translation-cell-dialog';
-import type { EntryView } from './entry-view-store';
+import type { EntryView } from '@/components/entry-view/entry-view-store';
 
 /**
  * Fio do diálogo de tradução com o store da view: busca os idiomas de

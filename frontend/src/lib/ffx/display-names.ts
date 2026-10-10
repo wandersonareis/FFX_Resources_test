@@ -127,3 +127,22 @@ export function resolveSegmentLabel(name: string | undefined): string {
   if (!name) return '';
   return LOCKIT_LABELS[name] ?? name;
 }
+
+/** De onde veio a imagem servida (o backend decide, por preferência). */
+export const IMAGE_SOURCE_LABELS: Record<string, string> = {
+  dds: '.dds em disco',
+  png: '.png em disco',
+  phyre: 'decodificado do .dds.phyre',
+};
+
+/**
+ * Rótulo de estado de uma cópia, relativo à textura de referência:
+ *
+ *	idêntica  → ainda sincronizada com o que está na tela;
+ *	importada → editada em separado (divergente — sobrescrita por replicar);
+ *	pristine  → nunca tocada (mas diferente da imagem de referência).
+ */
+export function copyState(d: { identical: boolean; modded: boolean }): string {
+  if (d.identical) return 'idêntica';
+  return d.modded ? 'importada' : 'pristine';
+}

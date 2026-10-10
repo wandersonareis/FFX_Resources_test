@@ -1,0 +1,128 @@
+'use client';
+
+import { Copy } from 'lucide-react';
+import type { ReactNode } from 'react';
+import type { dto } from '@/wailsjs/go/models';
+import { Badge } from '@/components/ui/badge';
+import {
+  copyState,
+  IMAGE_SOURCE_LABELS,
+  resolveEntryLabel,
+} from '@/lib/ffx/display-names';
+import { formatBytes } from '@/lib/ffx/bytes';
+
+/**
+ * Coluna de informações da textura aberta: metadados do container, estado
+ * (pristine / importada), a linha "Repetidas" (grupo de cópias de mesma
+ * imagem — otimização do DVD) com atalho de navegação para cada uma, e os
+ * caminhos dos derivados já extraídos.
+ */
+export function ImageInfoPanel({
+  image,
+  duplicates,
+  onGoToCopy,
+}: {
+  image: dto.ImageEntry;
+  duplicates: dto.ImageDuplicate[];
+  /** Navega para uma cópia (a árvore já tem o entry — é só selecionar). */
+  onGoToCopy: (id: string, key: string, vbfPath?: string) => void;
+}) {
+  // Linha "Repetidas": o grupo de cópias de mesma imagem (otimização do
+  // DVD) com atalho de navegação para cada uma delas.
+  const repeatsRow: [label: string, value: ReactNode] =
+    duplicates.length > 0
+      ? [
+          'Repetidas',
+          <div key="dups" className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge className="bg-amber-600 text-white">
+                <Copy size={12} className="mr-1" />×{duplicates.length + 1}{' '}
+                idênticas
+              </Badge>
+              <span className="text-xs opacity-70">
+                {formatBytes(image.dupPayload * duplicates.length)} de cópias
+              </span>
+            </div>
+            <ul className="space-y-0.5">
+              {duplicates.map((d) => (
+                <li key={d.id}>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left text-xs hover:bg-muted"
+                    title={`${d.id} — abrir esta cópia`}
+                    onClick={() => void onGoToCopy(d.id, d.key, d.vbfPath)}
+                  >
+                    <span className="min-w-0 flex-1 truncate underline-offset-2 hover:underline">
+                      {resolveEntryLabel('images', d.id)}
+                    </span>
+                    <Badge
+                      variant={d.identical ? 'outline' : 'secondary'}
+                      className="shrink-0 text-[10px]"
+                    >
+                      {copyState(d)}
+                    </Badge>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>,
+        ]
+      : [
+          'Repetidas',
+          <span key="dups" className="opacity-70">
+            nenhuma (imagem única)
+          </span>,
+        ];
+
+  const meta: Array<[label: string, value: ReactNode]> = [
+    ['Formato', image.format],
+    ['Dimensões', `${image.width}×${image.height}`],
+    [
+      'Mipmaps',
+      `${image.mipmapCount}${image.maxMipmapLevel ? ` (max ${image.maxMipmapLevel})` : ''}`,
+    ],
+    [
+      'Fonte',
+      <Badge key="source" variant="outline">
+        {IMAGE_SOURCE_LABELS[image.source] ?? image.source}
+      </Badge>,
+    ],
+    [
+      'Estado',
+      image.modded ? (
+        <Badge key="modded" className="bg-emerald-600 text-white">
+          importada (mods/)
+        </Badge>
+      ) : (
+        <Badge key="modded" variant="outline">
+          pristine (data/)
+        </Badge>
+      ),
+    ],
+    repeatsRow,
+    [
+      'Cópias extraídas',
+      image.ddsPath || image.pngPath ? (
+        <span key="paths" className="block break-all opacity-80">
+          {image.ddsPath ? <span className="block">{image.ddsPath}</span> : null}
+          {image.pngPath ? <span className="block">{image.pngPath}</span> : null}
+        </span>
+      ) : (
+        'nenhuma'
+      ),
+    ],
+  ];
+
+  return (
+    <dl className="space-y-2 text-sm">
+      {meta.map(([label, value]) => (
+        <div key={label} className="flex flex-col gap-1">
+          <dt className="text-xs uppercase tracking-wide opacity-60">
+            {label}
+          </dt>
+          <dd className="min-w-0">{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
