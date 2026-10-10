@@ -150,7 +150,15 @@ export function resolveEventGroup(
   if (self) return { target: fragment, name: self };
 
   const namedSibling = siblings
-    .filter((s) => s !== fragment && names[s])
+    .filter(
+      (s) =>
+        s !== fragment &&
+        // Só o MESMO shortened (2 letras): sem isto, o sort() abaixo pega o
+        // menor fragmento nomeado da ÁRVORE INTEIRA — como "azit" é o menor
+        // global, todo órfão de qualquer pasta caía em Home.
+        s.slice(0, 2) === fragment.slice(0, 2) &&
+        names[s],
+    )
     .sort()[0];
   if (namedSibling) return { target: namedSibling, name: names[namedSibling] };
 

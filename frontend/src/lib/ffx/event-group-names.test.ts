@@ -51,6 +51,42 @@ describe('resolveEventGroup', () => {
     });
   });
 
+  // Regressão: o caller de produção (eventGroups) passa TODOS os fragmentos,
+  // sem pré-filtrar por shortened. Sem o filtro, o sort() escolhia "azit" —
+  // o menor fragmento nomeado da árvore inteira — e todo órfão de qualquer
+  // pasta caía em Home.
+  it('não mistura shortenings quando o caller passa todos os fragmentos', () => {
+    const todos = [
+      'azit', 'azmm', 'bsil', 'bsvr', 'bsyt', 'bvyt',
+      'genk', 'gemm', 'kino', 'lchb', 'lumm', 'mihn',
+      'maca', 'mamm', 'isho', 'kamm',
+    ];
+    // bsyt não pode pular para "azit" (Home) só porque ele é o menor nomeado.
+    expect(resolveEventGroup('ffx', 'bsyt', todos)).toEqual({
+      target: 'bsil',
+      name: 'Besaid Island',
+    });
+    // mm/sufixo também fica no próprio shortened.
+    expect(resolveEventGroup('ffx', 'mamm', todos)).toEqual({
+      target: 'maca',
+      name: 'Lake Macalania',
+    });
+    // Azmm é do MESMO shortened de azit → continua em Home.
+    expect(resolveEventGroup('ffx', 'azmm', todos)).toEqual({
+      target: 'azit',
+      name: 'Home',
+    });
+    // Sem irmão nomeado no shortened, vira nó próprio (pasta no disco).
+    expect(resolveEventGroup('ffx', 'isho', todos)).toEqual({
+      target: 'isho',
+      name: '',
+    });
+    expect(resolveEventGroup('ffx', 'kamm', todos)).toEqual({
+      target: 'kamm',
+      name: '',
+    });
+  });
+
   it('scen só é nomeado na aba eternalcalm', () => {
     expect(resolveEventGroup('eternalcalm', 'scen', ['scen']).name).toBe(
       'Eternal Calm'
