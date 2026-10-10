@@ -9,8 +9,8 @@ import type { SideNode } from '@/lib/ffx/content-tree/model';
  * recursão do TreeItem não arrastar 8 props nível a nível — o dono dos
  * dados continua sendo o store da view (index.tsx apenas o projeta aqui).
  *
- * O valor é remontado a cada render do ContentTree: mesmo custo de re-render
- * de hoje, sem subscriber extra e sem risco de closure velha.
+ * O dono MEMOIZA o valor (useMemo com deps estáveis) e o TreeItem é memo:
+ * com contexto estável, nó intocado re-renderiza só quando o próprio nó muda.
  */
 export interface ContentTreeValue {
   expanded: ReadonlySet<string>;

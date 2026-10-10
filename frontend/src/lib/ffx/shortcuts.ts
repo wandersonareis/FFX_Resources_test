@@ -17,6 +17,8 @@ export const SHORTCUTS = {
   save: { keys: 'Mod+S', label: 'Salvar no binário' },
   /** app-shell → abre o ConfigDialog (engrenagem do header). */
   config: { keys: 'Mod+,', label: 'Abrir Configurações' },
+  /** app-shell → abre o modal de busca da aba ATIVA (palette Ctrl+K). */
+  search: { keys: 'Mod+K', label: 'Buscar' },
   /** app-shell → uma tecla por aba de GAME_VERSIONS (1 = FFX, 2 = EC, ...). */
   versionTabs: {
     keys: ['Mod+1', 'Mod+2', 'Mod+3', 'Mod+4'],

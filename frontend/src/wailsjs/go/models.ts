@@ -48,10 +48,6 @@ export namespace dto {
 	    }
 	}
 	export class RefLink {
-	    // Anotação de link de ref dedupada: o texto ATUAL da def, o pristine
-	    // dela e onde ela vive (arquivo + Index/Name) — alimenta o texto
-	    // linkado (cor própria), o tooltip "repetição" e o editor aberto na
-	    // def através do link.
 	    text: string;
 	    original?: string;
 	    sourceId?: string;
@@ -77,8 +73,6 @@ export namespace dto {
 	    hash?: Record<string, string>;
 	    text: Record<string, string>;
 	    original?: Record<string, string>;
-	    // União dos dois lados da tabela: a row existe só no original (o
-	    // arquivo traduzido tem menos linhas) ou só na tradução.
 	    missingInOriginal?: boolean;
 	    missingInTranslated?: boolean;
 	    divergent?: boolean;
@@ -120,8 +114,6 @@ export namespace dto {
 	export class FileEntry {
 	    metadata: Metadata;
 	    rows: TextRow[];
-	    // Anotações de link de refs dedupadas (rowKey → def), exclusivas de
-	    // EXIBIÇÃO — o payload de apply/export nunca as carrega.
 	    refs?: Record<string, RefLink>;
 	
 	    static createFrom(source: any = {}) {
@@ -395,8 +387,6 @@ export namespace dto {
 	        this.destRoot = source["destRoot"];
 	    }
 	}
-	// VbfNode é um filho imediato de um diretório do .vbf — ou um chunk do
-	// macrodic. kind/id/vazios = formato fora do escopo do app.
 	export class VbfNode {
 	    name: string;
 	    path: string;
@@ -425,8 +415,6 @@ export namespace dto {
 	        this.image = source["image"];
 	    }
 	}
-	// VbfRoot é uma raiz de árvore da sidebar: um .vbf encontrado perto do
-	// executável do jogo.
 	export class VbfRoot {
 	    name: string;
 	    path: string;
@@ -551,6 +539,101 @@ export namespace services {
 		}
 	}
 	
+	
+	export class TextSearchMatch {
+	    index: number;
+	    name?: string;
+	    data: boolean;
+	    mods: boolean;
+	    snippetBefore?: string;
+	    snippetHit?: string;
+	    snippetAfter?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TextSearchMatch(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.index = source["index"];
+	        this.name = source["name"];
+	        this.data = source["data"];
+	        this.mods = source["mods"];
+	        this.snippetBefore = source["snippetBefore"];
+	        this.snippetHit = source["snippetHit"];
+	        this.snippetAfter = source["snippetAfter"];
+	    }
+	}
+	export class TextSearchResult {
+	    kind: string;
+	    id: string;
+	    rows: TextSearchMatch[];
+	
+	    static createFrom(source: any = {}) {
+	        return new TextSearchResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.id = source["id"];
+	        this.rows = this.convertValues(source["rows"], TextSearchMatch);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class TextSearchResponse {
+	    results: TextSearchResult[];
+	    totalRows: number;
+	    totalFiles: number;
+	    truncated: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new TextSearchResponse(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.results = this.convertValues(source["results"], TextSearchResult);
+	        this.totalRows = source["totalRows"];
+	        this.totalFiles = source["totalFiles"];
+	        this.truncated = source["truncated"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 
 }
 

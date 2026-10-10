@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useHotkey, useHotkeys } from '@tanstack/react-hotkeys';
 import { loggedToast as toast } from '@/lib/ffx/toast-logged';
 import { SHORTCUTS, shortcutTip } from '@/lib/ffx/shortcuts';
+import { openSearchDialog } from '@/lib/ffx/search-store';
 import { ChevronDown, Download, Settings, Upload } from 'lucide-react';
 import { QuitApp } from '@/wailsjs/go/main/App';
 import { EventsEmit } from '@/wailsjs/runtime/runtime';
@@ -176,6 +177,13 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
         },
       },
     }))
+  );
+  // Ctrl+K: abrir o modal de busca da aba ATIVA (convenção de palette; o
+  // store da busca é de módulo por versão, então o atalho só aponta o id).
+  useHotkey(
+    SHORTCUTS.search.keys,
+    () => openSearchDialog(GAME_VERSIONS[selectedIndex].id),
+    { meta: { name: SHORTCUTS.search.label, group: 'Global' } }
   );
   // Ctrl+, : abrir Configurações (convenção de settings).
   useHotkey(SHORTCUTS.config.keys, () => setConfigOpen(true), {

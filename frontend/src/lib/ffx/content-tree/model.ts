@@ -113,6 +113,26 @@ export function buildNodeIndex(
 }
 
 /**
+ * Caminho da RAIZ até a folha (inclusive), de cima para baixo — é o que o
+ * reveal da busca expande no `expanded` sem tocar no resto do que o usuário
+ * abriu. [] = a folha não existe nas raízes dadas (árvore ainda em carga).
+ */
+export function ancestorPathOf(
+  roots: readonly SideNode[],
+  leafId: string
+): string[] {
+  const walk = (nodes: readonly SideNode[]): string[] | null => {
+    for (const node of nodes) {
+      if (node.id === leafId) return [node.id];
+      const hit = node.children ? walk(node.children) : null;
+      if (hit) return [node.id, ...hit];
+    }
+    return null;
+  };
+  return walk(roots) ?? [];
+}
+
+/**
  * Nó realçado para a seleção. Em imagens a árvore só guarda o
  * REPRESENTANTE do grupo de cópias — quando a seleção é uma cópia oculta
  * (a lista "Repetidas" navega até ela), o realce salta para o representante

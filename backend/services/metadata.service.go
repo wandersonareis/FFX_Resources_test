@@ -177,6 +177,7 @@ func (s *MetadataService) normalizeCollection(kind string, version common.GameVe
 // arquivo carregado seguiria velho. Perder o decode cache é o preço da
 // frescura; re-decodificar é o comportamento original do fluxo por clique.
 func clearDedupViewCache() {
+	clearTextSearchCache()
 	dedupViewMu.Lock()
 	dedupViewCache = map[string]rawView{}
 	dedupViewMu.Unlock()

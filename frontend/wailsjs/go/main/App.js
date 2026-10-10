@@ -198,6 +198,10 @@ export function SaveVbfImage(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['SaveVbfImage'](arg1, arg2, arg3, arg4);
 }
 
+export function SearchTextEntries(arg1, arg2) {
+  return window['go']['main']['App']['SearchTextEntries'](arg1, arg2);
+}
+
 export function SelectDirectory(arg1) {
   return window['go']['main']['App']['SelectDirectory'](arg1);
 }
@@ -236,6 +240,10 @@ export function SetGameExeLocation(arg1) {
 
 export function SetUnsavedEdits(arg1) {
   return window['go']['main']['App']['SetUnsavedEdits'](arg1);
+}
+
+export function WarmTextSearch(arg1) {
+  return window['go']['main']['App']['WarmTextSearch'](arg1);
 }
 
 export function WriteLog(arg1, arg2, arg3) {

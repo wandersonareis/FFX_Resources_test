@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import {
   ChevronDown,
   ChevronRight,
@@ -28,8 +29,18 @@ import { useContentTree } from './tree-context';
  * Item recursivo da árvore. `node` e `depth` são as ÚNICAS props: expansão,
  * seleção, checkboxes e ações vêm do contexto, então a recursão não repassa
  * nada adiante.
+ *
+ * MEMOIZADO: com o valor do contexto estável, um nó só re-renderiza quando o
+ * PRÓPRIO nó muda (expansão/seleção/marcação) — mudanças de estado da view
+ * que não tocam no nó passam reto.
  */
-export function TreeItem({ node, depth }: { node: SideNode; depth: number }) {
+export const TreeItem = memo(function TreeItem({
+  node,
+  depth,
+}: {
+  node: SideNode;
+  depth: number;
+}) {
   const {
     expanded,
     selectedId,
@@ -144,7 +155,7 @@ export function TreeItem({ node, depth }: { node: SideNode; depth: number }) {
           ) : (
             <Folder size={18} className="mr-2 shrink-0" />
           )}
-          <span className="truncate">{node.label}</span>
+          <span className="min-w-0 flex-1 truncate">{node.label}</span>
         </Button>
       </div>
       {hasChildren && isExpanded
@@ -154,4 +165,4 @@ export function TreeItem({ node, depth }: { node: SideNode; depth: number }) {
         : null}
     </div>
   );
-}
+});

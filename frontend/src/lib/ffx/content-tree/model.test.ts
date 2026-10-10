@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import {
+  ancestorPathOf,
   buildContentRoots,
   buildNodeIndex,
   entryCheckState,
@@ -86,5 +87,42 @@ describe('buildContentRoots', () => {
   it('does not create an empty Texto root if there are no text kinds', () => {
     const images: SideNode = { id: 'kind:images', label: 'Imagens', kind: 'images' };
     expect(buildContentRoots([images])).toEqual([images]);
+  });
+});
+
+describe('ancestorPathOf', () => {
+  const events: SideNode = {
+    id: 'kind:events',
+    label: 'Eventos (1)',
+    kind: 'events',
+    children: [
+      {
+        id: 'group:events:azit',
+        label: 'Home (az)',
+        kind: 'events',
+        children: [
+          {
+            id: 'leaf:events:azit0000',
+            label: 'azit0000',
+            kind: 'events',
+            entry: { kind: 'events', id: 'azit0000', key: 'k', label: 'azit0000' },
+          },
+        ],
+      },
+    ],
+  };
+
+  it('walks from the kind root down to the leaf, inclusive — for the reveal', () => {
+    expect(ancestorPathOf([events], 'leaf:events:azit0000')).toEqual([
+      'kind:events',
+      'group:events:azit',
+      'leaf:events:azit0000',
+    ]);
+  });
+
+  it('handles depth-1 leaves and reports missing nodes as an empty path', () => {
+    expect(ancestorPathOf([imageTree], 'leaf:b')).toEqual(['category', 'directory', 'leaf:b']);
+    expect(ancestorPathOf([events], 'leaf:events:missing')).toEqual([]);
+    expect(ancestorPathOf([], 'leaf:events:azit0000')).toEqual([]);
   });
 });

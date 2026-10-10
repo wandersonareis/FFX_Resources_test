@@ -1,5 +1,5 @@
 import { createStore } from '@tanstack/store';
-import { dto } from '@/wailsjs/go/models';
+import { dto, services } from '@/wailsjs/go/models';
 import {
   KIND_LABELS,
   IMAGE_TREE_PREFIX,
@@ -38,7 +38,13 @@ import {
   loadVbfRoots,
   type VbfNode,
 } from '@/lib/ffx/vbf';
-import { TEXT_ROOT_NODE_ID, type SideNode } from '@/lib/ffx/content-tree/model';
+import {
+  TEXT_ROOT_NODE_ID,
+  ancestorPathOf,
+  buildNodeIndex,
+  type SideNode,
+} from '@/lib/ffx/content-tree/model';
+import { invalidateTextSearchResults } from '@/lib/ffx/search-store';
 
 /** Estado de carga de um item principal da árvore. */
 export type KindLoadStatus = 'loading' | 'ready' | 'error';
@@ -152,6 +158,19 @@ export interface EntryViewState {
    * unmount/remount da tabela e ser consumido quando as rows chegarem.
    */
   pendingTableFocus: boolean;
+  /** Row alvo vindo da busca; mantém também qual coluna encontrou o texto. */
+  pendingTableRowFocus: services.TextSearchMatch | null;
+  /**
+   * Folha a REVELAR na árvore (resultado do modal de busca): o caminho
+   * inteiro entra no `expanded` no mesmo patch e este id manda o ContentTree
+   * rolar até o nó (consumido pelo efeito de scroll).
+   */
+  revealedNodeId: string | null;
+  /**
+   * Reveal adiado: o arquivo pedido no modal ainda não está na árvore (kind
+   * em carga). Conclui sozinho quando os kinds terminam de carregar.
+   */
+  pendingReveal: { leafId: string; match: services.TextSearchMatch | null } | null;
 }
 
 export interface EntryActions {
@@ -160,7 +179,7 @@ export interface EntryActions {
   /** Reload frio (botão): limpa a árvore para placeholders e recarrega tudo. */
   coldReload(): Promise<void>;
   /** Abre um arquivo na tabela (carrega rows e registra a base do rascunho). */
-  selectEntry(entry: EntryRow): Promise<void>;
+  selectEntry(entry: EntryRow, searchMatch?: services.TextSearchMatch): Promise<void>;
   /** Clique/Enter num nó da árvore: folha abre; grupo/raiz expande (como
    * no .vbf) e raiz de kind também troca o kind ativo. */
   selectNode(node: SideNode): Promise<void>;
@@ -170,6 +189,15 @@ export interface EntryActions {
   requestTableFocus(): void;
   /** Tabela focou a 1ª linha: limpa o pedido pendente. */
   consumeTableFocus(): void;
+  /** A tabela consumiu o locator de row vindo da busca. */
+  consumeTableRowFocus(): void;
+  /**
+   * Resultado do modal de busca: expande o caminho do arquivo na árvore
+   * (reveal + scroll) e abre a entrada com a row do match focada na tabela.
+   */
+  openSearchResult(leafId: string, match?: services.TextSearchMatch): Promise<void>;
+  /** A árvore rolou até o revealedNodeId: limpa o pedido. */
+  consumeRevealedNode(): void;
   /**
    * Abre o modal do editor para a linha clicada/teclada na tabela. target
    * preenchido = edita a DEF de outra entrada através do link (o rascunho
@@ -270,6 +298,9 @@ function createEntryStore(version: GameVersionId) {
     dialogOpen: false,
     imageAction: null,
     pendingTableFocus: false,
+    pendingTableRowFocus: null,
+    revealedNodeId: null,
+    pendingReveal: null,
   });
 }
 
@@ -362,6 +393,7 @@ const NO_SELECTION: Partial<EntryViewState> = {
   refLinks: {},
   progress: null,
   image: null,
+  pendingTableRowFocus: null,
 };
 
 /**
@@ -487,8 +519,15 @@ export function createEntryView(version: GameVersionId): EntryView {
     }
   };
 
-  const selectEntry = async (entry: EntryRow): Promise<void> => {
-    patch({ loading: true });
+  const selectEntry = async (
+    entry: EntryRow,
+    searchMatch?: services.TextSearchMatch,
+  ): Promise<void> => {
+    patch({
+      loading: true,
+      pendingTableFocus: false,
+      pendingTableRowFocus: searchMatch ?? null,
+    });
     try {
       patch({ activeKind: entry.kind, selectedEntry: entry });
       if (entry.kind === 'images') {
@@ -529,10 +568,14 @@ export function createEntryView(version: GameVersionId): EntryView {
       // Filtro de linhas: para .vbf de idioma não-us, olha o idioma do
       // binário clicado (o .vbf é só visualização — nada a traduzir).
       const vbfLoc = entry.vbf ? locFromVbfPath(entry.vbf.path) : null;
+      const searchRowKey = searchMatch
+        ? `${searchMatch.index}:${searchMatch.name ?? ''}`
+        : null;
       const rows = (full.rows ?? []).filter((r) =>
-        vbfLoc && vbfLoc !== SOURCE_LANG
+        (vbfLoc && vbfLoc !== SOURCE_LANG
           ? !isBlankSourceRow(r.text?.[vbfLoc])
-          : !isBlankSourceRow(r.text?.[SOURCE_LANG])
+          : !isBlankSourceRow(r.text?.[SOURCE_LANG])) ||
+        (searchRowKey !== null && rowKey(r) === searchRowKey)
       );
       patch({ rows });
     } catch (error) {
@@ -687,6 +730,7 @@ export function createEntryView(version: GameVersionId): EntryView {
     await loadAllKinds(gen);
     if (gen === generationCounter.current) {
       patch({ loading: false });
+      resolvePendingReveal();
     }
   };
 
@@ -702,6 +746,9 @@ export function createEntryView(version: GameVersionId): EntryView {
     // descartado e as raízes re-descobertas (executável do jogo pode ter
     // mudado no diálogo de configuração).
     invalidateVbfCache();
+    // Resultados do modal de busca apontam para a base ANTIGA: descarta (o
+    // termo fica) — o modal stale re-executa a consulta sozinho ao reabrir.
+    invalidateTextSearchResults(version);
     patch({
       roots: kinds.map((kind) => loadingRootNode(kind)),
       vbfRoots: [],
@@ -713,11 +760,14 @@ export function createEntryView(version: GameVersionId): EntryView {
       kindStatus: loadingStatuses(kinds),
       generation: gen,
       loading: true,
+      revealedNodeId: null,
+      pendingReveal: null,
     });
     void loadVbfRootNodes(gen);
     await loadAllKinds(gen);
     if (gen === generationCounter.current) {
       patch({ loading: false });
+      resolvePendingReveal();
     }
   };
 
@@ -737,6 +787,55 @@ export function createEntryView(version: GameVersionId): EntryView {
       else next.add(node.id);
       return { ...prev, expanded: next };
     });
+  };
+
+  /**
+   * Reveal da busca: expande o caminho da folha em UNION (o resto do que o
+   * usuário abriu permanece) e marca o nó para o ContentTree rolar até ele.
+   * `kind:text` entra junto porque é o wrapper VISUAL acima das raízes de
+   * kind — sem ele a folha existe mas fica escondida no grupo.
+   */
+  const revealNodePath = (leafId: string): boolean => {
+    const path = ancestorPathOf(store.state.roots, leafId);
+    if (path.length === 0) return false;
+    store.setState((prev) => {
+      const expanded = new Set(prev.expanded).add(TEXT_ROOT_NODE_ID);
+      for (const id of path) expanded.add(id);
+      return { ...prev, expanded, revealedNodeId: leafId };
+    });
+    return true;
+  };
+
+  /**
+   * Resultado do modal de busca: revela o arquivo na árvore e abre a entrada
+   * com a row do match (o pendingTableRowFocus cuida do foco/scroll na
+   * tabela). Folha fora da árvore (kind ainda em carga) fica pendente e
+   * conclui sozinha quando os kinds terminam.
+   */
+  const openSearchResult = async (
+    leafId: string,
+    match?: services.TextSearchMatch,
+  ): Promise<void> => {
+    const node = buildNodeIndex(store.state.roots, store.state.vbfRoots).get(leafId);
+    if (!node?.entry) {
+      patch({ pendingReveal: { leafId, match: match ?? null } });
+      return;
+    }
+    revealNodePath(leafId);
+    await selectEntry(node.entry, match);
+  };
+
+  /** Conclui um reveal adiado — a árvore terminou de carregar. */
+  const resolvePendingReveal = (): void => {
+    const pending = store.state.pendingReveal;
+    if (!pending) return;
+    if (
+      !buildNodeIndex(store.state.roots, store.state.vbfRoots).get(pending.leafId)
+    ) {
+      return;
+    }
+    patch({ pendingReveal: null });
+    void openSearchResult(pending.leafId, pending.match ?? undefined);
   };
 
   /**
@@ -823,6 +922,9 @@ export function createEntryView(version: GameVersionId): EntryView {
     toggleNode,
     requestTableFocus: () => patch({ pendingTableFocus: true }),
     consumeTableFocus: () => patch({ pendingTableFocus: false }),
+    consumeTableRowFocus: () => patch({ pendingTableRowFocus: null }),
+    openSearchResult,
+    consumeRevealedNode: () => patch({ revealedNodeId: null }),
     openDialog: (row, target) => {
       // Todo kind de TEXTO do .vbf é editável (o salvar roteia ao binding
       // de .vbf com o estado da sessão, gravando em mods/). Só kind fora

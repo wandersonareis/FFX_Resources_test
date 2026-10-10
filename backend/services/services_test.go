@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"ffxresources/backend/common"
 	"ffxresources/backend/dto"
@@ -112,6 +113,102 @@ var _ = Describe("MetadataService", Ordered, func() {
 		entries, err := metadataService.ListEntries(services.KindMacro, common.GameVersionFFX2)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(entries).NotTo(BeEmpty(), "macro chunks should be found")
+	})
+
+	It("searches the us text in data and mods and returns the matching row", func() {
+		// Revalidação imediata: o teste muda os gamefiles no meio do spec e
+		// o throttle de frescor (2s) guardaria o índice velho.
+		defer func(previous time.Duration) {
+			services.TextSearchFreshCheckInterval = previous
+		}(services.TextSearchFreshCheckInterval)
+		services.TextSearchFreshCheckInterval = 0
+
+		services.InvalidateViewCaches()
+		entries, err := metadataService.ListEntries(services.KindEvents, common.GameVersionFFX2)
+		Expect(err).NotTo(HaveOccurred())
+
+		var target services.EntrySummary
+		var targetRow dto.TextRow
+		var query string
+		for _, candidate := range entries {
+			entry, loadErr := metadataService.GetEntry(services.KindEvents, candidate.ID, common.GameVersionFFX2)
+			if loadErr != nil {
+				continue
+			}
+			for _, row := range entry.Rows {
+				text := row.Original[common.DefaultLocalization]
+				if strings.TrimSpace(text) == "" {
+					text = row.Text[common.DefaultLocalization]
+				}
+				if strings.TrimSpace(text) == "" {
+					continue
+				}
+				target = candidate
+				targetRow = row
+				query = strings.TrimSpace(text)
+				break
+			}
+			if query != "" {
+				break
+			}
+		}
+		Expect(query).NotTo(BeEmpty(), "fixture must contain a searchable English event row")
+
+		findMatch := func(response services.TextSearchResponse) (services.TextSearchMatch, bool) {
+			for _, result := range response.Results {
+				if result.Kind != services.KindEvents || result.ID != target.ID {
+					continue
+				}
+				for _, match := range result.Rows {
+					if match.Index == targetRow.Index && match.Name == targetRow.Name {
+						return match, true
+					}
+				}
+			}
+			return services.TextSearchMatch{}, false
+		}
+
+		// Termo de 1 rune não consulta o índice de conteúdo (mínimo = 2).
+		one, err := metadataService.SearchText(common.GameVersionFFX2, query[:1])
+		Expect(err).NotTo(HaveOccurred())
+		Expect(one.Results).To(BeEmpty())
+
+		response, err := metadataService.SearchText(common.GameVersionFFX2, query)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(response.TotalFiles).To(BeNumerically(">=", 1))
+		Expect(response.TotalRows).To(BeNumerically(">=", 1))
+		Expect(response.Truncated).To(BeFalse())
+		dataMatch, found := findMatch(response)
+		Expect(found).To(BeTrue(), "search should locate the source row")
+		Expect(dataMatch.Data).To(BeTrue())
+		Expect(dataMatch.Mods).To(BeFalse())
+		// O snippet devolve o trecho na caixa original, com o hit destacável.
+		Expect(dataMatch.SnippetHit).NotTo(BeEmpty())
+		Expect(strings.EqualFold(dataMatch.SnippetHit, query)).To(BeTrue())
+		Expect(strings.ToLower(dataMatch.SnippetBefore + dataMatch.SnippetHit + dataMatch.SnippetAfter)).
+			To(ContainSubstring(strings.ToLower(query)))
+
+		parsed, ok := dto.ParseKey(target.Key)
+		Expect(ok).To(BeTrue())
+		rel := filepath.Join(
+			common.GetLocalizationRootForVersion(common.GameVersionFFX2, common.DefaultLocalization),
+			filepath.FromSlash(parsed.LocalizationPattern),
+		)
+		accessor, err := common.NewFileAccessorFrom(rel, common.SourceData)
+		Expect(err).NotTo(HaveOccurred())
+		binary, err := accessor.ReadBytes()
+		Expect(err).NotTo(HaveOccurred())
+		modsPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, rel)
+		Expect(os.MkdirAll(filepath.Dir(modsPath), 0o755)).To(Succeed())
+		Expect(os.WriteFile(modsPath, binary, 0o644)).To(Succeed())
+		defer os.Remove(modsPath)
+
+		response, err = metadataService.SearchText(common.GameVersionFFX2, query)
+		Expect(err).NotTo(HaveOccurred())
+		bothMatch, found := findMatch(response)
+		Expect(found).To(BeTrue())
+		Expect(bothMatch.Data).To(BeTrue())
+		Expect(bothMatch.Mods).To(BeTrue(), "new mods file must invalidate and rebuild the cached index")
 	})
 
 	It("gets an event entry with rows", func() {

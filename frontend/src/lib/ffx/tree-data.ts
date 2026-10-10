@@ -20,10 +20,12 @@ import {
   RefreshImageDuplicates,
   ReplicateImage,
   RevealEntryFile,
+  SearchTextEntries,
   SaveImage,
   SelectImageFile,
   SelectImageSavePath,
   SelectImportFile,
+  WarmTextSearch,
 } from '@/wailsjs/go/main/App';
 import { dto, services } from '@/wailsjs/go/models';
 import { resolveEntryLabel, EntryKind } from './display-names';
@@ -108,6 +110,25 @@ export async function loadKindEntries(
       label: resolveEntryLabel(kind, s.id),
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/** Busca no texto decodificado de data/ e mods/ (idioma us), sem trazer DTOs. */
+export function searchTextEntries(
+  version: GameVersionId,
+  query: string
+): Promise<services.TextSearchResponse> {
+  return SearchTextEntries(
+    version as Parameters<typeof SearchTextEntries>[0],
+    query
+  );
+}
+
+/**
+ * Pré-aquece o índice de busca da versão em background (chamado depois que a
+ * árvore carrega): a primeira consulta do modal não paga a construção.
+ */
+export function warmTextSearch(version: GameVersionId): void {
+  WarmTextSearch(version as Parameters<typeof WarmTextSearch>[0]);
 }
 
 export async function loadEntry(

@@ -102,6 +102,8 @@ export function SaveImage(arg1:string,arg2:string,arg3:string,arg4:string,arg5:c
 
 export function SaveVbfImage(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
+export function SearchTextEntries(arg1:common.GameVersion,arg2:string):Promise<services.TextSearchResponse>;
+
 export function SelectDirectory(arg1:string):Promise<string>;
 
 export function SelectGameExeFile():Promise<string>;
@@ -121,5 +123,7 @@ export function SetEnableMods(arg1:boolean):Promise<void>;
 export function SetGameExeLocation(arg1:string):Promise<void>;
 
 export function SetUnsavedEdits(arg1:boolean):Promise<void>;
+
+export function WarmTextSearch(arg1:common.GameVersion):Promise<void>;
 
 export function WriteLog(arg1:string,arg2:string,arg3:Record<string, any>):Promise<void>;

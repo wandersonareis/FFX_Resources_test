@@ -25,6 +25,8 @@ import {
 import { LAYOUT_DEFAULTS_PX } from "@/lib/ffx/layout-storage";
 import { usePersistedLayout } from "@/lib/ffx/use-persisted-layout";
 import { SHORTCUTS, shortcutTip } from "@/lib/ffx/shortcuts";
+import { invalidateTextSearchResults } from "@/lib/ffx/search-store";
+import { warmTextSearch } from "@/lib/ffx/tree-data";
 import {
   createEntryView,
   type EntryView,
@@ -76,6 +78,9 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
     // carga da aba VISUALIZADA, pré-carrega as demais em background —
     // trocar de aba depois cai no caminho rápido (cache do backend).
     void view.actions.reload().then(() => {
+      // Índice de busca da aba aquecido em background: o primeiro Ctrl+K
+      // não paga a construção síncrona do índice.
+      warmTextSearch(version);
       void PreloadVersions(
         GAME_VERSIONS.filter((t) => t.id !== version).map((t) => t.id),
       );
@@ -83,12 +88,20 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
   }, [view, version]);
 
   useEffect(
-    () => drafts.onSaved(() => void view.actions.reload()),
-    [drafts, view],
+    () =>
+      drafts.onSaved(() => {
+        // Salvou = os textos mudaram: resultados do modal ficaram velhos.
+        invalidateTextSearchResults(version);
+        void view.actions.reload();
+      }),
+    [drafts, view, version],
   );
 
   // Após importar, o backend emite ImportDone → recarrega árvore e tabela.
-  useWailsEvent("ImportDone", () => void view.actions.reload());
+  useWailsEvent("ImportDone", () => {
+    invalidateTextSearchResults(version);
+    void view.actions.reload();
+  });
 
   const onSaveAll = () => {
     void saveAllDrafts(() => saving, setSaving);

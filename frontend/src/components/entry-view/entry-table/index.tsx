@@ -50,6 +50,23 @@ export function EntryTable({ view }: { view: EntryView }) {
   });
 
   const pendingTableFocus = useSelector(store, (s) => s.pendingTableFocus);
+  const pendingTableRowFocus = useSelector(store, (s) => s.pendingTableRowFocus);
+
+  // Um resultado de busca carrega o locator da row junto com o arquivo: em
+  // vez de começar no topo, a tabela foca e centraliza a ocorrência encontrada.
+  useEffect(() => {
+    if (!pendingTableRowFocus || loading || !selectedEntry || rows.length === 0) return;
+    const key = rowKey({
+      index: pendingTableRowFocus.index,
+      name: pendingTableRowFocus.name,
+    });
+    const row = rowRefs.current.get(key) ?? rowRefs.current.get(rowKey(rows[0]));
+    actions.consumeTableRowFocus();
+    if (!row) return;
+    setFocusedRowId(row.dataset.rowKey ?? key);
+    row.focus();
+    row.scrollIntoView({ block: 'center' });
+  }, [pendingTableRowFocus, loading, selectedEntry, rows, rowRefs, actions]);
 
   // ArrowRight na folha: quando o arquivo termina de carregar, foca a
   // primeira linha (apenas focus() no DOM.

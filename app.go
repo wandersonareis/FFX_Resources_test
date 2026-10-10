@@ -475,6 +475,26 @@ func (a *App) ListTextEntries(kind string, version common.GameVersion) ([]servic
 	return a.MetadataService.ListEntries(kind, version)
 }
 
+// SearchTextEntries busca em data/ e mods/ no idioma us. O backend mantém o
+// índice decodificado por versão; o resultado traz arquivos (com snippet
+// das rows) e os totais da base para o "N rows em M arquivos" do modal.
+func (a *App) SearchTextEntries(version common.GameVersion, query string) (services.TextSearchResponse, error) {
+	if a.MetadataService == nil {
+		return services.TextSearchResponse{}, fmt.Errorf("metadata service not initialized")
+	}
+	return a.MetadataService.SearchText(version, query)
+}
+
+// WarmTextSearch pré-constrói o índice de busca da versão em background
+// (a aba chama depois que a árvore carrega): a primeira consulta do modal
+// não paga a construção síncrona.
+func (a *App) WarmTextSearch(version common.GameVersion) {
+	if a.MetadataService == nil {
+		return
+	}
+	a.MetadataService.WarmTextSearch(version)
+}
+
 // GetTextEntry devolve uma entrada completa (metadata + rows) por demanda,
 // direto da memória — sem exportar para disco.
 func (a *App) GetTextEntry(kind, id string, version common.GameVersion) (dto.FileEntry, error) {

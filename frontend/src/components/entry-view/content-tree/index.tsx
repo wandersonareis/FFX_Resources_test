@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { useSelector } from "@tanstack/react-store";
 import type { EntryKind } from "@/lib/ffx/display-names";
@@ -10,7 +10,9 @@ import { useVbfSelection } from "@/lib/ffx/vbf-selection";
 import {
   buildContentRoots,
   highlightedNodeId,
+  type SideNode,
 } from "@/lib/ffx/content-tree/model";
+import { openSearchDialog } from "@/lib/ffx/search-store";
 import {
   menuTargetOf,
   type TreeCtxNode,
@@ -18,16 +20,20 @@ import {
 import { Button } from "@/components/ui/button";
 import type { EntryView } from "../entry-view-store";
 import { EntryActionsMenu } from "../entry-actions-menu";
+import { SearchDialog } from "../search/search-dialog";
 import { VbfExtractDialog, type VbfExtractRequest } from "./vbf-extract-dialog";
 import { ContentTreeProvider, type ContentTreeValue } from "./tree-context";
 import { TreeList } from "./tree-list";
 import { useContentTreeActions } from "./use-content-tree-actions";
 import { useContentTreeHotkeys } from "./use-content-tree-hotkeys";
+import { SearchControl } from "./search-control";
 
 /**
  * Sidebar da aba: árvore de kinds/grupos/arquivos com expandir, seleção de
  * exportação (checkbox tri-state), menu de contexto (Exportar / Abrir até o
- * arquivo / Deletar) e navegação por teclado.
+ * arquivo / Deletar) e navegação por teclado. A busca vive no MODAL
+ * (SearchControl é só o gatilho visual + Ctrl+K) e um resultado clicado
+ * revela o arquivo aqui (revealNodePath + scroll).
  *
  * O estado da árvore vive no store da view; aqui ficam só o que é local
  * (nó do menu e requisição de extração) e a projeção desses dados para a
@@ -37,12 +43,15 @@ import { useContentTreeHotkeys } from "./use-content-tree-hotkeys";
 export function ContentTree({ view }: { view: EntryView }) {
   const { version, store, actions } = view;
   const roots = useSelector(store, (s) => s.roots);
-  const contentRoots = useMemo(() => buildContentRoots(roots), [roots]);
   const vbfRoots = useSelector(store, (s) => s.vbfRoots);
   const expanded = useSelector(store, (s) => s.expanded);
   const selectedEntry = useSelector(store, (s) => s.selectedEntry);
   const image = useSelector(store, (s) => s.image);
   const loading = useSelector(store, (s) => s.loading);
+  const revealedNodeId = useSelector(store, (s) => s.revealedNodeId);
+  // Projeção PURA das raízes: sem filtro de busca — a árvore é estável e o
+  // reveal do modal só mexe no `expanded`.
+  const contentRoots = useMemo(() => buildContentRoots(roots), [roots]);
 
   const [ctxNode, setCtxNode] = useState<TreeCtxNode | null>(null);
   const [extractRequest, setExtractRequest] =
@@ -93,15 +102,44 @@ export function ContentTree({ view }: { view: EntryView }) {
     deleteSelectedImages: treeActions.onDeleteSelectedImages,
   });
 
-  const treeValue: ContentTreeValue = {
-    expanded,
-    selectedId,
-    selectedByKind,
-    vbfSelectionByRoot: vbfSelectionSnapshot.byRoot,
-    onToggle: actions.toggleNode,
-    onSelect: (node) => void actions.selectNode(node),
-    onCheck: treeActions.checkNode,
-  };
+  const onSelect = useCallback(
+    (node: SideNode) => void actions.selectNode(node),
+    [actions],
+  );
+  // O valor do contexto é MEMOIZADO: sem isso todo item da árvore re-renderiza
+  // a cada tecla de estado da view (o provider antigo era remontado a cada
+  // render — known issue registrada no tree-context).
+  const treeValue: ContentTreeValue = useMemo(
+    () => ({
+      expanded,
+      selectedId,
+      selectedByKind,
+      vbfSelectionByRoot: vbfSelectionSnapshot.byRoot,
+      onToggle: actions.toggleNode,
+      onSelect,
+      onCheck: treeActions.checkNode,
+    }),
+    [
+      expanded,
+      selectedId,
+      selectedByKind,
+      vbfSelectionSnapshot.byRoot,
+      actions,
+      onSelect,
+      treeActions.checkNode,
+    ],
+  );
+
+  // Reveal do modal: o caminho já entrou no `expanded` no mesmo patch, então
+  // o nó está no DOM — só rolar até ele e limpar o pedido.
+  useEffect(() => {
+    if (!revealedNodeId) return;
+    const attribute = `[data-node-id="${revealedNodeId.replace(/["\\]/g, "\\$&")}"]`;
+    treeRef.current
+      ?.querySelector<HTMLElement>(attribute)
+      ?.scrollIntoView({ block: "nearest" });
+    actions.consumeRevealedNode();
+  }, [revealedNodeId, actions]);
 
   return (
     // A largura vem do ResizablePanel (o `defaultSize`/layout salvo fica no
@@ -122,6 +160,7 @@ export function ContentTree({ view }: { view: EntryView }) {
           />
         </Button>
       </div>
+      <SearchControl onOpen={() => openSearchDialog(version)} />
       <EntryActionsMenu
         view={view}
         target={ctxTarget}
@@ -163,6 +202,7 @@ export function ContentTree({ view }: { view: EntryView }) {
           void actions.coldReload();
         }}
       />
+      <SearchDialog view={view} />
     </aside>
   );
 }
