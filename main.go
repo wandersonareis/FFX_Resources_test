@@ -35,7 +35,7 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:     "FINAL FANTASY X/X-2 HD Remaster Resources Editor",
+		Title:     "FINAL FANTASY X and X-2 HD Remaster Resources Editor",
 		Width:     1280,
 		Height:    800,
 		MinWidth:  1024,
@@ -86,7 +86,7 @@ func main() {
 			WebviewIsTransparent: true,
 			WindowIsTranslucent:  true,
 			About: &mac.AboutInfo{
-				Title:   "FINAL FANTASY X/X-2 HD Remaster Resources Editor",
+				Title:   "FINAL FANTASY X and X-2 HD Remaster Resources Editor",
 				Message: "",
 				Icon:    icon,
 			},

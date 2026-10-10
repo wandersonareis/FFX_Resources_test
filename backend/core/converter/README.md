@@ -1,6 +1,6 @@
 # Converter Package
 
-This package provides functionality for converting between different data formats used in the FINAL FANTASY X/X-2 HD Remaster Resources Editor system.
+This package provides functionality for converting between different data formats used in the FINAL FANTASY X and X-2 HD Remaster Resources Editor system.
 
 ## Structure
 
