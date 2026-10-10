@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { KIND_LABELS } from '@/lib/ffx/display-names';
+import { formatGameTextSnippetForSearch } from '@/lib/ffx/game-text-format';
 import { buildNodeIndex } from '@/lib/ffx/content-tree/model';
 import {
   buildSearchItems,
@@ -27,7 +28,6 @@ import {
   closeSearchDialog,
   runTextSearch,
   searchStoreFor,
-  setSearchQuery,
 } from '@/lib/ffx/search-store';
 import type { services } from '@/wailsjs/go/models';
 import type { EntryView } from '../entry-view-store';
@@ -165,8 +165,10 @@ export function SearchDialog({ view }: { view: EntryView }) {
             ref={inputRef}
             value={draft}
             onChange={(event) => {
+              // Só o rascunho LOCAL: quem escreve `query` no store é o
+              // runTextSearch (query = último termo EXECUTADO). Sincronizar
+              // aqui mataria o guard do debounce — draft === query sempre.
               setDraft(event.target.value);
-              setSearchQuery(version, event.target.value);
             }}
             onKeyDown={onKeyDown}
             placeholder="Buscar nome de arquivo ou texto (us)…"
@@ -272,18 +274,26 @@ export function SearchDialog({ view }: { view: EntryView }) {
   );
 }
 
-/** Snippet já partido pelo backend: o hit ganha <mark>, o resto é texto. */
+/**
+ * Snippet formatado com a MESMA conversão da tabela/editor (tags {…} viram
+ * cor/itálico/chip); o hit ganha <mark> por dentro das marcas. A remontagem
+ * é lossless — o parser sempre vê a janela original.
+ */
 function SnippetText({ match }: { match: services.TextSearchMatch }) {
-  if (!match.snippetHit && !match.snippetBefore && !match.snippetAfter) {
+  const html = formatGameTextSnippetForSearch({
+    before: match.snippetBefore ?? '',
+    hit: match.snippetHit ?? '',
+    after: match.snippetAfter ?? '',
+  });
+  if (!html) {
     return <span className="italic opacity-70">(sem texto exibível)</span>;
   }
+  // O parser escapa todo texto; <mark> é nosso. Estilos do destaque e dos
+  // parágrafos ficam no CONTAINER para o snippet caber numa linha da lista.
   return (
-    <span className="min-w-0 truncate">
-      {match.snippetBefore}
-      <mark className="rounded-sm bg-yellow-200 px-0.5 text-inherit dark:bg-yellow-500/40">
-        {match.snippetHit}
-      </mark>
-      {match.snippetAfter}
-    </span>
+    <span
+      className="block min-w-0 truncate [&_mark]:rounded-sm [&_mark]:bg-yellow-200 [&_mark]:px-0.5 [&_p]:inline [&_p]:m-0 [&_p+p]:pl-1 dark:[&_mark]:bg-yellow-500/40"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   );
 }

@@ -62,15 +62,13 @@ export function closeSearchDialog(version: GameVersionId): void {
   searchStoreFor(version).setState((prev) => ({ ...prev, open: false }));
 }
 
-/** Rascunho do input publicado na hora (a CONSULTA entra pelo runTextSearch). */
-export function setSearchQuery(version: GameVersionId, query: string): void {
-  searchStoreFor(version).setState((prev) => ({ ...prev, query }));
-}
-
 /**
  * Executa a busca de CONTEÚDO no backend. Termo abaixo do mínimo limpa os
  * resultados sem tocar no backend; respostas velhas (query anterior ou
  * invalidação no meio do voo) são descartadas pela guarda de sequência.
+ * É ESTA função que escreve `query` no store (query = último termo
+ * EXECUTADO) — o rascunho do input nunca toca no estado da busca, senão o
+ * guard do debounce do dialog compara draft === query e nunca agenda.
  */
 export async function runTextSearch(
   version: GameVersionId,

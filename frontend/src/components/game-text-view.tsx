@@ -1,12 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { gameTextParser } from '@/lib/ffx/game-text-parser';
-import {
-  splitLeadingPadding,
-  summarizePadding,
-} from '@/lib/ffx/leading-padding';
-import { cn } from '@/lib/utils';
+import { formatGameTextForDisplay } from '@/lib/ffx/game-text-format';
 
 interface GameTextViewProps {
   /** Texto canônico com tags (ex: linha de TextRow.text[lang]). */
@@ -21,12 +16,13 @@ interface GameTextViewProps {
  * ({TEXT_NEWLINE}/\n -> parágrafo, {CLR:…} -> cor, {TEXT_ITALIC} -> itálico,
  * demais tags -> chip). Evita mostrar tags cruas ao lado do texto normalizado.
  *
- * O parser escapa todo texto/atributo, então o HTML é seguro para
- * dangerouslySetInnerHTML.
+ * Casca fina sobre `formatGameTextForDisplay` (formatador compartilhado com o
+ * modal de busca). O parser escapa todo texto/atributo, então o HTML é seguro
+ * para dangerouslySetInnerHTML.
  */
 export function GameTextView({ text, fallback = '', className }: GameTextViewProps) {
-  const html = useMemo(
-    () => gameTextParser.parseGameTextToHTML(splitLeadingPadding(text ?? '').body),
+  const { paddingSummary, html } = useMemo(
+    () => formatGameTextForDisplay(text),
     [text]
   );
 
@@ -34,14 +30,13 @@ export function GameTextView({ text, fallback = '', className }: GameTextViewPro
     return fallback ? <div className={className}>{fallback}</div> : null;
   }
 
-  const padding = splitLeadingPadding(text ?? '').padding;
   return (
     <div className={className}>
-      {padding !== '' && (
+      {paddingSummary !== '' && (
         <div className="mb-1 flex items-center gap-1 text-xs text-muted-foreground">
           <span>␍ padding de tela:</span>
           <code className="rounded bg-muted px-1">
-            {summarizePadding(padding)}
+            {paddingSummary}
           </code>
         </div>
       )}

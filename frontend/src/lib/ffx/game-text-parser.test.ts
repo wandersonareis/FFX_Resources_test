@@ -118,6 +118,60 @@ describe('parseGameTextToHTML: formatação não vira chip', () => {
   });
 });
 
+describe('parseGameTextToHTML: destaque markStart/markEnd', () => {
+  it('sem options a saída é idêntica (refs/tabela/editor não mudam)', () => {
+    const raw = '{CLR:RED}Perigli{TEXT_ITALIC}oso{TEXT_NORMAL} do Yuna{CMD:01:02}';
+    expect(gameTextParser.parseGameTextToHTML(raw, undefined, {})).toBe(
+      gameTextParser.parseGameTextToHTML(raw)
+    );
+  });
+
+  it('intervalo vazio não gera destaque', () => {
+    const raw = 'Tidus e Yuna';
+    expect(
+      gameTextParser.parseGameTextToHTML(raw, undefined, { markStart: 5, markEnd: 5 })
+    ).toBe(gameTextParser.parseGameTextToHTML(raw));
+  });
+
+  it('envolve o texto do hit em <mark> por dentro da cor', () => {
+    const html = gameTextParser.parseGameTextToHTML('{CLR:RED}Perigloso', undefined, {
+      markStart: 13, // 'glo' depois de '{CLR:RED}Peri'
+      markEnd: 16,
+    });
+    expect(html).toContain('Peri<mark>glo</mark>so');
+    // O <mark> fica ANINHADO no span de cor, nunca no lugar dele.
+    expect(html.indexOf('<mark>')).toBeGreaterThan(html.indexOf('<span style='));
+    expect(html.indexOf('</mark>')).toBeLessThan(html.lastIndexOf('</span>'));
+  });
+
+  it('hit que intersecta uma tag chip destaca o chip inteiro', () => {
+    const html = gameTextParser.parseGameTextToHTML('x{CMD:01:02}y', undefined, {
+      markStart: 2, // por dentro de {CMD:01:02} (extensão [1, 12))
+      markEnd: 6,
+    });
+    expect(html).toContain('<mark><span data-game-tag="{CMD:01:02}"');
+    expect(html).toContain('</span></mark>');
+  });
+
+  it('o destaque atravessa parágrafo ({TEXT_NEWLINE}) sem quebrar', () => {
+    const html = gameTextParser.parseGameTextToHTML(
+      'Press{TEXT_NEWLINE}Enter agora',
+      undefined,
+      { markStart: 21, markEnd: 24 } // 'ter' de Enter
+    );
+    expect(html).toBe('<p>Press</p><p>En<mark>ter</mark> agora</p>');
+  });
+
+  it('os offsets são em code points (emoji não desloca o destaque)', () => {
+    // '😀' ocupa 2 unidades UTF-16 mas 1 code point.
+    const html = gameTextParser.parseGameTextToHTML('Tidus 😀 Yuna', undefined, {
+      markStart: 8,
+      markEnd: 12,
+    });
+    expect(html).toBe('<p>Tidus 😀 <mark>Yuna</mark></p>');
+  });
+});
+
 describe('serializeJSONToGameText', () => {
   it('emite o valor do chip verbatim', () => {
     const json = {

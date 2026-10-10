@@ -9,6 +9,26 @@ import {
 } from './game-text-tags';
 import type { ChipValidator } from './tag-catalog';
 
+/** Destaque opcional de um intervalo do texto (usado pelo snippet da busca). */
+export interface GameTextMarkOptions {
+  /** Início (inclusivo) em CODE POINTS do texto de entrada. */
+  markStart?: number;
+  /** Fim (exclusivo) em CODE POINTS do texto de entrada. */
+  markEnd?: number;
+}
+
+/** Offset em code points -> índice UTF-16 (clamp nas pontas). */
+function toUtf16Index(text: string, codePoints: number): number {
+  let count = 0;
+  for (let i = 0; i < text.length; ) {
+    if (count >= codePoints) return i;
+    const code = text.codePointAt(i) ?? 0;
+    i += code > 0xffff ? 2 : 1;
+    count += 1;
+  }
+  return text.length;
+}
+
 /**
  * Conversão entre o texto canônico do backend (tags {…}) e o HTML do Tiptap.
  *
@@ -25,15 +45,35 @@ export const gameTextParser = {
    * sobreviveria ao round-trip — a MESMA instância usada na conversão de tags
    * digitadas, senão o HTML divergiria do valor e o setContent perderia o
    * cursor.
+   *
+   * `options` (opcional) destaca um intervalo do texto em <mark> — usado
+   * pelo snippet da busca. Sem ele, a saída é byte-idêntica à de sempre.
    */
-  parseGameTextToHTML(rawText: string, validate?: ChipValidator): string {
+  parseGameTextToHTML(
+    rawText: string,
+    validate?: ChipValidator,
+    options?: GameTextMarkOptions
+  ): string {
     if (!rawText) return '<p></p>';
 
-    // Quebras: \n real ou {TEXT_NEWLINE} viram parágrafos.
-    const paragraphs = rawText.split(/(?:\r?\n|\{TEXT_NEWLINE\})/gi);
-    const htmlParagraphs: string[] = [];
+    // Destaque (busca): markStart/markEnd em CODE POINTS do texto cru,
+    // resolvidos uma única vez para UTF-16 — a varredura trabalha em
+    // offsets absolutos e nunca corta uma tag no meio.
+    const mark = this.resolveMarkRange(rawText, options);
 
-    for (const para of paragraphs) {
+    // Quebras: \n real ou {TEXT_NEWLINE} viram parágrafos. O split leva
+    // grupo de captura (separadores intercalados no resultado), então o
+    // cursor absoluto avança exatamente pelo que foi consumido.
+    const segments = rawText.split(/(\r?\n|\{TEXT_NEWLINE\})/gi);
+    const htmlParagraphs: string[] = [];
+    let cursor = 0;
+
+    for (let s = 0; s < segments.length; s += 2) {
+      const para = segments[s];
+      const paraStart = cursor;
+      cursor +=
+        para.length + (s + 1 < segments.length ? segments[s + 1].length : 0);
+
       if (para.trim() === '') {
         htmlParagraphs.push('<p></p>');
         continue;
@@ -61,7 +101,13 @@ export const gameTextParser = {
         if (matchIndex > lastIndex) {
           const segment = para.slice(lastIndex, matchIndex);
           if (segment) {
-            resultHTML += this.wrapStyledText(segment, currentColor, italicActive);
+            resultHTML += this.wrapSegment(
+              segment,
+              paraStart + lastIndex,
+              currentColor,
+              italicActive,
+              mark
+            );
           }
         }
 
@@ -79,6 +125,7 @@ export const gameTextParser = {
           // DIRETO no texto (sem chip) — igual aos botões do jogo. Chip
           // textual fica para os casos com texto (locked/invalid/dummy).
           const btnClasses = buttonSpriteClasses(inner);
+          let chipHTML: string;
           if (btnClasses.length > 0 && !locked && !invalid) {
             // O wrapper externo (data-game-tag) é o ponto de re-parse do
             // node gameTag; os ícones ficam ANINHADOS dentro dele — um node
@@ -86,7 +133,7 @@ export const gameTextParser = {
             // renderHTML, e irmãos no mesmo nível virariam filhos do
             // primeiro tile (tile tem tamanho fixo: sobrepõem). Estrutura
             // byte-idêntica à do renderHTML do gameTag.
-            resultHTML +=
+            chipHTML =
               `<span data-game-tag="${this.escapeAttr(fullTag)}">` +
               btnClasses
                 .map(
@@ -98,7 +145,7 @@ export const gameTextParser = {
                 .join('') +
               '</span>';
           } else {
-            resultHTML += `<span data-game-tag="${this.escapeAttr(
+            chipHTML = `<span data-game-tag="${this.escapeAttr(
               fullTag
             )}" class="game-tag-chip${locked ? ' locked' : ''}${
               invalid ? ' invalid' : ''
@@ -106,6 +153,15 @@ export const gameTextParser = {
               invalid ? ' data-invalid="true"' : ''
             }>${this.escapeHtml(label)}</span>`;
           }
+          // Destaque que intersecta a TAG inteira: o chip ganha o <mark>
+          // (não há texto fora da braces para envolver — senão o hit
+          // ficaria invisível).
+          const tagStart = paraStart + matchIndex;
+          const tagEnd = paraStart + tagRegex.lastIndex;
+          resultHTML +=
+            mark && mark.start < tagEnd && mark.end > tagStart
+              ? `<mark>${chipHTML}</mark>`
+              : chipHTML;
         }
 
         lastIndex = tagRegex.lastIndex;
@@ -114,7 +170,13 @@ export const gameTextParser = {
       if (lastIndex < para.length) {
         const remaining = para.slice(lastIndex);
         if (remaining) {
-          resultHTML += this.wrapStyledText(remaining, currentColor, italicActive);
+          resultHTML += this.wrapSegment(
+            remaining,
+            paraStart + lastIndex,
+            currentColor,
+            italicActive,
+            mark
+          );
         }
       }
 
@@ -216,11 +278,56 @@ export const gameTextParser = {
     return upper.length > 0;
   },
 
+  wrapSegment(
+    text: string,
+    absoluteStart: number,
+    color: string | null,
+    italic: boolean,
+    mark: { start: number; end: number } | null
+  ): string {
+    const absoluteEnd = absoluteStart + text.length;
+    if (!mark || mark.end <= absoluteStart || mark.start >= absoluteEnd) {
+      return this.wrapStyledText(text, color, italic);
+    }
+    // O corte é ANTES do escape (escapar muda o comprimento); as 3 partes
+    // são escapadas individualmente e o <mark> entra no meio, POR DENTRO
+    // de itálico/cor — mesma aparência da tabela.
+    const from = Math.max(mark.start, absoluteStart) - absoluteStart;
+    const to = Math.min(mark.end, absoluteEnd) - absoluteStart;
+    const escaped =
+      this.escapeHtml(text.slice(0, from)) +
+      `<mark>${this.escapeHtml(text.slice(from, to))}</mark>` +
+      this.escapeHtml(text.slice(to));
+    return this.wrapStyledTextHtml(escaped, color, italic);
+  },
+
   wrapStyledText(text: string, color: string | null, italic: boolean): string {
-    let escaped = this.escapeHtml(text);
-    if (italic) escaped = `<em>${escaped}</em>`;
-    if (color) escaped = `<span style="color: ${color}">${escaped}</span>`;
-    return escaped;
+    return this.wrapStyledTextHtml(this.escapeHtml(text), color, italic);
+  },
+
+  /** Itálico/cor sobre HTML JÁ escapado (pode conter <mark> interno). */
+  wrapStyledTextHtml(
+    html: string,
+    color: string | null,
+    italic: boolean
+  ): string {
+    if (italic) html = `<em>${html}</em>`;
+    if (color) html = `<span style="color: ${color}">${html}</span>`;
+    return html;
+  },
+
+  /** markStart/markEnd em code points -> intervalo UTF-16 (null = sem destaque). */
+  resolveMarkRange(
+    rawText: string,
+    options?: GameTextMarkOptions
+  ): { start: number; end: number } | null {
+    if (options?.markStart == null || options?.markEnd == null) return null;
+    const start = toUtf16Index(rawText, Math.max(0, options.markStart));
+    const end = toUtf16Index(
+      rawText,
+      Math.max(options.markEnd, options.markStart)
+    );
+    return end > start ? { start, end } : null;
   },
 
   /**
