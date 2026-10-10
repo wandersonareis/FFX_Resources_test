@@ -182,11 +182,14 @@ var _ = Describe("MetadataService", Ordered, func() {
 		Expect(found).To(BeTrue(), "search should locate the source row")
 		Expect(dataMatch.Data).To(BeTrue())
 		Expect(dataMatch.Mods).To(BeFalse())
-		// O snippet devolve o trecho na caixa original, com o hit destacável.
+		// O snippet devolve o trecho na caixa original; o MATCHING é por
+		// dobra de acentos ("dificil" casa "difícil"), então a comparação
+		// é na forma dobrada — o hit mantém o acento do arquivo.
 		Expect(dataMatch.SnippetHit).NotTo(BeEmpty())
-		Expect(strings.EqualFold(dataMatch.SnippetHit, query)).To(BeTrue())
-		Expect(strings.ToLower(dataMatch.SnippetBefore + dataMatch.SnippetHit + dataMatch.SnippetAfter)).
-			To(ContainSubstring(strings.ToLower(query)))
+		Expect(services.FoldSearchText(dataMatch.SnippetHit)).
+			To(Equal(services.FoldSearchText(query)))
+		Expect(services.FoldSearchText(dataMatch.SnippetBefore + dataMatch.SnippetHit + dataMatch.SnippetAfter)).
+			To(ContainSubstring(services.FoldSearchText(query)))
 
 		parsed, ok := dto.ParseKey(target.Key)
 		Expect(ok).To(BeTrue())

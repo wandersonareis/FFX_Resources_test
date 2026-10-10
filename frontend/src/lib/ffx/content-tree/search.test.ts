@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import type { services } from '@/wailsjs/go/models';
 import type { SideNode } from './model';
-import { buildSearchItems, searchTreeNames } from './search';
+import { buildSearchItems, foldDiacritics, searchTreeNames } from './search';
 
 const roots: SideNode[] = [
   {
@@ -62,6 +62,44 @@ describe('searchTreeNames', () => {
   it('caps the number of name matches and returns nothing for a blank query', () => {
     expect(searchTreeNames(roots, 'az', 1)).toHaveLength(1);
     expect(searchTreeNames(roots, '   ')).toEqual([]);
+  });
+
+  it('matches ignoring accents in both directions', () => {
+    const accented: SideNode[] = [
+      {
+        id: 'kind:objects',
+        label: 'Sistema',
+        kind: 'objects',
+        children: [
+          {
+            id: 'leaf:objects:coracao',
+            label: 'Coração',
+            kind: 'objects',
+            entry: {
+              kind: 'objects',
+              id: 'coracao',
+              key: 'ffx/battle/difícil.bin',
+              label: 'Coração',
+            },
+          },
+        ],
+      },
+    ];
+    // Sem acento acha com acento e vice-versa (label e key).
+    expect(
+      searchTreeNames(accented, 'coracao').map((node) => node.entry?.id)
+    ).toEqual(['coracao']);
+    expect(searchTreeNames(accented, 'CORACAO')).toHaveLength(1);
+    expect(
+      searchTreeNames(accented, 'dificil').map((node) => node.entry?.id)
+    ).toEqual(['coracao']);
+    expect(searchTreeNames(accented, 'difícil')).toHaveLength(1);
+  });
+});
+
+describe('foldDiacritics', () => {
+  it('strips diacritics keeping the base letter, lowercased', () => {
+    expect(foldDiacritics('DifÍcil CORAÇÃO')).toBe('dificil coracao');
   });
 });
 

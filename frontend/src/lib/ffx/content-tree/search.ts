@@ -11,6 +11,16 @@ import type { SideNode } from "./model";
 export const SEARCH_NAME_MATCH_LIMIT = 20;
 
 /**
+ * Forma de MATCHING sem acentos ("difícil" -> "dificil", "coração" ->
+ * "coracao"): NFD + remoção das marcas combinantes, embutido no runtime.
+ * Mesma semântica do FoldSearchText do backend — a busca de nomes casa nos
+ * dois sentidos, igual à de conteúdo.
+ */
+export function foldDiacritics(value: string): string {
+  return value.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
+}
+
+/**
  * Item da lista do modal: um ARQUIVO (cabeçalho, clique leva ao arquivo com
  * a primeira row focada) ou uma ROW logo abaixo dele, indentada (clique leva
  * exatamente àquela linha na tabela).
@@ -40,7 +50,8 @@ export function searchTreeNames(
   query: string,
   limit: number = SEARCH_NAME_MATCH_LIMIT,
 ): SideNode[] {
-  const normalized = query.trim().toLowerCase();
+  // Matching sem acentos nos dois sentidos ("coracao" acha "Coração").
+  const normalized = foldDiacritics(query.trim());
   if (!normalized) return [];
 
   const hits: SideNode[] = [];
@@ -51,7 +62,7 @@ export function searchTreeNames(
         const { label, id, key } = node.entry;
         if (
           [label, id, key].some((value) =>
-            value.toLowerCase().includes(normalized),
+            foldDiacritics(value).includes(normalized),
           )
         ) {
           hits.push(node);

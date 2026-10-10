@@ -116,6 +116,58 @@ func TestSearchSnippetSlicesRunesOnBoundaries(t *testing.T) {
 	}
 }
 
+func TestSearchIgnoresAccentsBothWays(t *testing.T) {
+	index := textSearchIndex{files: []indexedTextFile{{
+		kind: KindEvents,
+		id:   "acento",
+		rows: []indexedTextRow{
+			newIndexedTextRow(1, "", "Tidus está difícil, coração", ""),
+			newIndexedTextRow(2, "", "plain", "tradução coração"),
+		},
+	}}}
+
+	for _, query := range []string{"dificil", "difícil", "coracao", "coração", "CORACAO"} {
+		response := index.search(query)
+		if response.TotalRows == 0 {
+			t.Fatalf("consulta %q deveria casar (dobra de acentos)", query)
+		}
+	}
+
+	// O hit preserva a caixa e os acentos ORIGINAIS do arquivo.
+	match := index.search("coracao").Results[0].Rows[0]
+	if match.SnippetHit != "coração" {
+		t.Fatalf("SnippetHit = %q, want %q (acento original)", match.SnippetHit, "coração")
+	}
+	if !match.Data {
+		t.Fatalf("match do data não veio marcado: %+v", match)
+	}
+}
+
+func TestSearchSnippetMapsFoldedHitBackToOriginalRunes(t *testing.T) {
+	// Acentos ANTES do hit: o corte do snippet usa o mapa de origens
+	// (posição no espaço dobrado -> rune original), nunca a posição crua.
+	text := "O café é éé difícil"
+	index := textSearchIndex{files: []indexedTextFile{{
+		kind: KindEvents,
+		id:   "mapa",
+		rows: []indexedTextRow{newIndexedTextRow(0, "", text, "")},
+	}}}
+
+	match := index.search("dificil").Results[0].Rows[0]
+	if match.SnippetHit != "difícil" {
+		t.Fatalf("SnippetHit = %q, want %q", match.SnippetHit, "difícil")
+	}
+	if !strings.HasPrefix(match.SnippetBefore, "O café é éé ") {
+		t.Fatalf("SnippetBefore = %q, want prefixo original intacto", match.SnippetBefore)
+	}
+}
+
+func TestFoldSearchTextStripsDiacriticsKeepsBase(t *testing.T) {
+	if got := FoldSearchText("DifÍcil CORAÇÃO"); got != "dificil coracao" {
+		t.Fatalf("FoldSearchText = %q, want %q", got, "dificil coracao")
+	}
+}
+
 func TestIndexFreshThrottleReusesVerdict(t *testing.T) {
 	previous := TextSearchFreshCheckInterval
 	TextSearchFreshCheckInterval = time.Hour

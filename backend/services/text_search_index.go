@@ -3,10 +3,13 @@ package services
 import (
 	"sort"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"ffxresources/backend/common"
 	"ffxresources/backend/dto"
+
+	"golang.org/x/text/unicode/norm"
 )
 
 // MaxSearchFiles limita quantos ARQUIVOS por consulta entram no resultado
@@ -14,8 +17,8 @@ import (
 // testes ajustam para exercitar o corte sem fixture grande.
 var MaxSearchFiles = 100
 
-// searchSnippetContext é o bytes de contexto antes/depois do match no
-// snippet exibido no modal de busca.
+// searchSnippetContext é o raio (em RUNES) de contexto antes/depois do
+// match no snippet exibido no modal de busca.
 const searchSnippetContext = 80
 
 // TextSearchMatch identifica uma row encontrada e em qual fonte o texto
@@ -51,9 +54,10 @@ type TextSearchResponse struct {
 	Truncated  bool               `json:"truncated"`
 }
 
-// indexedTextRow guarda o texto us em DUAS formas: a cópia minúscula para o
-// match (busca substring barata) e o texto ORIGINAL para o snippet — não
-// guarda DTOs completos, hashes nem os demais idiomas.
+// indexedTextRow guarda o texto us em DUAS formas: a cópia DOBRADA para o
+// match (minúscula, sem diacríticos — "difícil" casa "dificil") e o texto
+// ORIGINAL para o snippet — não guarda DTOs completos, hashes nem os
+// demais idiomas.
 type indexedTextRow struct {
 	index    int
 	name     string
@@ -79,12 +83,42 @@ type indexedRowID struct {
 	name  string
 }
 
+// FoldSearchText devolve a forma de MATCHING: minúsculas sem diacríticos
+// ("difícil" -> "dificil", "coração" -> "coracao"). Minúsculas primeiro,
+// depois NFD e remoção das marcas combinantes (Mn) — NFD, não NFKD: não
+// dobra ligaduras nem largura de fonte. É a MESMA implementação usada para
+// montar o índice, a consulta e o mapa de offsets do snippet.
+func FoldSearchText(s string) string {
+	folded, _ := foldOffsets(s)
+	return folded
+}
+
+// foldOffsets devolve o texto dobrado (ver FoldSearchText) e, para cada
+// rune DOBRADO, o índice do rune ORIGINAL de onde veio — o mapa que permite
+// cortar o snippet no texto original usando um match feito no espaço
+// dobrado (onde é "coracao") e ainda mostrar o acento de "coração".
+func foldOffsets(s string) (string, []int32) {
+	runes := []rune(s)
+	var folded strings.Builder
+	origins := make([]int32, 0, len(runes))
+	for origIndex, r := range runes {
+		for _, d := range norm.NFD.String(string(r)) {
+			if unicode.Is(unicode.Mn, d) {
+				continue
+			}
+			folded.WriteRune(unicode.ToLower(d))
+			origins = append(origins, int32(origIndex))
+		}
+	}
+	return folded.String(), origins
+}
+
 func newIndexedTextRow(index int, name, data, mods string) indexedTextRow {
 	return indexedTextRow{
 		index:    index,
 		name:     name,
-		data:     strings.ToLower(data),
-		mods:     strings.ToLower(mods),
+		data:     FoldSearchText(data),
+		mods:     FoldSearchText(mods),
 		dataOrig: data,
 		modsOrig: mods,
 	}
@@ -108,10 +142,10 @@ func indexedFileFromEntries(kind, id string, data, mods *dto.FileEntry) indexedT
 			indexed.index = row.Index
 			indexed.name = row.Name
 			if source == common.SourceData {
-				indexed.data = strings.ToLower(text)
+				indexed.data = FoldSearchText(text)
 				indexed.dataOrig = text
 			} else {
-				indexed.mods = strings.ToLower(text)
+				indexed.mods = FoldSearchText(text)
 				indexed.modsOrig = text
 			}
 			rowsByID[key] = indexed
@@ -132,7 +166,9 @@ func indexedFileFromEntries(kind, id string, data, mods *dto.FileEntry) indexedT
 // O corte em MaxSearchFiles limita só o payload: os totais cobrem a base
 // inteira para o modal exibir "mostrando N de M".
 func (index textSearchIndex) search(query string) TextSearchResponse {
-	query = strings.ToLower(strings.TrimSpace(query))
+	// Matching SEM acentos nos dois sentidos: "dificil" acha "difícil" e
+	// vice-versa (a dobra é a mesma do índice).
+	query = FoldSearchText(strings.TrimSpace(query))
 	if query == "" {
 		return TextSearchResponse{}
 	}
@@ -180,55 +216,50 @@ func (index textSearchIndex) search(query string) TextSearchResponse {
 }
 
 // withSnippet corta o texto ORIGINAL em volta do match, partindo o resultado
-// em antes/hit/depois. A posição vem da cópia minúscula (é onde o match foi
-// feito); os cortes são aparados em fronteira de rune para nunca partir um
-// caractere multibyte no meio.
+// em antes/hit/depois — o hit mantém a caixa e os acentos ORIGINAIS (a
+// consulta "coracao" acha e mostra "coração"). O match foi feito no espaço
+// DOBRADO; o mapa de origens devolve os runes originais correspondentes,
+// então todos os cortes caem em fronteira de rune por construção.
 func (m *TextSearchMatch) withSnippet(row indexedTextRow, query string) {
-	lower := row.data
-	original := row.dataOrig
+	folded, original := row.data, row.dataOrig
 	if m.Mods {
-		lower = row.mods
-		original = row.modsOrig
+		folded, original = row.mods, row.modsOrig
 	}
-	pos := strings.Index(lower, query)
-	if pos < 0 || pos > len(original) {
+	pos := strings.Index(folded, query)
+	if pos < 0 {
 		return
 	}
-	// A caixa pode mudar o tamanho em bytes em Unicode raro: se os offsets
-	// não caem em fronteira de rune, aparar para o início do caractere.
-	for pos > 0 && !utf8.RuneStart(original[pos]) {
-		pos--
+	// A cópia dobrada do original é byte-idêntica à indexada (mesma
+	// função), então o mapa de origens indexa o MESMO espaço do match.
+	_, origins := foldOffsets(original)
+	foldedRuneStart := utf8.RuneCountInString(folded[:pos])
+	queryRunes := utf8.RuneCountInString(query)
+	if foldedRuneStart >= len(origins) || foldedRuneStart+queryRunes > len(origins) {
+		return
 	}
-	end := pos + len(query)
-	if end > len(original) {
-		end = len(original)
-	}
-	for end < len(original) && !utf8.RuneStart(original[end]) {
-		end++
+	origRunes := []rune(original)
+	hitStart := int(origins[foldedRuneStart])
+	hitEnd := hitStart + 1
+	if last := foldedRuneStart + queryRunes - 1; last > foldedRuneStart {
+		hitEnd = int(origins[last]) + 1
 	}
 
-	start := pos - searchSnippetContext
+	start := hitStart - searchSnippetContext
 	if start < 0 {
 		start = 0
 	}
-	for start > 0 && !utf8.RuneStart(original[start]) {
-		start--
-	}
-	tail := end + searchSnippetContext
-	if tail > len(original) {
-		tail = len(original)
-	}
-	for tail < len(original) && !utf8.RuneStart(original[tail]) {
-		tail++
+	tail := hitEnd + searchSnippetContext
+	if tail > len(origRunes) {
+		tail = len(origRunes)
 	}
 
-	m.SnippetBefore = original[start:pos]
+	m.SnippetBefore = string(origRunes[start:hitStart])
 	if start > 0 {
 		m.SnippetBefore = "…" + m.SnippetBefore
 	}
-	m.SnippetHit = original[pos:end]
-	m.SnippetAfter = original[end:tail]
-	if tail < len(original) {
+	m.SnippetHit = string(origRunes[hitStart:hitEnd])
+	m.SnippetAfter = string(origRunes[hitEnd:tail])
+	if tail < len(origRunes) {
 		m.SnippetAfter += "…"
 	}
 }
