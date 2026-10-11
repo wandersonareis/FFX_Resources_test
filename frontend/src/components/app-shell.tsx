@@ -399,7 +399,7 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
   return (
     <div className="flex h-screen flex-col">
       <header className="sticky top-0 z-10 flex items-center gap-2 bg-background px-4 py-2 border-b">
-        <span className="text-lg font-semibold">FINAL FANTASY X and X-2 HD Remaster Resources Editor</span>
+        <span className="text-xl font-malva-medium text-gradient">FINAL FANTASY X and X-2 HD Remaster Resources Editor</span>
         <span className="flex-1" />
         <Tooltip>
           <TooltipTrigger asChild>
@@ -449,11 +449,13 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
 
       <Tabs value={String(selectedIndex)} onValueChange={onTabChange} className="flex-1 min-h-0 flex flex-col">
         <div className="mx-4 mt-2 flex items-center justify-between gap-2">
-          <TabsList className="w-fit">
+          <TabsList variant="gradient" className="w-fit">
             {GAME_VERSIONS.map((tab, index) => (
               <Tooltip key={tab.id}>
                 <TooltipTrigger asChild>
-                  <TabsTrigger value={String(index)}>{tab.label}</TabsTrigger>
+                  <TabsTrigger variant="gradient" value={String(index)}>
+                    {tab.label}
+                  </TabsTrigger>
                 </TooltipTrigger>
                 <TooltipContent>
                   {shortcutTip(

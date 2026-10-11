@@ -145,8 +145,8 @@ export function ContentTree({ view }: { view: EntryView }) {
     // A largura vem do ResizablePanel (o `defaultSize`/layout salvo fica no
     // grupo); o `border-r` saiu daqui porque a própria divisória é o handle.
     <aside className="h-full w-full p-2 flex flex-col min-h-0">
-      <div className="flex items-center justify-between font-semibold px-2 py-1">
-        <span>Conteúdo</span>
+      <div className="flex items-center justify-between font-semibold px-2">
+        <span className="text-sky-500 text-lg font-malva-medium">Conteúdo</span>
         <Button
           variant="ghost"
           size="icon"

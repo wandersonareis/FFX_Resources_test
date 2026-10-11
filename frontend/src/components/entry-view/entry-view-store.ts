@@ -677,16 +677,6 @@ export function createEntryView(version: GameVersionId): EntryView {
     );
   };
 
-  /** Tamanho humano do container — só informativo na raiz da árvore. */
-  const formatVbfSize = (bytes: number): string => {
-    if (!Number.isFinite(bytes) || bytes <= 0) return '';
-    const gb = bytes / 1024 ** 3;
-    if (gb >= 1) return `${gb.toFixed(1)} GB`;
-    const mb = bytes / 1024 ** 2;
-    if (mb >= 1) return `${mb.toFixed(0)} MB`;
-    return `${bytes} B`;
-  };
-
   /**
    * Raízes dos containers .vbf descobertos perto do executável do jogo. O
    * backend varre a pasta uma vez (promessa compartilhada em vbf.ts) e cada
@@ -707,7 +697,7 @@ export function createEntryView(version: GameVersionId): EntryView {
           // Mesmo formato de vbfNodeId com path/id vazios = a RAIZ do
           // container (é o que a expansão usa como diretório inicial).
           id: vbfNodeId(root.path, { path: '', id: '' }),
-          label: `${root.name.replace(/\.vbf$/i, '')} · ${formatVbfSize(root.size)}`,
+          label: root.name.replace(/\.vbf$/i, ''),
           vbf: true,
           vbfRoot: root.path,
           vbfPath: '',

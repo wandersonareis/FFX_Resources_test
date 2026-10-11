@@ -29,17 +29,17 @@ export function TreeList({
       onContextMenuCapture={onNodeContextMenu}
     >
       {vbfRoots.length > 0 ? (
-        <div className="px-2 pt-1 pb-1 text-xs font-medium text-muted-foreground">
-          Containers .vbf · somente leitura
-        </div>
+        <small className="px-2 pt-1 pb-1 text-xs font-medium text-muted-foreground">
+          Containers .vbf
+        </small>
       ) : null}
       {vbfRoots.map((node) => (
         <TreeItem key={node.id} node={node} depth={0} />
       ))}
       {roots.length > 0 && vbfRoots.length > 0 ? (
-        <div className="px-2 pt-3 pb-1 text-xs font-medium text-muted-foreground border-t mt-1">
+        <small className="px-2 pt-3 pb-1 text-xs font-medium text-muted-foreground mt-1">
           Arquivos de data/
-        </div>
+        </small>
       ) : null}
       {roots.map((node) => (
         <TreeItem key={node.id} node={node} depth={0} />

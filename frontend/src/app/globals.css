@@ -7,9 +7,18 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: "Malva", ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: "Malva", ui-sans-serif, system-ui, sans-serif;
+  /* Malva Black (peso 900 real): só em pontos específicos (hero-title e
+     onde for chamado explicitamente com font-malva-black). */
+  --font-malva-black: "Malva Black", "Malva", ui-sans-serif, system-ui,
+    sans-serif;
+  /* Malva Medium (peso 500 real, arquivo próprio): uso específico —
+     títulos de seção (ex.: cabeçalho do painel principal). Chamar com
+     font-malva-medium. */
+  --font-malva-medium: "Malva Medium", "Malva", ui-sans-serif, system-ui,
+    sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -129,6 +138,68 @@
   }
 }
 
+/* Fontes do projeto — família "Malva" (GlYPH fonts, arquivo local em
+   /public). A família "Malva" carrega SÓ o Regular, declarado cobrindo
+   100–900: todo peso pedido (medium/semibold/bold) renderiza os glifos
+   desenhados do Regular, sem faux-bold do motor e sem puxar o Black.
+   O Black (peso 900 real) mora numa família SEPARADA ("Malva Black"),
+   usada só onde é chamado explicitamente (hero-title). */
+@font-face {
+  font-family: "Malva";
+  src: url("/MalvaW03-Regular.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Malva Black";
+  src: url("/MalvaW03-Black.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Malva Medium (peso 500 real): família própria, cobrindo 100–900 para
+   qualquer peso pedido renderizar o Medium desenhado (sem faux-bold). */
+@font-face {
+  font-family: "Malva Medium";
+  src: url("/malva-w03-medium.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ─────────────────────────────────────────────
+   Hero title — sky, limpo, sem efeitos
+   ───────────────────────────────────────────── */
+
+.hero-title {
+  @apply text-[1rem] tracking-[-0.03em];
+  /* Black real (família separada); font-black garante o peso mesmo se a
+     família cair no fallback. */
+  font-family: var(--font-malva-black);
+  font-weight: 900;
+  text-wrap: balance;
+}
+
+.text-gradient {
+  --from: #1bb7ff; /* sky-500 */
+  --to: #23b2eb;   /* sky-700 — o meio do degradê cai no sky-600 */
+
+  background-image: linear-gradient(to bottom, var(--from), var(--to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* No escuro, sobe um tom para o texto respirar sobre fundo quase preto */
+.dark .text-gradient {
+  --from: #38bdf8; /* sky-400 */
+  --to: #0284c7;   /* sky-600 */
+}
+
 .editor-content .tiptap p {
   margin: 0 0 0.5rem;
 }
@@ -171,7 +242,7 @@
   display: inline-block;
   vertical-align: middle;
   flex-shrink: 0;
-  background-image: url('/pad_icon.png');
+  background-image: url("/pad_icon.png");
   background-repeat: no-repeat;
   background-size: calc(408px * var(--gb-l) * var(--gb-c))
     calc(272px * var(--gb-l) * var(--gb-c));
@@ -200,27 +271,112 @@
 
 /* Face buttons — espelho do buttonMap do jogo na arte do Xbox:
    30 TRIANGLE→Y, 31 X→A, 32 CIRCLE→B, 33 SQUARE→X. */
-.gb-y { --x: 103px; --y: 1px; --w: 32px; --h: 32px; }
-.gb-a { --x: 35px; --y: 1px; --w: 32px; --h: 32px; }
-.gb-b { --x: 69px; --y: 1px; --w: 32px; --h: 32px; }
-.gb-x { --x: 1px; --y: 1px; --w: 32px; --h: 32px; }
+.gb-y {
+  --x: 103px;
+  --y: 1px;
+  --w: 32px;
+  --h: 32px;
+}
+.gb-a {
+  --x: 35px;
+  --y: 1px;
+  --w: 32px;
+  --h: 32px;
+}
+.gb-b {
+  --x: 69px;
+  --y: 1px;
+  --w: 32px;
+  --h: 32px;
+}
+.gb-x {
+  --x: 1px;
+  --y: 1px;
+  --w: 32px;
+  --h: 32px;
+}
 
 /* Shoulders (LB/RB/LT/RT). */
-.gb-lb { --x: 137px; --y: 3px; --w: 32px; --h: 27px; --gb-c: 1.2; }
-.gb-rb { --x: 171px; --y: 3px; --w: 32px; --h: 27px; --gb-c: 1.2; }
-.gb-lt { --x: 205px; --y: 3px; --w: 32px; --h: 27px; --gb-c: 1.2; }
-.gb-rt { --x: 239px; --y: 3px; --w: 32px; --h: 27px; --gb-c: 1.2; }
+.gb-lb {
+  --x: 137px;
+  --y: 3px;
+  --w: 32px;
+  --h: 27px;
+  --gb-c: 1.2;
+}
+.gb-rb {
+  --x: 171px;
+  --y: 3px;
+  --w: 32px;
+  --h: 27px;
+  --gb-c: 1.2;
+}
+.gb-lt {
+  --x: 205px;
+  --y: 3px;
+  --w: 32px;
+  --h: 27px;
+  --gb-c: 1.2;
+}
+.gb-rt {
+  --x: 239px;
+  --y: 3px;
+  --w: 32px;
+  --h: 27px;
+  --gb-c: 1.2;
+}
 
 /* START (▶) e SELECT (◀). */
-.gb-start { --x: 307px; --y: 7px; --w: 32px; --h: 21px; --gb-c: 1.55; }
-.gb-back { --x: 273px; --y: 7px; --w: 32px; --h: 21px; --gb-c: 1.55; }
+.gb-start {
+  --x: 307px;
+  --y: 7px;
+  --w: 32px;
+  --h: 21px;
+  --gb-c: 1.55;
+}
+.gb-back {
+  --x: 273px;
+  --y: 7px;
+  --w: 32px;
+  --h: 21px;
+  --gb-c: 1.55;
+}
 
 /* Setas de direção (0x41–0x48) e cursor ✛ (0x40/0x4F). */
-.gb-arrow-up { --x: 5px; --y: 36px; --w: 26px; --h: 30px; --gb-c: 1.1; }
-.gb-arrow-right { --x: 36px; --y: 38px; --w: 30px; --h: 26px; --gb-c: 1.1; }
-.gb-arrow-down { --x: 72px; --y: 36px; --w: 26px; --h: 30px; --gb-c: 1.1; }
-.gb-arrow-left { --x: 103px; --y: 38px; --w: 30px; --h: 26px; --gb-c: 1.1; }
-.gb-cursor { --x: 136px; --y: 34px; --w: 35px; --h: 34px; }
+.gb-arrow-up {
+  --x: 5px;
+  --y: 36px;
+  --w: 26px;
+  --h: 30px;
+  --gb-c: 1.1;
+}
+.gb-arrow-right {
+  --x: 36px;
+  --y: 38px;
+  --w: 30px;
+  --h: 26px;
+  --gb-c: 1.1;
+}
+.gb-arrow-down {
+  --x: 72px;
+  --y: 36px;
+  --w: 26px;
+  --h: 30px;
+  --gb-c: 1.1;
+}
+.gb-arrow-left {
+  --x: 103px;
+  --y: 38px;
+  --w: 30px;
+  --h: 26px;
+  --gb-c: 1.1;
+}
+.gb-cursor {
+  --x: 136px;
+  --y: 34px;
+  --w: 35px;
+  --h: 34px;
+}
 
 /* Decoracão do `{query` enquanto o autocomplete está ativo. */
 .tag-suggestion-active {
@@ -346,4 +502,3 @@
   box-shadow: inset 2px 0 0 var(--primary);
   font-weight: 500;
 }
-

@@ -126,12 +126,14 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
         <ResizableHandle withHandle />
 
         <ResizablePanel id="main" minSize={300}>
-          <main className="h-full min-w-0 p-3 px-4 overflow-auto">
+          <main className="h-full min-w-0 p-2 px-4 overflow-auto">
             <div className="flex items-center justify-between gap-4">
-              <h3 className="text-lg font-semibold flex items-center gap-3">
+              <h3 className="flex gap-2 items-center text-sky-500 text-lg font-malva-medium">
                 {KIND_LABELS[activeKind]}
+                {/* O span volta ao Malva padrão (Regular, família base),
+                    só desanimado. */}
                 {selectedEntry ? (
-                  <span className="font-normal opacity-70">
+                  <span className="opacity-70">
                     {" "}
                     · {selectedEntry.label}
                   </span>
@@ -180,9 +182,9 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
                 <EntryTable view={view} />
               )
             ) : loading ? (
-              <p className="mt-8 opacity-70">Carregando…</p>
+              <p className="mt-4 opacity-70">Carregando…</p>
             ) : (
-              <p className="mt-8 opacity-70">
+              <p className="mt-4 opacity-70">
                 Selecione um arquivo no sidebar.
               </p>
             )}
