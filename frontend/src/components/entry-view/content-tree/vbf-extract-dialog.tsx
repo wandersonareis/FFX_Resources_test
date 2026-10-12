@@ -163,9 +163,9 @@ export function VbfExtractDialog({
             {preview.existing > 0 ? (
               <div
                 role="alert"
-                className="flex gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm"
+                className="flex gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm"
               >
-                <AlertTriangle size={17} className="mt-0.5 shrink-0 text-amber-600" />
+                <AlertTriangle size={17} className="mt-0.5 shrink-0 text-warning" />
                 <span>
                   <strong>{preview.existing.toLocaleString('pt-BR')} arquivo(s)</strong> já
                   existem no destino e serão sobrescritos.

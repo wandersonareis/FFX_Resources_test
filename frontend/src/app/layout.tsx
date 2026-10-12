@@ -17,7 +17,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="pt-BR" className={`${geistMono.variable} h-full antialiased`}>
+    // suppressHydrationWarning: o next-themes escreve a classe `.dark` no
+    // <html> antes da hidratação (para não piscar o tema errado).
+    <html
+      lang="pt-BR"
+      className={`${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
       </body>

@@ -1,13 +1,28 @@
 'use client';
 
+import { ThemeProvider } from 'next-themes';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
 
+/**
+ * Providers globais. O ThemeProvider do next-themes é o dono do tema:
+ * escreve a classe `.dark` no <html> (o Tailwind v4 resolve via
+ * `@custom-variant dark`), persiste a escolha em localStorage e evita
+ * flash na hidratação. `defaultTheme="dark"` = code_dark.html; o toggle
+ * no header alterna para "light" (code.html).
+ */
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <TooltipProvider delayDuration={300}>
-      {children}
-      <Toaster position="bottom-center" />
-    </TooltipProvider>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="dark"
+      enableSystem={false}
+      disableTransitionOnChange
+    >
+      <TooltipProvider delayDuration={300}>
+        {children}
+        <Toaster position="bottom-center" />
+      </TooltipProvider>
+    </ThemeProvider>
   );
 }

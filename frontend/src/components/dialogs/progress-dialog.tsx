@@ -59,9 +59,9 @@ export function ProgressDialog({
           <div className="space-y-2 py-2" role="status">
             <div className="flex justify-center">
               {issueCount > 0 ? (
-                <AlertTriangle className="size-14 text-amber-600" aria-label="Concluído com falhas" />
+                <AlertTriangle className="size-14 text-warning" aria-label="Concluído com falhas" />
               ) : (
-                <CheckCircle2 className="size-14 text-emerald-600" aria-label="Concluído" />
+                <CheckCircle2 className="size-14 text-success" aria-label="Concluído" />
               )}
             </div>
             <p className="text-center text-sm tabular-nums text-muted-foreground">

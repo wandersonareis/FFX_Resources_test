@@ -35,7 +35,7 @@ export function ImageInfoPanel({
           'Repetidas',
           <div key="dups" className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-1.5">
-              <Badge className="bg-amber-600 text-white">
+              <Badge className="border border-warning/40 bg-warning/15 text-warning">
                 <Copy size={12} className="mr-1" />×{duplicates.length + 1}{' '}
                 idênticas
               </Badge>
@@ -90,7 +90,7 @@ export function ImageInfoPanel({
     [
       'Estado',
       image.modded ? (
-        <Badge key="modded" className="bg-emerald-600 text-white">
+        <Badge key="modded" className="border border-success/40 bg-success/15 text-success">
           importada (mods/)
         </Badge>
       ) : (

@@ -1,0 +1,210 @@
+/* ══════════════════════════════════════════════════════════════════════
+   THEME — tokens do design system (Tailwind v4 CSS-first).
+
+   Fonte da verdade: ./designe (code.html = light, code_dark.html = dark)
+   e ./designe/DESIGN.md. Importado por globals.css como layer(theme):
+
+     @import "./theme.css" layer(theme);
+
+   Estrutura em três blocos:
+     1. @theme        → paleta FIXA (constante nos dois temas). Vira
+                        utilitários reais do Tailwind (bg-sky-accent…).
+     2. @theme inline → tokens SEMÂNTICOS que apontam para variáveis de
+                        runtime (var(--x)). O valor muda conforme a classe
+                        .dark no <html>, então bg-background / text-primary
+                        resolvem por tema sem nenhum sufixo `dark:`.
+     3. :root / .dark → as variáveis de runtime de cada tema.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ──────────────────────────────────────────────────────────────────────
+   1. PALETA FIXA
+   ────────────────────────────────────────────────────────────────────── */
+@theme {
+  /* Chrome = title bar + status bar. Painel = sidebar/header/tabela. */
+  --color-chrome-light: #f1f5f9; /* code.html  · slate-100 */
+  --color-chrome-dark: #0b0f19; /* code_dark  · title/status bar */
+  --color-panel-light: #ffffff; /* code.html  · painéis brancos   */
+  --color-panel-dark: #0f172a; /* code_dark  · slate-900        */
+  --color-canvas-dark: #020617; /* code_dark  · slate-950        */
+
+  /* Acentos fixos (DESIGN.md). Para status que MUDAM por tema, use os
+     tokens semânticos --color-success / --color-warning (ver :root/.dark). */
+  --color-sky-accent: #38bdf8; /* sky-400 — primary no escuro     */
+  --color-indigo-tag: #818cf8; /* indigo-400 — macros/speaker tags */
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   2. TOKENS SEMÂNTICOS  →  variáveis de runtime
+   ────────────────────────────────────────────────────────────────────── */
+@theme inline {
+  /* Superfícies */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-panel: var(--panel);
+  --color-chrome: var(--chrome);
+
+  /* Ações */
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-hover-foreground: var(--primary-hover-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  /* Apoio */
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  /* Status semânticos (validações/avisos do DESIGN.md) */
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+
+  /* Estrutura */
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Sidebar (shadcn) */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Charts */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Fontes — Malva Regular (base) e Malva Medium (títulos).
+     SEM Malva Black. */
+  --font-sans: "Malva", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono);
+  --font-heading: "Malva", ui-sans-serif, system-ui, sans-serif;
+  --font-malva-medium: "Malva Medium", "Malva", ui-sans-serif, system-ui,
+    sans-serif;
+
+  /* Raio — DESIGN.md manda 4px nos controles; 0.5rem como base deixa
+     rounded-md≈6px e rounded-lg≈8px, batendo com os mockups. */
+  --radius: 0.5rem;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   3. VARIÁVEIS POR TEMA
+   ────────────────────────────────────────────────────────────────────── */
+
+/* LIGHT — code.html: canvas slate-50, painéis brancos, chrome slate-100,
+   primary sky-500. */
+:root {
+  --background: #f8fafc; /* slate-50  */
+  --foreground: #1e293b; /* slate-800 */
+  --card: #ffffff;
+  --card-foreground: #1e293b;
+  --popover: #ffffff;
+  --popover-foreground: #1e293b;
+  --panel: #ffffff;
+  --chrome: #f1f5f9; /* slate-100 */
+
+  --primary: #0ea5e9; /* sky-500 */
+  --primary-foreground: #ffffff;
+  --primary-hover: #0284c7; /* sky-600 */
+  --primary-hover-foreground: #ffffff;
+  --secondary: #818cf8; /* indigo-400 */
+  --secondary-foreground: #ffffff;
+
+  --muted: #f1f5f9; /* slate-100 */
+  --muted-foreground: #64748b; /* slate-500 */
+  --accent: #e2e8f0; /* slate-200 */
+  --accent-foreground: #0f172a;
+  --destructive: #dc2626; /* red-600 */
+  --destructive-foreground: #ffffff;
+  --success: #16a34a; /* green-600 — legível sobre claro */
+  --warning: #b45309; /* amber-700 — legível sobre claro */
+
+  --border: #e2e8f0; /* slate-200 */
+  --input: #e2e8f0;
+  --ring: #0ea5e9; /* sky-500 */
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1e293b;
+  --sidebar-primary: #0ea5e9;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f1f5f9;
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #0ea5e9;
+
+  --chart-1: #0ea5e9;
+  --chart-2: #818cf8;
+  --chart-3: #34d399;
+  --chart-4: #f59e0b;
+  --chart-5: #ef4444;
+}
+
+/* DARK — code_dark.html: canvas slate-950, chrome #0b0f19, painéis
+   slate-900, primary sky-400. */
+.dark {
+  --background: #020617; /* slate-950 */
+  --foreground: #e2e8f0; /* slate-200 */
+  --card: #0f172a; /* slate-900 */
+  --card-foreground: #e2e8f0;
+  --popover: #0f172a;
+  --popover-foreground: #e2e8f0;
+  --panel: #0f172a;
+  --chrome: #0b0f19; /* title/status bar */
+
+  --primary: #38bdf8; /* sky-400 */
+  --primary-foreground: #082f49; /* sky-900 */
+  --primary-hover: #0ea5e9; /* sky-500 */
+  --primary-hover-foreground: #ffffff;
+  --secondary: #818cf8; /* indigo-400 */
+  --secondary-foreground: #ffffff;
+
+  --muted: #1e293b; /* slate-800 */
+  --muted-foreground: #94a3b8; /* slate-400 */
+  --accent: #1e293b; /* slate-800 */
+  --accent-foreground: #f1f5f9;
+  --destructive: #f87171; /* red-400 */
+  --destructive-foreground: #ffffff;
+  --success: #34d399; /* emerald-400 — DESIGN.md tertiary */
+  --warning: #fbbf24; /* amber-400 */
+
+  --border: #1e293b; /* slate-800 */
+  --input: #334155; /* slate-700 */
+  --ring: #38bdf8; /* sky-400 */
+
+  --sidebar: #0f172a;
+  --sidebar-foreground: #e2e8f0;
+  --sidebar-primary: #38bdf8;
+  --sidebar-primary-foreground: #082f49;
+  --sidebar-accent: #1e293b;
+  --sidebar-accent-foreground: #f1f5f9;
+  --sidebar-border: #1e293b;
+  --sidebar-ring: #38bdf8;
+
+  --chart-1: #38bdf8;
+  --chart-2: #818cf8;
+  --chart-3: #34d399;
+  --chart-4: #f59e0b;
+  --chart-5: #f87171;
+}

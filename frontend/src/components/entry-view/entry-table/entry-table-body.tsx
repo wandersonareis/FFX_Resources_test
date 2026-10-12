@@ -33,7 +33,7 @@ export function EntryTableBody({
             onFocus={() => onFocusRow(key)}
             className={
               focusedRowId === key
-                ? 'bg-sky-100 outline outline-sky-400'
+                ? 'bg-primary/10 outline outline-primary/60'
                 : 'outline-none focus-visible:bg-muted/40'
             }
           >

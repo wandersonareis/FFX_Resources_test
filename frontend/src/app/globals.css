@@ -1,149 +1,32 @@
+/* ══════════════════════════════════════════════════════════════════════
+   GLOBALS — ponto de entrada do CSS.
+   Os tokens do tema (paleta light/dark, fontes, raio) vivem em theme.css.
+
+     @layer theme, base, components, utilities;
+     @import "./theme.css" layer(theme);
+   ══════════════════════════════════════════════════════════════════════ */
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Ordem das camadas do Tailwind v4 — declarada ANTES de qualquer import
+   que as use, senão o cascade fica errado. */
+@layer theme, base, components, utilities;
+
+@import "./theme.css" layer(theme);
+
 @custom-variant dark (&:is(.dark *));
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: "Malva", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono);
-  --font-heading: "Malva", ui-sans-serif, system-ui, sans-serif;
-  /* Malva Black (peso 900 real): só em pontos específicos (hero-title e
-     onde for chamado explicitamente com font-malva-black). */
-  --font-malva-black: "Malva Black", "Malva", ui-sans-serif, system-ui,
-    sans-serif;
-  /* Malva Medium (peso 500 real, arquivo próprio): uso específico —
-     títulos de seção (ex.: cabeçalho do painel principal). Chamar com
-     font-malva-medium. */
-  --font-malva-medium: "Malva Medium", "Malva", ui-sans-serif, system-ui,
-    sans-serif;
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
-}
-
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
-  }
-}
+/* ══════════════════════════════════════════════════════════════════════
+   BASE — reset, fontes locais (Malva Regular + Medium), scrollbars.
+   ══════════════════════════════════════════════════════════════════════ */
 
 /* Fontes do projeto — família "Malva" (GlYPH fonts, arquivo local em
-   /public). A família "Malva" carrega SÓ o Regular, declarado cobrindo
-   100–900: todo peso pedido (medium/semibold/bold) renderiza os glifos
-   desenhados do Regular, sem faux-bold do motor e sem puxar o Black.
-   O Black (peso 900 real) mora numa família SEPARADA ("Malva Black"),
-   usada só onde é chamado explicitamente (hero-title). */
+   /public). A família "Malva" carrega SÓ o Regular, cobrindo 100–900:
+   todo peso pedido (medium/semibold/bold) renderiza os glifos do Regular,
+   sem faux-bold do motor. O Medium (peso 500 real) é família própria —
+   chamado com font-malva-medium. NÃO existe Malva Black neste projeto. */
 @font-face {
   font-family: "Malva";
   src: url("/MalvaW03-Regular.woff2") format("woff2");
@@ -153,16 +36,6 @@
 }
 
 @font-face {
-  font-family: "Malva Black";
-  src: url("/MalvaW03-Black.woff2") format("woff2");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* Malva Medium (peso 500 real): família própria, cobrindo 100–900 para
-   qualquer peso pedido renderizar o Medium desenhado (sem faux-bold). */
-@font-face {
   font-family: "Malva Medium";
   src: url("/malva-w03-medium.woff2") format("woff2");
   font-weight: 100 900;
@@ -170,65 +43,223 @@
   font-display: swap;
 }
 
-/* ─────────────────────────────────────────────
-   Hero title — sky, limpo, sem efeitos
-   ───────────────────────────────────────────── */
-
-.hero-title {
-  @apply text-[1rem] tracking-[-0.03em];
-  /* Black real (família separada); font-black garante o peso mesmo se a
-     família cair no fallback. */
-  font-family: var(--font-malva-black);
-  font-weight: 900;
-  text-wrap: balance;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
-.text-gradient {
-  --from: #1bb7ff; /* sky-500 */
-  --to: #23b2eb;   /* sky-700 — o meio do degradê cai no sky-600 */
-
-  background-image: linear-gradient(to bottom, var(--from), var(--to));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+/* Scrollbars finas (6px) — trilha transparente, thumb tomado da borda
+   do tema corrente (var(--border)). */
+@layer base {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
 }
 
-/* No escuro, sobe um tom para o texto respirar sobre fundo quase preto */
-.dark .text-gradient {
-  --from: #38bdf8; /* sky-400 */
-  --to: #0284c7;   /* sky-600 */
+/* ══════════════════════════════════════════════════════════════════════
+   COMPONENTS — classes utilitárias específicas do app.
+   ══════════════════════════════════════════════════════════════════════ */
+
+@layer components {
+  /* Título em degradê sky — limpo, sem efeitos. O .dark sobe um tom
+     para o texto respirar sobre o fundo quase preto. */
+  .text-gradient {
+    --from: #0ea5e9; /* sky-500 */
+    --to: #0284c7; /* sky-700 — o meio cai no sky-600 */
+
+    background-image: linear-gradient(to bottom, var(--from), var(--to));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  .dark .text-gradient {
+    --from: #38bdf8; /* sky-400 */
+    --to: #0284c7; /* sky-600 */
+  }
+
+  .editor-content .tiptap p {
+    margin: 0 0 0.5rem;
+  }
+
+  /* ── Chip de tag de controle ({WAIT}, speaker, etc.) ── */
+  .game-tag-chip {
+    display: inline-block;
+    padding: 0 0.45rem;
+    margin: 0 0.1rem;
+    border-radius: 4px;
+    font-size: 0.78em;
+    font-weight: 600;
+    line-height: 1.6;
+    background: color-mix(in srgb, var(--secondary) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--secondary) 40%, transparent);
+    white-space: nowrap;
+    vertical-align: baseline;
+  }
+
+  .game-tag-chip.locked {
+    background: color-mix(in srgb, var(--muted-foreground) 22%, transparent);
+    border-style: dashed;
+    cursor: not-allowed;
+    text-transform: none;
+  }
+
+  .game-tag-chip.invalid {
+    background: color-mix(in srgb, var(--destructive) 16%, transparent);
+    border-color: color-mix(in srgb, var(--destructive) 65%, transparent);
+  }
+
+  /* Decoracão do `{query` enquanto o autocomplete está ativo. */
+  .tag-suggestion-active {
+    background: color-mix(in srgb, var(--primary) 18%, transparent);
+    border-radius: 3px;
+    text-decoration: underline dotted;
+  }
+
+  .tag-suggestion-active.is-empty {
+    text-decoration: none;
+  }
+
+  /* Popup do autocomplete do editor, montado DENTRO do container passado à
+     extensão (o wrapper do GameTextEditor; num modal Radix, dentro do
+     diálogo). Estar dentro do conteúdo do Dialog é o que torna
+     cliques/Escape nele internos ao modal — montado no body, o
+     DismissableLayer do Radix FECHA o diálogo inteiro em qualquer clique
+     no popup (interact-outside). O clique nos itens faz preventDefault no
+     mousedown (no JS): o foco/caret permanece no editor (senão o Tiptap
+     perde a seleção e a sugestão sai antes do click completar). */
+  .tag-suggestion {
+    position: absolute;
+    z-index: 100;
+    min-width: 240px;
+    max-width: 380px;
+    max-height: 300px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--popover);
+    color: var(--popover-foreground);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.18),
+      0 2px 6px rgba(0, 0, 0, 0.12);
+    font-size: 0.82rem;
+    line-height: 1.4;
+  }
+
+  .tag-suggestion-list {
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+    overflow-y: auto;
+  }
+
+  .tag-suggestion-item {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.28rem 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .tag-suggestion-item.active {
+    background: var(--accent);
+    color: var(--accent-foreground);
+  }
+
+  .tag-suggestion-label {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .tag-suggestion-detail {
+    opacity: 0.7;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tag-suggestion-empty {
+    padding: 0.6rem;
+    opacity: 0.65;
+  }
+
+  .tag-suggestion-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.5rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.7rem;
+    opacity: 0.75;
+  }
+
+  /* Aviso do rodapé: N itens ocultos pelo corte de MAX_VALUES — filtre. */
+  .tag-suggestion-note {
+    flex-basis: 100%;
+    margin-top: 0.1rem;
+    font-size: 0.68rem;
+    font-style: italic;
+  }
+
+  .tag-suggestion-footer kbd {
+    min-width: 1.1rem;
+    padding: 0 0.25rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.68rem;
+    text-align: center;
+  }
+
+  /* ── Células da tabela de tradução ── */
+  .text-cell {
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-width: 480px;
+  }
+
+  .translated-cell {
+    cursor: pointer;
+  }
+
+  .translated-cell:hover {
+    background: var(--accent);
+  }
+
+  /* Linha editada: faixa de 2px na esquerda na cor primária. */
+  .translated-cell.edited {
+    box-shadow: inset 2px 0 0 var(--primary);
+    font-weight: 500;
+  }
 }
 
-.editor-content .tiptap p {
-  margin: 0 0 0.5rem;
-}
-
-.game-tag-chip {
-  display: inline-block;
-  padding: 0 0.45rem;
-  margin: 0 0.1rem;
-  border-radius: 4px;
-  font-size: 0.78em;
-  font-weight: 600;
-  line-height: 1.6;
-  background: rgba(98, 91, 113, 0.16);
-  border: 1px solid rgba(98, 91, 113, 0.4);
-  white-space: nowrap;
-  vertical-align: baseline;
-}
-
-.game-tag-chip.locked {
-  background: rgba(120, 120, 120, 0.22);
-  border-style: dashed;
-  cursor: not-allowed;
-  text-transform: none;
-}
-
-.game-tag-chip.invalid {
-  background: rgba(190, 60, 60, 0.16);
-  border-color: rgba(190, 60, 60, 0.65);
-}
+/* ══════════════════════════════════════════════════════════════════════
+   SPRITE DE ÍCONES DE CONTROLE (fora do @layer components de propósito:
+   usa vars customizadas --x/--y e precisa de precedência alta)
+   ══════════════════════════════════════════════════════════════════════ */
 
 /* Sprite de ícones de controle — public/pad_icon.png (408×272, fundo
    transparente, glifos do Xbox como renderiza o jogo no PC). Uma imagem só,
@@ -376,129 +407,4 @@
   --y: 34px;
   --w: 35px;
   --h: 34px;
-}
-
-/* Decoracão do `{query` enquanto o autocomplete está ativo. */
-.tag-suggestion-active {
-  background: rgba(90, 130, 200, 0.18);
-  border-radius: 3px;
-  text-decoration: underline dotted;
-}
-
-.tag-suggestion-active.is-empty {
-  text-decoration: none;
-}
-
-/* Popup do autocomplete do editor, montado DENTRO do container passado à
-   extensão (o wrapper do GameTextEditor; num modal Radix, dentro do diálogo).
-   Estar dentro do conteúdo do Dialog é o que torna cliques/Escape nele
-   internos ao modal — montado no body, o DismissableLayer do Radix FECHA
-   o diálogo inteiro em qualquer clique no popup (interact-outside).
-   O clique nos itens faz preventDefault no mousedown (no JS): o foco/caret
-   permanece no editor (senão o Tiptap perde a seleção e a sugestão sai
-   antes do click completar). */
-.tag-suggestion {
-  position: absolute;
-  z-index: 100;
-  min-width: 240px;
-  max-width: 380px;
-  max-height: 300px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--popover);
-  color: var(--popover-foreground);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.18),
-    0 2px 6px rgba(0, 0, 0, 0.12);
-  font-size: 0.82rem;
-  line-height: 1.4;
-}
-
-.tag-suggestion-list {
-  list-style: none;
-  margin: 0;
-  padding: 4px;
-  overflow-y: auto;
-}
-
-.tag-suggestion-item {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  padding: 0.28rem 0.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.tag-suggestion-item.active {
-  background: var(--accent);
-  color: var(--accent-foreground);
-}
-
-.tag-suggestion-label {
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.tag-suggestion-detail {
-  opacity: 0.7;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tag-suggestion-empty {
-  padding: 0.6rem;
-  opacity: 0.65;
-}
-
-.tag-suggestion-footer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.3rem 0.5rem;
-  border-top: 1px solid var(--border);
-  font-size: 0.7rem;
-  opacity: 0.75;
-}
-
-/* Aviso do rodapé: N itens ocultos pelo corte de MAX_VALUES — filtre. */
-.tag-suggestion-note {
-  flex-basis: 100%;
-  margin-top: 0.1rem;
-  font-size: 0.68rem;
-  font-style: italic;
-}
-
-.tag-suggestion-footer kbd {
-  min-width: 1.1rem;
-  padding: 0 0.25rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  font-family: inherit;
-  font-size: 0.68rem;
-  text-align: center;
-}
-
-.text-cell {
-  white-space: pre-wrap;
-  word-break: break-word;
-  max-width: 480px;
-}
-
-.translated-cell {
-  cursor: pointer;
-}
-
-.translated-cell:hover {
-  background: var(--accent);
-}
-
-.translated-cell.edited {
-  box-shadow: inset 2px 0 0 var(--primary);
-  font-weight: 500;
 }

@@ -128,7 +128,7 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
         <ResizablePanel id="main" minSize={300}>
           <main className="h-full min-w-0 p-2 px-4 overflow-auto">
             <div className="flex items-center justify-between gap-4">
-              <h3 className="flex gap-2 items-center text-sky-500 text-lg font-malva-medium">
+              <h3 className="flex gap-2 items-center text-primary text-lg font-malva-medium">
                 {KIND_LABELS[activeKind]}
                 {/* O span volta ao Malva padrão (Regular, família base),
                     só desanimado. */}
@@ -144,7 +144,7 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
                     className={
                       progress.translated >= progress.total &&
                       progress.total > 0
-                        ? "text-emerald-700 border-emerald-300 dark:text-emerald-400 dark:border-emerald-800"
+                        ? "text-success border-success/40"
                         : "text-muted-foreground"
                     }
                   >

@@ -128,7 +128,7 @@ export function StatusBar() {
   const warningPanelOpen = openPanel === 'warning';
 
   return (
-    <footer className="relative z-20 border-t bg-background">
+    <footer className="relative z-20 border-t bg-chrome">
       <div className="flex h-8 items-center gap-2 text-xs">
         {/* Três colunas iguais: as setas começam na MESMA margem da
             sidebar (pl-3), o progresso cai no centro exato da janela e o

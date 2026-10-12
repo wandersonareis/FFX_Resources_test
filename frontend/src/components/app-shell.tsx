@@ -51,6 +51,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { GameVersionTab } from '@/components/game-version-tab';
 import { StatusBar } from '@/components/status-bar/status-bar';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { ConfigDialog } from '@/components/dialogs/config-dialog';
 import { ImportSummaryDialog } from '@/components/dialogs/import-summary-dialog';
 import { ProgressDialog } from '@/components/dialogs/progress-dialog';
@@ -398,9 +399,10 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
 
   return (
     <div className="flex h-screen flex-col">
-      <header className="sticky top-0 z-10 flex items-center gap-2 bg-background px-4 py-2 border-b">
+      <header className="sticky top-0 z-10 flex items-center gap-2 bg-chrome px-4 py-2 border-b">
         <span className="text-xl font-malva-medium text-gradient">FINAL FANTASY X and X-2 HD Remaster Resources Editor</span>
         <span className="flex-1" />
+        <ThemeToggle />
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -448,7 +450,7 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
       </header>
 
       <Tabs value={String(selectedIndex)} onValueChange={onTabChange} className="flex-1 min-h-0 flex flex-col">
-        <div className="mx-4 mt-2 flex items-center justify-between gap-2">
+        <div className="mx-4 mt-2 flex items-center justify-between gap-1">
           <TabsList variant="gradient" className="w-fit">
             {GAME_VERSIONS.map((tab, index) => (
               <Tooltip key={tab.id}>
@@ -466,7 +468,7 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
               </Tooltip>
             ))}
           </TabsList>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">

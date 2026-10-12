@@ -134,8 +134,8 @@ export const TreeItem = memo(function TreeItem({
           variant="ghost"
           size="sm"
           data-node-button
-          className={`w-full justify-start text-left min-w-0 focus-visible:bg-sky-200 focus-visible:ring-1 focus-visible:ring-sky-400 focus-visible:outline-none ${
-            isSelected ? 'bg-sky-100 ring-1 ring-sky-400' : ''
+          className={`w-full justify-start text-left min-w-0 focus-visible:bg-primary/10 focus-visible:ring-1 focus-visible:ring-primary focus-visible:outline-none ${
+            isSelected ? 'bg-primary/10 ring-1 ring-primary text-primary' : ''
           }`}
           onClick={() => onSelect(node)}
         >
