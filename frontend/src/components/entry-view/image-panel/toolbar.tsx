@@ -1,16 +1,17 @@
 'use client';
 
-import { Copy, Download, FlipVertical, FolderInput, RefreshCw } from 'lucide-react';
+import { Copy, FlipVertical, FolderInput, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SHORTCUTS, shortcutTip } from '@/lib/ffx/shortcuts';
 import { ImageExportMenu } from './export-menu';
 import type { ImageBusy } from './use-image-actions';
 
 /**
- * Barra de ações do painel: extrair cópias de trabalho (.dds + .png em
- * mods/images), salvar em qualquer lugar do disco, importar um .dds editado
- * (repack só do mesmo formato/dimensão nesta etapa), propagar o import para
- * as cópias idênticas, espelhar a pré-visualização e reanalisar o índice.
+ * Barra de ações do painel: exportar (salvar como .dds/.png em pasta livre,
+ * ou extrair os dois formatos para mods/images — a extração mora no menu
+ * Exportar), importar um .dds editado (repack só do mesmo formato/dimensão
+ * nesta etapa), propagar o import para as cópias idênticas, espelhar a
+ * pré-visualização e reanalisar o índice.
  */
 export function ImageToolbar({
   busy,
@@ -39,21 +40,12 @@ export function ImageToolbar({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Button
-        size="sm"
-        variant="outline"
+      <ImageExportMenu
         disabled={busy !== null}
-        title={
-          readOnly
-            ? 'Extrai esta imagem do .vbf como .dds e .png, preservando o caminho interno'
-            : 'Gera .dds e .png na pasta de imagens de trabalho — o diálogo pergunta se é só esta ou todas as cópias'
-        }
-        onClick={onExtract}
-      >
-        <Download size={16} />
-        Extrair .dds + .png
-      </Button>
-      <ImageExportMenu disabled={busy !== null} onSave={onSave} />
+        readOnly={readOnly}
+        onSave={onSave}
+        onExtract={onExtract}
+      />
       <Button size="sm" disabled={busy !== null} onClick={onImport}>
         <FolderInput size={16} />
         {busy === 'import'
