@@ -1,12 +1,7 @@
 package ffx2
 
-// accessory.bin — ffx2/master/jppc/battle/kernel/accessory.h
-// (C#: src/core/ffx2/accessory.cs) individual = 0x54 (84) — igual ao C#.
-//
-// Chaves (nomes dos campos do struct C#, ver "Convenções" do
-// pacote): name@0x00, help@0x04, creature_data_help@0x24.
-
-// FeedStatChanges (16 bytes) — hp/mp int + 8 stats byte no C#.
+// accessory.bin
+// FeedStatChanges (16 bytes) — hp/mp int + 8 stats byte.
 type FeedStatChanges struct {
 	HP           int32
 	MP           int32
@@ -20,18 +15,18 @@ type FeedStatChanges struct {
 	Accuracy     uint8
 }
 
-// AccessoryCreatureData (0x30) — Explicit, Size=0x30 no C#: o gap
-// 0x0C..0x1D não é nomeado no C#; aqui vira Reserve1.
+// AccessoryCreatureData (0x30) — Explicit, Size=0x30 : o gap
+// 0x0C..0x1D não é nomeado; aqui vira Reserve1.
 type AccessoryCreatureData struct {
-	Help           TextRef // C# `creature_data.help`
+	Help           TextRef
 	Abilities      [2]UnlockableAbility
-	Reserve1       [0x11]uint8 // gap 0x0C..0x1D não nomeado no C#
+	Reserve1       [0x11]uint8
 	FeedAmount     uint8
 	AbilityToLearn uint16
 	FeedStats      FeedStatChanges
 }
 
-// Accessory (84 bytes) — Sequential no C#.
+// Accessory (84 bytes)
 type Accessory struct {
 	Name         TextRef
 	Help         TextRef
@@ -40,7 +35,7 @@ type Accessory struct {
 	User         uint8
 	Icon         uint8
 	OrderingIdx  uint8
-	Reserve      uint8 // C# `reserve` (privado)
+	Reserve      uint8
 	StatChanges  StatChanges
 	Abilities    [2]UnlockableAbility
 	Price        uint32

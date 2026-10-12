@@ -1,20 +1,19 @@
 package ffx2
 
-// Last Mission (ffx_ps2/ffx2/master/jppc/lastmiss/kernel/*.h)
-// (C#: src/core/ffx2/{LmCommand,LmMonMagic,LmMonster}.cs)
+// Last Mission
 //
-// Divergências PC vs struct C# (resolvidas empiricamente; preservadas como
+// Divergências PC vs struct (resolvidas empiricamente; preservadas como
 // reserves nomeadas):
-//   - LmCommand: C# termina em 0x43 (67B), binário PC = 68B (byte final = 0).
-//   - LmMonMagic: C# termina em 0x45 (69B), binário PC = 72B (3 bytes finais).
-//   - LmMonster: C# termina em 0x7B (123B), binário PC = 128B (flag@0x7B +
-//     bitfield u32@0x7C sempre não-zero <=127) — struct C# é `partial`.
+//   - LmCommand: termina em 0x43 (67B), binário PC = 68B (byte final = 0).
+//   - LmMonMagic: termina em 0x45 (69B), binário PC = 72B (3 bytes finais).
+//   - LmMonster: termina em 0x7B (123B), binário PC = 128B (flag@0x7B +
+//     bitfield u32@0x7C sempre não-zero <=127) — struct é `partial`.
 //
-// Chaves = nomes dos campos do struct C# (ver "Convenções" do
+// Chaves = nomes dos campos do struct (ver "Convenções" do
 // pacote): name@0x00, help@0x08, information@0x10 em LmCommand/LmMonMagic;
 // name@0x00, help@0x04 em LmMonster.
 
-// LmCommand (68 bytes). `name`/`help`/`information` são `uint` no C# — pares
+// LmCommand (68 bytes). `name`/`help`/`information` são `uint` — pares
 // offset+chave de 4 bytes, i.e. TextRef.
 type LmCommand struct {
 	Name               TextRef
@@ -131,11 +130,11 @@ type LmMonMagic struct {
 	StatusChg          uint8
 	StatusOnoff        uint8
 	StatusHit          uint8
-	Reserve1           [3]uint8 // PC: C# termina em 0x45; binário = 0x48
+	Reserve1           [3]uint8 // PC: termina em 0x45; binário = 0x48
 }
 
 // LmMonster (128 bytes). Os campos finais (ExtraFlag/ExtraFlags) não existem
-// no struct parcial do C#; são lidos do binário PC (0x7B..0x80) para round-trip.
+// no struct parcial; são lidos do binário PC (0x7B..0x80) para round-trip.
 type LmMonster struct {
 	Name                TextRef
 	Help                TextRef
@@ -225,6 +224,6 @@ type LmMonster struct {
 	ProhibitOversoul    uint8
 	ProhibitChangeMoney uint8
 	ProhibitChangeDress uint8
-	ExtraFlag           uint8  // 0x7B: flag ausente no C# (98% dos monstros = 1)
-	ExtraFlags          uint32 // 0x7C..0x80: bitfield ausente no C# (sempre 1..127)
+	ExtraFlag           uint8  // 0x7B: flag ausente (98% dos monstros = 1)
+	ExtraFlags          uint32 // 0x7C..0x80: bitfield ausente (sempre 1..127)
 }

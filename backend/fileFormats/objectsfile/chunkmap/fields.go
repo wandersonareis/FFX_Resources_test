@@ -62,7 +62,7 @@ func Fields[T any]() ([]Field, error) {
 	return slices.Clone(r.fields), nil
 }
 
-// SegmentFields devolve só os campos KindText de Fields, na ordem do arquivo.
+// SegmentFields returns only text references, in their binary order.
 func SegmentFields[T any]() ([]Field, error) {
 	all, err := Fields[T]()
 	if err != nil {

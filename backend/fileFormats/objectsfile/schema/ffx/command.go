@@ -10,9 +10,8 @@ package ffx
 //
 // PCommand = Command + PCommandData (4 bytes no fim do chunk).
 //
-// As chaves são os nomes dos campos do struct C#, em snake_case
-// (ver "Convenções" no doc do pacote): name/name_simplified,
-// desc/desc_simplified, help/help_simplified.
+// Os rótulos textuais são derivados dos campos Go: Name.Standard,
+// Name.Simplified, Desc.Standard e Desc.Simplified.
 //
 // Alinhamento validado por stats (320 chunks de command.bin): steals_gil 0/1
 // @0x21 (2 comandos), mp_cost <=99 @0x25, JINX bit5 @0x56, overdrive_200 bit6
@@ -21,8 +20,8 @@ package ffx
 // CommandBody (76 bytes @0x10..0x5C) — trecho comum a Command e PCommand:
 // animações, flags de menu/dano, custos, mapa de status e buffs.
 type CommandBody struct {
-	Anim1      uint16 // C# anim_1 (snake_case geraria anim1)
-	Anim2      uint16 // C# anim_2 (snake_case geraria anim2)
+	Anim1      uint16
+	Anim2      uint16
 	Icon       uint8
 	CasterAnim uint8
 
@@ -34,7 +33,7 @@ type CommandBody struct {
 	FlagsUsage   uint8
 	FlagsMisc    uint32
 	FlagsDamage  uint8
-	StealsGil    uint8 // C# bool — só Steal/Mug (2 comandos)
+	StealsGil    uint8 // bool — só Steal/Mug (2 comandos)
 	PartyPreview uint8
 
 	FlagsDamageClass uint8
@@ -61,30 +60,30 @@ type CommandBody struct {
 	FlagsBuffsMix     uint16 // u16 @0x5A (bit6 = overdrive_200)
 }
 
-// MonMagic (92 bytes) = C# FFX.Command — monmagic1/2.bin.
+// MonMagic (92 bytes) = FFX.Command — monmagic1/2.bin.
 type MonMagic struct {
 	Name TextPair
 	Desc TextPair
 	CommandBody
 }
 
-// Command (96 bytes) = C# FFX.PCommand — command.bin/item.bin.
+// Command (96 bytes) = FFX.PCommand — command.bin/item.bin.
 type Command struct {
 	Name TextPair
-	Desc TextPair // C# `desc`
+	Desc TextPair
 	CommandBody
 
 	// PCommandData @0x5C..0x60 (src/core/ffx/command.cs).
 	OrderingIdx    uint8  // índice de ordenação no menu (1..23)
 	SphereGridRole uint8  // sempre 0 no PC
-	ReserveData    uint16 // C# _0x02 (reserva do layout)
+	ReserveData    uint16 // _0x02 (reserva do layout)
 }
 
 // important.bin (itens-chave) — src/core/ffx/important.cs. individual = 20B.
 // Mesmo formato de command.bin (4 chaves @0x00..0x10); sem PCommandData.
 type KeyItem struct {
 	Name      TextPair
-	Help      TextPair // C# `help`
+	Help      TextPair
 	ItemType  uint8
 	ItemValue uint8
 	Icon      uint8

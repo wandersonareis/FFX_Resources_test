@@ -18,32 +18,22 @@ import (
 )
 
 /*
-Validação dos schemas chunkmap contra os binários reais — o fluxo novo é
-AUTO-SUFICIENTE: nada aqui depende do KeyedStringFile legado para validar o
-novo fluxo em si.
+Validação dos schemas chunkmap contra os binários reais. O fluxo exporta
+somente os tipos explicitamente textuais e preserva os demais bytes do chunk.
 
 Para cada arquivo coberto por uma struct T:
 
-  1. binary.Size(T) == individualLength lido do cabeçalho (V1 = 20 bytes,
-     FFX; V2 = 32 bytes, FFX-2/LastMission) e == totalLength/count;
+  1. binary.Size(T) <= individualLength lido do cabeçalho (V1 = 20 bytes,
+     FFX; V2 = 32 bytes, FFX-2/LastMission);
   2. round-trip Decode -> Encode byte-exato em TODOS os chunks;
-  3. as chaves do objeto mapeado são exatamente as declaradas em wantKeys
-     (snake_case do nome do campo C#, na ordem do arquivo);
+	  3. os nomes dos campos mapeados são os caminhos Go declarados no schema,
+	     na ordem do arquivo;
   4. ToBytes sem edição devolve exatamente os bytes originais do chunk;
   5. ciclo de vida do arquivo inteiro: LoadFileFromBytes -> ToBytes reproduz
      o binário original byte-a-byte (header verbatim + chunks + string table
      reconstruída);
   6. export -> import identidade (importar o que foi exportado não muda
-     nada) e o caminho dos builders (ExportFieldTexts) devolve o mesmo
-     resultado — coberto por chunkmap/text_test.go.
-
-Cruzamento com o fluxo legado (diagnóstico de migração, separado):
-a comparação é por QUANTIDADE de campos de texto — independentemente de qual
-lado tem mais ou menos — e pela IGUALDADE dos valores extraídos, posiçional.
-Os nomes ("name", "help", ...) são apenas rótulos humanos: nunca participam
-da comparação. Divergência de quantidade falha o teste e pede conferência no
-editor hex (caso config_txt: o legado lia 2 campos e o binário tem 4 —
-corrigido no LayoutSet; os demais devem casar).
+     nada), além dos testes específicos de TextPair e padding.
 
 Os binários vêm de build/bin/data (fonte primária — tem todos os arquivos de
 FFX, FFX-2 e LastMission); testData/ e examples/ são fallbacks gitignored.
@@ -174,7 +164,7 @@ func checkSchema[T any](t *testing.T, patternPath string, version common.GameVer
 		}
 	}
 
-	// (5) ciclo de vida do arquivo inteiro, sem tocar no fluxo legado
+	// (5) ciclo de vida do arquivo inteiro.
 	file, err := chunkmap.LoadFileFromBytes[T](version, patternPath, data)
 	if err != nil {
 		t.Fatalf("LoadFileFromBytes: %v", err)

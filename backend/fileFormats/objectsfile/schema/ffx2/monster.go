@@ -1,11 +1,7 @@
 package ffx2
 
 // monster.bin / monster2.bin — ffx_ps2/ffx2/master/jppc/battle/kernel/
-// {monster,monster2}.h (C#: src/core/ffx2/{monster,Monster2}.cs).
-// individual = 0xC8 (200) nos dois, igual aos structs C#.
-
-// ChrItemLoot (24 bytes) — 6 pares (item/amount) comuns+raros de
-// drop/steal/bribe (src/core/ffx2/battle/btldrop.cs).
+// ChrItemLoot (24 bytes) — 6 pares (item/amount)
 type ChrItemLoot struct {
 	ItemCommon        uint16
 	ItemCommonAmount  uint16
@@ -32,7 +28,7 @@ type ChrLoot struct {
 	Loot        ChrItemLoot
 }
 
-// Monster (200 bytes) — src/core/ffx2/monster.cs.
+// Monster (200 bytes)
 // Chaves: name@0x00, help@0x04 (NameOnlyV2Layout legado lê só
 // name@0x00).
 type Monster struct {
@@ -82,9 +78,8 @@ type Monster struct {
 	Reserve2        uint16
 }
 
-// Monster2 (200 bytes) — src/core/ffx2/Monster2.cs (struct `partial`,
+// Monster2 (200 bytes)
 // descompilado: os buffers são InlineArray(24/24/24/16/4/4/4)).
-// `name`/`help` são `uint` no C#, mas são pares offset+chave (Segment).
 type Monster2 struct {
 	Name TextRef
 	Help TextRef

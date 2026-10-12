@@ -1,11 +1,7 @@
 package ffx2
 
 // *_txt.bin e oversoul.bin (tabelas de texto e tabela de Oversoul)
-// — src/core/ffx2/{BtlTxt,BtlEndTxt,MenuTxt,Oversoul}.cs.
-// Chaves = nomes dos campos do struct C#.
-
-// Oversoul (8B) — oversoul.bin (individual = 8). `name` é `uint` no C# (par
-// offset+chave) e `count` é InlineArray(2) de short.
+// Oversoul (8B) — oversoul.bin (individual = 8).
 type Oversoul struct {
 	Name  TextRef
 	Count [2]int16

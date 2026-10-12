@@ -23,8 +23,8 @@ type TextContent struct {
 	Segment models.Segment
 	Bytes   []byte
 	// Status é a classificação do Segment.Offset contra a tabela lida — a
-	// mesma guarda do fluxo legado (objectsfile.KeyedString). Refs quebrados
-	// ficam SEM texto e mantêm o segmento original no save.
+	// validação comum da string table. Refs quebrados ficam sem texto e mantêm
+	// o segmento original no save.
 	Status objectsfile.PointerStatus
 	// edited marca texto trocado depois da leitura (SetString).
 	edited bool
@@ -109,11 +109,10 @@ func (c *TextContent) SetHeaderBytes(buf *bytes.Buffer) {
 
 // readTextContent resolve o texto do segmento na string table. Segmento
 // zerado (offset==0 && key==0) não tem texto: devolve nil (os bytes originais
-// do segmento são preservados — mesma regra do fluxo legado).
+// do segmento são preservados).
 //
-// O ponteiro é DIREÇÃO, não fato: fora de uma fronteira de bloco (ou fora
-// da tabela) não existe texto ali — o sufixo não vira frase. O segmento
-// original é mantido e o campo expõe "".
+// O ponteiro é direção, não fato: fora de uma fronteira de bloco (ou fora da
+// tabela) não existe texto ali. O segmento original é mantido e o campo expõe "".
 func readTextContent(strtab []byte, seg models.Segment, languageCode string, version common.GameVersion) *TextContent {
 	if strtab == nil || (seg.Offset == 0 && seg.Key == 0) {
 		return nil

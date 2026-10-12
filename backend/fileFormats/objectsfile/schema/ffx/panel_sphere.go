@@ -1,7 +1,6 @@
 package ffx
 
-// panel.bin (nós da Sphere Grid) — src/core/ffx/panel.cs. individual = 24B.
-// Chaves C#: name/name_simplified + help/help_simplified @0x00..0x10.
+// panel.bin (nós da Sphere Grid) — individual = 24B.
 type SphereGridNodeType struct {
 	Name         TextPair
 	Help         TextPair
@@ -11,13 +10,12 @@ type SphereGridNodeType struct {
 	IconID       uint16
 }
 
-// sphere.bin (esferas) — src/core/ffx/sphere.cs. individual = 16B.
-// O único campo de texto do struct C# é `help` (2 chaves @0x00..0x08).
+// sphere.bin (esferas) — individual = 16B.
 type Sphere struct {
 	Help        TextPair
 	Type        SphereBehavior
 	Activates   SphereTargets
 	Range       SphereRange
 	SpecialRole uint8
-	Reserve     uint16 // C# `_0x0E` (privado)
+	Reserve     uint16
 }

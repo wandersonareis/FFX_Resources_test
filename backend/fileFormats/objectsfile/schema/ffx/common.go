@@ -8,31 +8,9 @@
 //	src/core/ffx/battle/mon_stats.cs
 //	src/core/ffx/{status,element,typedefs,summon,abimap}.cs, src/core/excel.cs
 //
-// Convenções (idênticas ao pacote ffx2): TextRef/TextPair (models.Segment)
-// para referência de texto, "Reserve*" para bytes privados/gaps, bool C#
-// vira uint8. Não há tag: o tipo do campo diz se é texto ou dado.
-//
-// Chaves (chaves JSON/DTO) — snake_case do nome do campo Go, que é a forma
-// Go idiomática do nome do campo no struct C# (PascalCase, inicialismos em
-// maiúsculas):
-//   - um TextPair gera DUAS chaves: `{campo}` (standard) e
-//     `{campo}_simplified` (simplified), na ordem em que os pares aparecem no
-//     struct (src/core/excel.cs);
-//   - um TextRef gera só `{campo}`;
-//   - arrays geram `{campo}_{indice}` (índice 0-based);
-//   - campos aninhados são prefixados pelo campo pai, com `_`:
-//     `creature_data.help` -> `creature_data_help`.
-//
-// Divergências de nome — onde snake(Go) não reproduz a grafia do C#, o campo
-// carrega um comentário `// C# ...` com a origem (audit: 3 em ffx, 3 em
-// ffx2; o resto é Reserve*/Dummy*/Extra* do próprio C#):
-//   - CommandBody.Anim1/Anim2 <- anim_1/anim_2 (a chave fica anim1/anim2);
-//   - AutoAbilityEffectsMap.Words <- `_u` (palavra de bits; no C# viram as
-//     props has_*), idem AbilityMap.Words <- `_u`.
-//
-// Para os arquivos sem struct C# equivalente a chave deriva do layout legado
-// em snake_case, com `description` -> `help` (é o nome usado pelo C# em todos
-// os structs que têm os dois campos).
+// TextRef/TextPair identificam explicitamente os campos textuais. O chunkmap
+// usa os nomes dos campos Go como rótulos e preserva os outros campos como
+// bytes de dados; não há tags nem nomes de campo externos usados para lookup.
 //
 // Divergências PC (testData/FFX .../new_uspc) vs struct C# (Switch HD),
 // resolvidas empiricamente:
@@ -57,7 +35,7 @@ type T_XCommandId = uint16
 // ElementFlags enum : byte.
 type ElementFlags uint8
 
-// Flags de status (C# : ushort).
+// Flags de status.
 type (
 	StatusPermanentFlags uint16
 	StatusTemporalFlags  uint16
@@ -68,15 +46,15 @@ type (
 
 // Sphere enums (src/core/ffx/sphere.cs).
 type (
-	SphereBehavior uint16 // enum : ushort
-	SphereTargets  uint16 // [Flags] enum : ushort
-	SphereRange    uint8  // [Flags] enum : byte
+	SphereBehavior uint16 // enum
+	SphereTargets  uint16 // [Flags] enum
+	SphereRange    uint8  // [Flags] enum
 )
 
-// AutoAbilityEffectsMap (6 bytes) — InlineArray(3) de ushort no C#
+// AutoAbilityEffectsMap (6 bytes)
 // (src/core/ffx/aabimap.cs: auto-abilities, overdrives, stroll/capture).
 type AutoAbilityEffectsMap struct {
-	Words [3]uint16 // C# _u (palavra de bits; props has_*)
+	Words [3]uint16
 }
 
 // StatusMap (25 bytes, src/core/ffx/status.cs): valores por status.
@@ -111,10 +89,10 @@ type StatusMap struct {
 // PlyGender enum : byte (src/core/ffx/plyrom.cs).
 type PlyGender uint8
 
-// AbilityMap (12 bytes) — InlineArray(3) de uint no C#
+// AbilityMap (12 bytes)
 // (src/core/ffx/abimap.cs: overdrives, white magic, black magic).
 type AbilityMap struct {
-	Words [3]uint32 // C# _u (palavra de bits; props has_*)
+	Words [3]uint32
 }
 
 // AeonStatBoostsScaling (18 bytes, src/core/ffx/summon.cs): quanto de cada

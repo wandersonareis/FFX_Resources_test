@@ -103,10 +103,10 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 		Expect(binFile.GetObjects()).NotTo(BeNil())
 		Expect(binFile.GetObjects().Len()).To(BeNumerically(">", 0))
 
+		// w_name.bin tem layout COM Creator dedicado (não usa Fields);
+		// o fallback abaixo cobre apenas layouts sem registro algum.
 		layout, ok := objectsfile.FileLayoutFor(version, tc.pattern)
 		if !ok {
-			// w_name.bin não tem layout registrado (gap pré-existente):
-			// deriva layout ad hoc só com o necessário para a metadata.
 			layout = objectsfile.FileLayout{
 				Version:    version,
 				DirPattern: filepath.Dir(tc.pattern),

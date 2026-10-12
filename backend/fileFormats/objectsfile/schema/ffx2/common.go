@@ -30,7 +30,6 @@ type StatusFlags uint32
 type StatusFlags2 uint32
 
 // StatusMap (24 bytes): chance/valor por status do grupo 1.
-// src/core/ffx2/status.cs
 type StatusMap struct {
 	Death          uint8
 	Petrification  uint8
@@ -46,7 +45,7 @@ type StatusMap struct {
 	DoubleHP       uint8
 	DoubleMP       uint8
 	Spellspring    uint8
-	Damage9999     uint8 // C# damage_9999 (snake_case geraria damage9999)
+	Damage9999     uint8
 	AlwaysCritical uint8
 	Pointless      uint8
 	Itchy          uint8
@@ -115,12 +114,11 @@ type StatusDurationMap2 struct {
 }
 
 // AutoAbilityEffectsMap (6 bytes): palavras de bits das auto-abilities
-// (InlineArray(3) de ushort no C#).
 type AutoAbilityEffectsMap struct {
-	Words [3]uint16 // C# _u (palavra de bits; props has_*)
+	Words [3]uint16
 }
 
-// StatChanges (10 bytes, src/core/ffx2/job.cs): deltas de stat.
+// StatChanges (10 bytes): deltas de stat.
 type StatChanges struct {
 	HP           int8
 	MP           int8
@@ -134,7 +132,7 @@ type StatChanges struct {
 	Luck         int8
 }
 
-// UnlockableAbility (4 bytes, src/core/ffx2/job.cs): habilidade desbloqueável
+// UnlockableAbility (4 bytes): habilidade desbloqueável
 // (requirement/ability são contextuais: gate de Garment Grid, AP, nível...).
 type UnlockableAbility struct {
 	Requirement uint16

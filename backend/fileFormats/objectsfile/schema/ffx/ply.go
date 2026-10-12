@@ -1,12 +1,11 @@
 package ffx
 
-// ply_rom.bin / ply_save.bin — src/core/ffx/{plyrom,plysave}.cs.
-// Tamanhos confirmados por test/core/excel.cs:
+// ply_rom.bin / ply_save.bin
 //
 //	SizeOf<PlyRom>()  == 0x2C (44)  -> ply_rom.bin
 //	SizeOf<PlySave>() == 0x94 (148) -> ply_save.bin
 //
-// ply_rom.bin tem 4 segmentos (chaves C# switch_text e scan_text, cada um
+// ply_rom.bin tem 4 segmentos (chaves switch_text e scan_text, cada um
 // standard+simplified); ply_save.bin tem 1 (name).
 
 // PlyRom (44 bytes) — PlySave não existe aqui: é o "Player Read-Only Memory".
@@ -23,11 +22,11 @@ type PlyRom struct {
 
 	AeonStatScaling AeonStatBoostsScaling
 	DoomDuration    uint8
-	Reserve1        uint8 // C# `__0x2B` (chr.ram.__0x199)
+	Reserve1        uint8
 }
 
 // PlySave (148 bytes) — StructLayout Sequential, Pack=2: em Go não há
-// padding implícito e todos os campos já caem nos mesmos offsets que no C#.
+// padding implícito e todos os campos já caem nos mesmos offsets.
 type PlySave struct {
 	Name TextRef
 
@@ -84,9 +83,9 @@ type PlySave struct {
 	LimitModeCounters  [20]uint16
 	ObtainedLimitModes OverdriveModeFlags
 
-	Reserve1 uint32 // C# `__0x8C`
-	Reserve2 uint32 // C# `__0x90`
+	Reserve1 uint32
+	Reserve2 uint32
 }
 
-// OverdriveModeFlags enum : uint (src/core/ffx/plysave.cs).
+// OverdriveModeFlags enum : uint
 type OverdriveModeFlags uint32

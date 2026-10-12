@@ -73,9 +73,6 @@ func NewMappedTextObject[T any](
 	return o, nil
 }
 
-// Edited reporta se algum slot mudou o texto no idioma da carga desde
-// NewMappedTextObject — a detecção de edição usada pelo ToBytes do arquivo
-// (cobre qualquer caminho de escrita, inclusive a ponte dos builders).
 func (o *MappedTextObject[T]) Edited() bool {
 	for i, slot := range o.slots {
 		if slot.GetLocalizedString(o.languageCode) != o.initial[i] {
@@ -290,7 +287,6 @@ func (o *MappedTextObject[T]) ToBytes(languageCode string) ([]byte, error) {
 	return out, nil
 }
 
-// ToString formata para debug/log: formatter customizado ou defaultString.
 func (o *MappedTextObject[T]) ToString(languageCode string) string {
 	if o.formatter != nil {
 		return o.formatter(o, languageCode)
