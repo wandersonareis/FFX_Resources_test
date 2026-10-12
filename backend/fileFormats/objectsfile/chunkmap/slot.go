@@ -3,27 +3,17 @@ package chunkmap
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/converter"
 	ffxencoding "ffxresources/backend/core/encoding"
-	"ffxresources/backend/datastore"
 	"ffxresources/backend/fileFormats/objectsfile"
 	"ffxresources/backend/models"
 )
 
-/*
-Slot de texto do fluxo novo: TextContent + TextSlot substituem, dentro do
-chunkmap, o par KeyedString/LocalizedKeyedStringObject do fluxo legado.
-
-Os dois tipos implementam os contratos do datastore (IGlobalKeyedString e
-IGlobalLocalizedKeyedStringObject) para que as funções compartilhadas da
-camada Wails (builders/objectsfile.ExportFieldTexts, builders.ApplyObjectsEntry,
-formatters JSON/Strings) continuem operando sem mudança — os contratos são a
-camada orquestradora, não o fluxo legado. Nenhuma função do fluxo legado é
-chamada: a resolução e a codificação de texto passam direto pelo converter,
-que é o primitivo compartilhado de charset.
-*/
+// TextContent implements the low-level keyed-string contract consumed by the
+// shared string-table compiler. TextSlot is new-flow-only localized storage.
 
 // TextContent é o conteúdo de texto de um idioma num slot: o models.Segment
 // (offset na string table + key) e os bytes codificados no charset do idioma.
@@ -141,106 +131,69 @@ func readTextContent(strtab []byte, seg models.Segment, languageCode string, ver
 	return content
 }
 
-// TextSlot é o campo de texto de um chunk mapeado: um conteúdo por idioma.
-// A chave identifica o campo nos DTOs (snake_case do nome do campo da struct).
+// TextSlot stores the contents of one text reference by localization.
 type TextSlot struct {
-	key      string
-	contents map[string]datastore.IGlobalKeyedString
+	contents map[string]*TextContent
 }
 
-// newTextSlot cria o slot vazio para a chave.
-func newTextSlot(key string) *TextSlot {
-	return &TextSlot{key: key, contents: make(map[string]datastore.IGlobalKeyedString)}
+func newTextSlot() *TextSlot {
+	return &TextSlot{contents: make(map[string]*TextContent)}
 }
 
-// Key devolve a chave (DTO) do campo.
-func (s *TextSlot) Key() string { return s.key }
-
-// ReadAndSetLocalizedContent resolve o texto do segmento contra strtab no
-// idioma (contrato datastore). É o caminho da CARGA: grava direto, sem
-// passar pela guarda de sobrescrita.
-func (s *TextSlot) ReadAndSetLocalizedContent(languageCode string, bytes []byte, offset models.Offset, key models.Key, version common.GameVersion) {
-	if bytes == nil {
-		return
-	}
-	if content := readTextContent(bytes, models.Segment{Offset: offset, Key: key}, languageCode, version); content != nil {
+func (s *TextSlot) read(languageCode string, table []byte, segment models.Segment, version common.GameVersion) {
+	if content := readTextContent(table, segment, languageCode, version); content != nil {
 		s.contents[languageCode] = content
 	}
 }
 
-// SetLocalizedContent grava o conteúdo do idioma (contrato datastore) — o
-// caminho das EDIÇÕES pela ponte compartilhada (builders). Conteúdo vazio
-// NUNCA sobrescreve um conteúdo existente (mesma regra do fluxo legado).
-func (s *TextSlot) SetLocalizedContent(languageCode string, content datastore.IGlobalKeyedString) {
-	if content == nil {
-		return
-	}
-	if _, ok := s.contents[languageCode]; ok && content.IsEmpty() {
-		return
-	}
-	s.contents[languageCode] = content
-}
-
-func (s *TextSlot) GetLocalizedContent(languageCode string) datastore.IGlobalKeyedString {
-	return s.contents[languageCode]
-}
+func (s *TextSlot) get(languageCode string) *TextContent { return s.contents[languageCode] }
 
 func (s *TextSlot) GetLocalizedString(languageCode string) string {
-	if c := s.GetLocalizedContent(languageCode); c != nil {
-		return c.GetString()
+	if content := s.contents[languageCode]; content != nil {
+		return content.GetString()
 	}
 	return ""
 }
 
-func (s *TextSlot) GetDefaultContent() datastore.IGlobalKeyedString {
-	return s.GetLocalizedContent(common.DefaultLocalization)
+type textUpdate struct {
+	languageCode string
+	content      *TextContent
 }
 
-func (s *TextSlot) GetDefaultString() string {
-	return s.GetLocalizedString(common.DefaultLocalization)
-}
-
-// CopyInto copia todos os conteúdos para outro objeto (contrato datastore —
-// é o caminho do SetLocalizations entre objetos).
-func (s *TextSlot) CopyInto(other datastore.IGlobalLocalizedKeyedStringObject) {
-	for loc, content := range s.contents {
-		other.SetLocalizedContent(loc, content)
-	}
-}
-
-func (s *TextSlot) String() string {
-	return s.GetDefaultString()
-}
-
-// SetTexts grava os textos por idioma no slot — o equivalente próprio do
-// fluxo novo ao applyLocalizedText/updateOrCreateSegment do legado. Texto
-// vazio e idioma não suportado são ignorados; texto igual ao atual não
-// re-codifica.
-func (s *TextSlot) SetTexts(texts map[string]string, version common.GameVersion) {
+func (s *TextSlot) prepareTexts(texts map[string]string, version common.GameVersion) ([]textUpdate, error) {
+	updates := make([]textUpdate, 0, len(texts))
 	for languageCode, newText := range texts {
-		if newText == "" {
-			continue
-		}
-		if !common.IsSupportedLanguage(languageCode) {
-			continue
-		}
-		if newText == s.GetLocalizedString(languageCode) {
+		if newText == "" || newText == s.GetLocalizedString(languageCode) {
 			continue
 		}
 		charset := common.LanguageCodeToCharset(languageCode)
-		if content := s.GetLocalizedContent(languageCode); content != nil {
-			content.SetString(newText, charset)
-			continue
-		}
 		encoded, err := converter.StringToBytes(newText, charset, version)
 		if err != nil {
-			common.LogError("TextSlot.SetTexts(%s): %v", s.key, err)
-			continue
+			return nil, fmt.Errorf("codificar idioma %s: %w", languageCode, err)
 		}
-		s.SetLocalizedContent(languageCode, &TextContent{
-			Charset: charset,
-			Version: version,
-			Bytes:   encoded,
-		})
+		var content *TextContent
+		if existing := s.contents[languageCode]; existing != nil {
+			updated := *existing
+			updated.Charset = charset
+			updated.Bytes = encoded
+			updated.edited = true
+			content = &updated
+		} else {
+			content = &TextContent{
+				Charset: charset,
+				Version: version,
+				Bytes:   encoded,
+				Status:  objectsfile.PointerCreated,
+				edited:  true,
+			}
+		}
+		updates = append(updates, textUpdate{languageCode: languageCode, content: content})
+	}
+	return updates, nil
+}
+
+func (s *TextSlot) applyTexts(updates []textUpdate) {
+	for _, update := range updates {
+		s.contents[update.languageCode] = update.content
 	}
 }

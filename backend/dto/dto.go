@@ -50,8 +50,16 @@ import (
 // Original e flags Missing* são exclusivos de exibição e nunca entram em
 // apply/export. Divergent é o inverso: apply-only, ignorado em display/export.
 type TextRow struct {
-	Index    int               `json:"index"`
-	Name     string            `json:"name,omitempty"`
+	Index int `json:"index"`
+	// Character/Kind são o dono de cada nome de w_name.bin, resolvido pelos
+	// model_ids do próprio chunk (schema/ffx/wname.go): personagem dono do
+	// nome e tipo do equipamento ("weapon"/"shield"). São APENAS referência
+	// de exibição — o model_id não vira row nem campo editável; a identidade
+	// da row é Index+Name e o import resolve a posição pelos model_ids do
+	// registro. Nada além de text/hash é editável.
+	Character string `json:"character,omitempty"`
+	Kind      string `json:"kind,omitempty"`
+	Name      string `json:"name,omitempty"`
 	Hash     map[string]string `json:"hash,omitempty"`
 	Text     map[string]string `json:"text"`
 	Original map[string]string `json:"original,omitempty"`

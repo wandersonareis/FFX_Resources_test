@@ -1,53 +1,19 @@
 // Package ffx2 mapeia os binários de battle/kernel (FFX-2) e lastmiss/kernel
 // (Last Mission) em structs Go, no estilo das structs [StructLayout] do
-// Fahrenheit (C#): https://github.com/fahrenheit-crew/fahrenheit
 //
-// Origem dos campos (adaptados de C# para Go, sem padding implícito —
+// Origem dos campos sem padding implícito —
 // encoding/binary escreve apenas os campos exportados, contíguos):
 //
-//	src/core/ffx2/{plate,accessory,aability,LmCommand,LmMonMagic,LmMonster}.cs
-//	src/core/ffx2/{status,element,job,typedefs}.cs, src/core/excel.cs
-//
-// Convenções (idênticas ao pacote ffx): TextRef/TextPair (models.Segment)
-// para referência de texto, "Reserve*" para bytes privados/gaps, "Dummy*"
-// para dummies já presentes no C#, bool C# vira uint8. Não há tag: o tipo
-// do campo diz se é texto ou dado.
-//
-// Chaves (chaves JSON/DTO) — snake_case do nome do campo Go, que é a forma
-// Go idiomática do nome do campo no struct C# (PascalCase, inicialismos em
-// maiúsculas):
-//   - um TextRef gera só `{campo}`;
-//   - um TextPair gera DUAS chaves: `{campo}` (standard) e
-//     `{campo}_simplified` (simplified), na ordem em que os pares aparecem no
-//     struct (src/core/excel.cs);
-//   - arrays geram `{campo}_{indice}` (índice 0-based);
-//   - campos aninhados são prefixados pelo campo pai, com `_`:
-//     `creature_data.help` -> `creature_data_help`.
-//
-// Divergências de nome — onde snake(Go) não reproduz a grafia do C#, o campo
-// carrega um comentário `// C# ...` com a origem (audit: 3 em ffx, 3 em
-// ffx2; o resto é Reserve*/Dummy*/Extra* do próprio C#):
-//   - Command.Anim1/Anim2 <- anim_1/anim_2 (a chave fica anim1/anim2);
-//   - StatusMap.Damage9999 <- damage_9999 (a chave fica damage9999);
-//   - AutoAbilityEffectsMap.Words <- `_u` (palavra de bits; no C# viram as
-//     props has_*).
-//
-// Os typos do C# são preservados de propósito (as chaves têm de casar com o
-// struct de origem): gill/steal_gill/def_zantetu, category_abilty,
-// prohibit_posion, prohibit_movestop, prohibit_timestop, cursol_dist_yn ...
-//
-// Para os arquivos sem struct C# equivalente a chave deriva do layout legado
-// em snake_case, com `description` -> `help` (é o nome usado pelo C# em todos
-// os structs que têm os dois campos).
+// TextRef identifica explicitamente uma referência textual. Os nomes Go dos
+// campos são os rótulos exibidos; índices de slot, não strings, identificam
+// os textos durante a importação. Reserve*/Dummy* preservam bytes não textuais.
 package ffx2
 
 import "ffxresources/backend/models"
 
-// TextRef: referência a texto (offset na string table + u16 "key"
-// desconhecido no C# — models.Segment cobre os mesmos 4 bytes).
-type TextRef = models.Segment
+// TextRef: referência textual (offset na string table + u16 key).
+type TextRef = models.TextRef
 
-// T_X2CommandId é o alias C# global using T_X2CommandId = System.UInt16.
 type T_X2CommandId = uint16
 
 // ElementFlags enum : byte (fire/ice/thunder/water/gravity/holy).

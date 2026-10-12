@@ -60,7 +60,7 @@ func marshalCollectionLangs(c dto.Collection, langs []string) ([]byte, error) {
 		entry := c[k]
 		rows := make([]dto.TextRow, 0, len(entry.Rows))
 		for _, row := range entry.Rows {
-			r := dto.TextRow{Index: row.Index, Name: row.Name}
+			r := dto.TextRow{Index: row.Index, Character: row.Character, Kind: row.Kind, Name: row.Name}
 			if row.Hash != nil {
 				r.Hash = make(map[string]string, len(row.Hash))
 				for lang, h := range row.Hash {

@@ -44,18 +44,14 @@ package ffx
 
 import "ffxresources/backend/models"
 
-// TextRef: referência a texto (offset + u16 "key" desconhecido no
-// C# — models.Segment cobre os mesmos 4 bytes).
-type TextRef = models.Segment
+// TextRef: referência textual de 4 bytes (offset + key).
+type TextRef = models.TextRef
 
-// TextPair: par (standard, simplified) de referências de
-// texto (src/core/excel.cs) — 8 bytes / 2 segmentos.
-type TextPair struct {
-	Standard   TextRef
-	Simplified TextRef
-}
+// TextPair: dois segmentos físicos; a camada textual só exporta Simplified
+// quando seu conteúdo difere de Standard.
+type TextPair = models.TextPair
 
-// T_XCommandId é o alias C# global using T_XCommandId = System.UInt16.
+// T_XCommandId é o alias System.UInt16.
 type T_XCommandId = uint16
 
 // ElementFlags enum : byte.

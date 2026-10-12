@@ -1,15 +1,59 @@
-package chunkmap_test
+package chunkmap
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"ffxresources/backend/common"
+	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/fileFormats/objectsfile"
-	"ffxresources/backend/fileFormats/objectsfile/chunkmap"
 	"ffxresources/backend/fileFormats/objectsfile/schema/ffx"
 	"ffxresources/backend/fileFormats/objectsfile/schema/ffx2"
 	"ffxresources/backend/models"
+	testcommon "ffxresources/testData"
 )
+
+const (
+	pointerGuardLang = common.DefaultLocalization
+	ffxKernelPath    = "battle/kernel/"
+	lastMissPath     = "lastmiss/kernel/"
+)
+
+func preparePointerGuardCharsets(t *testing.T) {
+	t.Helper()
+	for _, version := range []common.GameVersion{common.GameVersionFFX, common.GameVersionFFX2} {
+		if err := ffxencoding.PrepareVersionCharsets(version); err != nil {
+			t.Fatalf("preparar charsets %s: %v", version, err)
+		}
+	}
+}
+
+func readPointerGuardBinary(t *testing.T, version common.GameVersion, pattern string) []byte {
+	t.Helper()
+	game := "ffx2"
+	if version == common.GameVersionFFX {
+		game = "ffx"
+	}
+	root := filepath.Dir(testcommon.GetTestDataRootDirectory())
+	suffix := filepath.Join("build", "bin", "data", "ffx_ps2", game, "master", "new_uspc", filepath.FromSlash(pattern))
+	candidates := []string{suffix}
+	if version == common.GameVersionFFX {
+		candidates = append(candidates, filepath.Join("testData", "FFX", "binary", "ffx_ps2", game, "master", "new_uspc", filepath.FromSlash(pattern)))
+	} else {
+		candidates = append(candidates, filepath.Join("testData", "FFX-2", "binary", "ffx_ps2", game, "master", "new_uspc", filepath.FromSlash(pattern)))
+	}
+	candidates = append(candidates, filepath.Join("examples", filepath.FromSlash(pattern)))
+	for _, candidate := range candidates {
+		data, err := os.ReadFile(filepath.Join(root, candidate))
+		if err == nil {
+			return data
+		}
+	}
+	t.Fatalf("binario %s nao encontrado; tentei:\n  %s", pattern, strings.Join(candidates, "\n  "))
+	return nil
+}
 
 /*
 A guarda do ponteiro: o ref é DIREÇÃO, não fato.
@@ -31,22 +75,13 @@ LastMission) e mede todos os outros ao lado:
      para onde apontava.
 */
 
-// pointered é o contrato observável de um ref lido — implementado por
-// objectsfile.KeyedString (fluxo legado) e por chunkmap.TextContent. É por
-// ele que a guarda é lida de fora do pacote.
-type pointered interface {
-	PointerStatus() objectsfile.PointerStatus
-	GetOffset() models.Offset
-	GetString() string
-}
-
 // slot identifica um campo de texto: chunk + posição do campo no layout.
 type slot struct{ chunk, field int }
 
 // slotKey identifica um campo pelo par (chunk, chave) — o que o export usa.
 type slotKey struct {
 	chunk int
-	key   string
+	field int
 }
 
 // slotState é o estado de um campo no idioma primário.
@@ -58,17 +93,15 @@ type slotState struct {
 }
 
 // snapshotOf captura o estado de todos os campos textuais de todos os chunks.
-func snapshotOf[T any](f *chunkmap.File[T]) map[slot]slotState {
+func snapshotOf[T any](f *File[T]) map[slot]slotState {
 	out := make(map[slot]slotState)
 	for ci, obj := range f.Objects {
-		for fi, key := range obj.OrderedFieldKeys() {
-			st := slotState{key: key}
-			if seg := obj.GetKeyedString(key); seg != nil {
-				if p, ok := seg.GetLocalizedContent(lang).(pointered); ok {
-					st.status = p.PointerStatus()
-					st.offset = p.GetOffset()
-					st.text = p.GetString()
-				}
+		for fi, field := range obj.fields {
+			st := slotState{key: field.Name}
+			if content := obj.slots[fi].get(pointerGuardLang); content != nil {
+				st.status = content.PointerStatus()
+				st.offset = content.GetOffset()
+				st.text = content.GetString()
 			}
 			out[slot{ci, fi}] = st
 		}
@@ -106,15 +139,15 @@ func reportPointer(t *testing.T, pattern string, before map[slot]slotState) {
 
 // exportedPrimary devolve o texto do idioma primário exportado por
 // (chunk, chave): o export é o único caminho que vira linha de texto.
-func exportedPrimary[T any](f *chunkmap.File[T]) map[slotKey]string {
+func exportedPrimary[T any](f *File[T]) map[slotKey]string {
 	out := make(map[slotKey]string)
-	texts, err := f.ExportText(lang)
+	texts, err := f.ExportText(pointerGuardLang)
 	if err != nil {
 		return out
 	}
 	for _, ft := range texts {
 		for _, fld := range ft.Fields {
-			out[slotKey{chunk: ft.Index, key: fld.Key}] = fld.Texts[lang]
+			out[slotKey{chunk: ft.Index, field: fld.Index}] = fld.Texts[pointerGuardLang]
 		}
 	}
 	return out
@@ -125,8 +158,8 @@ func exportedPrimary[T any](f *chunkmap.File[T]) map[slotKey]string {
 func checkGuardedReferences[T any](t *testing.T, pattern string, version common.GameVersion, wantBroken bool) {
 	t.Helper()
 
-	_, data := readBinary(t, version, pattern)
-	f, err := chunkmap.LoadFileFromBytes[T](version, pattern, data)
+	data := readPointerGuardBinary(t, version, pattern)
+	f, err := LoadFileFromBytes[T](version, pattern, data)
 	if err != nil {
 		t.Fatalf("%s: %v", pattern, err)
 	}
@@ -154,7 +187,7 @@ func checkGuardedReferences[T any](t *testing.T, pattern string, version common.
 			t.Errorf("%s: chunk %d campo %q [%s @ %d]: ref quebrado leu texto %q",
 				pattern, k.chunk, st.key, st.status, st.offset, st.text)
 		}
-		if got := exported[slotKey{chunk: k.chunk, key: st.key}]; got != "" {
+		if got := exported[slotKey{chunk: k.chunk, field: k.field}]; got != "" {
 			t.Errorf("%s: chunk %d campo %q [%s @ %d]: ref quebrado virou linha %q no export",
 				pattern, k.chunk, st.key, st.status, st.offset, got)
 		}
@@ -173,8 +206,8 @@ func checkGuardedReferences[T any](t *testing.T, pattern string, version common.
 func checkSaveKeepsSegments[T any](t *testing.T, pattern string, version common.GameVersion, wantBroken bool) {
 	t.Helper()
 
-	_, data := readBinary(t, version, pattern)
-	f, err := chunkmap.LoadFileFromBytes[T](version, pattern, data)
+	data := readPointerGuardBinary(t, version, pattern)
+	f, err := LoadFileFromBytes[T](version, pattern, data)
 	if err != nil {
 		t.Fatalf("%s: %v", pattern, err)
 	}
@@ -189,7 +222,7 @@ func checkSaveKeepsSegments[T any](t *testing.T, pattern string, version common.
 		found   bool
 	)
 	for ci := range f.Objects {
-		for fi, key := range f.Objects[ci].OrderedFieldKeys() {
+		for fi, field := range f.Objects[ci].fields {
 			st := before[slot{ci, fi}]
 			if st.status != objectsfile.PointerOK || st.text == "" {
 				continue
@@ -198,14 +231,14 @@ func checkSaveKeepsSegments[T any](t *testing.T, pattern string, version common.
 				continue
 			}
 			edited, newText, found = slot{ci, fi}, st.text+st.text, true
-			_ = key
+			_ = field
 		}
 	}
 	if !found {
 		t.Fatalf("%s: nenhum campo legítimo para editar", pattern)
 	}
-	if err := f.Objects[edited.chunk].ImportText([]objectsfile.FieldText{
-		{Key: before[edited].key, Texts: map[string]string{lang: newText}},
+	if err := f.Objects[edited.chunk].ImportText([]TextField{
+		{Index: edited.field, Name: before[edited].key, Texts: map[string]string{pointerGuardLang: newText}},
 	}); err != nil {
 		t.Fatalf("%s: ImportText: %v", pattern, err)
 	}
@@ -217,7 +250,7 @@ func checkSaveKeepsSegments[T any](t *testing.T, pattern string, version common.
 	if err != nil {
 		t.Fatalf("%s: ToBytes: %v", pattern, err)
 	}
-	reloaded, err := chunkmap.LoadFileFromBytes[T](version, pattern, out)
+	reloaded, err := LoadFileFromBytes[T](version, pattern, out)
 	if err != nil {
 		t.Fatalf("%s: reload do save: %v", pattern, err)
 	}
@@ -301,8 +334,8 @@ func guardOf[T any](wantBroken bool) func(t *testing.T, pattern string, version 
 // reportOf amarra um tipo concreto à medição pura (sem expectativa).
 func reportOf[T any](t *testing.T, pattern string, version common.GameVersion) {
 	t.Helper()
-	_, data := readBinary(t, version, pattern)
-	f, err := chunkmap.LoadFileFromBytes[T](version, pattern, data)
+	data := readPointerGuardBinary(t, version, pattern)
+	f, err := LoadFileFromBytes[T](version, pattern, data)
 	if err != nil {
 		t.Errorf("%s: %v", pattern, err)
 		return
@@ -311,12 +344,8 @@ func reportOf[T any](t *testing.T, pattern string, version common.GameVersion) {
 }
 
 // ---- FFX (V1): guarda ligada nos arquivos medidos com defeito ----
-//
-// a_ability.bin não entra aqui: o binário declara 108 bytes por chunk e a
-// struct FFX correspondente tem 96 — o LoadFileFromBytes recusa. Ele é
-// coberto pelo legacy_crosscheck (que não valida tamanho de struct).
-
 func TestPointerGuardFFX(t *testing.T) {
+	preparePointerGuardCharsets(t)
 	for _, c := range []struct {
 		file string
 		run  func(t *testing.T, pattern string, version common.GameVersion)
@@ -360,6 +389,7 @@ func TestPointerGuardFFX(t *testing.T) {
 // ---- FFX-2 (V2): Fase 0, medição ----
 
 func TestPointerReportFFX2(t *testing.T) {
+	preparePointerGuardCharsets(t)
 	for _, c := range []struct {
 		file string
 		run  func(t *testing.T, pattern string, version common.GameVersion)
@@ -389,6 +419,7 @@ func TestPointerReportFFX2(t *testing.T) {
 // ---- LastMission (V2): Fase 0, medição ----
 
 func TestPointerReportLastMiss(t *testing.T) {
+	preparePointerGuardCharsets(t)
 	for _, c := range []struct {
 		file string
 		run  func(t *testing.T, pattern string, version common.GameVersion)

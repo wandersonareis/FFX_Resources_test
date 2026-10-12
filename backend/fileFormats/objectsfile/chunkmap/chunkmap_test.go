@@ -104,9 +104,8 @@ func readBinary(t *testing.T, version common.GameVersion, patternPath string) (s
 // checkSchema roda as verificações auto-suficientes de um arquivo contra a
 // struct T.
 //
-// wantKeys = chaves esperadas do objeto mapeado (derivadas do nome dos campos
-// de texto da struct).
-func checkSchema[T any](t *testing.T, patternPath string, version common.GameVersion, wantSize int, wantKeys []string) {
+// wantNames contém os caminhos Go esperados dos campos textuais.
+func checkSchema[T any](t *testing.T, patternPath string, version common.GameVersion, wantSize int, wantNames []string) {
 	t.Helper()
 
 	relPath, data := readBinary(t, version, patternPath)
@@ -129,12 +128,12 @@ func checkSchema[T any](t *testing.T, patternPath string, version common.GameVer
 	if err != nil {
 		t.Fatalf("SegmentFields: %v", err)
 	}
-	keys := make([]string, len(fields))
+	names := make([]string, len(fields))
 	for i, f := range fields {
-		keys[i] = f.Key
+		names[i] = f.Name
 	}
-	if !slices.Equal(keys, wantKeys) {
-		t.Fatalf("chaves = %v, esperado %v", keys, wantKeys)
+	if !slices.Equal(names, wantNames) {
+		t.Fatalf("nomes = %v, esperado %v", names, wantNames)
 	}
 
 	// (2)+(4): round-trip binário e ToBytes byte-exato em TODOS os chunks
@@ -159,7 +158,7 @@ func checkSchema[T any](t *testing.T, patternPath string, version common.GameVer
 		}
 
 		// export -> import identidade (sem nenhuma edicao)
-		exported, err := obj.ExportText()
+		exported, err := obj.ExportText(lang)
 		if err != nil {
 			t.Fatalf("chunk %d: ExportText: %v", i, err)
 		}
@@ -193,38 +192,48 @@ func checkSchema[T any](t *testing.T, patternPath string, version common.GameVer
 	}
 }
 
-// ---- chaves esperadas (tags `bin:"..."` na ordem do arquivo) ----
+// ---- caminhos Go esperados na ordem binária ----
 
 var (
-	// FFX — CommandLayout (name, simplifiedName, description,
-	// simplifiedDescription) em @0,4,8,12.
-	ffxCmdKeys  = []string{"name", "name_simplified", "desc", "desc_simplified"}
-	ffxKeyItem  = []string{"name", "name_simplified", "help", "help_simplified"}
-	ffxPanel    = []string{"name", "name_simplified", "help", "help_simplified"}
-	ffxText2    = []string{"help", "help_simplified"}
-	ffxNameHelp = []string{"command", "command_simplified", "help", "help_simplified"}
-	ffxMonStats = []string{"name", "sensor_text", "sensor_text_simplified", "scan_text", "scan_text_simplified"}
-	ffxPlyRom   = []string{"switch_text", "switch_text_simplified", "scan_text", "scan_text_simplified"}
-	ffxPlySave  = []string{"name"}
+	// FFX — TextPair exposes its Standard and Simplified references.
+	ffxCmdNames = []string{"Name.Standard", "Name.Simplified", "Desc.Standard", "Desc.Simplified"}
+	ffxKeyItem  = []string{"Name.Standard", "Name.Simplified", "Help.Standard", "Help.Simplified"}
+	ffxPanel    = []string{"Name.Standard", "Name.Simplified", "Help.Standard", "Help.Simplified"}
+	ffxText2    = []string{"Help.Standard", "Help.Simplified"}
+	ffxNameHelp = []string{"Command.Standard", "Command.Simplified", "Help.Standard", "Help.Simplified"}
+	ffxMonStats = []string{"Name.Standard", "SensorText.Standard", "SensorText.Simplified", "ScanText.Standard", "ScanText.Simplified"}
+	ffxPlyRom   = []string{"SwitchText.Standard", "SwitchText.Simplified", "ScanText.Standard", "ScanText.Simplified"}
+	ffxPlySave  = []string{"Name.Standard"}
 
-	// FFX-2 — CommandV2 ({name, help} @0,4).
-	ffx2NameHelp = []string{"name", "help"}
-	ffx2Creature = []string{"name", "help", "creature_data_help"}
-	ffx2Plate    = []string{
-		"name", "help",
-		"messages_0", "messages_1", "messages_2", "messages_3",
-		"creature_data_help",
+	// w_name.bin — Names (7 nomes) e NamesHira (7 leituras); um slot por
+	// personagem, identificado pelos model_ids do próprio chunk (nunca pela
+	// posição no array).
+	ffxWeaponNames = []string{
+		"Names[0].Standard", "Names[1].Standard", "Names[2].Standard", "Names[3].Standard",
+		"Names[4].Standard", "Names[5].Standard", "Names[6].Standard",
+		"NamesHira[0].Simplified", "NamesHira[1].Simplified", "NamesHira[2].Simplified",
+		"NamesHira[3].Simplified", "NamesHira[4].Simplified", "NamesHira[5].Simplified",
+		"NamesHira[6].Simplified",
 	}
-	ffx2CmdText  = []string{"command", "help"}
-	ffx2BtlTxt   = []string{"help"}
-	ffx2Oversoul = []string{"name"}
 
-	// Last Mission (sem struct C# — chaves derivadas do layout legado).
-	lm4    = []string{"name", "help", "effect", "effect_description"}
-	lm3    = []string{"name", "help", "effect"}
-	lmInfo = []string{"name", "help", "information"}
-	lm2    = []string{"name", "help"}
-	lm1    = []string{"name"}
+	// FFX-2 — TextRef fields export as Standard.
+	ffx2NameHelp = []string{"Name.Standard", "Help.Standard"}
+	ffx2Creature = []string{"Name.Standard", "Help.Standard", "CreatureData.Help.Standard"}
+	ffx2Plate    = []string{
+		"Name.Standard", "Help.Standard",
+		"Messages[0].Standard", "Messages[1].Standard", "Messages[2].Standard", "Messages[3].Standard",
+		"CreatureData.Help.Standard",
+	}
+	ffx2CmdText  = []string{"Command.Standard", "Help.Standard"}
+	ffx2BtlTxt   = []string{"Help.Standard"}
+	ffx2Oversoul = []string{"Name.Standard"}
+
+	// Last Mission schemas.
+	lm4    = []string{"Name.Standard", "Help.Standard", "Effect.Standard", "EffectDescription.Standard"}
+	lm3    = []string{"Name.Standard", "Help.Standard", "Effect.Standard"}
+	lmInfo = []string{"Name.Standard", "Help.Standard", "Information.Standard"}
+	lm2    = []string{"Name.Standard", "Help.Standard"}
+	lm1    = []string{"Name.Standard"}
 )
 
 // Caminhos (patternPath) dos binários de teste.
@@ -238,14 +247,14 @@ const (
 func TestFFXCommandSchema(t *testing.T) {
 	for _, file := range []string{"command", "item"} {
 		t.Run(file, func(t *testing.T) {
-			checkSchema[ffx.Command](t, ffxKernelPath+file+".bin", common.GameVersionFFX, 96, ffxCmdKeys)
+			checkSchema[ffx.Command](t, ffxKernelPath+file+".bin", common.GameVersionFFX, 96, ffxCmdNames)
 		})
 	}
 	t.Run("important", func(t *testing.T) {
 		checkSchema[ffx.KeyItem](t, ffxKernelPath+"important.bin", common.GameVersionFFX, 20, ffxKeyItem)
 	})
 	t.Run("a_ability", func(t *testing.T) {
-		checkSchema[ffx.AutoAbility](t, ffxKernelPath+"a_ability.bin", common.GameVersionFFX, 108, ffxCmdKeys)
+		checkSchema[ffx.AutoAbility](t, ffxKernelPath+"a_ability.bin", common.GameVersionFFX, 108, ffxCmdNames)
 	})
 	t.Run("panel", func(t *testing.T) {
 		checkSchema[ffx.SphereGridNodeType](t, ffxKernelPath+"panel.bin", common.GameVersionFFX, 24, ffxPanel)
@@ -257,7 +266,7 @@ func TestFFXCommandSchema(t *testing.T) {
 	// de texto (name + desc), todos confirmados no binário.
 	for _, name := range []string{"monmagic1", "monmagic2"} {
 		t.Run(name, func(t *testing.T) {
-			checkSchema[ffx.MonMagic](t, ffxKernelPath+name+".bin", common.GameVersionFFX, 92, ffxCmdKeys)
+			checkSchema[ffx.MonMagic](t, ffxKernelPath+name+".bin", common.GameVersionFFX, 92, ffxCmdNames)
 		})
 	}
 }
@@ -292,6 +301,68 @@ func TestFFXPlayerSchema(t *testing.T) {
 	t.Run("ply_save", func(t *testing.T) {
 		checkSchema[ffx.PlySave](t, ffxKernelPath+"ply_save.bin", common.GameVersionFFX, 148, ffxPlySave)
 	})
+}
+
+func TestFFXWeaponNameSchema(t *testing.T) {
+	t.Run("w_name", func(t *testing.T) {
+		checkSchema[ffx.WeaponName](t, ffxKernelPath+"w_name.bin", common.GameVersionFFX, 72, ffxWeaponNames)
+	})
+}
+
+// TestFFXWeaponNameModelOwners valida o mapa model_id -> personagem contra o
+// binário real: todo ID do arquivo resolve, cada registro tem um dono distinto
+// por posição e a correspondência confere nos pontos conhecidos (0x4007 é a
+// última arma do Tidus, 0x4042 o primeiro escudo, 0x4062 a última do Rikku).
+func TestFFXWeaponNameModelOwners(t *testing.T) {
+	relPath, data := readBinary(t, common.GameVersionFFX, ffxKernelPath+"w_name.bin")
+	file, err := chunkmap.LoadFileFromBytes[ffx.WeaponName](common.GameVersionFFX, ffxKernelPath+"w_name.bin", data)
+	if err != nil {
+		t.Fatalf("LoadFileFromBytes: %v", err)
+	}
+
+	seen := make(map[ffx.WeaponModelKey]struct{})
+	for i := 0; i < file.Count(); i++ {
+		characters := make(map[string]struct{}, 7)
+		for _, id := range file.Get(i).Value().ModelIDs {
+			key := ffx.WeaponModelKeyOf(id)
+			owner, ok := ffx.WeaponModelOwnerOf(key)
+			if !ok {
+				t.Fatalf("%s: chunk %d: model id %s sem dono no mapa", relPath, i, key)
+			}
+			if owner.Kind != ffx.WeaponKindWeapon && owner.Kind != ffx.WeaponKindShield {
+				t.Fatalf("%s: chunk %d: model id %s com kind inesperado %q", relPath, i, key, owner.Kind)
+			}
+			seen[key] = struct{}{}
+			characters[owner.Character] = struct{}{}
+		}
+		if len(characters) != 7 {
+			t.Fatalf("%s: chunk %d: %d personagens distintos nos model_ids, esperado 7",
+				relPath, i, len(characters))
+		}
+	}
+	if len(seen) != 74 {
+		t.Fatalf("%s: %d model ids distintos no arquivo, esperado 74", relPath, len(seen))
+	}
+
+	spot := []struct {
+		key  ffx.WeaponModelKey
+		want ffx.WeaponModelOwner
+	}{
+		{ffx.WeaponModelKey{0x07, 0x40}, ffx.WeaponModelOwner{Character: "Tidus", Kind: ffx.WeaponKindWeapon}},
+		{ffx.WeaponModelKey{0x42, 0x40}, ffx.WeaponModelOwner{Character: "Tidus", Kind: ffx.WeaponKindShield}},
+		{ffx.WeaponModelKey{0x0B, 0x40}, ffx.WeaponModelOwner{Character: "Yuna", Kind: ffx.WeaponKindWeapon}},
+		{ffx.WeaponModelKey{0x4B, 0x40}, ffx.WeaponModelOwner{Character: "Yuna", Kind: ffx.WeaponKindShield}},
+		{ffx.WeaponModelKey{0x62, 0x40}, ffx.WeaponModelOwner{Character: "Rikku", Kind: ffx.WeaponKindShield}},
+	}
+	for _, s := range spot {
+		owner, ok := ffx.WeaponModelOwnerOf(s.key)
+		if !ok {
+			t.Fatalf("model id %s ausente no mapa", s.key)
+		}
+		if owner != s.want {
+			t.Fatalf("model id %s = %+v, esperado %+v", s.key, owner, s.want)
+		}
+	}
 }
 
 // ---- FFX-2 (V2) ----

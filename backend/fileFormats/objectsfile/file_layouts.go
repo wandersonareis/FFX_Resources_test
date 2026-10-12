@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"ffxresources/backend/common"
+	"ffxresources/backend/datastore"
 )
 
 // FileLayout declarativo especifica como carregar/decodificar um arquivo binário de objetos.
@@ -227,9 +228,23 @@ var FileLayouts = map[string]FileLayout{
 		Fields:     MenuTextPairLayout[common.GameVersionFFX],
 		Formatter:  nameOnlyLegacyFmtStore,
 	},
-	// Weapon names - special creator (excluded from generic layouts)
-	// TODO: w_name.bin (WeaponsNameTextObject) still needs adaptation to FileLayout format
-	// due to its unique struct layout (array of Tidus/Yuna/Auron/etc. names)
+	// w_name.bin — weapon names (FFX). O layout existe para os fluxos por
+	// layout (services/original/import/vbf) resolverem o arquivo; o Creator
+	// dedicado é obrigatório aqui: SegmentField só expressa segmentos de
+	// texto e não modelaria o tail ModelIDs[7]+reserva do chunk de 0x48
+	// bytes. Quando o fluxo chunkmap amadurecer, troca-se SÓ este Creator
+	// por uma implementação mapeada (schema/ffx.WeaponName) — os services
+	// permanecem intactos.
+	"ffx/battle/kernel/w_name.bin": {
+		Version:    common.GameVersionFFX,
+		DirPattern: "battle/kernel",
+		FileName:   "w_name.bin",
+		Fields:     nil, // Creator dedicado ignora Fields (ver FileLayout)
+		Formatter:  nil, // o objeto formata a si próprio (weaponLegacyFmt)
+		Creator: func(chunkBytes, stringBytes []byte, headerLength int, languageCode string) (datastore.IGlobalLocalizedTextObject, error) {
+			return NewWeaponsNameTextObject(chunkBytes, stringBytes, headerLength, languageCode, common.GameVersionFFX)
+		},
+	},
 
 	// ===== FFX-2 (v2) - battle/kernel =====
 	"ffx2/battle/kernel/command.bin": {

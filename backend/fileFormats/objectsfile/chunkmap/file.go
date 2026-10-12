@@ -23,18 +23,9 @@ antigo, sem depender de nenhum tipo dele:
 	err = f.SaveToBinary(path)            // grava na árvore mods + cópia extra
 
 O arquivo guarda um idioma só (o binário do jogo é por locale); a carga
-resolves o idioma padrão e mescla os demais idiomas nos slots (best-effort,
-mesma semântica da população de localizações do app). A gravação devolve o
-idioma padrão, como o writer legado.
+resolve o idioma padrão e mescla os demais idiomas nos slots (best-effort).
+A gravação do arquivo usa o idioma padrão.
 */
-
-// FileText são os campos de texto de um chunk (objeto) do arquivo: índice do
-// chunk no arquivo e os campos na ordem binária. É a unidade de export/
-// import do arquivo inteiro — o Index preserva a reconstrução posicional.
-type FileText struct {
-	Index  int
-	Fields []objectsfile.FieldText
-}
 
 // File é um binário de objetos mapeado pela struct T.
 type File[T any] struct {
@@ -66,7 +57,7 @@ func LoadFile[T any](version common.GameVersion, patternPath string) (*File[T], 
 	if err != nil {
 		return nil, err
 	}
-	f, err := LoadFileFromBytes[T](version, patternPath, data)
+	f, err := loadFileFromBytes[T](version, patternPath, data, defaultLang)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +70,7 @@ func LoadFile[T any](version common.GameVersion, patternPath string) (*File[T], 
 			common.LogVerbose("[chunkmap] %s/%s: %v", patternPath, locKey, err)
 			continue
 		}
-		locFile, err := LoadFileFromBytes[T](version, patternPath, locData)
+		locFile, err := loadFileFromBytes[T](version, patternPath, locData, locKey)
 		if err != nil {
 			common.LogVerbose("[chunkmap] %s/%s: %v", patternPath, locKey, err)
 			continue
@@ -89,15 +80,29 @@ func LoadFile[T any](version common.GameVersion, patternPath string) (*File[T], 
 	return f, nil
 }
 
-// LoadFileFromBytes decodifica bytes já lidos (testes e pipelines próprios):
-// valida a struct contra o cabeçalho e instancia um objeto por chunk.
+// LoadFileFromBytes decodifica bytes já lidos (testes e pipelines próprios).
+// A struct pode ser menor que individualLength: Decode guarda os bytes
+// restantes do chunk em Tail. Uma struct maior que o chunk é rejeitada.
 func LoadFileFromBytes[T any](version common.GameVersion, patternPath string, data []byte) (*File[T], error) {
+	return loadFileFromBytes[T](version, patternPath, data, common.DefaultLocalization)
+}
+
+// LoadFileFromBytesForLanguage decodes one locale's binary. Use it when the
+// caller reads locale files independently rather than through LoadFile.
+func LoadFileFromBytesForLanguage[T any](version common.GameVersion, patternPath, languageCode string, data []byte) (*File[T], error) {
+	if err := validateLanguage(languageCode); err != nil {
+		return nil, err
+	}
+	return loadFileFromBytes[T](version, patternPath, data, languageCode)
+}
+
+func loadFileFromBytes[T any](version common.GameVersion, patternPath string, data []byte, languageCode string) (*File[T], error) {
 	h, chunks, strtab, err := Split(data, version)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", patternPath, err)
 	}
-	if size := StructSize[T](); size != h.IndividualLength {
-		return nil, fmt.Errorf("%s: struct de %d bytes, individualLength do binário é %d",
+	if size := StructSize[T](); size > h.IndividualLength {
+		return nil, fmt.Errorf("%s: struct de %d bytes excede individualLength do binário (%d)",
 			patternPath, size, h.IndividualLength)
 	}
 	f := &File[T]{
@@ -112,7 +117,7 @@ func LoadFileFromBytes[T any](version common.GameVersion, patternPath string, da
 	for i := 0; i < h.ChunkCount(); i++ {
 		obj, err := NewMappedTextObject[T](
 			h.Chunk(chunks, i), strtab, h.IndividualLength,
-			common.DefaultLocalization, version, patternPath,
+			languageCode, version, patternPath,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("%s: chunk %d: %w", patternPath, i, err)
@@ -147,7 +152,7 @@ func (f *File[T]) Get(i int) *MappedTextObject[T] {
 func (f *File[T]) ExportText(languageCode string) ([]FileText, error) {
 	out := make([]FileText, 0, len(f.Objects))
 	for i, obj := range f.Objects {
-		fields, err := obj.ExportText()
+		fields, err := obj.ExportText(languageCode)
 		if err != nil {
 			return nil, fmt.Errorf("%s: chunk %d: %w", f.PatternPath, i, err)
 		}
@@ -199,7 +204,11 @@ func (f *File[T]) Edited() bool {
 func (f *File[T]) encodeLanguage(languageCode string) ([]byte, error) {
 	var keyed []datastore.IGlobalKeyedString
 	for _, obj := range f.Objects {
-		keyed = append(keyed, obj.GetLocalizedKeyedStrings(languageCode)...)
+		for _, slot := range obj.slots {
+			if content := slot.contents[languageCode]; content != nil {
+				keyed = append(keyed, content)
+			}
+		}
 	}
 	// A string table ORIGINAL é a base: refs quebrados (MID/OOB) e campos
 	// vazios mantêm o segmento cru, e textos já gravados não são recompilados.
@@ -267,7 +276,8 @@ func readFileBytes(version common.GameVersion, languageCode, patternPath string)
 		return nil, fmt.Errorf("acessar %s: %w", rel, err)
 	}
 	if !accessor.Exists {
-		return nil, fmt.Errorf("arquivo não existe: %s", rel)
+		return nil, fmt.Errorf("arquivo não existe em %s (GameFilesRoot=%s; a raiz deve conter ffx_ps2)",
+			accessor.ResolvedPath, common.GameFilesRoot)
 	}
 	data, err := accessor.ReadBytes()
 	if err != nil {

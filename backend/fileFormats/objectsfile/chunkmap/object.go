@@ -6,50 +6,27 @@ import (
 	"strings"
 
 	"ffxresources/backend/common"
-	"ffxresources/backend/datastore"
-	"ffxresources/backend/fileFormats/objectsfile"
 	"ffxresources/backend/models"
 )
 
-// Formatter formata o objeto para debug/log (usado por ToString).
+// Formatter formats a mapped object for debug output.
 type Formatter[T any] func(o *MappedTextObject[T], languageCode string) string
 
-// MappedTextObject adapta um chunk mapeado pela struct T ao contrato
-// datastore.IGlobalLocalizedTextObject — o contrato compartilhado da camada
-// Wails (builders/formatters), não o fluxo legado. A struct é quem declara o
-// que é texto (campos TextRef/TextPair) e quais são as chaves — derivadas do
-// nome do campo, que é o do struct C#.
-//
-//   - Leitura: models.Segment de cada campo -> TextSlot (slot.go), que
-//     resolve o texto contra a string table pelo converter.
-//   - Escrita (ToBytes): conteúdo de volta no campo do segmento + struct +
-//     Tail (sem patch dos bytes originais).
-//
-// Campos não-texto são SOMENTE leitura: nunca são serializados de volta
-// exceto como os bytes exatos lidos (struct preserva o valor decodificado).
+// MappedTextObject keeps the decoded bytes and text slots in binary order.
+// Text field names are presentation metadata; slot indexes and reflect paths
+// are the only identities used internally.
 type MappedTextObject[T any] struct {
 	headerLength int
 	version      common.GameVersion
 	typeName     string
-	// languageCode é o idioma resolvido na carga — a mesma chave do snapshot.
 	languageCode string
-
-	chunk  *Chunk[T]
-	fields []Field
-	langs  []string
-	slots  []*TextSlot
-	byName map[string]*TextSlot
-	// initial é o snapshot do texto (idioma da carga) por slot — a base da
-	// detecção de edição do ToBytes do arquivo.
-	initial   []string
-	formatter Formatter[T]
+	chunk        *Chunk[T]
+	fields       []Field
+	slots        []*TextSlot
+	initial      []string
+	formatter    Formatter[T]
 }
 
-// garante o contrato de texto (9 métodos) para qualquer T.
-var _ datastore.IGlobalLocalizedTextObject = (*MappedTextObject[models.Segment])(nil)
-
-// NewMappedTextObject decodifica chunkBytes em T e instancia um slot de
-// texto por campo, resolvendo o texto contra stringBytes no idioma.
 func NewMappedTextObject[T any](
 	chunkBytes []byte,
 	stringBytes []byte,
@@ -60,7 +37,7 @@ func NewMappedTextObject[T any](
 ) (*MappedTextObject[T], error) {
 	fields, err := SegmentFields[T]()
 	if err != nil {
-		return nil, fmt.Errorf("%s: mapear campos: %w", typeName, err)
+		return nil, fmt.Errorf("%s: mapear campos textuais: %w", typeName, err)
 	}
 	chunk, err := Decode[T](chunkBytes)
 	if err != nil {
@@ -74,19 +51,23 @@ func NewMappedTextObject[T any](
 		languageCode: languageCode,
 		chunk:        chunk,
 		fields:       fields,
-		langs:        supportedLangs(),
 		slots:        make([]*TextSlot, len(fields)),
-		byName:       make(map[string]*TextSlot, len(fields)),
 		initial:      make([]string, len(fields)),
 	}
-
 	value := reflect.ValueOf(&chunk.Value).Elem()
-	for i, f := range fields {
-		seg := segmentAt(value, f.Path).Interface().(models.Segment)
-		slot := newTextSlot(f.Key)
-		slot.ReadAndSetLocalizedContent(languageCode, stringBytes, seg.Offset, seg.Key, version)
+	for i, field := range fields {
+		fieldValue := segmentAt(value, field.Path)
+		exporter, ok := fieldValue.Interface().(models.TextSegmentsExporter)
+		if !ok {
+			return nil, fmt.Errorf("%s: campo %s nao exporta segmentos de texto", typeName, field.Name)
+		}
+		segments := exporter.ExportTextSegments()
+		if field.Component < 0 || field.Component >= len(segments) {
+			return nil, fmt.Errorf("%s: componente textual invalido em %s", typeName, field.Name)
+		}
+		slot := newTextSlot()
+		slot.read(languageCode, stringBytes, segments[field.Component].Segment, version)
 		o.slots[i] = slot
-		o.byName[f.Key] = slot
 		o.initial[i] = slot.GetLocalizedString(languageCode)
 	}
 	return o, nil
@@ -104,169 +85,204 @@ func (o *MappedTextObject[T]) Edited() bool {
 	return false
 }
 
-// segmentAt segue o caminho (negativo = índice de array) até o models.Segment.
-func segmentAt(v reflect.Value, path []int) reflect.Value {
+// segmentAt follows a reflect path (negative steps represent array indexes).
+func segmentAt(value reflect.Value, path []int) reflect.Value {
 	for _, step := range path {
 		if step < 0 {
-			v = v.Index(-step - 1)
+			value = value.Index(-step - 1)
 		} else {
-			v = v.Field(step)
+			value = value.Field(step)
 		}
 	}
-	return v
+	return value
 }
 
-// SetFormatter define um formatter customizado para ToString.
-func (o *MappedTextObject[T]) SetFormatter(fn Formatter[T]) {
-	o.formatter = fn
-}
+func (o *MappedTextObject[T]) SetFormatter(fn Formatter[T]) { o.formatter = fn }
 
-// OrderedFieldKeys devolve as chaves na ordem do arquivo (ordem binária).
-func (o *MappedTextObject[T]) OrderedFieldKeys() []string {
-	keys := make([]string, 0, len(o.fields))
-	for _, f := range o.fields {
-		keys = append(keys, f.Key)
+// Value expõe a struct decodificada do chunk — leitura de dados não textuais
+// (como os model_ids de w_name.bin). Edições aqui entram no Encode.
+func (o *MappedTextObject[T]) Value() *T { return &o.chunk.Value }
+
+// OrderedFieldNames returns Go struct field paths in binary order.
+func (o *MappedTextObject[T]) OrderedFieldNames() []string {
+	names := make([]string, len(o.fields))
+	for i, field := range o.fields {
+		names[i] = field.Name
 	}
-	return keys
+	return names
 }
 
-// FieldOffsets devolve (chave, offset) por campo de texto — para inspeção
-// e validação contra o cabeçalho/binário.
+// FieldOffsets returns each textual struct field path and its byte offset.
 func (o *MappedTextObject[T]) FieldOffsets() ([]string, []int) {
-	keys := make([]string, len(o.fields))
+	names := make([]string, len(o.fields))
 	offsets := make([]int, len(o.fields))
-	for i, f := range o.fields {
-		keys[i] = f.Key
-		offsets[i] = f.Offset
+	for i, field := range o.fields {
+		names[i], offsets[i] = field.Name, field.Offset
 	}
-	return keys, offsets
+	return names, offsets
 }
 
-// GetName retorna o campo "name" se existir; senão o primeiro campo do
-// arquivo (o primeiro campo é o título natural do chunk — `name`, ou o
-// campo equivalente como `help` no btl_txt.bin).
-func (o *MappedTextObject[T]) GetName(languageCode string) string {
-	if slot := o.byName["name"]; slot != nil {
-		return slot.GetLocalizedString(languageCode)
+func (o *MappedTextObject[T]) ExportText(languageCode string) ([]TextField, error) {
+	if err := validateLanguage(languageCode); err != nil {
+		return nil, err
 	}
-	if len(o.slots) > 0 {
-		return o.slots[0].GetLocalizedString(languageCode)
-	}
-	return ""
-}
+	var out []TextField
+	for start := 0; start < len(o.fields); {
+		end := start + 1
+		for end < len(o.fields) && samePath(o.fields[start].Path, o.fields[end].Path) {
+			end++
+		}
 
-// GetKeyedString retorna o segmento pelo título (chave JSON).
-func (o *MappedTextObject[T]) GetKeyedString(title string) datastore.IGlobalLocalizedKeyedStringObject {
-	return o.byName[title]
-}
-
-// Texts implementa TextResolver: leitura do campo `key` na string table —
-// os textos não-vazios por idioma (nil quando o campo não existe).
-func (o *MappedTextObject[T]) Texts(key string) map[string]string {
-	slot := o.byName[key]
-	if slot == nil {
-		return nil
-	}
-	var out map[string]string
-	for _, loc := range o.langs {
-		if text := slot.GetLocalizedString(loc); text != "" {
-			if out == nil {
-				out = make(map[string]string)
+		partTexts := make(map[models.TextPart]string, end-start)
+		for i := start; i < end; i++ {
+			partTexts[o.fields[i].Part] = o.slots[i].GetLocalizedString(languageCode)
+		}
+		for i := start; i < end; i++ {
+			text := partTexts[o.fields[i].Part]
+			if text == "" || (o.fields[i].SameAs != "" && partTexts[o.fields[i].SameAs] == text) {
+				continue
 			}
-			out[loc] = text
+			out = append(out, TextField{
+				Index: i, Name: o.fields[i].Name,
+				Texts: map[string]string{languageCode: text},
+			})
+		}
+		start = end
+	}
+	return out, nil
+}
+
+func (o *MappedTextObject[T]) ImportText(fields []TextField) error {
+	// Validate the entire input before mutating any slot.
+	seen := make(map[int]struct{}, len(fields))
+	byIndex := make(map[int]map[string]string, len(fields))
+	for _, field := range fields {
+		if field.Index < 0 || field.Index >= len(o.slots) {
+			return fmt.Errorf("chunkmap: indice de campo textual fora da faixa: %d", field.Index)
+		}
+		if field.Name != "" && field.Name != o.fields[field.Index].Name {
+			return fmt.Errorf("chunkmap: campo %d e %q, nao %q", field.Index, field.Name, o.fields[field.Index].Name)
+		}
+		if _, duplicate := seen[field.Index]; duplicate {
+			return fmt.Errorf("chunkmap: campo textual %d repetido", field.Index)
+		}
+		seen[field.Index] = struct{}{}
+		byIndex[field.Index] = field.Texts
+		for languageCode := range field.Texts {
+			if err := validateLanguage(languageCode); err != nil {
+				return err
+			}
 		}
 	}
-	return out
-}
 
-// SetTexts implementa TextResolver: grava os textos no slot de `key` e
-// devolve o models.Segment resultante (o que ToBytes escreve na struct).
-// A gravação é própria do fluxo novo (TextSlot.SetTexts) — codificação via
-// converter, sem passar pela ponte do fluxo legado.
-func (o *MappedTextObject[T]) SetTexts(key string, texts map[string]string) models.Segment {
-	slot := o.byName[key]
-	if slot == nil || len(texts) == 0 {
-		return models.Segment{}
-	}
-	slot.SetTexts(texts, o.version)
-	for _, loc := range o.langs {
-		if c := slot.GetLocalizedContent(loc); c != nil {
-			return models.Segment{Offset: c.GetOffset(), Key: c.GetKey()}
+	// Text field types declare SameAs relationships. If a related component is
+	// omitted, the supplied source translation is applied to it as well.
+	for start := 0; start < len(o.fields); {
+		end := start + 1
+		for end < len(o.fields) && samePath(o.fields[start].Path, o.fields[end].Path) {
+			end++
 		}
-	}
-	return models.Segment{}
-}
-
-// ExportText devolve um FieldText por campo de texto da struct, na ordem
-// binária do arquivo — o helper genérico (chunkmap.ExportText) sobre o
-// próprio objeto como resolver.
-func (o *MappedTextObject[T]) ExportText() ([]objectsfile.FieldText, error) {
-	return ExportText[T](o)
-}
-
-// ImportText aplica os campos recebidos (DTO -> slot); chave desconhecida é
-// erro (pega typo no JSON).
-func (o *MappedTextObject[T]) ImportText(fields []objectsfile.FieldText) error {
-	return ImportText[T](fields, o)
-}
-
-// GetLocalizedKeyedStrings retorna os conteúdos localizados na ordem do arquivo.
-func (o *MappedTextObject[T]) GetLocalizedKeyedStrings(localization string) []datastore.IGlobalKeyedString {
-	result := make([]datastore.IGlobalKeyedString, 0, len(o.slots))
-	for _, slot := range o.slots {
-		if c := slot.GetLocalizedContent(localization); c != nil {
-			result = append(result, c)
+		for targetIndex := start; targetIndex < end; targetIndex++ {
+			relation := o.fields[targetIndex].SameAs
+			if relation == "" {
+				continue
+			}
+			sourceIndex := -1
+			for i := start; i < end; i++ {
+				if o.fields[i].Part == relation {
+					sourceIndex = i
+					break
+				}
+			}
+			if sourceIndex < 0 {
+				return fmt.Errorf("%s: campo %s referencia parte textual ausente %q", o.typeName, o.fields[targetIndex].Name, relation)
+			}
+			if sourceTexts, supplied := byIndex[sourceIndex]; supplied {
+				targetTexts := make(map[string]string, len(sourceTexts)+len(byIndex[targetIndex]))
+				for languageCode, text := range sourceTexts {
+					targetTexts[languageCode] = text
+				}
+				for languageCode, text := range byIndex[targetIndex] {
+					if text != "" {
+						targetTexts[languageCode] = text
+					}
+				}
+				byIndex[targetIndex] = targetTexts
+			}
 		}
+		start = end
 	}
-	return result
+
+	updatesByIndex := make([][]textUpdate, len(o.slots))
+	for index := range o.slots {
+		texts, supplied := byIndex[index]
+		if !supplied {
+			continue
+		}
+		updates, err := o.slots[index].prepareTexts(texts, o.version)
+		if err != nil {
+			return fmt.Errorf("%s: campo %s: %w", o.typeName, o.fields[index].Name, err)
+		}
+		updatesByIndex[index] = updates
+	}
+	for index, updates := range updatesByIndex {
+		o.slots[index].applyTexts(updates)
+	}
+	return nil
 }
 
-// SetLocalizations copia as localizações de outro objeto por interseção de
-// chaves. Aceita *MappedTextObject[T] (mescla de idiomas no LoadFile) e o
-// *KeyedStringFile legado: ambos expõem GetKeyedString(string).
-func (o *MappedTextObject[T]) SetLocalizations(other datastore.IGlobalLocalizationSetter) {
-	getter, ok := other.(interface {
-		GetKeyedString(string) datastore.IGlobalLocalizedKeyedStringObject
-	})
-	if !ok {
+func (o *MappedTextObject[T]) SetLocalizations(other *MappedTextObject[T]) {
+	if other == nil {
 		return
 	}
-	for _, f := range o.fields {
-		slot := o.byName[f.Key]
-		if slot == nil {
-			continue
-		}
-		if otherSeg := getter.GetKeyedString(f.Key); otherSeg != nil {
-			otherSeg.CopyInto(slot)
+	for i := 0; i < min(len(o.slots), len(other.slots)); i++ {
+		for localization, content := range other.slots[i].contents {
+			if localization != o.languageCode {
+				o.slots[i].contents[localization] = content
+			}
 		}
 	}
 }
 
-// GetTextObject retorna o próprio objeto.
-func (o *MappedTextObject[T]) GetTextObject() datastore.IGlobalLocalizedTextObject {
-	return o
-}
+func (o *MappedTextObject[T]) GetHeaderLength() int { return o.headerLength }
 
-// GetHeaderLength retorna o comprimento do cabeçalho do arquivo.
-func (o *MappedTextObject[T]) GetHeaderLength() int {
-	return o.headerLength
-}
-
-// ToBytes grava cada conteúdo de volta no models.Segment correspondente e
-// serializa struct + Tail. Slot sem conteúdo no idioma é pulado (bytes
-// originais do segmento preservados).
 func (o *MappedTextObject[T]) ToBytes(languageCode string) ([]byte, error) {
-	value := reflect.ValueOf(&o.chunk.Value).Elem()
-	for i, f := range o.fields {
-		content := o.slots[i].GetLocalizedContent(languageCode)
-		if content == nil {
-			continue
-		}
-		segmentAt(value, f.Path).Set(reflect.ValueOf(models.Segment{
-			Offset: content.GetOffset(),
-			Key:    content.GetKey(),
-		}))
+	if err := validateLanguage(languageCode); err != nil {
+		return nil, err
 	}
+	value := reflect.ValueOf(&o.chunk.Value).Elem()
+	for start := 0; start < len(o.fields); {
+		end := start + 1
+		for end < len(o.fields) && samePath(o.fields[start].Path, o.fields[end].Path) {
+			end++
+		}
+
+		field := o.fields[start]
+		fieldValue := segmentAt(value, field.Path)
+		exporter, ok := fieldValue.Interface().(models.TextSegmentsExporter)
+		if !ok {
+			return nil, fmt.Errorf("%s: campo %s nao exporta segmentos de texto", o.typeName, field.Name)
+		}
+		segments := exporter.ExportTextSegments()
+		for i := start; i < end; i++ {
+			component := o.fields[i].Component
+			if component < 0 || component >= len(segments) {
+				return nil, fmt.Errorf("%s: componente textual invalido em %s", o.typeName, o.fields[i].Name)
+			}
+			if content := o.slots[i].get(languageCode); content != nil {
+				segments[component].Segment = content.Segment
+			}
+		}
+		importer, ok := fieldValue.Addr().Interface().(models.TextSegmentsImporter)
+		if !ok {
+			return nil, fmt.Errorf("%s: campo %s nao importa segmentos de texto", o.typeName, field.Name)
+		}
+		if err := importer.ImportTextSegments(segments); err != nil {
+			return nil, fmt.Errorf("%s: campo %s: %w", o.typeName, field.Name, err)
+		}
+		start = end
+	}
+
 	out, err := o.chunk.Encode()
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", o.typeName, err)
@@ -282,17 +298,13 @@ func (o *MappedTextObject[T]) ToString(languageCode string) string {
 	return o.defaultString(languageCode)
 }
 
-// String implementa IGlobalLocalizedTextObject.
-func (o *MappedTextObject[T]) String() string {
-	return o.ToString(common.DefaultLocalization)
-}
+func (o *MappedTextObject[T]) String() string { return o.ToString(common.DefaultLocalization) }
 
-// defaultString une os valores não-vazios na ordem do arquivo com " | ".
 func (o *MappedTextObject[T]) defaultString(languageCode string) string {
 	parts := make([]string, 0, len(o.slots))
 	for _, slot := range o.slots {
-		if s := slot.GetLocalizedString(languageCode); s != "" {
-			parts = append(parts, s)
+		if text := slot.GetLocalizedString(languageCode); text != "" {
+			parts = append(parts, text)
 		}
 	}
 	return strings.Join(parts, " | ")

@@ -160,6 +160,61 @@ func TestJSONObjectFormatterRoundTrip(t *testing.T) {
 	}
 }
 
+// TestJSONObjectFormatterWeaponNameMetadata garante que a metadata de
+// referência do fluxo chunkmap (w_name: character, kind) sobrevive ao
+// marshal/unmarshal — que rows sem ela não ganham as chaves no JSON
+// (omitempty; exports antigos permanecem idênticos) — e que o model_id
+// NUNCA entra no artefato: a identidade da row é Index+Name.
+func TestJSONObjectFormatterWeaponNameMetadata(t *testing.T) {
+	f := json.NewJSONObjectFormatter()
+	version := common.GameVersionFFX
+	c := dto.Collection{
+		"w_name": {
+			Metadata: dto.NewObjectMetadata(version, "battle/kernel", "w_name.bin", "ffx/battle/kernel/w_name.bin"),
+			Rows: []dto.TextRow{
+				{
+					Index:     12,
+					Character: "Tidus",
+					Kind:      "weapon",
+					Name:      "Tidus.Standard",
+					Hash:      hash.Texts(map[string]string{"us": "Brotherhood"}),
+					Text:      map[string]string{"us": "Brotherhood"},
+				},
+				{
+					Index: 12,
+					Name:  "Legacy",
+					Hash:  hash.Texts(map[string]string{"us": "Old flow"}),
+					Text:  map[string]string{"us": "Old flow"},
+				},
+			},
+		},
+	}
+	raw, err := f.Marshal(c)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	text := string(raw)
+	if !strings.Contains(text, `"character": "Tidus"`) ||
+		!strings.Contains(text, `"kind": "weapon"`) {
+		t.Fatalf("metadata ausente no JSON:\n%s", text)
+	}
+	if strings.Contains(text, "modelId") {
+		t.Fatalf("model_id não pertence ao artefato (identidade = index+name):\n%s", text)
+	}
+
+	back, err := f.Unmarshal(raw)
+	if err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	rows := back["w_name"].Rows
+	if rows[0].Character != "Tidus" || rows[0].Kind != "weapon" {
+		t.Fatalf("metadata não preservada: %+v", rows[0])
+	}
+	if rows[1].Character != "" || rows[1].Kind != "" {
+		t.Fatalf("row legada não deveria carregar metadata: %+v", rows[1])
+	}
+}
+
 // TestJSONPreservesLayoutFieldOrder garante que campos de um mesmo objeto
 // (mesmo Index) saem na ordem do layout, não em ordem alfabética por Name.
 func TestJSONPreservesLayoutFieldOrder(t *testing.T) {
