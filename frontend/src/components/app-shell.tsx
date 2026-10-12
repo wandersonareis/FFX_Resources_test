@@ -455,7 +455,11 @@ export function AppShell() {  const [selectedIndex, setSelectedIndex] = useState
             {GAME_VERSIONS.map((tab, index) => (
               <Tooltip key={tab.id}>
                 <TooltipTrigger asChild>
-                  <TabsTrigger variant="gradient" value={String(index)}>
+                  <TabsTrigger
+                    variant="gradient"
+                    value={String(index)}
+                    className="h-8 px-2.5 py-0 rounded-lg"
+                  >
                     {tab.label}
                   </TabsTrigger>
                 </TooltipTrigger>
