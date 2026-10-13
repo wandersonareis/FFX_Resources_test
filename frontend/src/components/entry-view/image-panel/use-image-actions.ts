@@ -7,6 +7,8 @@ import type { EntryRow } from '@/lib/ffx/tree-data';
 import {
   importImage,
   importImageGroup,
+  importImages,
+  previewImportImages,
   refreshImageDuplicates,
   saveImage,
   selectImageFile,
@@ -21,7 +23,13 @@ import {
 import { parseError } from '@/lib/ffx/error-handler';
 import type { EntryView } from '@/components/entry-view/entry-view-store';
 
-export type ImageBusy = 'extract' | 'import' | 'save' | 'refresh' | null;
+export type ImageBusy =
+  | 'extract'
+  | 'import'
+  | 'importBatch'
+  | 'save'
+  | 'refresh'
+  | null;
 
 /**
  * Fluxos imperativos do painel: salvar, importar (com passo de alcance
@@ -48,6 +56,15 @@ export function useImageActions({
    * (null = sem diálogo aberto). Só aparece quando a imagem tem cópias.
    */
   const [pendingImport, setPendingImport] = useState<string | null>(null);
+
+  /**
+   * Import em lote de <TranslateLocation>/images: `pendingBatch` guarda o
+   * resumo da varredura (null = diálogo fechado) e `pickedDirs` os
+   * diretórios após ps3data que o usuário marcou — cada marcação refaz a
+   * varredura para atualizar quantas texturas são novas.
+   */
+  const [pendingBatch, setPendingBatch] = useState<dto.ImageBatch | null>(null);
+  const [pickedDirs, setPickedDirs] = useState<string[]>([]);
 
   /**
    * Textura aberta pelo navegador de .vbf: o container é somente leitura;
@@ -216,11 +233,70 @@ export function useImageActions({
     }
   };
 
+  /**
+   * Import em lote de mods/translated/images: abre varrendo sem seleção
+   * (para descobrir os diretórios disponíveis), reanexa a cada marcação e
+   * aplica só os containers diferentes dos de mods/.
+   */
+  const openImportImages = async () => {
+    try {
+      setPickedDirs([]);
+      setPendingBatch(await previewImportImages(version, []));
+    } catch (error) {
+      toast.error(parseError(error));
+    }
+  };
+
+  const toggleImportDir = async (dir: string) => {
+    const next = pickedDirs.includes(dir)
+      ? pickedDirs.filter((d) => d !== dir)
+      : [...pickedDirs, dir];
+    setPickedDirs(next);
+    try {
+      setPendingBatch(await previewImportImages(version, next));
+    } catch (error) {
+      toast.error(parseError(error));
+    }
+  };
+
+  const confirmImportImages = async () => {
+    setBusy('importBatch');
+    const toastId = 'importImages';
+    toast.loading('Importando imagens…', { id: toastId });
+    try {
+      const result = await importImages(version, pickedDirs);
+      setPendingBatch(null);
+      if (result.new_count === 0) {
+        toast.info('Nada novo para importar.', { id: toastId });
+      } else {
+        const pulados =
+          result.errors.length > 0
+            ? ` (${result.errors.length} pulada(s))`
+            : '';
+        toast.success(
+          `${result.new_count} de ${result.max} nova(s) importada(s).${pulados}`,
+          { id: toastId }
+        );
+        await actions.reload();
+      }
+    } catch (error) {
+      toast.error(parseError(error), { id: toastId });
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return {
     busy,
     readOnly,
     pendingImport,
     setPendingImport,
+    pendingBatch,
+    pickedDirs,
+    openImportImages,
+    toggleImportDir,
+    confirmImportImages,
+    closeImportImages: () => setPendingBatch(null),
     openAction,
     onSave,
     onImport,

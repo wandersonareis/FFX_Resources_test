@@ -1,0 +1,153 @@
+package services
+
+import (
+	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	"ffxresources/backend/common"
+	"ffxresources/backend/dto"
+	"ffxresources/backend/interactions"
+)
+
+// Subpastas sob a raiz de tradução (TranslateLocation): textos em text/,
+// imagens em images/ — o padrão é <game>/mods/translated.
+const (
+	TranslatedTextSubdir   = "text"
+	TranslatedImagesSubdir = "images"
+)
+
+// TranslatedRoot devolve a raiz de tradução configurada no app
+// (TranslateLocation, padrão <game>/mods/translated).
+func TranslatedRoot() string {
+	if svc := interactions.NewInteractionService(); svc != nil && svc.TranslateLocation != nil {
+		if root := strings.TrimSpace(svc.TranslateLocation.GetTargetDirectory()); root != "" {
+			return root
+		}
+	}
+	return common.DefaultTranslatedDir(filepath.Join(common.GetExecDir(), common.DirData))
+}
+
+// TranslatedTextRoot é a raiz de TEXTOS traduzidos: <TranslateLocation>/text.
+func TranslatedTextRoot() string {
+	return filepath.Join(TranslatedRoot(), TranslatedTextSubdir)
+}
+
+// TranslatedImagesRoot é a raiz de IMAGENS traduzidas:
+// <TranslateLocation>/images.
+func TranslatedImagesRoot() string {
+	return filepath.Join(TranslatedRoot(), TranslatedImagesSubdir)
+}
+
+// walkTranslatedCandidates varre root (recursivo) devolvendo os .json e
+// .strings em ordem canônica, relativos a root. Raiz inexistente é lote
+// vazio e não erro: o diretório pode ainda não ter sido criado.
+func walkTranslatedCandidates(root string) ([]string, error) {
+	var out []string
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+			return err
+		}
+		if d == nil || d.IsDir() {
+			return nil
+		}
+		ext := strings.ToLower(filepath.Ext(d.Name()))
+		if ext != ".json" && ext != ".strings" {
+			return nil
+		}
+		rel, rerr := filepath.Rel(root, path)
+		if rerr != nil {
+			return nil
+		}
+		out = append(out, filepath.ToSlash(rel))
+		return nil
+	})
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
+// PreviewImportTranslated varre <TranslateLocation>/text e monta o resumo do
+// lote SEM aplicar nada — é o que alimenta o diálogo de confirmação.
+func (s *MetadataService) PreviewImportTranslated(version common.GameVersion, kinds []string) (dto.ImportBatch, error) {
+	return s.importTranslatedBatch(version, kinds, false)
+}
+
+// ImportTranslated reexecuta o lote aplicando arquivo a arquivo. Um arquivo
+// com erro é pulado individualmente (o dos demais segue) e as falhas voltam
+// agregadas em batch.Errors.
+func (s *MetadataService) ImportTranslated(version common.GameVersion, kinds []string) (dto.ImportBatch, error) {
+	return s.importTranslatedBatch(version, kinds, true)
+}
+
+func (s *MetadataService) importTranslatedBatch(version common.GameVersion, kinds []string, apply bool) (dto.ImportBatch, error) {
+	root := TranslatedTextRoot()
+	batch := dto.ImportBatch{Root: root}
+
+	files, err := walkTranslatedCandidates(root)
+	if err != nil {
+		return batch, err
+	}
+
+	want := make(map[string]bool, len(kinds))
+	for _, k := range kinds {
+		if k = strings.ToLower(strings.TrimSpace(k)); k != "" {
+			want[k] = true
+		}
+	}
+	if len(want) == 0 {
+		return batch, fmt.Errorf("nenhum kind pedido")
+	}
+
+	found := make(map[string]bool, len(want))
+	for _, name := range files {
+		// O plano é montado AQUI, arquivo a arquivo: prepareImport mede
+		// contra a store do momento, então o 2º arquivo precisa enxergar o
+		// que o 1º acabou de gravar — um plano pré-montado para todos os
+		// arquivos ficaria defasado e regravaria o que o anterior alterou.
+		plan, perr := s.prepareImport(filepath.Join(root, name), version)
+		if perr != nil {
+			batch.Errors = append(batch.Errors, fmt.Sprintf("%s: %s", name, perr.Error()))
+			continue
+		}
+		if !want[plan.kind] {
+			continue
+		}
+		found[plan.kind] = true
+		batch.Files = append(batch.Files, name)
+		batch.EntryCount += plan.summary.EntryCount
+		batch.ChangedTexts += plan.summary.ChangedTexts
+		for _, e := range plan.summary.Errors {
+			batch.Errors = append(batch.Errors, fmt.Sprintf("%s: %s", name, e))
+		}
+
+		if !apply || len(plan.summary.Errors) > 0 || len(plan.merged) == 0 {
+			continue
+		}
+		if aerr := s.ApplyTextCollection(plan.kind, version, plan.merged); aerr != nil {
+			batch.Errors = append(batch.Errors, fmt.Sprintf("%s: %s", name, aerr.Error()))
+		}
+	}
+
+	// Kinds pedidos sem arquivo nenhum não são erro (dá para marcar mais
+	// kinds do que a pasta tem): entram só como achados, para o diálogo
+	// mostrar o que de fato será importado.
+	for k := range want {
+		if found[k] {
+			batch.Kinds = append(batch.Kinds, k)
+		}
+	}
+	sort.Strings(batch.Kinds)
+	return batch, nil
+}

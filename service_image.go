@@ -175,3 +175,23 @@ func (s *ImageService) SelectImageSavePath(format, suggestedName, id string, ver
 		application.FileFilter{DisplayName: "Todos os arquivos (*.*)", Pattern: "*.*"},
 	)
 }
+
+// PreviewImportImages varre a raiz de imagens traduzidas
+// (<TranslateLocation>/images) e resume o lote SEM gravar: devolve os
+// diretórios logo após ps3data (events, map, menu…) para o diálogo marcar e
+// quantos candidatos diferem do que já está em mods/.
+func (s *ImageService) PreviewImportImages(version common.GameVersion, subdirs []string) (dto.ImageBatch, error) {
+	if s.meta == nil {
+		return dto.ImageBatch{}, fmt.Errorf("metadata service not initialized")
+	}
+	return s.meta.PreviewImportImages(version, subdirs)
+}
+
+// ImportImages grava sobre mods/ apenas os .dds.phyre diferentes dos já
+// presentes (idênticos são pulados) e atualiza os artefatos de trabalho.
+func (s *ImageService) ImportImages(version common.GameVersion, subdirs []string) (dto.ImageBatch, error) {
+	if s.meta == nil {
+		return dto.ImageBatch{}, fmt.Errorf("metadata service not initialized")
+	}
+	return s.meta.ImportImages(version, subdirs)
+}

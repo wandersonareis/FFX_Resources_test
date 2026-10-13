@@ -102,3 +102,22 @@ func NewImageMetadata(id string, version common.GameVersion) Metadata {
 		ID:  id,
 	}
 }
+
+// ImageBatch descreve um import em lote de .dds.phyre a partir da raiz de
+// imagens traduzidas (<TranslateLocation>/images).
+type ImageBatch struct {
+	// Root é a varredura.
+	Root string `json:"root"`
+	// Subdirs são os diretórios disponíveis logo após ps3data (events, map,
+	// menu…). Voltam sempre, mesmo sem seleção — é o que o diálogo oferece
+	// para marcar.
+	Subdirs []string `json:"subdirs"`
+	// Picked são os subdiretórios efetivamente selecionados.
+	Picked []string `json:"picked"`
+	// Max é o total de candidatos no escopo; NewCount quantos diferem do que
+	// já está em mods/ (no preview) ou foram gravados (na aplicação).
+	Max      int `json:"max"`
+	NewCount int `json:"new_count"`
+	// Errors agrega as falhas por textura; o lote segue nos demais.
+	Errors []string `json:"errors"`
+}

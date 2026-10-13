@@ -5,8 +5,10 @@ import {
   GetTextEntry,
   ImportEntry,
   ImportFile,
+  ImportTranslated,
   ListTextEntries,
   PreviewImport,
+  PreviewImportTranslated,
   RevealEntryFile,
   SearchTextEntries,
   SelectImportFile,
@@ -23,6 +25,8 @@ import {
   ImageExists,
   ImportImage,
   ImportImageGroup,
+  ImportImages,
+  PreviewImportImages,
   RefreshImageDuplicates,
   ReplicateImage,
   SaveImage,
@@ -210,6 +214,35 @@ export function importImageGroup(
     ddsPath,
     targets,
     version as Parameters<typeof ImportImageGroup>[4]
+  );
+}
+
+/**
+ * Varre <TranslateLocation>/images e resume o lote SEM gravar: devolve os
+ * diretórios após ps3data (events, map…) e quantos candidatos são NOVOS
+ * (diferentes do container já em mods/).
+ */
+export function previewImportImages(
+  version: GameVersionId,
+  subdirs: string[]
+): Promise<dto.ImageBatch> {
+  return PreviewImportImages(
+    version as Parameters<typeof PreviewImportImages>[0],
+    subdirs
+  );
+}
+
+/**
+ * Grava sobre mods/ apenas os .dds.phyre diferentes dos já presentes —
+ * idênticos são pulados.
+ */
+export function importImages(
+  version: GameVersionId,
+  subdirs: string[]
+): Promise<dto.ImageBatch> {
+  return ImportImages(
+    version as Parameters<typeof ImportImages>[0],
+    subdirs
   );
 }
 
@@ -464,4 +497,32 @@ export async function importFile(
   version: GameVersionId
 ): Promise<number> {
   return ImportFile(path, version as Parameters<typeof ImportFile>[1]);
+}
+
+/**
+ * Varre <TranslateLocation>/text e resume o lote SEM aplicar — alimenta o
+ * diálogo de confirmação do Importar em lote.
+ */
+export async function previewImportTranslated(
+  version: GameVersionId,
+  kinds: EntryKind[]
+): Promise<dto.ImportBatch> {
+  return PreviewImportTranslated(
+    version as Parameters<typeof PreviewImportTranslated>[0],
+    kinds
+  );
+}
+
+/**
+ * Aplica o lote de <TranslateLocation>/text, arquivo a arquivo; devolve o
+ * resumo agregado (arquivos, entradas, textos alterados e falhas).
+ */
+export async function importTranslated(
+  version: GameVersionId,
+  kinds: EntryKind[]
+): Promise<dto.ImportBatch> {
+  return ImportTranslated(
+    version as Parameters<typeof ImportTranslated>[0],
+    kinds
+  );
 }

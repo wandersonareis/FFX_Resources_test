@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, FlipVertical, FolderInput, RefreshCw } from 'lucide-react';
+import { Copy, FlipVertical, FolderInput, Images, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SHORTCUTS, shortcutTip } from '@/lib/ffx/shortcuts';
 import { ImageExportMenu } from './export-menu';
@@ -21,6 +21,7 @@ export function ImageToolbar({
   onExtract,
   onSave,
   onImport,
+  onImportTranslated,
   onReplicate,
   onToggleFlip,
   onRefresh,
@@ -32,6 +33,7 @@ export function ImageToolbar({
   onExtract: () => void;
   onSave: (format: 'dds' | 'png') => void;
   onImport: () => void;
+  onImportTranslated: () => void;
   onReplicate: () => void;
   onToggleFlip: () => void;
   onRefresh: () => void;
@@ -53,6 +55,16 @@ export function ImageToolbar({
           : !readOnly && duplicateCount > 0
             ? `Importar .dds… (${copyTotal} idênticas)`
             : 'Importar .dds…'}
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={busy !== null}
+        title="Importa em lote os .dds.phyre de mods/translated/images — só os diferentes dos já em mods/"
+        onClick={onImportTranslated}
+      >
+        <Images size={16} />
+        {busy === 'importBatch' ? 'Importando…' : 'Importar traduzidas…'}
       </Button>
       {duplicateCount > 0 ? (
         <Button

@@ -196,3 +196,23 @@ func (s *TextService) CountChangedTexts(imported, store dto.Collection) int {
 	}
 	return s.meta.CountChangedTexts(imported, store)
 }
+
+// PreviewImportTranslated varre a raiz de textos traduzidos
+// (<TranslateLocation>/text) e devolve o resumo do lote SEM aplicar — é o
+// que alimenta o diálogo de confirmação do Importar em lote.
+func (s *TextService) PreviewImportTranslated(version common.GameVersion, kinds []string) (dto.ImportBatch, error) {
+	if s.meta == nil {
+		return dto.ImportBatch{}, fmt.Errorf("metadata service not initialized")
+	}
+	return s.meta.PreviewImportTranslated(version, kinds)
+}
+
+// ImportTranslated reexecuta o lote e aplica arquivo a arquivo, gravando os
+// binários em mods/. Arquivos com erro são pulados um a um; as falhas voltam
+// agregadas no resumo.
+func (s *TextService) ImportTranslated(version common.GameVersion, kinds []string) (dto.ImportBatch, error) {
+	if s.meta == nil {
+		return dto.ImportBatch{}, fmt.Errorf("metadata service not initialized")
+	}
+	return s.meta.ImportTranslated(version, kinds)
+}

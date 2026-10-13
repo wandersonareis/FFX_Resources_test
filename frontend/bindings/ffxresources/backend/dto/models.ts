@@ -99,6 +99,85 @@ export class FileEntry {
 }
 
 /**
+ * ImageBatch descreve um import em lote de .dds.phyre a partir da raiz de
+ * imagens traduzidas (<TranslateLocation>/images).
+ */
+export class ImageBatch {
+    /**
+     * Root é a varredura.
+     */
+    "root": string;
+
+    /**
+     * Subdirs são os diretórios disponíveis logo após ps3data (events, map,
+     * menu…). Voltam sempre, mesmo sem seleção — é o que o diálogo oferece
+     * para marcar.
+     */
+    "subdirs": string[];
+
+    /**
+     * Picked são os subdiretórios efetivamente selecionados.
+     */
+    "picked": string[];
+
+    /**
+     * Max é o total de candidatos no escopo; NewCount quantos diferem do que
+     * já está em mods/ (no preview) ou foram gravados (na aplicação).
+     */
+    "max": number;
+    "new_count": number;
+
+    /**
+     * Errors agrega as falhas por textura; o lote segue nos demais.
+     */
+    "errors": string[];
+
+    /** Creates a new ImageBatch instance. */
+    constructor($$source: Partial<ImageBatch> = {}) {
+        if (!("root" in $$source)) {
+            this["root"] = "";
+        }
+        if (!("subdirs" in $$source)) {
+            this["subdirs"] = [];
+        }
+        if (!("picked" in $$source)) {
+            this["picked"] = [];
+        }
+        if (!("max" in $$source)) {
+            this["max"] = 0;
+        }
+        if (!("new_count" in $$source)) {
+            this["new_count"] = 0;
+        }
+        if (!("errors" in $$source)) {
+            this["errors"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ImageBatch instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ImageBatch {
+        const $$createField1_0 = $$createType0;
+        const $$createField2_0 = $$createType0;
+        const $$createField5_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("subdirs" in $$parsedSource) {
+            $$parsedSource["subdirs"] = $$createField1_0($$parsedSource["subdirs"]);
+        }
+        if ("picked" in $$parsedSource) {
+            $$parsedSource["picked"] = $$createField2_0($$parsedSource["picked"]);
+        }
+        if ("errors" in $$parsedSource) {
+            $$parsedSource["errors"] = $$createField5_0($$parsedSource["errors"]);
+        }
+        return new ImageBatch($$parsedSource as Partial<ImageBatch>);
+    }
+}
+
+/**
  * ImageDuplicate é uma cópia de mesma imagem (payload original igual).
  */
 export class ImageDuplicate {
@@ -363,6 +442,80 @@ export class ImageImportResult {
             $$parsedSource["failed"] = $$createField1_0($$parsedSource["failed"]);
         }
         return new ImageImportResult($$parsedSource as Partial<ImageImportResult>);
+    }
+}
+
+/**
+ * ImportBatch descreve uma importação em LOTE a partir de um diretório
+ * (mods/translated/text): o que foi encontrado, o que mudaria e o que falhou.
+ * Diferente de ImportSummary, que descreve UM arquivo, este agrega N arquivos
+ * de kinds diferentes — por isso os kinds vêm como lista e não como escalar.
+ */
+export class ImportBatch {
+    /**
+     * Root é a varredura (a raiz de textos traduzidos).
+     */
+    "root": string;
+
+    /**
+     * Kinds são os kinds pedidos que de fato tiveram arquivo encontrado.
+     */
+    "kinds": string[];
+
+    /**
+     * Files são os arquivos varridos, relativos a Root (mantém o resumo legível).
+     */
+    "files": string[];
+    "entry_count": number;
+    "changed_texts": number;
+
+    /**
+     * Errors agrega as falhas por arquivo; qualquer uma bloqueia o lote.
+     */
+    "errors": string[];
+
+    /** Creates a new ImportBatch instance. */
+    constructor($$source: Partial<ImportBatch> = {}) {
+        if (!("root" in $$source)) {
+            this["root"] = "";
+        }
+        if (!("kinds" in $$source)) {
+            this["kinds"] = [];
+        }
+        if (!("files" in $$source)) {
+            this["files"] = [];
+        }
+        if (!("entry_count" in $$source)) {
+            this["entry_count"] = 0;
+        }
+        if (!("changed_texts" in $$source)) {
+            this["changed_texts"] = 0;
+        }
+        if (!("errors" in $$source)) {
+            this["errors"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ImportBatch instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ImportBatch {
+        const $$createField1_0 = $$createType0;
+        const $$createField2_0 = $$createType0;
+        const $$createField5_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("kinds" in $$parsedSource) {
+            $$parsedSource["kinds"] = $$createField1_0($$parsedSource["kinds"]);
+        }
+        if ("files" in $$parsedSource) {
+            $$parsedSource["files"] = $$createField2_0($$parsedSource["files"]);
+        }
+        if ("errors" in $$parsedSource) {
+            $$parsedSource["errors"] = $$createField5_0($$parsedSource["errors"]);
+        }
+        return new ImportBatch($$parsedSource as Partial<ImportBatch>);
     }
 }
 

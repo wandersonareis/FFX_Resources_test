@@ -455,3 +455,16 @@ func writeFile(path string, payload []byte) error {
 	}
 	return nil
 }
+
+// ImportContainer grava um .dds.phyre COMPLETO sobre o container em mods/.
+//
+// É cópia de container, não repack: a fonte já está no formato que o .vbf
+// usa, então não há o que embalar no pristine (o caminho de ImportPayloadFrom,
+// que recebe um DDS e o monta sobre o original de data/).
+func ImportContainer(version common.GameVersion, id string, container []byte) error {
+	if !ValidID(id) {
+		return fmt.Errorf("textura desconhecida: %s", id)
+	}
+	rel := RelPath(version, id)
+	return writeFile(filepath.Join(common.GameFilesRoot, common.ModsFolder, rel), container)
+}

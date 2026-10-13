@@ -4,10 +4,12 @@
 export {
     BatchResult,
     FileEntry,
+    ImageBatch,
     ImageDuplicate,
     ImageDuplicates,
     ImageEntry,
     ImageImportResult,
+    ImportBatch,
     ImportEntryInfo,
     ImportSummary,
     ImportUsage,

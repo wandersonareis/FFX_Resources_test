@@ -18,6 +18,7 @@ import { ImageToolbar } from './toolbar';
 import { ImagePreview } from './image-preview';
 import { ImageInfoPanel } from './image-info-panel';
 import { ImageImportDialog } from './import-dialog';
+import { ImportImagesDialog } from './import-images-dialog';
 import { useImagePreview } from './use-image-preview';
 import { useImageActions } from './use-image-actions';
 
@@ -60,6 +61,12 @@ export function ImagePanel({ view }: { view: EntryView }) {
     readOnly,
     pendingImport,
     setPendingImport,
+    pendingBatch,
+    pickedDirs,
+    openImportImages,
+    toggleImportDir,
+    confirmImportImages,
+    closeImportImages,
     openAction,
     onSave,
     onImport,
@@ -76,6 +83,7 @@ export function ImagePanel({ view }: { view: EntryView }) {
   const panelIdle =
     entry !== null &&
     pendingImport === null &&
+    pendingBatch === null &&
     imageAction === null &&
     menuTarget === null &&
     busy === null;
@@ -145,6 +153,7 @@ export function ImagePanel({ view }: { view: EntryView }) {
           onExtract={() => openAction('extract')}
           onSave={(format) => void onSave(format)}
           onImport={() => void onImport()}
+          onImportTranslated={() => void openImportImages()}
           onReplicate={() => openAction('replicate')}
           onToggleFlip={preview.toggleFlip}
           onRefresh={() => void onRefresh()}
@@ -201,6 +210,18 @@ export function ImagePanel({ view }: { view: EntryView }) {
           onCancel={() => setPendingImport(null)}
           onImportOne={() => pendingImport && void runImport(pendingImport, false)}
           onImportAll={() => pendingImport && void runImport(pendingImport, true)}
+        />
+
+        <ImportImagesDialog
+          open={pendingBatch !== null}
+          batch={pendingBatch}
+          selected={pickedDirs}
+          busy={busy === 'importBatch'}
+          onToggle={(dir) => void toggleImportDir(dir)}
+          onOpenChange={(open) => {
+            if (!open) closeImportImages();
+          }}
+          onConfirm={() => void confirmImportImages()}
         />
       </div>
     </EntryActionsMenu>

@@ -130,6 +130,28 @@ export function ImportImageGroup(kind: string, id: string, ddsPath: string, targ
 }
 
 /**
+ * ImportImages grava sobre mods/ apenas os .dds.phyre diferentes dos já
+ * presentes (idênticos são pulados) e atualiza os artefatos de trabalho.
+ */
+export function ImportImages(version: common$0.GameVersion, subdirs: string[]): $CancellablePromise<dto$0.ImageBatch> {
+    return $Call.ByID(2367032655, version, subdirs).then(($result: any) => {
+        return $$createType5($result);
+    });
+}
+
+/**
+ * PreviewImportImages varre a raiz de imagens traduzidas
+ * (<TranslateLocation>/images) e resume o lote SEM gravar: devolve os
+ * diretórios logo após ps3data (events, map, menu…) para o diálogo marcar e
+ * quantos candidatos diferem do que já está em mods/.
+ */
+export function PreviewImportImages(version: common$0.GameVersion, subdirs: string[]): $CancellablePromise<dto$0.ImageBatch> {
+    return $Call.ByID(2336505643, version, subdirs).then(($result: any) => {
+        return $$createType5($result);
+    });
+}
+
+/**
  * RefreshImageDuplicates descarta o índice de duplicatas em cache (rebuild
  * na próxima consulta) — para edição externa em hex editor.
  */
@@ -182,3 +204,4 @@ const $$createType1 = $Create.Array($Create.Any);
 const $$createType2 = dto$0.ImageEntry.createFrom;
 const $$createType3 = dto$0.ImageDuplicates.createFrom;
 const $$createType4 = dto$0.ImageImportResult.createFrom;
+const $$createType5 = dto$0.ImageBatch.createFrom;

@@ -140,12 +140,23 @@ export function ImportFile(path: string, version: common$0.GameVersion): $Cancel
 }
 
 /**
+ * ImportTranslated reexecuta o lote e aplica arquivo a arquivo, gravando os
+ * binários em mods/. Arquivos com erro são pulados um a um; as falhas voltam
+ * agregadas no resumo.
+ */
+export function ImportTranslated(version: common$0.GameVersion, kinds: string[]): $CancellablePromise<dto$0.ImportBatch> {
+    return $Call.ByID(2189922945, version, kinds).then(($result: any) => {
+        return $$createType6($result);
+    });
+}
+
+/**
  * ListLanguages devolve os idiomas disponíveis em formato chave/valor
  * (Code para arquivos, Name para exibição no picker).
  */
 export function ListLanguages(): $CancellablePromise<common$0.Language[]> {
     return $Call.ByID(3280093965).then(($result: any) => {
-        return $$createType7($result);
+        return $$createType8($result);
     });
 }
 
@@ -155,7 +166,7 @@ export function ListLanguages(): $CancellablePromise<common$0.Language[]> {
  */
 export function ListTextEntries(kind: string, version: common$0.GameVersion): $CancellablePromise<services$0.EntrySummary[]> {
     return $Call.ByID(72744971, kind, version).then(($result: any) => {
-        return $$createType9($result);
+        return $$createType10($result);
     });
 }
 
@@ -165,7 +176,18 @@ export function ListTextEntries(kind: string, version: common$0.GameVersion): $C
  */
 export function PreviewImport(path: string, version: common$0.GameVersion): $CancellablePromise<dto$0.ImportSummary> {
     return $Call.ByID(4130373507, path, version).then(($result: any) => {
-        return $$createType10($result);
+        return $$createType11($result);
+    });
+}
+
+/**
+ * PreviewImportTranslated varre a raiz de textos traduzidos
+ * (<TranslateLocation>/text) e devolve o resumo do lote SEM aplicar — é o
+ * que alimenta o diálogo de confirmação do Importar em lote.
+ */
+export function PreviewImportTranslated(version: common$0.GameVersion, kinds: string[]): $CancellablePromise<dto$0.ImportBatch> {
+    return $Call.ByID(1973036677, version, kinds).then(($result: any) => {
+        return $$createType6($result);
     });
 }
 
@@ -184,7 +206,7 @@ export function RevealEntryFile(kind: string, id: string, version: common$0.Game
  */
 export function SearchTextEntries(version: common$0.GameVersion, query: string): $CancellablePromise<services$0.TextSearchResponse> {
     return $Call.ByID(2804091447, version, query).then(($result: any) => {
-        return $$createType11($result);
+        return $$createType12($result);
     });
 }
 
@@ -217,9 +239,10 @@ var $$createType3 = (function $$initCreateType3(...args: any[]): any {
 });
 const $$createType4 = dto$0.FileEntry.createFrom;
 const $$createType5 = $Create.Map($Create.Any, $$createType4);
-const $$createType6 = common$0.Language.createFrom;
-const $$createType7 = $Create.Array($$createType6);
-const $$createType8 = services$0.EntrySummary.createFrom;
-const $$createType9 = $Create.Array($$createType8);
-const $$createType10 = dto$0.ImportSummary.createFrom;
-const $$createType11 = services$0.TextSearchResponse.createFrom;
+const $$createType6 = dto$0.ImportBatch.createFrom;
+const $$createType7 = common$0.Language.createFrom;
+const $$createType8 = $Create.Array($$createType7);
+const $$createType9 = services$0.EntrySummary.createFrom;
+const $$createType10 = $Create.Array($$createType9);
+const $$createType11 = dto$0.ImportSummary.createFrom;
+const $$createType12 = services$0.TextSearchResponse.createFrom;
