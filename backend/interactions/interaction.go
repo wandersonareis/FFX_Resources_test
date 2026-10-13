@@ -1,23 +1,26 @@
 package interactions
 
 import (
-	"context"
 	"ffxresources/backend/common"
 	"path/filepath"
 	"sync"
 )
 
+// InteractionService é o ponto de acesso único às localizações do jogo
+// (gamefiles, translated) e ao config persistido. O singleton é criado sob
+// demanda e protegido por mu para acesso concorrente seguro (goroutines
+// de preload, workers de import).
 type InteractionService struct {
-	Ctx               context.Context
-	activeCtx         context.Context
-	cancel            context.CancelFunc
-	mu                sync.Mutex
+	mu                sync.RWMutex
 	ffxAppConfig      IAppConfig
 	GameLocation      IGameLocation
 	TranslateLocation ITranslateLocation
 }
 
-var interactionInstance *InteractionService
+var (
+	interactionInstance *InteractionService
+	interactionOnce     sync.Once
+)
 
 func resolveLocationPath(config IAppConfig, configKey, defaultDirName string) string {
 	if config != nil {
@@ -59,36 +62,10 @@ func defaultAppConfig() *AppConfig {
 	}
 }
 
-func NewInteractionService() *InteractionService {
-	if interactionInstance == nil {
-		config := NewAppConfig()
-		if config == nil {
-			config = defaultAppConfig()
-		}
-
-		gameDir := resolveLocationPath(config, "GameFilesLocation", common.DirData)
-		translateDir := resolveTranslatePath(config, gameDir)
-
-		interactionInstance = &InteractionService{
-			Ctx:               context.Background(),
-			ffxAppConfig:      config,
-			GameLocation:      newGameLocation(gameDir, config),
-			TranslateLocation: newTranslateLocation(translateDir, config),
-		}
-
-		if gameDir != "" {
-			common.SetGameFilesRoot(gameDir)
-		}
-
-		common.SetCurrentGameVersion(config.GetGameVersion())
-
-	}
-	return interactionInstance
-}
-
-func NewInteractionServiceWithConfig(config *AppConfig) *InteractionService {
-	s := NewInteractionService()
-
+// applyConfig injeta o config no singleton, resolve as localizações e
+// sincroniza os globals (GameFilesRoot, CurrentGameVersion). Usado pelo
+// construtor normal e pelo construtor com config customizado (testes/scripts).
+func (s *InteractionService) applyConfig(config IAppConfig) {
 	gameDir := resolveLocationPath(config, "GameFilesLocation", common.DirData)
 	translateDir := resolveTranslatePath(config, gameDir)
 
@@ -101,51 +78,36 @@ func NewInteractionServiceWithConfig(config *AppConfig) *InteractionService {
 	if gameDir != "" {
 		common.SetGameFilesRoot(gameDir)
 	}
-
 	common.SetCurrentGameVersion(config.GetGameVersion())
-
-	return s
 }
 
-func NewInteractionWithCtx(ctx context.Context) *InteractionService {
+// NewInteractionService devolve o singleton, criando na primeira chamada
+// a partir do config.json padrão.
+func NewInteractionService() *InteractionService {
+	interactionOnce.Do(func() {
+		config := NewAppConfig()
+		if config == nil {
+			config = defaultAppConfig()
+		}
+		interactionInstance = &InteractionService{}
+		interactionInstance.applyConfig(config)
+	})
+	return interactionInstance
+}
+
+// NewInteractionServiceWithConfig re-injeta um config customizado no
+// singleton. Existe para testes e scripts CLI que precisam apontar para
+// diretórios de teste em vez dos arquivos reais do jogo.
+func NewInteractionServiceWithConfig(config *AppConfig) *InteractionService {
 	s := NewInteractionService()
-
-	s.mu.Lock()
-	s.Ctx = ctx
-	activeCtx, cancel := context.WithCancel(ctx)
-	s.activeCtx = activeCtx
-	s.cancel = cancel
-	s.mu.Unlock()
-
+	s.applyConfig(config)
 	return s
 }
 
+// FFXAppConfig devolve o config atual (leitura pontual; valores são
+// repassados aos chamadores, sem acoplamento ao estado interno).
 func (i *InteractionService) FFXAppConfig() IAppConfig {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
 	return i.ffxAppConfig
-}
-
-func (i *InteractionService) Start() context.Context {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-
-	i.activeCtx, i.cancel = context.WithCancel(i.Ctx)
-
-	return i.activeCtx
-}
-
-func (i *InteractionService) Stop() {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-
-	if i.cancel != nil {
-		i.cancel()
-		i.cancel = nil
-	}
-}
-
-func (i *InteractionService) GetActiveCtx() context.Context {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-
-	return i.activeCtx
 }

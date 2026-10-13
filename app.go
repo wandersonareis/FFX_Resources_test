@@ -96,9 +96,8 @@ func appServices(a *App) []application.Service {
 }
 
 // ServiceStartup substitui o OnStartup do v2: roda durante app.Run(), antes
-// do event loop. O ctx recebido é cancelado logo antes do shutdown e serve
-// de raiz de cancelamento para as goroutines de trabalho.
-func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
+// do event loop. O ctx recebido é cancelado logo antes do shutdown.
+func (a *App) ServiceStartup(_ context.Context, _ application.ServiceOptions) error {
 	// O arquivo de log nasce aqui: um por início de app, ao lado do
 	// executável (logs/ffx-<início>.log) — antes de qualquer mensagem.
 	// A linha abaixo garante conteúdo desde o primeiro instante (e deixa
@@ -116,10 +115,6 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 		}
 	}()
 
-	// A árvore de dependências (notifier, progresso, statusbar, metadata e os
-	// serviços por domínio) já foi montada em NewApp — aqui só o que exige o
-	// ctx da aplicação.
-	interactions.NewInteractionWithCtx(ctx)
 	return nil
 }
 
