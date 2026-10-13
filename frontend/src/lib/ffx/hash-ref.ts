@@ -3,7 +3,7 @@
 // com "$" E o resto casa com o hash PRÓPRIO da row. Prefixo sozinho não
 // basta: um texto literal que comece com "$" não pode virar linha oculta.
 
-import type { dto } from '@/wailsjs/go/models';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
 
 /**
  * Kinds cujo view sai com dedup global (refs "$hash" na entrega): os

@@ -5,8 +5,8 @@ import { useHotkey, useHotkeys } from '@tanstack/react-hotkeys';
 import { loggedToast as toast } from '@/lib/ffx/toast-logged';
 import { SHORTCUTS, shortcutTip } from '@/lib/ffx/shortcuts';
 import { openSearchDialog } from '@/lib/ffx/search-store';
-import { QuitApp } from '@/wailsjs/go/main/App';
-import { EventsEmit } from '@/wailsjs/runtime/runtime';
+import { QuitApp } from '@/bindings/ffxresources/app';
+import { Events } from '@wailsio/runtime';
 import { GAME_VERSIONS, GameVersionId, isGameVersionId } from '@/lib/ffx/game-version';
 import { tabStorage } from '@/lib/ffx/tab-storage';
 import { useWailsEvent } from '@/lib/ffx/use-wails-event';
@@ -42,8 +42,8 @@ export function AppShell() {
   }, []);
 
   const setVersion = useCallback((version: GameVersionId) => {
-    EventsEmit('GameVersionChanged', version);
-    EventsEmit('Refresh_Tree');
+    Events.Emit('GameVersionChanged', version);
+    Events.Emit('Refresh_Tree');
   }, []);
 
   // ---- Atalhos globais (TanStack Hotkeys) ----

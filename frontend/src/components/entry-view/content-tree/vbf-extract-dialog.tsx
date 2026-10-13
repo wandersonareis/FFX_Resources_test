@@ -19,7 +19,7 @@ import {
   previewVbfExtraction,
   selectVbfExtractDir,
 } from '@/lib/ffx/vbf';
-import type { dto } from '@/wailsjs/go/models';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
 
 export interface VbfExtractRequest {
   requestId: number;

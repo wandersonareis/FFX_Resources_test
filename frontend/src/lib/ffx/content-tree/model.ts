@@ -1,4 +1,4 @@
-import type { dto } from '@/wailsjs/go/models';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import type { EntryKind } from '../display-names';
 import type { EntryRow } from '../tree-data';
 

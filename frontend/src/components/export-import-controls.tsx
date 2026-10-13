@@ -3,8 +3,8 @@
 import { useCallback, useState } from 'react';
 import { Download, Upload } from 'lucide-react';
 import { loggedToast as toast } from '@/lib/ffx/toast-logged';
-import { EventsEmit } from '@/wailsjs/runtime/runtime';
-import { dto } from '@/wailsjs/go/models';
+import { Events } from '@wailsio/runtime';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import { GAME_VERSIONS, GameVersionId } from '@/lib/ffx/game-version';
 import { EntryKind, KIND_LABELS } from '@/lib/ffx/display-names';
 import { exportSelection, EXPORT_FORMAT_LABELS } from '@/lib/ffx/export-selection';
@@ -135,7 +135,7 @@ export function ExportImportControls({ version }: { version: GameVersionId }) {
       );
       // Avisa a aba ativa para recarregar árvore/tabela (rascunhos preservados).
       try {
-        EventsEmit('ImportDone');
+        Events.Emit('ImportDone');
       } catch {
         // sem runtime Wails (dev no browser) — segue sem recarga automática
       }

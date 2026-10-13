@@ -1,5 +1,6 @@
 import { createStore } from '@tanstack/store';
-import { dto, services } from '@/wailsjs/go/models';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
+import * as services from '@/bindings/ffxresources/backend/services/models';
 import {
   KIND_LABELS,
   IMAGE_TREE_PREFIX,
@@ -564,7 +565,11 @@ export function createEntryView(version: GameVersionId): EntryView {
       });
       // Anotações de link das refs dedupadas (texto da def + origem) —
       // alimenta o texto linkado na tabela (cor própria, tooltip).
-      patch({ refLinks: full.refs ?? {} });
+      // O v3 gera `refs` como `{ [_ in string]?: RefLink }` (valor opcional),
+      // enquanto o v2 gerava `Record<string, RefLink>`. O mapa vem de um
+      // `map[string]RefLink` do Go, cujo valor nunca é nil — o cast devolve
+      // exatamente a tipagem que os consumidores já assumem.
+      patch({ refLinks: (full.refs ?? {}) as Record<string, dto.RefLink> });
       // Filtro de linhas: para .vbf de idioma não-us, olha o idioma do
       // binário clicado (o .vbf é só visualização — nada a traduzir).
       const vbfLoc = entry.vbf ? locFromVbfPath(entry.vbf.path) : null;

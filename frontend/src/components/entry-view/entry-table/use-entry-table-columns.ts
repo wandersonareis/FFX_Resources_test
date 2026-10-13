@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import { dto } from '@/wailsjs/go/models';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import { useEditDraft, rowKey } from '@/lib/ffx/edit-draft';
 import { SOURCE_LANG } from '@/lib/ffx/save-all';
 import { linkedRowText } from '@/lib/ffx/hash-ref';

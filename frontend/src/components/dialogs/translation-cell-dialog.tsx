@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useHotkey } from '@tanstack/react-hotkeys';
 import { ChevronLeft, ChevronRight, ShieldAlert } from 'lucide-react';
-import { dto } from '@/wailsjs/go/models';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import { SOURCE_LANG } from '@/lib/ffx/save-all';
 import {
   missingProtectedTags,

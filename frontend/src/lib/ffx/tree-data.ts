@@ -26,8 +26,9 @@ import {
   SelectImageSavePath,
   SelectImportFile,
   WarmTextSearch,
-} from '@/wailsjs/go/main/App';
-import { dto, services } from '@/wailsjs/go/models';
+} from '@/bindings/ffxresources/app';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
+import * as services from '@/bindings/ffxresources/backend/services/models';
 import { resolveEntryLabel, EntryKind } from './display-names';
 import type { GameVersionId } from './game-version';
 

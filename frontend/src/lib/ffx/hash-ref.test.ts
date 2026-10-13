@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import type { dto } from '@/wailsjs/go/models';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import { linkedRowText } from './hash-ref';
 
 // A anotação de link vem do backend (FileEntry.refs, chave = dto.RowKey =

@@ -1,6 +1,6 @@
 import type { ReactTable } from '@tanstack/react-table';
 import { TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { dto } from '@/wailsjs/go/models';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import type { F } from './table-types';
 
 export function EntryTableHeader({

@@ -1,11 +1,11 @@
-import { EventsEmit } from '@/wailsjs/runtime/runtime';
+import { Events } from '@wailsio/runtime';
 
 export function sendErrorNotificationWithMessage(message: string): void {
-  EventsEmit('Notify', { severity: 'error', message });
+  Events.Emit('Notify', { severity: 'error', message });
 }
 
 export function sendErrorNotification(err: unknown): void {
-  EventsEmit('Notify', { severity: 'error', message: parseError(err) });
+  Events.Emit('Notify', { severity: 'error', message: parseError(err) });
 }
 
 export function parseError(err: unknown): string {

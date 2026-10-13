@@ -1,7 +1,7 @@
 'use client';
 
 import { Copy } from 'lucide-react';
-import type { dto } from '@/wailsjs/go/models';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,

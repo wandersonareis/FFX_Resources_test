@@ -1,4 +1,4 @@
-import { dto } from '@/wailsjs/go/models';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import { rowKey, useEditDraft } from '@/lib/ffx/edit-draft';
 import { SOURCE_LANG } from '@/lib/ffx/save-all';
 import type { EntryRow } from '@/lib/ffx/tree-data';

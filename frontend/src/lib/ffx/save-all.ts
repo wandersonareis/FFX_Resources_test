@@ -1,4 +1,4 @@
-import { ApplyTextCollection, ApplyVbfTextCollection } from '@/wailsjs/go/main/App';
+import { ApplyTextCollection, ApplyVbfTextCollection } from '@/bindings/ffxresources/app';
 import { loggedToast as toast } from '@/lib/ffx/toast-logged';
 import { editDraft } from './edit-draft';
 import { invalidateVbfCache } from './vbf';

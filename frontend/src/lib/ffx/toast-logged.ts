@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import { WriteLog } from '@/wailsjs/go/main/App';
+import { WriteLog } from '@/bindings/ffxresources/app';
 
 type SonnerMessage = Parameters<typeof toast>[0];
 type SonnerData = Parameters<typeof toast>[1];

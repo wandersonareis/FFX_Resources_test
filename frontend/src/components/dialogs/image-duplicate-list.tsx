@@ -2,7 +2,7 @@
 
 import { Badge } from '@/components/ui/badge';
 import { copyState, resolveEntryLabel } from '@/lib/ffx/display-names';
-import type { dto } from '@/wailsjs/go/models';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
 
 /**
  * Lista da textura de referência + cópias, com o estado de cada uma.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { dto } from '@/wailsjs/go/models';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import type { EntryKind } from './display-names';
 import { editDraft } from './edit-draft';
 

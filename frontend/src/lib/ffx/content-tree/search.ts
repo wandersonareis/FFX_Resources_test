@@ -1,4 +1,4 @@
-import type { services } from "@/wailsjs/go/models";
+import * as services from "@/bindings/ffxresources/backend/services/models";
 import type { EntryKind } from "../display-names";
 import type { SideNode } from "./model";
 

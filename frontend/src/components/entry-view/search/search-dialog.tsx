@@ -29,7 +29,7 @@ import {
   runTextSearch,
   searchStoreFor,
 } from '@/lib/ffx/search-store';
-import type { services } from '@/wailsjs/go/models';
+import * as services from '@/bindings/ffxresources/backend/services/models';
 import type { EntryView } from '../entry-view-store';
 
 /**

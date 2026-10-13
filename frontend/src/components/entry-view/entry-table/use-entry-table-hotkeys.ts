@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useHotkeys } from '@tanstack/react-hotkeys';
-import { dto } from '@/wailsjs/go/models';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import { rowKey } from '@/lib/ffx/edit-draft';
 import { entryNodeId } from '@/lib/ffx/content-tree/model';
 import { SHORTCUTS } from '@/lib/ffx/shortcuts';

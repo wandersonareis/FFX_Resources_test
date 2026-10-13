@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Save } from "lucide-react";
 import { useSelector } from "@tanstack/react-store";
-import { SetUnsavedEdits } from "@/wailsjs/go/main/App";
+import { SetUnsavedEdits } from "@/bindings/ffxresources/app";
 import { KIND_LABELS } from "@/lib/ffx/display-names";
 import type { GameVersionId } from "@/lib/ffx/game-version";
 import { useEditDraft } from "@/lib/ffx/edit-draft";
@@ -36,7 +36,7 @@ import { EntryTable } from "@/components/entry-view/entry-table";
 import { ImageActionDialogs } from "@/components/dialogs/image-action-dialogs";
 import { ImagePanel } from "@/components/entry-view/image-panel";
 import { TranslationDialog } from "@/components/dialogs/translation-dialog";
-import { PreloadVersions } from "@/wailsjs/go/main/App";
+import { PreloadVersions } from "@/bindings/ffxresources/app";
 import { GAME_VERSIONS } from "@/lib/ffx/game-version";
 
 /**

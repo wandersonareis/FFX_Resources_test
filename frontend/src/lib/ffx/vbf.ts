@@ -13,8 +13,8 @@ import {
   SelectVbfExtractDir,
   SelectVbfImageExtractDir,
   SaveVbfImage,
-} from '@/wailsjs/go/main/App';
-import { dto } from '@/wailsjs/go/models';
+} from '@/bindings/ffxresources/app';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
 
 /**
  * Navegador de container .vbf (SOMENTE LEITURA).

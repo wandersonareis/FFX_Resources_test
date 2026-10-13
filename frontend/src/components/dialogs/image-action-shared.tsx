@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { loggedToast as toast } from '@/lib/ffx/toast-logged';
 import { AlertTriangle } from 'lucide-react';
-import type { dto } from '@/wailsjs/go/models';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import { parseError } from '@/lib/ffx/error-handler';
 import { imageDuplicates } from '@/lib/ffx/tree-data';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';

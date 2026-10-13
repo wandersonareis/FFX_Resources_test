@@ -1,9 +1,16 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { EventsOn } from '@/wailsjs/runtime/runtime';
+import { Events } from '@wailsio/runtime';
 
-/** Registra um listener Wails com cleanup automático. */
+/**
+ * Registra um listener Wails com cleanup automático.
+ *
+ * No v2 era `EventsOn(nome, (...data) => cb(...data))`: o handler recebia os
+ * argumentos espalhados. No v3 o callback recebe um `WailsEvent` com `.data`,
+ * então repassamos `ev.data` — equivalente para os emits do app, que sempre
+ * carregam no máximo um argumento.
+ */
 export function useWailsEvent(
   eventName: string,
   callback: (...data: unknown[]) => void
@@ -13,7 +20,7 @@ export function useWailsEvent(
     ref.current = callback;
   }, [callback]);
   useEffect(
-    () => EventsOn(eventName, (...data) => ref.current(...data)),
+    () => Events.On(eventName, (ev) => ref.current(ev.data)),
     [eventName]
   );
 }

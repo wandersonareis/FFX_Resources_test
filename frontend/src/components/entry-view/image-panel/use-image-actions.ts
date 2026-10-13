@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { loggedToast as toast } from '@/lib/ffx/toast-logged';
-import type { dto } from '@/wailsjs/go/models';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import type { EntryRow } from '@/lib/ffx/tree-data';
 import {
   importImage,

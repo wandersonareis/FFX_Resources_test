@@ -1,4 +1,4 @@
-import type { dto } from '@/wailsjs/go/models';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import { isRefText } from './hash-ref';
 import { isBlankText } from './blank-us';
 import { SOURCE_LANG } from './save-all';

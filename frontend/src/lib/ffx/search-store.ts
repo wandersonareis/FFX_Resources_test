@@ -1,5 +1,5 @@
 import { createStore, type Store } from '@tanstack/store';
-import type { services } from '@/wailsjs/go/models';
+import * as services from '@/bindings/ffxresources/backend/services/models';
 import type { GameVersionId } from './game-version';
 import { searchTextEntries } from './tree-data';
 import { sendErrorNotification } from './error-handler';

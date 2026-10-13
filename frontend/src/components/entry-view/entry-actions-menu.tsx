@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { loggedToast as toast } from '@/lib/ffx/toast-logged';
 import { Copy, Download, FolderOpen, HardDriveDownload, Trash2 } from 'lucide-react';
-import type { dto } from '@/wailsjs/go/models';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import type { EntryMenuTarget } from '@/lib/ffx/content-tree/menu-target';
 import { EXPORT_FORMAT_LABELS, exportSelection } from '@/lib/ffx/export-selection';
 import { imageDuplicates, revealEntry } from '@/lib/ffx/tree-data';

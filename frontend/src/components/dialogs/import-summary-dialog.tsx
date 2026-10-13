@@ -1,6 +1,6 @@
 'use client';
 
-import { dto } from '@/wailsjs/go/models';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import { EntryKind, KIND_LABELS, resolveEntryLabel } from '@/lib/ffx/display-names';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

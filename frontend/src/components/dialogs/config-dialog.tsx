@@ -11,8 +11,8 @@ import {
   SelectDirectory,
   SelectGameExeFile,
   SetEnableMods,
-} from "@/wailsjs/go/main/App";
-import { EventsEmit } from "@/wailsjs/runtime/runtime";
+} from "@/bindings/ffxresources/app";
+import { Events } from "@wailsio/runtime";
 import { useWailsEvent } from "@/lib/ffx/use-wails-event";
 import { invalidateVbfCache } from "@/lib/ffx/vbf";
 import {
@@ -123,7 +123,7 @@ export function ConfigDialog({
     }
     if (path === item.value) return;
     try {
-      EventsEmit(item.eventName, path);
+      Events.Emit(item.eventName, path);
     } catch (error) {
       notify(error);
     }
@@ -152,7 +152,7 @@ export function ConfigDialog({
     // aponta para containers que podem nem existir mais.
     invalidateVbfCache();
     try {
-      EventsEmit("GameExeLocationChanged", path);
+      Events.Emit("GameExeLocationChanged", path);
     } catch (error) {
       notify(error);
     }
@@ -268,5 +268,5 @@ function notify(error: unknown): void {
   const message =
     error instanceof Error ? error.message : String(error ?? "Erro");
   toast.error(message, { duration: 4000 });
-  EventsEmit("Notify", { severity: "error", message });
+  Events.Emit("Notify", { severity: "error", message });
 }

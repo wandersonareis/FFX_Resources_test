@@ -2,7 +2,7 @@
 
 import { Copy } from 'lucide-react';
 import type { ReactNode } from 'react';
-import type { dto } from '@/wailsjs/go/models';
+import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import { Badge } from '@/components/ui/badge';
 import {
   copyState,
