@@ -40,7 +40,7 @@ export function ImportTranslatedDialog({
         if (!o || !importing) onOpenChange(o);
       }}
     >
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Importar textos de mods/translated</DialogTitle>
           <DialogDescription>
@@ -51,7 +51,7 @@ export function ImportTranslatedDialog({
         </DialogHeader>
 
         {batch ? (
-          <div className="space-y-3">
+          <div className="space-y-3 overflow-hidden">
             <div className="flex flex-wrap items-center gap-2 text-sm">
               {kinds.map((k) => (
                 <Badge key={k} variant="outline">
@@ -66,9 +66,9 @@ export function ImportTranslatedDialog({
               <span>{batch.changed_texts} texto(s) alterado(s)</span>
             </div>
 
-            <p className="break-all text-xs text-muted-foreground">{batch.root}</p>
+            <p className="break-all break-words text-xs text-muted-foreground">{batch.root}</p>
             {nada ? (
-              <div className="rounded-md border border-muted bg-muted/40 p-2 text-sm">
+              <div className="rounded-md border border-muted bg-muted/40 p-2 text-sm break-words">
                 Nenhum arquivo compatível em {batch.root} — exporte para a
                 subpasta text/ ou use &quot;Importar de…&quot;.
               </div>
@@ -82,7 +82,7 @@ export function ImportTranslatedDialog({
                 <ScrollArea className="mt-1 max-h-40">
                   <ul className="list-disc pl-5">
                     {errors.map((e, i) => (
-                      <li key={`${i}:${e}`} className="break-all">
+                      <li key={`${i}:${e}`} className="break-all break-words">
                         {e}
                       </li>
                     ))}
