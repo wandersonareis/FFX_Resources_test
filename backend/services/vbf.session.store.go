@@ -24,13 +24,11 @@ import (
 
 	"ffxresources/backend/builders"
 	"ffxresources/backend/common"
-	"ffxresources/backend/datastore"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/fileFormats/eventtable"
 	"ffxresources/backend/fileFormats/helpfile"
 	"ffxresources/backend/fileFormats/lockit"
-	"ffxresources/backend/fileFormats/objectsfile"
 )
 
 var (
@@ -70,20 +68,12 @@ type vbfEstado struct {
 	painel *helpfile.HelpKeyedStringFile
 	// lockitFile: o arquivo de lockit (uma entrada por id).
 	lockitFile *lockit.LockitFile
-	// binario: objects (binário + layout do arquivo, para o save).
-	binario *vbfEstadoBinario
+
 	// macro: o dicionário INTEIRO — base do rebuild (macro não tem
 	// propagação por arquivo: o artefato é um só, por localização).
 	macro dto.Collection
 }
 
-// vbfEstadoBinario é o binário de objects junto do layout: o save grava no
-// pattern path do layout (→ mods/) e a key identifica o arquivo.
-type vbfEstadoBinario struct {
-	key    string
-	layout objectsfile.FileLayout
-	bin    datastore.IBinaryFile
-}
 
 // save grava o binário do arquivo tocado em mods/ pelo estado da sessão —
 // o mesmo objeto decodificado no clique, já mutado pelo apply.
@@ -357,27 +347,6 @@ func vbfSessionLockitScope(vbfPath string) (builders.LockitApplyScope, bool) {
 	}, true
 }
 
-// vbfSessionObjectsLoader devolve o loader de binário de objects que atende
-// pela sessão: o apply só alcança os arquivos abertos no clique, e o objeto
-// é o MESMO que foi decodificado (mutação em memória → save em mods/).
-func vbfSessionObjectsLoader(vbfPath string) (func(objectsfile.FileLayout) (datastore.IBinaryFile, error), bool) {
-	vbfSessionMu.Lock()
-	defer vbfSessionMu.Unlock()
-	_, k, ok := vbfSessionForKind(vbfPath, KindObjects)
-	if !ok {
-		return nil, false
-	}
-	estado := k.estado
-	return func(layout objectsfile.FileLayout) (datastore.IBinaryFile, error) {
-		// id de objects = stem do arquivo (vbf_match), e o layout tem
-		// FileName = <id>.bin — o mesmo identificador do DTO.
-		id := strings.TrimSuffix(layout.FileName, ".bin")
-		if e := estado[id]; e != nil && e.binario != nil {
-			return e.binario.bin, nil
-		}
-		return nil, fmt.Errorf("objects %s: arquivo não aberto na sessão do .vbf", id)
-	}, true
-}
 
 // vbfSessionMacro devolve o dicionário completo guardado no clique — a base
 // do rebuild (macro não tem propagação por arquivo: o artefato é um só por

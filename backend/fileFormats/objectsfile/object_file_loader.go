@@ -91,6 +91,9 @@ func ResetObjectFileStoreForTest() {
 	populateDone = false
 }
 
+// Deprecated: fluxo legado de objects. O novo fluxo chunkmap
+// (fileFormats/objectsfile/chunkmap) substitui este pacote; será removido
+// em versão futura.
 // LoadObjectFile carrega o binário de um layout (leitura mods-first) sem
 // registrar no ObjectFileDataStore.
 func LoadObjectFile(l FileLayout) (datastore.IBinaryFile, error) {

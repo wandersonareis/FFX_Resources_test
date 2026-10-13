@@ -27,6 +27,7 @@ import (
 	"ffxresources/backend/fileFormats/helpfile"
 	"ffxresources/backend/fileFormats/lockit"
 	"ffxresources/backend/fileFormats/objectsfile"
+	"ffxresources/backend/fileFormats/objectsfile/chunkmap"
 	"ffxresources/backend/interactions"
 )
 
@@ -251,9 +252,9 @@ func TestVbfSessionLockitSalvaSomenteEmMods(t *testing.T) {
 	}
 }
 
-// TestVbfSessionObjectsSalvaSomenteEmMods: binário aberto na sessão →
-// applyObjectsCollection com o loader da sessão → mods/ novo (o original
-// de data/ nunca é tocado).
+// TestVbfSessionObjectsSalvaSomenteEmMods: objects é chunkmap puro — o
+// apply lê mods-first e grava em mods/ (o original de data/ nunca é
+// tocado); sem estado de sessão para objects.
 func TestVbfSessionObjectsSalvaSomenteEmMods(t *testing.T) {
 	root := seedVbfEditRoot(t)
 	antes := snapshotOutsideMods(t, root)
@@ -264,11 +265,13 @@ func TestVbfSessionObjectsSalvaSomenteEmMods(t *testing.T) {
 		t.Fatalf("layout de %s não encontrado", id)
 	}
 	layout := objectsfile.FileLayouts[key]
-	bin, err := objectsfile.LoadObjectFileFrom(layout, common.SourceData)
-	if err != nil {
-		t.Fatalf("load objects de data/: %v", err)
+
+	// Coleção chunkmap: mesmo fluxo do editor normal.
+	loader, ok := chunkmap.SchemaRegistry[key]
+	if !ok {
+		t.Fatal("schema chunkmap não registrado")
 	}
-	c, err := builders.BuildObjectsDTO(bin.GetObjects(), layout, key)
+	c, err := loader(common.GameVersionFFX, layout.PatternPath())
 	if err != nil {
 		t.Fatalf("DTO objects: %v", err)
 	}
@@ -276,33 +279,27 @@ func TestVbfSessionObjectsSalvaSomenteEmMods(t *testing.T) {
 	if !ok || len(entry.Rows) == 0 {
 		t.Fatalf("objects %s sem rows (ok=%v rows=%d)", id, ok, len(entry.Rows))
 	}
-	vbfSessionUpsertEstado("fake.vbf",
-		vbfTarget{Kind: KindObjects, ID: id, Version: common.GameVersionFFX},
-		entry, &vbfEstado{binario: &vbfEstadoBinario{key: key, layout: layout, bin: bin}})
-
-	loadBin, ok := vbfSessionObjectsLoader("fake.vbf")
-	if !ok {
-		t.Fatal("loader de objects da sessão não montou")
-	}
 
 	const novo = "Texto de objects editado pelo .vbf"
 	payload := editPayload(id, entry, novo)
 	rowKey := dto.RowKey(payload[id].Rows[0])
-	if err := applyObjectsCollection(common.GameVersionFFX, payload, loadBin); err != nil {
+	if err := applyObjectsCollection(common.GameVersionFFX, payload); err != nil {
 		t.Fatalf("apply objects: %v", err)
 	}
 
 	requireNadaForaDeModsMudou(t, root, antes)
 
-	rb, err := objectsfile.LoadObjectFileFrom(layout, common.SourceMods)
-	if err != nil {
-		t.Fatalf("releitura do binário em mods/: %v", err)
+	// Releitura de mods/: o apply gravou lá. (DisableMods do seed desliga a
+	// preferência do SourcePreferred — o SourceMods lê o alvo gravado.)
+	loadFrom, ok := chunkmap.SchemaSourceLoaders[key]
+	if !ok {
+		t.Fatal("schema chunkmap source loader não registrado")
 	}
-	rc, err := builders.BuildObjectsDTO(rb.GetObjects(), layout, key)
+	rb, err := loadFrom(common.GameVersionFFX, layout.PatternPath(), common.SourceMods)
 	if err != nil {
 		t.Fatalf("DTO da releitura: %v", err)
 	}
-	if got := rowTextPorChave(t, rc[id], rowKey); got != novo {
+	if got := rowTextPorChave(t, rb[id], rowKey); got != novo {
 		t.Fatalf("mods/ com texto %q, esperado %q", got, novo)
 	}
 }
@@ -406,13 +403,14 @@ func TestApplyVbfTextCollectionNaoTocaNoContainer(t *testing.T) {
 }
 
 // TestApplyVbfCollectionInSessionSemSessaoErro: sem nada aberto no clique,
-// NENHUM kind passa — o apply nunca roda contra o store de data/ nem
-// contra o container.
+// NENHUM kind com estado de sessão passa — o apply nunca roda contra o
+// store de data/ nem contra o container. Objects é exceção: chunkmap puro,
+// mods-first, sem estado de sessão.
 func TestApplyVbfCollectionInSessionSemSessaoErro(t *testing.T) {
 	vbfSessionResetAll()
 	t.Cleanup(vbfSessionResetAll)
 	for _, kind := range []string{
-		KindEvents, KindBattleText, KindHelp, KindMacro, KindObjects, KindLockit,
+		KindEvents, KindBattleText, KindHelp, KindMacro, KindLockit,
 	} {
 		if err := applyVbfCollectionInSession("fake.vbf", kind, common.GameVersionFFX, dto.Collection{}); err == nil {
 			t.Errorf("kind %s: esperava erro sem estado na sessão", kind)

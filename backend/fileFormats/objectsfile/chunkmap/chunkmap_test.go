@@ -14,7 +14,6 @@ import (
 	"ffxresources/backend/fileFormats/objectsfile/chunkmap"
 	"ffxresources/backend/fileFormats/objectsfile/schema/ffx"
 	"ffxresources/backend/fileFormats/objectsfile/schema/ffx2"
-	testcommon "ffxresources/testData"
 )
 
 /*
@@ -53,9 +52,24 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// projectRoot sobe do diretório de test data até a raiz do módulo.
+// projectRoot sobe do diretório do teste até a raiz do módulo (go.mod).
+// Local (não usa testData): testData importa services, e services agora
+// importa chunkmap — um import no teste recriaria ciclo em modo de teste.
 func projectRoot() string {
-	return filepath.Dir(testcommon.GetTestDataRootDirectory())
+	dir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			panic("go.mod não encontrado a partir de " + dir)
+		}
+		dir = parent
+	}
 }
 
 // binaryCandidates lista, em ordem de preferência, os caminhos (relativos à

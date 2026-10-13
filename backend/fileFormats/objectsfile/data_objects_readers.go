@@ -147,7 +147,9 @@ func ReadMonsterLocalizations(patternPath string, gameVersion common.GameVersion
 	return readWithLayout(patternPath, gameVersion, MonsterLayout, "MonsterTextObject", nil)
 }
 
-// ReadWeaponNamesLocalizations mantém o tipo específico de armas.
+// Deprecated: ReadWeaponNamesLocalizations — fluxo legado de w_name.bin.
+// Substituído pelo fluxo chunkmap (weaponnames.Rows/Apply via SchemaRegistry).
+// Mantido apenas como fallback para pipeline de import de JSON antigo.
 func ReadWeaponNamesLocalizations(patternPath string, gameVersion common.GameVersion) datastore.IBinaryFile {
 	if gameVersion != common.GameVersionFFX {
 		common.LogVerbose("ReadWeaponNamesLocalizations is only compatible with FFX (ffx), but got game version %s", gameVersion)

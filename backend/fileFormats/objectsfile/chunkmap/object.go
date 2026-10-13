@@ -73,6 +73,20 @@ func NewMappedTextObject[T any](
 	return o, nil
 }
 
+// cloneSlots devolve um MappedTextObject com slots clonados (edições em um
+// não afetam o outro); o chunk decodificado é compartilhado (read-only aqui).
+func (o *MappedTextObject[T]) cloneSlots() *MappedTextObject[T] {
+	c := *o
+	c.slots = make([]*TextSlot, len(o.slots))
+	c.initial = append([]string(nil), o.initial...)
+	for i, slot := range o.slots {
+		if slot == nil {
+			continue
+		}
+		c.slots[i] = slot.clone()
+	}
+	return &c
+}
 func (o *MappedTextObject[T]) Edited() bool {
 	for i, slot := range o.slots {
 		if slot.GetLocalizedString(o.languageCode) != o.initial[i] {

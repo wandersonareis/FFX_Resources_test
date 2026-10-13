@@ -38,13 +38,13 @@ import (
 	"ffxresources/backend/core/converter"
 	ffxencoding "ffxresources/backend/core/encoding"
 	coreprogress "ffxresources/backend/core/progress"
-	"ffxresources/backend/datastore"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/fileFormats/eventtable"
 	"ffxresources/backend/fileFormats/helpfile"
 	"ffxresources/backend/fileFormats/lockit"
 	"ffxresources/backend/fileFormats/objectsfile"
+	"ffxresources/backend/fileFormats/objectsfile/chunkmap"
 	"ffxresources/backend/formatters/hash"
 	jsonfmt "ffxresources/backend/formatters/json"
 	strfmt "ffxresources/backend/formatters/strings"
@@ -691,86 +691,32 @@ func importEventTableUsage(kind string, version common.GameVersion, id string, i
 	return usage, nil
 }
 
-// importObjectsUsage mede a string table só com o texto: para cada segmento
-// 'us', o texto do import (override por ponteiro de conteúdo) senão o da
-// store, medido por converter.StringToByteSize — que é byte a byte o que o
-// FillByteList do RebuildKeyedStrings gravaria (terminador incluso; paridade
-// coberta por teste no converter). Sem wrappers de IGlobalKeyedString, sem
-// buffer auxiliar e sem gravar arquivo. A iteração espelha o collect do
-// rebuild: RangeIndex + GetLocalizedKeyedStrings("us"), pulando nil.
+// importObjectsUsage mede a string table do arquivo com o import aplicado:
+// o schema chunkmap aplica as rows em memória e devolve o tamanho da tabela
+// reconstruída (dedup inclusive). Sem carregar wrappers legados e sem
+// gravar arquivo.
 func importObjectsUsage(version common.GameVersion, id string, imp dto.FileEntry) (dto.ImportUsage, error) {
 	usage := dto.ImportUsage{ID: id, Kind: KindObjects, Limit: importUint16Limit}
 	key, ok := objectKeyForID(version, id)
 	if !ok {
 		return usage, fmt.Errorf("objeto desconhecido: %s", id)
 	}
+	measure, ok := chunkmap.SchemaMeasurers[key]
+	if !ok {
+		return usage, fmt.Errorf("objects %s: schema chunkmap não registrado", key)
+	}
 	layout, ok := objectsfile.FileLayouts[key]
 	if !ok {
 		return usage, fmt.Errorf("layout não encontrado: %s", key)
 	}
-	binFile, err := objectsfile.LoadObjectFileFromStoreByLayout(layout)
-	if err != nil {
-		return usage, err
-	}
-	objects := binFile.GetObjects()
-	if objects == nil || objects.Len() == 0 {
-		return usage, fmt.Errorf("sem objetos: %s", id)
-	}
-
-	charset := ffxencoding.GetCharsetForLanguage(common.DefaultLocalization)
-	overrides := make(map[datastore.IGlobalKeyedString]string, len(imp.Rows))
-	for _, r := range imp.Rows {
-		t := r.Text[common.DefaultLocalization]
-		if t == "" {
-			continue
-		}
-		obj := objects.Get(r.Index)
-		if obj == nil {
-			return usage, fmt.Errorf("objeto %d ausente", r.Index)
-		}
-		seg := obj.GetKeyedString(r.Name)
-		if seg == nil {
-			return usage, fmt.Errorf("segmento %q ausente no objeto %d", r.Name, r.Index)
-		}
-		content := seg.GetLocalizedContent(common.DefaultLocalization)
-		if content == nil {
-			return usage, fmt.Errorf("segmento %q sem conteúdo 'us' no objeto %d", r.Name, r.Index)
-		}
-		overrides[content] = t
-	}
-
-	var merr error
-	pos := 0
-	objects.RangeIndex(func(_ int, obj datastore.IGlobalLocalizedTextObject) {
-		if obj == nil || merr != nil {
-			return
-		}
-		for _, ks := range obj.GetLocalizedKeyedStrings(common.DefaultLocalization) {
-			if ks == nil {
-				continue
-			}
-			text, has := overrides[ks]
-			if !has {
-				text = ks.GetString()
-			}
-			n, err := converter.StringToByteSize(text, charset, version)
-			if err != nil {
-				merr = err
-				return
-			}
-			pos += n
-		}
-	})
+	used, merr := measure(version, layout.PatternPath(), imp.Rows)
 	if merr != nil {
 		return usage, merr
 	}
-	usage.Used = pos
-	// Offset de cada string é sua posição inicial < Used; Used ≤ 65536 ⟺
-	// todo offset ≤ 65535 (cada string tem ao menos o terminador).
-	usage.Over = pos > importUint16Limit
+	usage.Used = used
+	usage.Over = used > importUint16Limit
 	return usage, nil
 }
-
 // importMacroUsage reconstrói o dicionário inteiro (todos os chunks, todos os
 // idiomas) com o 'us' mesclado e mede o container 'us'. Um uso só para o
 // arquivo: o limite é por binário. O layout (header + chunks) não é derivável

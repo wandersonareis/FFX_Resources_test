@@ -16,6 +16,11 @@ import (
 // contrário um creator genérico KeyedStringFileStore é construído a partir de
 // LayoutSet{Version: Fields}. O primeiro segmento sempre começa em 0; saltos
 // são expressos via Gap (0 = contíguo, >0 = bytes pulados após o segmento).
+//
+// DEPRECATED: O fluxo chunkmap (backend/fileFormats/objectsfile/chunkmap)
+// substitui este para todos os arquivos com schema registrado em SchemaRegistry.
+// Este mapa permanece para resolveObjectLayouts e objectKeyForID funcionarem,
+// e como fallback para pipeline de import de JSON antigo.
 type FileLayout struct {
 	Version    common.GameVersion
 	DirPattern string
@@ -228,13 +233,10 @@ var FileLayouts = map[string]FileLayout{
 		Fields:     MenuTextPairLayout[common.GameVersionFFX],
 		Formatter:  nameOnlyLegacyFmtStore,
 	},
-	// w_name.bin — weapon names (FFX). O layout existe para os fluxos por
-	// layout (services/original/import/vbf) resolverem o arquivo; o Creator
-	// dedicado é obrigatório aqui: SegmentField só expressa segmentos de
-	// texto e não modelaria o tail ModelIDs[7]+reserva do chunk de 0x48
-	// bytes. Quando o fluxo chunkmap amadurecer, troca-se SÓ este Creator
-	// por uma implementação mapeada (schema/ffx.WeaponName) — os services
-	// permanecem intactos.
+	// w_name.bin — weapon names (FFX). DEPRECATED: o fluxo chunkmap
+	// (SchemaRegistry["ffx/battle/kernel/w_name.bin"]) substitui este Creator.
+	// Mantido apenas para resolveObjectLayouts e objectKeyForID funcionarem,
+	// e como fallback para pipeline de import de JSON antigo.
 	"ffx/battle/kernel/w_name.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",

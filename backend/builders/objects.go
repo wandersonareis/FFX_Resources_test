@@ -90,6 +90,9 @@ func ObjectsCollectionKey(layout objectsfile.FileLayout) string {
 	return strings.TrimSuffix(layout.FileName, ".bin")
 }
 
+// Deprecated: fluxo legado de objects. O novo fluxo chunkmap
+// (fileFormats/objectsfile/chunkmap) substitui este builder; será removido
+// em versão futura.
 // BuildObjectsDTO monta a Collection pronta (texto + metadata + hash) a
 // partir da lista de objetos em memória. Chave = basename sem extensão.
 // Index das rows = posição do objeto na lista (reconstrução posicional).

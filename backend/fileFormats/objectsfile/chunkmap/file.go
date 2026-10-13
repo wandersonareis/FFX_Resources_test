@@ -7,6 +7,7 @@ import (
 	"ffxresources/backend/common"
 	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/datastore"
+	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/objectsfile"
 )
 
@@ -232,6 +233,44 @@ func (f *File[T]) encodeLanguage(languageCode string) ([]byte, error) {
 	return out, nil
 }
 
+// rebuildEditedStringTable aplica as rows em um clone raso dos slots e
+// reconstrói a string table do idioma pedido. O File original permanece
+// intacto (medição não é edição).
+func (f *File[T]) rebuildEditedStringTable(rows []dto.TextRow, languageCode string) ([]byte, error) {
+	// Clona o File trocando os slots por cópias: as edições ficam no clone.
+	clone := *f
+	clone.Objects = make([]*MappedTextObject[T], len(f.Objects))
+	for i, obj := range f.Objects {
+		clone.Objects[i] = obj.cloneSlots()
+	}
+	if err := GenericApply[T](&clone, rows); err != nil {
+		return nil, err
+	}
+	var keyed []datastore.IGlobalKeyedString
+	for _, obj := range clone.Objects {
+		for _, slot := range obj.slots {
+			if content := slot.contents[languageCode]; content != nil {
+				keyed = append(keyed, content)
+			}
+		}
+	}
+	return objectsfile.RebuildKeyedStrings(
+		keyed, ffxencoding.GetCharsetForLanguage(languageCode), f.Version, clone.StringBytes,
+	), nil
+}
+// MeasureStringTable aplica as rows em memória e devolve o tamanho da string
+// table reconstruída (dedup inclusive) no idioma pedido, sem gravar nada.
+// Espelha o encodeLanguage byte a byte — sem gerar os bytes, medindo apenas.
+func (f *File[T]) MeasureStringTable(rows []dto.TextRow, languageCode string) (int, error) {
+	if err := validateLanguage(languageCode); err != nil {
+		return 0, err
+	}
+	strtab, err := f.rebuildEditedStringTable(rows, languageCode)
+	if err != nil {
+		return 0, err
+	}
+	return len(strtab), nil
+}
 // SaveToBinary grava o arquivo na árvore mods (a localização canônica do
 // patternPath — o overlay que o app lê de volta) e, quando filePath é
 // absoluto, uma cópia extra (rotina de teste/reimport). Caminho relativo é
@@ -262,6 +301,60 @@ func (f *File[T]) SaveToBinary(filePath string) error {
 		return common.WriteBytesToFile(filePath, last)
 	}
 	return nil
+}
+
+// LoadFileFromSource carrega o binário de uma FONTE específica (SourceData
+// para o original de data/, SourcePreferred para mods-first).
+func LoadFileFromSource[T any](version common.GameVersion, patternPath string, src common.FileSource) (*File[T], error) {
+	if err := ffxencoding.EnsureAllCharsetsLoaded(version); err != nil {
+		return nil, fmt.Errorf("%s: charsets: %w", patternPath, err)
+	}
+	defaultLang := common.DefaultLocalization
+	data, err := readFileBytesFrom(version, defaultLang, patternPath, src)
+	if err != nil {
+		return nil, err
+	}
+	f, err := loadFileFromBytes[T](version, patternPath, data, defaultLang)
+	if err != nil {
+		return nil, err
+	}
+	for _, locKey := range common.SupportedLanguageCodes() {
+		if locKey == defaultLang {
+			continue
+		}
+		locData, lerr := readFileBytesFrom(version, locKey, patternPath, src)
+		if lerr != nil {
+			common.LogVerbose("[chunkmap] %s/%s: %v", patternPath, locKey, lerr)
+			continue
+		}
+		locFile, lerr := loadFileFromBytes[T](version, patternPath, locData, locKey)
+		if lerr != nil {
+			common.LogVerbose("[chunkmap] %s/%s: %v", patternPath, locKey, lerr)
+			continue
+		}
+		f.mergeLocalizations(locFile)
+	}
+	return f, nil
+}
+
+// readFileBytesFrom lê os bytes do binário da FONTE indicada.
+func readFileBytesFrom(version common.GameVersion, languageCode, patternPath string, src common.FileSource) ([]byte, error) {
+	rel := filepath.Join(
+		common.GetLocalizationRootForVersion(version, languageCode),
+		filepath.FromSlash(patternPath),
+	)
+	accessor, err := common.NewFileAccessorFrom(rel, src)
+	if err != nil {
+		return nil, fmt.Errorf("acessar %s: %w", rel, err)
+	}
+	if !accessor.Exists {
+		return nil, fmt.Errorf("arquivo não existe em %s", accessor.ResolvedPath)
+	}
+	data, err := accessor.ReadBytes()
+	if err != nil {
+		return nil, fmt.Errorf("ler %s: %w", accessor.ResolvedPath, err)
+	}
+	return data, nil
 }
 
 // readFileBytes lê os bytes do binário na resolução do app (mods-first via

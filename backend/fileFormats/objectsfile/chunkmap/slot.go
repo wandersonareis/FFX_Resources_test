@@ -154,6 +154,19 @@ func (s *TextSlot) GetLocalizedString(languageCode string) string {
 	return ""
 }
 
+// clone devolve um TextSlot com cópias rasas dos TextContent: edições no
+// clone (SetString via copy em prepareTexts) não afetam o original.
+func (s *TextSlot) clone() *TextSlot {
+	c := newTextSlot()
+	for lang, content := range s.contents {
+		if content == nil {
+			continue
+		}
+		copied := *content
+		c.contents[lang] = &copied
+	}
+	return c
+}
 type textUpdate struct {
 	languageCode string
 	content      *TextContent

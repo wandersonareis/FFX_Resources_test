@@ -1,3 +1,7 @@
+// Deprecated: weapon_names_object.go — fluxo legado de w_name.bin.
+// Substituído pelo fluxo chunkmap (schema/ffx.WeaponName + weaponnames.Rows/Apply).
+// Mantido apenas como fallback para o pipeline de import de JSON antigo.
+// Quando todo JSON antigo for convertido via git, remover este arquivo.
 package objectsfile
 
 import (

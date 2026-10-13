@@ -23,6 +23,9 @@ type LayoutSet map[common.GameVersion][]SegmentField
 // StringFormatter formata o objeto para debug/log (usado por ToString).
 type StringFormatter func(f *KeyedStringFile, languageCode string) string
 
+// Deprecated: fluxo legado de objects. O novo fluxo chunkmap
+// (fileFormats/objectsfile/chunkmap) substitui este pacote; será removido
+// em versão futura.
 // KeyedStringFile é um wrapper genérico que substitui os tipos concretos
 // que só variam no número de campos e no layout posicional dos segmentos.
 type KeyedStringFile struct {

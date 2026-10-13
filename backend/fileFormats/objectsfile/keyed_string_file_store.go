@@ -18,6 +18,9 @@ import (
 // StringFormatterStore formata um KeyedStringFileStore para debug/log.
 type StringFormatterStore func(f *KeyedStringFileStore, languageCode string) string
 
+// Deprecated: fluxo legado de objects. O novo fluxo chunkmap
+// (fileFormats/objectsfile/chunkmap) substitui este pacote para leitura,
+// apply e medição; será removido em versão futura.
 // KeyedStringFileStore é a cópia Store de KeyedStringFile.
 type KeyedStringFileStore struct {
 	Bytes        []byte

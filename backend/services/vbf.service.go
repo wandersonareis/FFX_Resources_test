@@ -39,6 +39,7 @@ import (
 	"ffxresources/backend/fileFormats/helpfile"
 	"ffxresources/backend/fileFormats/lockit"
 	"ffxresources/backend/fileFormats/objectsfile"
+	"ffxresources/backend/fileFormats/objectsfile/chunkmap"
 	"ffxresources/backend/fileFormats/vbf"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/loggingService"
@@ -577,6 +578,10 @@ func (s *MetadataService) decodeVbfEstado(t vbfTarget, src common.FileSource) (*
 		return nil, dto.FileEntry{}, false, nil
 
 	case KindObjects:
+		// Chunkmap: o schema registrado carrega da FONTE pedida (o overlay
+		// do .vbf entra via SourceVbfPreferred) com os nomes de campo do
+		// fluxo novo. Sem estado de sessão: o save é o applyObjectsCollection
+		// do fluxo normal (mods-first, grava em mods/).
 		layouts, err := s.resolveObjectLayouts(t.Version, []string{t.ID})
 		if err != nil {
 			return nil, dto.FileEntry{}, false, fmt.Errorf("objects %s: %w", t.ID, err)
@@ -586,14 +591,11 @@ func (s *MetadataService) decodeVbfEstado(t vbfTarget, src common.FileSource) (*
 		}
 		layout := layouts[0]
 		key := objectsfile.FileLayoutKey(t.Version, layout.PatternPath())
-		bin, err := objectsfile.LoadObjectFileFrom(layout, src)
-		if err != nil {
-			return nil, dto.FileEntry{}, false, fmt.Errorf("objects %s: %w", t.ID, err)
+		loadFrom, ok := chunkmap.SchemaSourceLoaders[key]
+		if !ok {
+			return nil, dto.FileEntry{}, false, fmt.Errorf("objects %s: schema chunkmap não registrado", key)
 		}
-		if bin == nil || bin.GetObjects() == nil || bin.GetObjects().IsEmpty() {
-			return nil, dto.FileEntry{}, false, nil
-		}
-		c, err := builders.BuildObjectsDTO(bin.GetObjects(), layout, key)
+		c, err := loadFrom(t.Version, layout.PatternPath(), src)
 		if err != nil {
 			return nil, dto.FileEntry{}, false, fmt.Errorf("objects %s: %w", t.ID, err)
 		}
@@ -601,8 +603,7 @@ func (s *MetadataService) decodeVbfEstado(t vbfTarget, src common.FileSource) (*
 		if !ok {
 			return nil, dto.FileEntry{}, false, nil
 		}
-		estado := &vbfEstado{binario: &vbfEstadoBinario{key: key, layout: layout, bin: bin}}
-		return estado, entry, true, nil
+		return nil, entry, true, nil
 
 	case KindMacro:
 		// O dicionário é UM artefato por localização: o estado guardado é o
@@ -673,11 +674,10 @@ func applyVbfCollectionInSession(vbfPath, kind string, version common.GameVersio
 		return builders.ApplyLockitDTOWithScope(version, c, scope)
 
 	case KindObjects:
-		loadBin, ok := vbfSessionObjectsLoader(vbfPath)
-		if !ok {
-			return fmt.Errorf("nenhum arquivo objects aberto na sessão de %s", base)
-		}
-		return applyObjectsCollection(version, c, loadBin)
+		// Chunkmap puro: o apply lê mods-first (o container entra como fonte
+		// de leitura via o overlay de clique) e grava em mods/ — o mesmo
+		// fluxo do editor normal. Sem estado de sessão para objects.
+		return applyObjectsCollection(version, c)
 
 	case KindMacro:
 		full, ok := vbfSessionMacro(vbfPath)

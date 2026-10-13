@@ -12,7 +12,6 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/progress"
 	"ffxresources/backend/core/reader"
-	"ffxresources/backend/datastore"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/ddsphyre"
 	"ffxresources/backend/fileFormats/event"
@@ -21,6 +20,7 @@ import (
 	"ffxresources/backend/fileFormats/lockit"
 	"ffxresources/backend/fileFormats/macrodic"
 	"ffxresources/backend/fileFormats/objectsfile"
+	"ffxresources/backend/fileFormats/objectsfile/chunkmap"
 	jsonfmt "ffxresources/backend/formatters/json"
 	strfmt "ffxresources/backend/formatters/strings"
 )
@@ -676,9 +676,7 @@ func (s *MetadataService) ApplyTextCollection(kind string, version common.GameVe
 	case KindObjects:
 		// Aplica as rows de todas as entradas antes de salvar cada binário:
 		// entradas repetidas (mesmo arquivo) recebem todas as suas rows.
-		return applyObjectsCollection(version, c, func(layout objectsfile.FileLayout) (datastore.IBinaryFile, error) {
-			return objectsfile.LoadObjectFileFromStoreByLayout(layout)
-		})
+		return applyObjectsCollection(version, c)
 
 	case KindMacro:
 		// Aplica sobre o DTO completo para não perder os outros chunks.
@@ -708,15 +706,10 @@ func (s *MetadataService) ApplyTextCollection(kind string, version common.GameVe
 	}
 }
 
-// applyObjectsCollection agrupa o lote por binário, aplica as rows de cada
-// entrada e salva cada binário tocado em mods/ (o pattern path do layout é
-// relativo: o SaveToBinary só grava a árvore mods).
-//
-// loadBin escolhe de onde vem o binário EM MEMÓRIA: o store de data/
-// (mods-first) no fluxo normal, ou o objeto decodificado da sessão quando o
-// arquivo veio do .vbf. A fonte é o único ponto que muda — a gravação é
-// sempre em mods/.
-func applyObjectsCollection(version common.GameVersion, c dto.Collection, loadBin func(layout objectsfile.FileLayout) (datastore.IBinaryFile, error)) error {
+// applyObjectsCollection aplica um lote de entradas de objects e persiste
+// cada binário em mods/. Agrupa por arquivo para reconstruir cada binário
+// uma única vez. Fluxo único: chunkmap (SchemaAppliers).
+func applyObjectsCollection(version common.GameVersion, c dto.Collection) error {
 	byKey := make(map[string][]dto.FileEntry, len(c))
 	order := make([]string, 0, len(c))
 	for _, id := range c.SortedKeys() {
@@ -730,29 +723,18 @@ func applyObjectsCollection(version common.GameVersion, c dto.Collection, loadBi
 		byKey[key] = append(byKey[key], c[id])
 	}
 	for _, key := range order {
-		layout, ok := objectsfile.FileLayouts[key]
+		applier, ok := chunkmap.SchemaAppliers[key]
 		if !ok {
-			layout, ok = objectsfile.FileLayoutFor(version, key)
-			if !ok {
-				return fmt.Errorf("no object layout for key: %s", key)
-			}
-		}
-		binFile, err := loadBin(layout)
-		if err != nil {
-			return err
+			return fmt.Errorf("objects %s: schema chunkmap não registrado", key)
 		}
 		for _, entry := range byKey[key] {
-			if err := builders.ApplyObjectsEntry(binFile.GetObjects(), version, key, entry); err != nil {
+			if err := applier(version, entry); err != nil {
 				return err
 			}
-		}
-		if err := binFile.SaveToBinary(layout.PatternPath()); err != nil {
-			return err
 		}
 	}
 	return nil
 }
-
 // applyMacroCollection sobrepõe o lote no dicionário COMPLETO e reconstrói
 // os binários (→ mods/). full vem da fonte da sessão: o dicionário inteiro
 // do .vbf no fluxo de container, o do store em data/. Refs "$hash" do
@@ -773,27 +755,18 @@ func applyMacroCollection(version common.GameVersion, full, c dto.Collection) er
 	return builders.ApplyMacroDTO(version, builders.ResolveDedupRefs(base))
 }
 
-// applyObjectsEntry carrega o binário do layout, aplica a entrada e salva.
+// applyObjectsEntry carrega o arquivo do layout via schema chunkmap,
+// aplica a entrada e grava em mods/. Fluxo único: chunkmap.
 func (s *MetadataService) applyObjectsEntry(version common.GameVersion, id string, entry dto.FileEntry) error {
 	key, ok := objectKeyForID(version, id)
 	if !ok {
 		return fmt.Errorf("unknown object id: %s", id)
 	}
-	layout, ok := objectsfile.FileLayouts[key]
+	applier, ok := chunkmap.SchemaAppliers[key]
 	if !ok {
-		layout, ok = objectsfile.FileLayoutFor(version, id+".bin")
-		if !ok {
-			return fmt.Errorf("no object layout for id: %s", id)
-		}
+		return fmt.Errorf("objects %s: schema chunkmap não registrado", key)
 	}
-	binFile, err := objectsfile.LoadObjectFileFromStoreByLayout(layout)
-	if err != nil {
-		return err
-	}
-	if err := builders.ApplyObjectsEntry(binFile.GetObjects(), version, key, entry); err != nil {
-		return err
-	}
-	return binFile.SaveToBinary(layout.PatternPath())
+	return applier(version, entry)
 }
 
 // ---- texto em memória (DTO estruturado, sem disco) --------------------------
@@ -1388,8 +1361,8 @@ func (s *MetadataService) ExportStrings(kind string, version common.GameVersion,
 	}
 }
 
-// buildObjectsCollection carrega cada arquivo por demanda (store + fallback
-// de leitura) e monta o DTO. ids vazio = todos os layouts da versão.
+// buildObjectsCollection carrega cada arquivo por demanda e monta o DTO.
+// ids vazio = todos os layouts da versão. Fluxo único: chunkmap.
 func (s *MetadataService) buildObjectsCollection(version common.GameVersion, ids []string) (dto.Collection, error) {
 	layouts, err := s.resolveObjectLayouts(version, ids)
 	if err != nil {
@@ -1398,23 +1371,17 @@ func (s *MetadataService) buildObjectsCollection(version common.GameVersion, ids
 	out := make(dto.Collection, len(layouts))
 	for _, layout := range layouts {
 		key := objectsfile.FileLayoutKey(version, layout.PatternPath())
-		// Sempre via LoadObjectFileFromStoreByLayout: a reutilização é
-		// vigiada pelo carimbo físico — binário modificado no disco
-		// (tradução copiada em mods/) recarrega na próxima leitura.
-		binFile, lerr := objectsfile.LoadObjectFileFromStoreByLayout(layout)
-		if lerr != nil {
-			common.LogVerbose("skip objects %s: %v", key, lerr)
+		loader, ok := chunkmap.SchemaRegistry[key]
+		if !ok {
+			common.LogVerbose("skip objects %s: schema chunkmap não registrado", key)
 			continue
 		}
-		if binFile == nil || binFile.GetObjects() == nil || binFile.GetObjects().IsEmpty() {
+		c, cerr := loader(version, layout.PatternPath())
+		if cerr != nil {
+			common.LogVerbose("skip chunkmap %s: %v", key, cerr)
 			continue
 		}
-		single, berr := builders.BuildObjectsDTO(binFile.GetObjects(), layout, key)
-		if berr != nil {
-			common.LogVerbose("skip objects %s: %v", key, berr)
-			continue
-		}
-		for k, v := range single {
+		for k, v := range c {
 			out[k] = v
 		}
 	}

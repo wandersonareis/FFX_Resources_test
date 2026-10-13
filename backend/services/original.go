@@ -16,6 +16,7 @@ import (
 	"ffxresources/backend/fileFormats/lockit"
 	"ffxresources/backend/fileFormats/macrodic"
 	"ffxresources/backend/fileFormats/objectsfile"
+	"ffxresources/backend/fileFormats/objectsfile/chunkmap"
 	"ffxresources/backend/formatters/hash"
 )
 
@@ -54,7 +55,7 @@ var (
 	// refOriginalCache memoiza rows do pristine por RowKey para o tooltip
 	// de repetição (fillRefOriginals). nil = def sem original em data/
 	// (ausência memoizada: não vira re-leitura por clique).
-	refOriginalMu     sync.Mutex
+	refOriginalMu    sync.Mutex
 	refOriginalCache = map[string]map[string]string{}
 )
 
@@ -269,7 +270,7 @@ func (s *MetadataService) loadOriginalFrom(kind, id string, version common.GameV
 		}
 		return entry, true, nil
 
-	case KindObjects:
+		case KindObjects:
 		layouts, err := s.resolveObjectLayouts(version, []string{id})
 		if err != nil {
 			return dto.FileEntry{}, false, fmt.Errorf("objects %s: %w", id, err)
@@ -279,24 +280,22 @@ func (s *MetadataService) loadOriginalFrom(kind, id string, version common.GameV
 		}
 		layout := layouts[0]
 		key := objectsfile.FileLayoutKey(version, layout.PatternPath())
-		binFile, err := objectsfile.LoadObjectFileFrom(layout, src)
-		if err != nil {
-			return dto.FileEntry{}, false, fmt.Errorf("objects %s: %w", id, err)
+		// Fluxo único: chunkmap. O schema registrado carrega da fonte
+		// indicada com os MESMOS nomes de campo da coleção de exibição.
+		loadFrom, ok := chunkmap.SchemaSourceLoaders[key]
+		if !ok {
+			return dto.FileEntry{}, false, fmt.Errorf("objects %s: schema chunkmap não registrado", key)
 		}
-		if binFile == nil || binFile.GetObjects() == nil || binFile.GetObjects().IsEmpty() {
-			return dto.FileEntry{}, false, nil
-		}
-		c, err := builders.BuildObjectsDTO(binFile.GetObjects(), layout, key)
-		if err != nil {
-			return dto.FileEntry{}, false, fmt.Errorf("objects %s: %w", id, err)
+		c, cerr := loadFrom(version, layout.PatternPath(), src)
+		if cerr != nil {
+			return dto.FileEntry{}, false, fmt.Errorf("objects %s: %w", id, cerr)
 		}
 		entry, ok := c[id]
 		if !ok {
 			return dto.FileEntry{}, false, nil
 		}
 		return entry, true, nil
-
-	case KindLockit:
+case KindLockit:
 		for _, l := range lockit.LayoutsForVersion(version) {
 			if l.ID() != id {
 				continue
