@@ -1,10 +1,6 @@
 package services
 
 import (
-	"context"
-	"reflect"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -18,9 +14,10 @@ type (
 		NotifySuccess(message string)
 	}
 
-	NotificationService struct {
-		ctx context.Context
-	}
+	// NotificationService publica avisos no frontend pelo bus de eventos do
+	// Wails v3 — não guarda mais um context.Context, que no v2 existia só
+	// para runtime.EventsEmit.
+	NotificationService struct{}
 
 	Notification struct {
 		Message  string `json:"message"`
@@ -52,8 +49,8 @@ func (nt Severity) String() string {
 	}
 }
 
-func NewEventNotifier(ctx context.Context) INotificationService {
-	return &NotificationService{ctx: ctx}
+func NewEventNotifier() INotificationService {
+	return &NotificationService{}
 }
 
 func (e *NotificationService) Notify(notification Severity, message string) {
@@ -69,11 +66,11 @@ func (e *NotificationService) Notify(notification Severity, message string) {
 		Severity: notification.String(),
 	}
 
-	if isEmptyContext(e.ctx) {
+	if !HasEventBus() {
 		return
 	}
 
-	runtime.EventsEmit(e.ctx, "Notify", notify)
+	EmitEvent("Notify", notify)
 }
 
 func (e *NotificationService) NotifyError(err error) {
@@ -90,12 +87,4 @@ func (e *NotificationService) NotifyWarn(message string) {
 
 func (e *NotificationService) NotifySuccess(message string) {
 	e.Notify(SeveritySuccess, message)
-}
-
-func isEmptyContext(ctx context.Context) bool {
-	if ctx == nil {
-		return true
-	}
-	ctxString := reflect.TypeOf(ctx).String()
-	return ctxString == "*context.emptyCtx" || ctxString == "context.backgroundCtx"
 }

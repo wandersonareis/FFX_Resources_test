@@ -1,10 +1,7 @@
 package services
 
 import (
-	"context"
 	"sync"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // StatusBarService emite avisos do backend para a barra de status do
@@ -15,10 +12,10 @@ import (
 // O serviço é SEM ESTADO de exibição: quem rotaciona (3s), abre o alert e
 // descarta é o frontend. Reemissão do mesmo ID é dedupeado no frontend,
 // que mantém os descartados da sessão.
-type StatusBarService struct {
-	mu  sync.Mutex
-	ctx context.Context
-}
+//
+// O ctx do v2 (só usado por runtime.EventsEmit) saiu: no v3 o evento sai
+// pelo bus de application.Get().
+type StatusBarService struct{}
 
 // StatusBarWarning é o aviso que a barra de status exibe.
 type StatusBarWarning struct {
@@ -42,20 +39,17 @@ type IStatusBarService interface {
 	PushWarning(w StatusBarWarning)
 }
 
-func NewStatusBarService(ctx context.Context) *StatusBarService {
-	return &StatusBarService{ctx: ctx}
+func NewStatusBarService() *StatusBarService {
+	return &StatusBarService{}
 }
 
-// PushWarning emite o aviso para o frontend. Contexto vazio (testes/dev sem
-// wails): no-op silencioso — o aviso continua no log de arquivo.
+// PushWarning emite o aviso para o frontend. Sem app wails (testes/dev sem
+// janela): no-op silencioso — o aviso continua no log de arquivo.
 func (s *StatusBarService) PushWarning(w StatusBarWarning) {
-	s.mu.Lock()
-	ctx := s.ctx
-	s.mu.Unlock()
-	if isEmptyContext(ctx) {
+	if !HasEventBus() {
 		return
 	}
-	runtime.EventsEmit(ctx, "StatusWarning", w)
+	EmitEvent("StatusWarning", w)
 }
 
 // statusbarBridge é a ponte instalada pela camada do app no startup.

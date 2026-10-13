@@ -127,7 +127,7 @@ func TestProgressServiceCycle(t *testing.T) {
 	loggingService.ResetForTest(t.TempDir())
 	t.Cleanup(func() { loggingService.ResetForTest(t.TempDir()) })
 
-	p := NewProgressService(nil, nil) // ctx vazio: EventsEmit é no-op
+	p := NewProgressService(nil) // sem app wails: EmitEvent é no-op
 	p.Begin("Exportando events (ffx2)…", 3)
 	if _, total, processed, pct, _ := p.stateSnapshot(); processed != 0 || total != 3 || pct != 0 {
 		t.Fatalf("begin: processed=%d total=%d pct=%d", processed, total, pct)

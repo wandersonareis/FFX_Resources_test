@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // App struct
@@ -27,21 +27,25 @@ type App struct {
 
 	MetadataService *services.MetadataService
 
-	ctx          context.Context
+	// O ctx do v2 saiu: no Wails v3 o app é alcançado por
+	// application.Get() e os serviços de ciclo de vida recebem um
+	// context.Context próprio em ServiceStartup.
 	unsavedMu    sync.Mutex
 	unsavedEdits bool
 }
 
 // NewApp creates a new App application struct
 func NewApp() *App {
-	notifier := services.NewEventNotifier(context.Background())
+	notifier := services.NewEventNotifier()
 	return &App{
 		MetadataService: services.NewMetadataService(notifier),
 	}
 }
 
-// startup is called at application startup
-func (a *App) startup(ctx context.Context) {
+// ServiceStartup substitui o OnStartup do v2: roda durante app.Run(), antes
+// do event loop. O ctx recebido é cancelado logo antes do shutdown e serve
+// de raiz de cancelamento para as goroutines de trabalho.
+func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	// O arquivo de log nasce aqui: um por início de app, ao lado do
 	// executável (logs/ffx-<início>.log) — antes de qualquer mensagem.
 	// A linha abaixo garante conteúdo desde o primeiro instante (e deixa
@@ -60,15 +64,17 @@ func (a *App) startup(ctx context.Context) {
 	}()
 
 	// Initialize services
-	a.initServices(ctx)
-
-	a.ctx = ctx
+	a.initServices()
 
 	interactions.NewInteractionWithCtx(ctx)
+	return nil
 }
 
-// domReady is called after front-end resources have been loaded
-func (a App) domReady(ctx context.Context) {
+// domReady registra os listeners Go↔JS e publica o estado inicial das
+// localizações. Equivale ao OnDomReady do v2: em main.go é acionado pelo
+// evento events.Common.WindowRuntimeReady, disparado quando o frontend manda
+// "wails:runtime:ready" — só então o JS consegue receber o que emitirmos.
+func (a *App) domReady() {
 	// Add your action here
 	defer func() {
 		if err := recover(); err != nil {
@@ -79,44 +85,66 @@ func (a App) domReady(ctx context.Context) {
 		}
 	}()
 
-	EventsOnStartup(ctx)
+	app := application.Get()
+	if app == nil {
+		return
+	}
 
-	EventsOnSaveConfig(ctx)
+	EventsOnStartup(app.Event)
+
+	EventsOnSaveConfig(app.Event)
 }
 
-// beforeClose is called when the application is about to quit,
-// either by clicking the window close button or calling runtime.Quit.
-// Returning true will cause the application to continue, false will continue shutdown as normal.
-func (a *App) beforeClose(ctx context.Context) (prevent bool) {
+// shouldQuit substitui o OnBeforeClose do v2: roda a cada pedido de saída
+// (fechar a última janela, Alt+F4 ou QuitApp — o v2 cobria os mesmos casos).
+// Devolve true para PERMITIR a saída, o inverso do `prevent` do v2.
+//
+// O diálogo do v2 devolvia a resposta em runtime.MessageDialog; no v3
+// Show() bloqueia e cada botão roda o próprio callback, então a decisão
+// vira uma variável local que os handlers preenchem.
+func (a *App) shouldQuit() bool {
 	interactions.NewInteractionService().FFXAppConfig().ToJson()
 
 	if !a.hasUnsavedEdits() {
+		return true
+	}
+
+	app := application.Get()
+	if app == nil {
 		return false
 	}
 
 	// Há edições não salvas: o texto mora no frontend, então "Salvar" emite
 	// o evento SaveRequested (o frontend salva e chama QuitApp para fechar).
-	answer, err := runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
-		Type:    runtime.QuestionDialog,
-		Title:   "Alterações não salvas",
-		Message: "Há textos editados não salvos. Deseja salvar antes de fechar?",
-		Buttons: []string{"&Salvar", "&Descartar", "&Cancelar"},
-	})
-	if err != nil {
-		return true
-	}
+	// Sem confirmação explícita, a saída fica bloqueada (default false).
+	allowQuit := false
 
-	fmt.Println("Close answer:", answer)
-	switch answer {
-	case "Salvar":
-		runtime.EventsEmit(ctx, "SaveRequested")
-		return true
-	case "Descartar":
+	dlg := app.Dialog.Question().
+		SetTitle("Alterações não salvas").
+		SetMessage("Há textos editados não salvos. Deseja salvar antes de fechar?")
+	save := dlg.AddButton("Salvar")
+	discard := dlg.AddButton("Descartar")
+	cancel := dlg.AddButton("Cancelar")
+	dlg.SetDefaultButton(save)
+	dlg.SetCancelButton(cancel)
+
+	save.OnClick(func() {
+		fmt.Println("Close answer: Salvar")
+		allowQuit = false
+		app.Event.Emit("SaveRequested")
+	})
+	discard.OnClick(func() {
+		fmt.Println("Close answer: Descartar")
 		a.SetUnsavedEdits(false)
-		return false
-	default:
-		return true
-	}
+		allowQuit = true
+	})
+	cancel.OnClick(func() {
+		fmt.Println("Close answer: Cancelar")
+		allowQuit = false
+	})
+
+	dlg.Show()
+	return allowQuit
 }
 
 // hasUnsavedEdits consulta a flag de edições pendentes (thread-safe).
@@ -134,35 +162,37 @@ func (a *App) SetUnsavedEdits(dirty bool) {
 }
 
 // QuitApp encerra a aplicação (usado após salvar no fluxo SaveRequested).
+// app.Quit() atravessa shouldQuit, do mesmo jeito que o runtime.Quit do v2
+// atravessava o beforeClose — com edições pendentes, o diálogo aparece de novo.
 func (a *App) QuitApp() {
-	if a.ctx != nil {
-		runtime.Quit(a.ctx)
-		return
+	if app := application.Get(); app != nil {
+		app.Quit()
 	}
-	runtime.Quit(interactions.NewInteractionService().Ctx)
 }
 
-// shutdown is called at application termination
-func (a *App) shutdown(ctx context.Context) {
+// ServiceShutdown substitui o OnShutdown do v2: roda quando a saída já está
+// confirmada, antes do shutdown dos services em ordem reversa.
+func (a *App) ServiceShutdown() error {
 	// Os .vbf abertos seguram handle de leitura: solta antes de sair.
 	services.CloseVbfArchives()
+	return nil
 }
 
-func (a *App) initServices(ctx context.Context) {
-	notification := services.NewEventNotifier(ctx)
+func (a *App) initServices() {
+	notification := services.NewEventNotifier()
 
 	a.noticationService = notification
 
 	// Ponte de progresso: operações longas (carga de árvore, export) publicam
 	// contadores pelo canal neutro core/progress e esta ponte emite os
 	// eventos do wails (Progress/ShowProgress) para a barra do frontend.
-	progressSvc := services.NewProgressService(ctx, notification)
+	progressSvc := services.NewProgressService(notification)
 	a.progressService = progressSvc
 	coreprogress.Set(progressSvc)
 
 	// Ponte da barra de status: desalinhamentos (original vs tradução)
 	// publicados pelos services chegam à barra de rodapé do frontend.
-	statusSvc := services.NewStatusBarService(ctx)
+	statusSvc := services.NewStatusBarService()
 	a.statusBarService = statusSvc
 	services.SetStatusBarService(statusSvc)
 
@@ -179,16 +209,69 @@ func (a *App) ReadFileAsString(file string) string {
 	return string(content)
 }
 
-func (a *App) SelectDirectory(title string) string {
-	selection, err := runtime.OpenDirectoryDialog(interactions.NewInteractionService().Ctx, runtime.OpenDialogOptions{
-		Title:            title,
-		DefaultDirectory: common.GetExecDir(),
-	})
-
+// pickDirectory abre o seletor nativo de PASTA com o título e a pasta
+// inicial pedidos. Devolve "" fora do ciclo de vida do app e no cancelamento.
+//
+// O Wails v3 não tem OpenDirectoryDialog: escolher pasta é o OpenFileDialog
+// com CanChooseDirectories(true). CanChooseFiles precisa ser false EXPLÍCITO
+// porque o SetOptions do v3 liga de volta os dois desligados.
+func pickDirectory(title, defaultDirectory string) string {
+	app := application.Get()
+	if app == nil {
+		return ""
+	}
+	selection, err := app.Dialog.OpenFileWithOptions(&application.OpenFileDialogOptions{
+		Title:              title,
+		Directory:          defaultDirectory,
+		CanChooseFiles:     false,
+		CanChooseDirectories: true,
+	}).PromptForSingleSelection()
 	if err != nil {
 		return ""
 	}
 	return selection
+}
+
+// pickFile abre o seletor nativo de ARQUIVO com o título, a pasta inicial e
+// os filtros pedidos (pares DisplayName/Pattern, como no v2). Devolve "" fora
+// do ciclo de vida do app e no cancelamento.
+func pickFile(title, defaultDirectory string, filters ...application.FileFilter) string {
+	app := application.Get()
+	if app == nil {
+		return ""
+	}
+	selection, err := app.Dialog.OpenFileWithOptions(&application.OpenFileDialogOptions{
+		Title:     title,
+		Directory: defaultDirectory,
+		Filters:   filters,
+	}).PromptForSingleSelection()
+	if err != nil {
+		return ""
+	}
+	return selection
+}
+
+// pickSave abre o diálogo "Salvar como". filename é o nome sugerido;
+// devolve "" fora do ciclo de vida do app e no cancelamento.
+func pickSave(title, defaultDirectory, filename string, filters ...application.FileFilter) string {
+	app := application.Get()
+	if app == nil {
+		return ""
+	}
+	selection, err := app.Dialog.SaveFileWithOptions(&application.SaveFileDialogOptions{
+		Title:     title,
+		Directory: defaultDirectory,
+		Filename:  filename,
+		Filters:   filters,
+	}).PromptForSingleSelection()
+	if err != nil {
+		return ""
+	}
+	return selection
+}
+
+func (a *App) SelectDirectory(title string) string {
+	return pickDirectory(title, common.GetExecDir())
 }
 
 // GetGameFilesLocation devolve o diretório dos arquivos do jogo
@@ -237,15 +320,13 @@ func (a *App) SetGameExeLocation(path string) {
 // qualquer nome no campo de arquivo. Devolve "" no cancelamento e numa
 // escolha inválida.
 func (a *App) SelectGameExeFile() string {
-	selection, err := runtime.OpenFileDialog(interactions.NewInteractionService().Ctx, runtime.OpenDialogOptions{
-		Title: "Selecionar o executável do jogo (FFX.exe ou FFX-2.exe)",
-		Filters: []runtime.FileFilter{
-			{DisplayName: "Executável do jogo (FFX.exe; FFX-2.exe)", Pattern: "FFX.exe;FFX-2.exe"},
+	selection := pickFile(
+		"Selecionar o executável do jogo (FFX.exe ou FFX-2.exe)", "",
+		application.FileFilter{
+			DisplayName: "Executável do jogo (FFX.exe; FFX-2.exe)",
+			Pattern:     "FFX.exe;FFX-2.exe",
 		},
-	})
-	if err != nil {
-		return ""
-	}
+	)
 	if selection == "" {
 		return ""
 	}
@@ -378,14 +459,8 @@ func (a *App) ExtractVbfImagesSelection(vbfPath string, paths []string, destRoot
 // SelectVbfExtractDir abre o seletor nativo de pasta para o "Extrair
 // para…", começando em data/ do jogo. Devolve "" no cancelamento.
 func (a *App) SelectVbfExtractDir() string {
-	selection, err := runtime.OpenDirectoryDialog(interactions.NewInteractionService().Ctx, runtime.OpenDialogOptions{
-		Title:            "Extrair para…",
-		DefaultDirectory: filepath.Join(common.GameFilesRoot, common.DirData),
-	})
-	if err != nil {
-		return ""
-	}
-	return selection
+	return pickDirectory("Extrair para…",
+		filepath.Join(common.GameFilesRoot, common.DirData))
 }
 
 // SelectVbfImageExtractDir escolhe a RAIZ onde DDS/PNG extraídos do .vbf
@@ -398,14 +473,7 @@ func (a *App) SelectVbfImageExtractDir() string {
 	// picker não abrir em pasta fallback (ImageWorkDir faz o mesmo nos
 	// outros dois pickers de arquivo).
 	_ = common.EnsurePathExists(defaultDir)
-	selection, err := runtime.OpenDirectoryDialog(interactions.NewInteractionService().Ctx, runtime.OpenDialogOptions{
-		Title:            "Escolher destino das imagens extraídas",
-		DefaultDirectory: defaultDir,
-	})
-	if err != nil {
-		return ""
-	}
-	return selection
+	return pickDirectory("Escolher destino das imagens extraídas", defaultDir)
 }
 
 // ExportVbfSelection decodifica os kinds de TEXTO da seleção e grava os
@@ -660,17 +728,11 @@ func (a *App) SaveImage(kind, id, format, destPath string, version common.GameVe
 // de ser re-encodado para DXT, com perda e sem mips).
 // Devolve "" quando o usuário cancela.
 func (a *App) SelectImageFile(id string, version common.GameVersion) string {
-	selection, err := runtime.OpenFileDialog(interactions.NewInteractionService().Ctx, runtime.OpenDialogOptions{
-		Title:            "Selecionar textura para importar",
-		DefaultDirectory: services.ImageWorkDir(version, id),
-		Filters: []runtime.FileFilter{
-			{DisplayName: "DDS (*.dds)", Pattern: "*.dds"},
-		},
-	})
-	if err != nil {
-		return ""
-	}
-	return selection
+	return pickFile(
+		"Selecionar textura para importar",
+		services.ImageWorkDir(version, id),
+		application.FileFilter{DisplayName: "DDS (*.dds)", Pattern: "*.dds"},
+	)
 }
 
 // SelectImageSavePath abre o diálogo "Salvar como" para .dds/.png já no
@@ -682,19 +744,10 @@ func (a *App) SelectImageSavePath(format, suggestedName, id string, version comm
 	if format == "png" {
 		pattern, display = "*.png", "PNG (*.png)"
 	}
-	selection, err := runtime.SaveFileDialog(interactions.NewInteractionService().Ctx, runtime.SaveDialogOptions{
-		Title:            "Salvar imagem",
-		DefaultDirectory: services.ImageWorkDir(version, id),
-		DefaultFilename:  suggestedName,
-		Filters: []runtime.FileFilter{
-			{DisplayName: display, Pattern: pattern},
-			{DisplayName: "Todos os arquivos (*.*)", Pattern: "*.*"},
-		},
-	})
-	if err != nil {
-		return ""
-	}
-	return selection
+	return pickSave("Salvar imagem", services.ImageWorkDir(version, id), suggestedName,
+		application.FileFilter{DisplayName: display, Pattern: pattern},
+		application.FileFilter{DisplayName: "Todos os arquivos (*.*)", Pattern: "*.*"},
+	)
 }
 
 // GetTagCatalog devolve o catálogo de tags nomeadas (PC/MCR/BUTTON/ICON) da
@@ -766,19 +819,12 @@ func (a *App) ExportJSON(kind string, version common.GameVersion, ids, langs []s
 // SelectImportFile abre o seletor nativo de arquivo para importar
 // (.json / .strings). Devolve "" quando o usuário cancela.
 func (a *App) SelectImportFile() string {
-	selection, err := runtime.OpenFileDialog(interactions.NewInteractionService().Ctx, runtime.OpenDialogOptions{
-		Title: "Selecionar arquivo para importar",
-		Filters: []runtime.FileFilter{
-			{DisplayName: "Arquivos de importação (*.json; *.strings)", Pattern: "*.json;*.strings"},
-			{DisplayName: "JSON (*.json)", Pattern: "*.json"},
-			{DisplayName: "Strings (*.strings)", Pattern: "*.strings"},
-			{DisplayName: "Todos os arquivos (*.*)", Pattern: "*.*"},
-		},
-	})
-	if err != nil {
-		return ""
-	}
-	return selection
+	return pickFile("Selecionar arquivo para importar", "",
+		application.FileFilter{DisplayName: "Arquivos de importação (*.json; *.strings)", Pattern: "*.json;*.strings"},
+		application.FileFilter{DisplayName: "JSON (*.json)", Pattern: "*.json"},
+		application.FileFilter{DisplayName: "Strings (*.strings)", Pattern: "*.strings"},
+		application.FileFilter{DisplayName: "Todos os arquivos (*.*)", Pattern: "*.*"},
+	)
 }
 
 // PreviewImport parseia/valida o arquivo e devolve o resumo para o modal

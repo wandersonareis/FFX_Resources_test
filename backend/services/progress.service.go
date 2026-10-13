@@ -1,14 +1,11 @@
 package services
 
 import (
-	"context"
 	"sync"
 	"time"
 
 	"ffxresources/backend/core/progress"
 	"ffxresources/backend/loggingService"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // ProgressService emite o progresso de operações longas por eventos do
@@ -21,7 +18,6 @@ import (
 // final incondicionalmente e fecha o diálogo.
 type ProgressService struct {
 	mu          sync.Mutex
-	ctx         context.Context
 	notifier    INotificationService
 	label       string
 	total       int
@@ -62,8 +58,11 @@ type IProgressService interface {
 	progress.Reporter
 }
 
-func NewProgressService(ctx context.Context, notifier INotificationService) *ProgressService {
-	return &ProgressService{ctx: ctx, notifier: notifier}
+// NewProgressService cria a ponte de progresso. O ctx que existia no v2
+// servia só para runtime.EventsEmit; no v3 os eventos saem pelo bus de
+// application.Get(), então o parâmetro caiu.
+func NewProgressService(notifier INotificationService) *ProgressService {
+	return &ProgressService{notifier: notifier}
 }
 
 // Begin inicia um ciclo de progresso.
@@ -160,21 +159,21 @@ func (p *ProgressService) End() {
 	p.enabled = false
 	snapshot := p.snapshotLocked(true)
 	p.mu.Unlock()
-	if !enabled || isEmptyContext(p.ctx) {
+	if !enabled || !HasEventBus() {
 		return
 	}
-	runtime.EventsEmit(p.ctx, "Progress", snapshot)
-	runtime.EventsEmit(p.ctx, "ShowProgress", false)
+	EmitEvent("Progress", snapshot)
+	EmitEvent("ShowProgress", false)
 }
 
 func (p *ProgressService) publish(show bool) {
-	if isEmptyContext(p.ctx) {
+	if !HasEventBus() {
 		return
 	}
 	if show {
-		runtime.EventsEmit(p.ctx, "ShowProgress", true)
+		EmitEvent("ShowProgress", true)
 	}
-	runtime.EventsEmit(p.ctx, "Progress", p.snapshot(false))
+	EmitEvent("Progress", p.snapshot(false))
 }
 
 func (p *ProgressService) snapshot(done bool) ProgressEvent {

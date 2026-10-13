@@ -4,13 +4,10 @@ import (
 	"embed"
 	"fmt"
 	"log"
+	"log/slog"
 
-	"github.com/wailsapp/wails/v2"
-	"github.com/wailsapp/wails/v2/pkg/logger"
-	"github.com/wailsapp/wails/v2/pkg/options"
-	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
-	"github.com/wailsapp/wails/v2/pkg/options/mac"
-	"github.com/wailsapp/wails/v2/pkg/options/windows"
+	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 //go:embed all:frontend/out
@@ -31,69 +28,63 @@ func main() {
 		}
 	}()
 
-	app := NewApp()
+	appInstance := NewApp()
 
-	// Create application with options
-	err := wails.Run(&options.App{
-		Title:     "FINAL FANTASY X and X-2 HD Remaster Resources Editor",
-		Width:     1280,
-		Height:    800,
-		MinWidth:  1024,
-		MinHeight: 600,
-		//MaxWidth:          1280,
-		//MaxHeight:         800,
-		DisableResize:     false,
-		Fullscreen:        false,
-		Frameless:         false,
-		StartHidden:       false,
-		HideWindowOnClose: false,
-		BackgroundColour:  &options.RGBA{R: 255, G: 255, B: 255, A: 255},
-		AssetServer: &assetserver.Options{
-			Assets: assets,
+	// v2: wails.Run(&options.App{...}) combinava opções, janela e execução.
+	// v3 separa em application.New (app + serviços), Window.NewWithOptions
+	// (janela) e app.Run (event loop).
+	app := application.New(application.Options{
+		Name: "FINAL FANTASY X and X-2 HD Remaster Resources Editor",
+		Icon: icon,
+		Services: []application.Service{
+			application.NewService(appInstance),
 		},
-		Menu:                     nil,
-		EnableDefaultContextMenu: true,
-		Logger:                   nil,
-		LogLevel:                 logger.TRACE,
-		OnStartup:                app.startup,
-		OnDomReady:               app.domReady,
-		OnBeforeClose:            app.beforeClose,
-		OnShutdown:               app.shutdown,
-		WindowStartState:         options.Normal,
-		Bind: []interface{}{
-			app,
+		Assets: application.AssetOptions{
+			Handler: application.AssetFileServerFS(assets),
 		},
-		// Windows platform specific options
-		Windows: &windows.Options{
-			WebviewIsTransparent: false,
-			WindowIsTranslucent:  false,
-			DisableWindowIcon:    false,
-			// DisableFramelessWindowDecorations: false,
+		// v2: OnBeforeClose. shouldQuit devolve true para PERMITIR a saída,
+		// o inverso do `prevent` do v2.
+		ShouldQuit: appInstance.shouldQuit,
+		// v2: LogLevel logger.TRACE — o v3 não tem TRACE; Debug é o nível
+		// mais baixo disponível.
+		LogLevel: slog.LevelDebug,
+		Windows: application.WindowsOptions{
+			// v2: WebviewUserDataPath: "" (default %APPDATA%\<binário>).
 			WebviewUserDataPath: "",
-			ZoomFactor:          1.0,
-		},
-		// Mac platform specific options
-		Mac: &mac.Options{
-			TitleBar: &mac.TitleBar{
-				TitlebarAppearsTransparent: true,
-				HideTitle:                  false,
-				HideTitleBar:               false,
-				FullSizeContent:            false,
-				UseToolbar:                 false,
-				HideToolbarSeparator:       true,
-			},
-			Appearance:           mac.NSAppearanceNameDarkAqua,
-			WebviewIsTransparent: true,
-			WindowIsTranslucent:  true,
-			About: &mac.AboutInfo{
-				Title:   "FINAL FANTASY X and X-2 HD Remaster Resources Editor",
-				Message: "",
-				Icon:    icon,
-			},
 		},
 	})
 
-	if err != nil {
+	// v2: Title/Width/Height/MinWidth/MinHeight/BackgroundColour/WindowStartState
+	// moravam em options.App; no v3 viraram opções da janela. O menu e o menu
+	// de contexto padrão continuam desligados/ligados por default
+	// (EnableDefaultContextMenu: true vira DefaultContextMenuDisabled: false).
+	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Title:            "FINAL FANTASY X and X-2 HD Remaster Resources Editor",
+		Width:            1280,
+		Height:           800,
+		MinWidth:         1024,
+		MinHeight:        600,
+		StartState:       application.WindowStateNormal,
+		BackgroundColour: application.NewRGB(255, 255, 255),
+		URL:              "/",
+		// v2: mac.Options{TitleBar, Appearance} — no v3 essas opções passaram
+		// para a janela.
+		Mac: application.MacWindow{
+			TitleBar: application.MacTitleBar{
+				AppearsTransparent:   true,
+				HideToolbarSeparator: true,
+			},
+			Appearance: application.NSAppearanceNameDarkAqua,
+		},
+	})
+
+	// v2: OnDomReady. WindowRuntimeReady dispara quando o frontend manda
+	// "wails:runtime:ready" — só então o JS recebe o que emitirmos.
+	window.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) {
+		appInstance.domReady()
+	})
+
+	if err := app.Run(); err != nil {
 		log.Fatal(err)
 	}
 }

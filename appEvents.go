@@ -1,135 +1,139 @@
 package main
 
 import (
-	"context"
 	"ffxresources/backend/common"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/services"
 	"fmt"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-func EventsOnStartup(ctx context.Context) {
-	emitLocationsEvents(ctx)
-	eventsOnLocations(ctx)
+// Este arquivo era todo parametrizado por um context.Context que existia só
+// para runtime.EventsOn/EventsEmit. No Wails v3 os eventos vivem no
+// EventManager da aplicação, então o parâmetro threaded passou a ser o
+// *application.EventManager — mesma forma, tipo novo.
+
+func EventsOnStartup(bus *application.EventManager) {
+	emitLocationsEvents(bus)
+	eventsOnLocations(bus)
 }
 
-func emitLocationsEvents(ctx context.Context) {
-	emitGameVersion(ctx)
-	emitGameLocation(ctx)
-	emitGameExeLocation(ctx)
-	emitExtractLocation(ctx)
-	emitTranslateLocation(ctx)
-	emitimportLocation(ctx)
+func emitLocationsEvents(bus *application.EventManager) {
+	emitGameVersion(bus)
+	emitGameLocation(bus)
+	emitGameExeLocation(bus)
+	emitExtractLocation(bus)
+	emitTranslateLocation(bus)
+	emitimportLocation(bus)
 }
 
-func eventsOnLocations(ctx context.Context) {
-	eventOnSetGameVersion(ctx)
-	eventOnSetGameLocation(ctx)
-	eventOnSetGameExeLocation(ctx)
-	eventOnSetExtractLocation(ctx)
-	eventOnSetTranslateLocation(ctx)
-	eventOnSetImportLocation(ctx)
+func eventsOnLocations(bus *application.EventManager) {
+	eventOnSetGameVersion(bus)
+	eventOnSetGameLocation(bus)
+	eventOnSetGameExeLocation(bus)
+	eventOnSetExtractLocation(bus)
+	eventOnSetTranslateLocation(bus)
+	eventOnSetImportLocation(bus)
 }
 
-func EventsOnSaveConfig(ctx context.Context) {
-	runtime.EventsOn(ctx, "SaveConfig", func(data ...any) {
-		fmt.Println("SaveConfig", data)
-		
+func EventsOnSaveConfig(bus *application.EventManager) {
+	bus.On("SaveConfig", func(e *application.CustomEvent) {
+		fmt.Println("SaveConfig", e.Data)
+
 		interactions.NewInteractionService().FFXAppConfig().ToJson()
 	})
 }
 
-func emitGameVersion(ctx context.Context) {
+func emitGameVersion(bus *application.EventManager) {
 	gameVersion := interactions.CurrentGameVersion()
-	runtime.EventsEmit(ctx, "GameVersion", gameVersion)
+	bus.Emit("GameVersion", gameVersion)
 }
 
-func emitGameLocation(ctx context.Context) {
+func emitGameLocation(bus *application.EventManager) {
 	gameLocation := interactions.NewInteractionService().GameLocation.GetTargetDirectory()
 
 	if gameLocation == "" {
 		interactions.NewInteractionService().GameLocation.ProvideTargetDirectory()
 
-		emitGameLocation(ctx)
+		emitGameLocation(bus)
 		return
 	}
-	
-	runtime.EventsEmit(ctx, "GameFilesLocation", gameLocation)
+
+	bus.Emit("GameFilesLocation", gameLocation)
 }
 
 // emitGameExeLocation devolve o executável do jogo escolhido ("") — é dele
 // que o navegador de .vbf deriva a pasta de busca dos containers.
-func emitGameExeLocation(ctx context.Context) {
-	runtime.EventsEmit(ctx, "GameExeLocation",
+func emitGameExeLocation(bus *application.EventManager) {
+	bus.Emit("GameExeLocation",
 		interactions.NewInteractionService().FFXAppConfig().GetGameExeLocation())
 }
 
-func emitExtractLocation(ctx context.Context) {
+func emitExtractLocation(bus *application.EventManager) {
 	extractLocation := interactions.NewInteractionService().ExtractLocation.GetTargetDirectory()
 
 	if extractLocation == "" {
 		interactions.NewInteractionService().ExtractLocation.ProvideTargetDirectory()
 
-		emitExtractLocation(ctx)
+		emitExtractLocation(bus)
 		return
 	}
-	runtime.EventsEmit(ctx, "ExtractLocation", extractLocation)
+	bus.Emit("ExtractLocation", extractLocation)
 }
 
-func emitTranslateLocation(ctx context.Context) {
+func emitTranslateLocation(bus *application.EventManager) {
 	translateLocation := interactions.NewInteractionService().TranslateLocation.GetTargetDirectory()
 
 	if translateLocation == "" {
 		interactions.NewInteractionService().TranslateLocation.ProvideTargetDirectory()
 
-		emitTranslateLocation(ctx)
+		emitTranslateLocation(bus)
 		return
 	}
-	runtime.EventsEmit(ctx, "TranslateLocation", translateLocation)
+	bus.Emit("TranslateLocation", translateLocation)
 }
 
-func emitimportLocation(ctx context.Context) {
+func emitimportLocation(bus *application.EventManager) {
 	importLocation := interactions.NewInteractionService().ImportLocation.GetTargetDirectory()
 
 	if importLocation == "" {
 		interactions.NewInteractionService().ImportLocation.ProvideTargetDirectory()
 
-		emitimportLocation(ctx)
+		emitimportLocation(bus)
 		return
 	}
-	runtime.EventsEmit(ctx, "ReimportLocation", importLocation)
+	bus.Emit("ReimportLocation", importLocation)
 }
 
-func eventOnSetGameVersion(ctx context.Context) {
+func eventOnSetGameVersion(bus *application.EventManager) {
 	updateGameVersion := func(version common.GameVersion) {
 		interactions.NewInteractionService().FFXAppConfig().SetGameVersion(version)
 	}
 
-	runtime.EventsOn(ctx, "GameVersionChanged", func(data ...any) {
-		fmt.Println("GameVersionChanged", data[0])
-		
-		gameVer, err := common.ParseGameVersionStrict(data[0].(string))
+	bus.On("GameVersionChanged", func(e *application.CustomEvent) {
+		fmt.Println("GameVersionChanged", e.Data)
+
+		gameVer, err := common.ParseGameVersionStrict(e.Data.(string))
 		if err != nil {
 			fmt.Println("ParseGameVersion error:", err)
 			return
 		}
 		updateGameVersion(gameVer)
 
-		emitGameVersion(ctx)
+		emitGameVersion(bus)
 	})
 }
 
-func eventOnSetGameLocation(ctx context.Context) {
-	runtime.EventsOn(ctx, "GameLocationChanged", func(data ...any) {
-		fmt.Println("GameLocationChanged", data)
+func eventOnSetGameLocation(bus *application.EventManager) {
+	bus.On("GameLocationChanged", func(e *application.CustomEvent) {
+		fmt.Println("GameLocationChanged", e.Data)
 
 		service := interactions.NewInteractionService()
 		oldGameDir := service.GameLocation.GetTargetDirectory()
 		oldDefaultTranslate := common.DefaultTranslatedDir(oldGameDir)
 
-		service.GameLocation.SetTargetDirectory(data[0].(string))
+		service.GameLocation.SetTargetDirectory(e.Data.(string))
 
 		// A árvore de gamefiles mudou: tudo que foi derivado dela (DTOs
 		// deduplicados, original pristine de data/ e os stores de formato)
@@ -142,63 +146,63 @@ func eventOnSetGameLocation(ctx context.Context) {
 		if service.TranslateLocation.GetTargetDirectory() == oldDefaultTranslate {
 			newDefaultTranslate := common.DefaultTranslatedDir(service.GameLocation.GetTargetDirectory())
 			_ = service.TranslateLocation.SetTargetDirectory(newDefaultTranslate)
-			emitTranslateLocation(ctx)
+			emitTranslateLocation(bus)
 		}
 
-		emitGameLocation(ctx)
+		emitGameLocation(bus)
 		// Aplica imediatamente: config já foi persistido por
 		// SetTargetDirectory; avisa o frontend para recarregar a árvore.
-		runtime.EventsEmit(ctx, "Refresh_Tree")
+		bus.Emit("Refresh_Tree")
 	})
 }
 
 // eventOnSetGameExeLocation grava o executável do jogo (caminho de ARQUIVO,
 // fora do map Locations) e recarrega a árvore VBF.
-func eventOnSetGameExeLocation(ctx context.Context) {
-	runtime.EventsOn(ctx, "GameExeLocationChanged", func(data ...any) {
-		fmt.Println("GameExeLocationChanged", data[0])
+func eventOnSetGameExeLocation(bus *application.EventManager) {
+	bus.On("GameExeLocationChanged", func(e *application.CustomEvent) {
+		fmt.Println("GameExeLocationChanged", e.Data)
 
 		interactions.NewInteractionService().FFXAppConfig().
-			SetGameExeLocation(data[0].(string))
+			SetGameExeLocation(e.Data.(string))
 
 		// A pasta de busca dos .vbf mudou: os containers abertos seguram
 		// handle de leitura do caminho anterior — fecha; a próxima listagem
 		// reabre os da nova pasta.
 		services.CloseVbfArchives()
-		emitGameExeLocation(ctx)
-		runtime.EventsEmit(ctx, "Refresh_Tree")
+		emitGameExeLocation(bus)
+		bus.Emit("Refresh_Tree")
 	})
 }
 
-func eventOnSetExtractLocation(ctx context.Context) {
-	runtime.EventsOn(ctx, "ExtractLocationChanged", func(data ...any) {
-		fmt.Println("ExtractLocationChanged", data)
+func eventOnSetExtractLocation(bus *application.EventManager) {
+	bus.On("ExtractLocationChanged", func(e *application.CustomEvent) {
+		fmt.Println("ExtractLocationChanged", e.Data)
 
-		interactions.NewInteractionService().ExtractLocation.SetTargetDirectory(data[0].(string))
+		interactions.NewInteractionService().ExtractLocation.SetTargetDirectory(e.Data.(string))
 
-		emitExtractLocation(ctx)
+		emitExtractLocation(bus)
 	})
 }
 
-func eventOnSetTranslateLocation(ctx context.Context) {
-	runtime.EventsOn(ctx, "TranslateLocationChanged", func(data ...any) {
-		fmt.Println("TranslateLocationChanged", data)
+func eventOnSetTranslateLocation(bus *application.EventManager) {
+	bus.On("TranslateLocationChanged", func(e *application.CustomEvent) {
+		fmt.Println("TranslateLocationChanged", e.Data)
 
-		interactions.NewInteractionService().TranslateLocation.SetTargetDirectory(data[0].(string))
+		interactions.NewInteractionService().TranslateLocation.SetTargetDirectory(e.Data.(string))
 
-		emitTranslateLocation(ctx)
+		emitTranslateLocation(bus)
 		// Fonte da tradução do reimport (mods/translated); recarrega
 		// metadados da árvore para refletir disponibilidade.
-		runtime.EventsEmit(ctx, "Refresh_Tree")
+		bus.Emit("Refresh_Tree")
 	})
 }
 
-func eventOnSetImportLocation(ctx context.Context) {
-	runtime.EventsOn(ctx, "ReimportLocationChanged", func(data ...any) {
-		fmt.Println("ReimportLocationChanged", data)
+func eventOnSetImportLocation(bus *application.EventManager) {
+	bus.On("ReimportLocationChanged", func(e *application.CustomEvent) {
+		fmt.Println("ReimportLocationChanged", e.Data)
 
-		interactions.NewInteractionService().ImportLocation.SetTargetDirectory(data[0].(string))
+		interactions.NewInteractionService().ImportLocation.SetTargetDirectory(e.Data.(string))
 
-		emitimportLocation(ctx)
+		emitimportLocation(bus)
 	})
 }
