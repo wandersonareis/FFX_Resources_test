@@ -1,6 +1,14 @@
 build/bin
 node_modules
 frontend/out
+# Cache do Task, usado pelo `wails3 build`/`wails3 dev` (Wails v3)
+.task/
+# Gerado por `wails3 generate syso` e removido ao fim do build; um resquício
+# seria linkado silenciosamente no próximo `go build`.
+/*.syso
+# Fonte vetorial do Icon Composer: o wails3 checa a raiz por ela, mas este
+# projeto só usa build/appicon.png.
+/appicon.icon/
 .angular
 package-lock.json
 package.json.md5

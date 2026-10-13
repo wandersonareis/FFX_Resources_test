@@ -1,0 +1,51 @@
+# Configuração do projeto Wails v3.
+# Depois de mexer em `info` ou `fileAssociations`, rode
+# `wails3 task common:update:build-assets` para regenerar os assets de build
+# (ele sobrescreve alterações feitas nos assets).
+version: '3'
+
+# Metadados usados para gerar os assets de build (icon, manifest, Info.plist,
+# instaladores). Vindos do antigo wails.json (name/author/outputfilename).
+info:
+  companyName: "Wanderson A. dos Reis"
+  productName: "FINAL FANTASY X and X-2 HD Remaster Resources Editor"
+  productIdentifier: "com.wandersonfrost.ffxresources"
+  description: "Editor de recursos do FINAL FANTASY X and X-2 HD Remaster"
+  copyright: "(c) Wanderson A. dos Reis"
+  comments: "Editor de recursos do FINAL FANTASY X and X-2 HD Remaster"
+  version: "2.0.0"
+
+# Configuração do modo de desenvolvimento (wails3 dev).
+dev_mode:
+  root_path: .
+  log_level: warn
+  debounce: 1000
+  ignore:
+    dir:
+      - .git
+      - node_modules
+      - frontend
+      - bin
+      # O wails3 dev assiste *.go: sem ignorar build/ o watcher recompila em
+      # loop, porque o app grava ali em runtime (build/bin/config, data,
+      # extracted, translated, logs) — e não há .go em build/.
+      - build
+      - examples
+      - .task
+    file:
+      - .DS_Store
+      - .gitignore
+      - .gitkeep
+      - "*_test.go"
+    watched_extension:
+      - "*.go"
+      - "*.js" # Watch for JS/TS included using the //wails:include directive.
+      - "*.ts" # The frontend directory is excluded by the setting above.
+    git_ignore: true
+  executes:
+    - cmd: wails3 build DEV=true
+      type: blocking
+    - cmd: wails3 task common:dev:frontend
+      type: background
+    - cmd: wails3 task run
+      type: primary
