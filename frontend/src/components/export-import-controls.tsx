@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { Download, Upload } from 'lucide-react';
+import { ChevronDown, Download, FileUp, FolderInput, ListChecks, Upload } from 'lucide-react';
 import { loggedToast as toast } from '@/lib/ffx/toast-logged';
 import { Events } from '@wailsio/runtime';
 import * as dto from '@/bindings/ffxresources/backend/dto/models';
@@ -222,14 +222,21 @@ export function ExportImportControls({ version }: { version: GameVersionId }) {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline">
+          <Button
+            size="sm"
+            variant="outline"
+            title="Exportar textos — JSON ou Strings, de todos os tipos ou da seleção marcada"
+          >
             <Download size={16} />
             Exportar
+            <ChevronDown size={12} />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="min-w-56">
           <DropdownMenuItem onSelect={() => void runExport(servedKinds, false)}>
-            Exportar tudo
+            <Download size={14} />
+            Exportar
+            <span className="ml-auto pl-3 text-xs opacity-60">todos os tipos</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuLabel className="text-muted-foreground">
@@ -247,18 +254,25 @@ export function ExportImportControls({ version }: { version: GameVersionId }) {
           ))}
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => void runExport(activeScope, true)}>
+            <ListChecks size={14} />
             Exportar seleção
+            <span className="ml-auto pl-3 text-xs opacity-60">marcados</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline">
+          <Button
+            size="sm"
+            variant="outline"
+            title="Importar textos — em lote de mods/translated ou de arquivo JSON/Strings"
+          >
             <Upload size={16} />
             Importar
+            <ChevronDown size={12} />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="min-w-56">
           <DropdownMenuLabel className="text-muted-foreground">
             Tipos
           </DropdownMenuLabel>
@@ -274,10 +288,14 @@ export function ExportImportControls({ version }: { version: GameVersionId }) {
           ))}
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => void onImportTranslatedClick()}>
-            Importar (mods/translated)
+            <FolderInput size={14} />
+            Importar
+            <span className="ml-auto pl-3 text-xs opacity-60">mods/translated</span>
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => void onImportClick()}>
+            <FileUp size={14} />
             Importar de…
+            <span className="ml-auto pl-3 text-xs opacity-60">arquivo</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
