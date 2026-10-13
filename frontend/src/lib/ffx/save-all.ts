@@ -1,4 +1,4 @@
-import { ApplyTextCollection, ApplyVbfTextCollection } from '@/bindings/ffxresources/app';
+import { ApplyTextCollection, ApplyVbfTextCollection } from '@/bindings/ffxresources/textservice';
 import { loggedToast as toast } from '@/lib/ffx/toast-logged';
 import { editDraft } from './edit-draft';
 import { invalidateVbfCache } from './vbf';

@@ -8,7 +8,7 @@
 //   2. valores: os índices de PC/MCR/BUTTON/ICON precisam existir no catálogo
 //      da versão — caso contrário o re-import reescreve a tag (o decoder
 //      normaliza o índice/nome) e o texto do tradutor muda sozinho.
-import { GetTagCatalog } from '@/bindings/ffxresources/app';
+import { GetTagCatalog } from '@/bindings/ffxresources/textservice';
 import * as services from '@/bindings/ffxresources/backend/services/models';
 import type { GameVersionId } from './game-version';
 import { extractChipLabel, isLockedTagInner } from './game-text-tags';

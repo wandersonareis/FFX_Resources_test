@@ -13,7 +13,7 @@ import {
   SelectVbfExtractDir,
   SelectVbfImageExtractDir,
   SaveVbfImage,
-} from '@/bindings/ffxresources/app';
+} from '@/bindings/ffxresources/vbfservice';
 import * as dto from '@/bindings/ffxresources/backend/dto/models';
 
 /**

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSelector } from '@tanstack/react-store';
-import { ListLanguages } from '@/bindings/ffxresources/app';
+import { ListLanguages } from '@/bindings/ffxresources/textservice';
 import { SOURCE_LANG } from '@/lib/ffx/save-all';
 import { TranslationCellDialog } from '@/components/dialogs/translation-cell-dialog';
 import type { EntryView } from '@/components/entry-view/entry-view-store';

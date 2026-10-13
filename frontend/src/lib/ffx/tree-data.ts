@@ -1,32 +1,34 @@
 import {
-  DeleteImages,
-  DeleteImageSelection,
   ExportEntry,
   ExportJSON,
   ExportStrings,
+  GetTextEntry,
+  ImportEntry,
+  ImportFile,
+  ListTextEntries,
+  PreviewImport,
+  RevealEntryFile,
+  SearchTextEntries,
+  SelectImportFile,
+  WarmTextSearch,
+} from '@/bindings/ffxresources/textservice';
+import {
+  DeleteImages,
+  DeleteImageSelection,
   ExtractImageGroup,
   ExtractImageSelection,
   GetImageEntry,
-  GetTextEntry,
   ImageDuplicates,
   ImageSelectionCopies,
   ImageExists,
-  ImportEntry,
-  ImportFile,
   ImportImage,
   ImportImageGroup,
-  ListTextEntries,
-  PreviewImport,
   RefreshImageDuplicates,
   ReplicateImage,
-  RevealEntryFile,
-  SearchTextEntries,
   SaveImage,
   SelectImageFile,
   SelectImageSavePath,
-  SelectImportFile,
-  WarmTextSearch,
-} from '@/bindings/ffxresources/app';
+} from '@/bindings/ffxresources/imageservice';
 import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import * as services from '@/bindings/ffxresources/backend/services/models';
 import { resolveEntryLabel, EntryKind } from './display-names';

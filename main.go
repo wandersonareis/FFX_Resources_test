@@ -36,9 +36,8 @@ func main() {
 	app := application.New(application.Options{
 		Name: "FINAL FANTASY X and X-2 HD Remaster Resources Editor",
 		Icon: icon,
-		Services: []application.Service{
-			application.NewService(appInstance),
-		},
+		// App (sessão/ciclo de vida) + serviços por domínio.
+		Services: appServices(appInstance),
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
 		},

@@ -11,7 +11,7 @@ import {
   SelectDirectory,
   SelectGameExeFile,
   SetEnableMods,
-} from "@/bindings/ffxresources/app";
+} from "@/bindings/ffxresources/configservice";
 import { Events } from "@wailsio/runtime";
 import { useWailsEvent } from "@/lib/ffx/use-wails-event";
 import { invalidateVbfCache } from "@/lib/ffx/vbf";
