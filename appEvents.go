@@ -23,18 +23,14 @@ func emitLocationsEvents(bus *application.EventManager) {
 	emitGameVersion(bus)
 	emitGameLocation(bus)
 	emitGameExeLocation(bus)
-	emitExtractLocation(bus)
 	emitTranslateLocation(bus)
-	emitimportLocation(bus)
 }
 
 func eventsOnLocations(bus *application.EventManager) {
 	eventOnSetGameVersion(bus)
 	eventOnSetGameLocation(bus)
 	eventOnSetGameExeLocation(bus)
-	eventOnSetExtractLocation(bus)
 	eventOnSetTranslateLocation(bus)
-	eventOnSetImportLocation(bus)
 }
 
 func EventsOnSaveConfig(bus *application.EventManager) {
@@ -69,19 +65,6 @@ func emitGameExeLocation(bus *application.EventManager) {
 	bus.Emit("GameExeLocation",
 		interactions.NewInteractionService().FFXAppConfig().GetGameExeLocation())
 }
-
-func emitExtractLocation(bus *application.EventManager) {
-	extractLocation := interactions.NewInteractionService().ExtractLocation.GetTargetDirectory()
-
-	if extractLocation == "" {
-		interactions.NewInteractionService().ExtractLocation.ProvideTargetDirectory()
-
-		emitExtractLocation(bus)
-		return
-	}
-	bus.Emit("ExtractLocation", extractLocation)
-}
-
 func emitTranslateLocation(bus *application.EventManager) {
 	translateLocation := interactions.NewInteractionService().TranslateLocation.GetTargetDirectory()
 
@@ -93,19 +76,6 @@ func emitTranslateLocation(bus *application.EventManager) {
 	}
 	bus.Emit("TranslateLocation", translateLocation)
 }
-
-func emitimportLocation(bus *application.EventManager) {
-	importLocation := interactions.NewInteractionService().ImportLocation.GetTargetDirectory()
-
-	if importLocation == "" {
-		interactions.NewInteractionService().ImportLocation.ProvideTargetDirectory()
-
-		emitimportLocation(bus)
-		return
-	}
-	bus.Emit("ReimportLocation", importLocation)
-}
-
 func eventOnSetGameVersion(bus *application.EventManager) {
 	updateGameVersion := func(version common.GameVersion) {
 		interactions.NewInteractionService().FFXAppConfig().SetGameVersion(version)
@@ -173,17 +143,6 @@ func eventOnSetGameExeLocation(bus *application.EventManager) {
 		bus.Emit("Refresh_Tree")
 	})
 }
-
-func eventOnSetExtractLocation(bus *application.EventManager) {
-	bus.On("ExtractLocationChanged", func(e *application.CustomEvent) {
-		fmt.Println("ExtractLocationChanged", e.Data)
-
-		interactions.NewInteractionService().ExtractLocation.SetTargetDirectory(e.Data.(string))
-
-		emitExtractLocation(bus)
-	})
-}
-
 func eventOnSetTranslateLocation(bus *application.EventManager) {
 	bus.On("TranslateLocationChanged", func(e *application.CustomEvent) {
 		fmt.Println("TranslateLocationChanged", e.Data)
@@ -194,15 +153,5 @@ func eventOnSetTranslateLocation(bus *application.EventManager) {
 		// Fonte da tradução do reimport (mods/translated); recarrega
 		// metadados da árvore para refletir disponibilidade.
 		bus.Emit("Refresh_Tree")
-	})
-}
-
-func eventOnSetImportLocation(bus *application.EventManager) {
-	bus.On("ReimportLocationChanged", func(e *application.CustomEvent) {
-		fmt.Println("ReimportLocationChanged", e.Data)
-
-		interactions.NewInteractionService().ImportLocation.SetTargetDirectory(e.Data.(string))
-
-		emitimportLocation(bus)
 	})
 }

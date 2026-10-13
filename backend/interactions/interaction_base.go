@@ -44,8 +44,7 @@ func (e *interactionBase) ProvideTargetDirectory() error {
 }
 
 // defaultDirForKey devolve o default por chave de config.
-// GameFiles = <exec>/data; Translate deriva dele (<game>/mods/translated);
-// Extract/Import são internos ocultos do frontend.
+// GameFiles = <exec>/data; Translate deriva dele (<game>/mods/translated).
 func defaultDirForKey(configKey string) string {
 	execDir := common.GetExecDir()
 	switch configKey {
@@ -53,10 +52,6 @@ func defaultDirForKey(configKey string) string {
 		return filepath.Join(execDir, common.DirData)
 	case "TranslateLocation":
 		return common.DefaultTranslatedDir(filepath.Join(execDir, common.DirData))
-	case "ExtractLocation":
-		return filepath.Join(execDir, common.DirExtracted)
-	case "ImportLocation":
-		return filepath.Join(execDir, common.DirReimported)
 	default:
 		return filepath.Join(common.ResourcesRoot, common.DirData)
 	}

@@ -13,9 +13,7 @@ const (
 	// o caminho interno do .vbf — irmão de mods/edits, que é SÓ de texto.
 	ModsImagesDir = "images"
 	DirData       = "data"
-	DirExtracted  = "extracted"
 	DirTranslated = "translated"
-	DirReimported = "reimported"
 )
 
 // DefaultTranslatedDir deriva o diretório de tradução de um gamefiles:

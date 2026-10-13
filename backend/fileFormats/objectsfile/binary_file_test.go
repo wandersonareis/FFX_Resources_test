@@ -82,9 +82,7 @@ var _ = Describe("BinaryFile Integrity", Ordered, func() {
 		Expect(config).NotTo(BeNil())
 		config.SetGameVersion(version)
 		config.SetLocation("GameFilesLocation", gameDir)
-		config.SetLocation("ExtractLocation", filepath.Join(tmpRoot, "extracted"))
 		config.SetLocation("TranslateLocation", filepath.Join(tmpRoot, "translated"))
-		config.SetLocation("ImportLocation", filepath.Join(tmpRoot, "reimported"))
 
 		interactions.NewInteractionServiceWithConfig(config)
 		Expect(common.GameFilesRoot).To(Equal(gameDir))

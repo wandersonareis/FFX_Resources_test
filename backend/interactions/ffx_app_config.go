@@ -75,16 +75,14 @@ func NewAppConfig() *AppConfig {
 
 // defaultLocations monta os diretórios padrão a partir do diretório do
 // executável e dos nomes em common. GameFiles = <exec>/data;
-// Translate é derivado: <gamefiles>/mods/translated. Extract/Import
-// são internos (ocultos do frontend) mas mantidos no config.
+// Translate é derivado: <gamefiles>/mods/translated — é a raiz do import
+// de texto e de imagens.
 func defaultLocations() map[string]string {
 	execDir := common.GetExecDir()
 	gameDir := filepath.Join(execDir, common.DirData)
 	return map[string]string{
 		"GameFilesLocation": gameDir,
-		"ExtractLocation":   filepath.Join(execDir, common.DirExtracted),
 		"TranslateLocation": common.DefaultTranslatedDir(gameDir),
-		"ImportLocation":    filepath.Join(execDir, common.DirReimported),
 	}
 }
 
@@ -167,6 +165,13 @@ func (c *AppConfig) UnmarshalJSON(data []byte) error {
 	delete(merged, "TranslateLocation")
 	for key, path := range aux.Locations {
 		if key == "TranslateLocation" {
+			continue
+		}
+		// Só entra o que o schema atual conhece (merged nasce com os
+		// defaults): chaves de fluxos descontinuados — ExtractLocation,
+		// ImportLocation — são descartadas aqui e somem do arquivo no
+		// próximo ToJson() (roda a cada saída).
+		if _, known := merged[key]; !known {
 			continue
 		}
 		if strings.TrimSpace(path) != "" {

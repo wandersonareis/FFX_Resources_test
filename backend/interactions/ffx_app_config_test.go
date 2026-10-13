@@ -32,8 +32,6 @@ func TestValidateConfigDerivesTranslatedFromCustomGameFiles(t *testing.T) {
 		filePath: filepath.Join(tmp, "config.json"),
 		locations: map[string]string{
 			"GameFilesLocation": gameDir,
-			"ExtractLocation":   filepath.Join(tmp, "extracted"),
-			"ImportLocation":    filepath.Join(tmp, "reimported"),
 		},
 		gameVersion: common.GameVersionFFX,
 	}
@@ -56,8 +54,6 @@ func TestValidateConfigKeepsCustomTranslated(t *testing.T) {
 		filePath: filepath.Join(tmp, "config.json"),
 		locations: map[string]string{
 			"GameFilesLocation": filepath.Join(tmp, "jogo"),
-			"ExtractLocation":   filepath.Join(tmp, "extracted"),
-			"ImportLocation":    filepath.Join(tmp, "reimported"),
 			"TranslateLocation": custom,
 		},
 		gameVersion: common.GameVersionFFX,
@@ -78,8 +74,6 @@ func TestUnmarshalDerivesTranslatedWhenMissing(t *testing.T) {
 	payload, err := json.Marshal(appConfigJSON{
 		Locations: map[string]string{
 			"GameFilesLocation": gameDir,
-			"ExtractLocation":   filepath.Join(tmp, "extracted"),
-			"ImportLocation":    filepath.Join(tmp, "reimported"),
 		},
 		GameVersion: common.GameVersionFFX,
 	})

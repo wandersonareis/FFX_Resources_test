@@ -14,9 +14,7 @@ type InteractionService struct {
 	mu                sync.Mutex
 	ffxAppConfig      IAppConfig
 	GameLocation      IGameLocation
-	ExtractLocation   IExtractLocation
 	TranslateLocation ITranslateLocation
-	ImportLocation    IImportLocation
 }
 
 var interactionInstance *InteractionService
@@ -69,17 +67,13 @@ func NewInteractionService() *InteractionService {
 		}
 
 		gameDir := resolveLocationPath(config, "GameFilesLocation", common.DirData)
-		extractDir := resolveLocationPath(config, "ExtractLocation", common.DirExtracted)
 		translateDir := resolveTranslatePath(config, gameDir)
-		importDir := resolveLocationPath(config, "ImportLocation", common.DirReimported)
 
 		interactionInstance = &InteractionService{
 			Ctx:               context.Background(),
 			ffxAppConfig:      config,
 			GameLocation:      newGameLocation(gameDir, config),
-			ExtractLocation:   newExtractLocation(extractDir, config),
 			TranslateLocation: newTranslateLocation(translateDir, config),
-			ImportLocation:    newImportLocation(importDir, config),
 		}
 
 		if gameDir != "" {
@@ -87,7 +81,7 @@ func NewInteractionService() *InteractionService {
 		}
 
 		common.SetCurrentGameVersion(config.GetGameVersion())
-		
+
 	}
 	return interactionInstance
 }
@@ -96,16 +90,12 @@ func NewInteractionServiceWithConfig(config *AppConfig) *InteractionService {
 	s := NewInteractionService()
 
 	gameDir := resolveLocationPath(config, "GameFilesLocation", common.DirData)
-	extractDir := resolveLocationPath(config, "ExtractLocation", common.DirExtracted)
 	translateDir := resolveTranslatePath(config, gameDir)
-	importDir := resolveLocationPath(config, "ImportLocation", common.DirReimported)
 
 	s.mu.Lock()
 	s.ffxAppConfig = config
 	s.GameLocation = newGameLocation(gameDir, config)
-	s.ExtractLocation = newExtractLocation(extractDir, config)
 	s.TranslateLocation = newTranslateLocation(translateDir, config)
-	s.ImportLocation = newImportLocation(importDir, config)
 	s.mu.Unlock()
 
 	if gameDir != "" {

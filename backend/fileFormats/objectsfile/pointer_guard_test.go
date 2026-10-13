@@ -104,9 +104,7 @@ var _ = Describe("Pointer guard (fluxo legado)", Ordered, func() {
 		Expect(config).NotTo(BeNil())
 		config.SetGameVersion(version)
 		config.SetLocation("GameFilesLocation", gameDir)
-		config.SetLocation("ExtractLocation", filepath.Join(root, "extracted"))
 		config.SetLocation("TranslateLocation", filepath.Join(root, "translated"))
-		config.SetLocation("ImportLocation", filepath.Join(root, "reimported"))
 
 		interactions.NewInteractionServiceWithConfig(config)
 		Expect(common.GameFilesRoot).To(Equal(gameDir))

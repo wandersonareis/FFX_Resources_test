@@ -112,9 +112,7 @@ var _ = Describe("Integration: integrity cycle via LoadObjectFileFromStore + Fil
 		Expect(config).NotTo(BeNil())
 		config.SetGameVersion(common.GameVersionFFX)
 		config.SetLocation("GameFilesLocation", gameDir)
-		config.SetLocation("ExtractLocation", filepath.Join(tmpRoot, "extracted"))
 		config.SetLocation("TranslateLocation", filepath.Join(tmpRoot, "translated"))
-		config.SetLocation("ImportLocation", filepath.Join(tmpRoot, "reimported"))
 
 		interactions.NewInteractionServiceWithConfig(config)
 		Expect(reader.InitializeInternals(common.GameVersionFFX)).To(Succeed())

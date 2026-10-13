@@ -77,9 +77,7 @@ var _ = Describe("MetadataService", Ordered, func() {
 		Expect(config).NotTo(BeNil())
 		config.SetGameVersion(common.GameVersionFFX2)
 		config.SetLocation("GameFilesLocation", gameLocation)
-		config.SetLocation("ExtractLocation", filepath.Join(tmpRoot, "extracted"))
 		config.SetLocation("TranslateLocation", filepath.Join(tmpRoot, "translated"))
-		config.SetLocation("ImportLocation", filepath.Join(tmpRoot, "reimported"))
 
 		interactions.NewInteractionServiceWithConfig(config)
 	})
