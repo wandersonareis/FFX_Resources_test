@@ -21,7 +21,7 @@ export function EditableCell({
   return (
     <div className="group flex items-center gap-1">
       <div
-        className={`text-cell translated-cell min-w-0 flex-1${edited || canRevert ? ' edited' : ''}`}
+        className={`text-cell translated-cell min-w-0 px-2 flex-1${edited || canRevert ? ' edited' : ''}`}
         onClick={onOpen}
       >
         <GameTextView text={displayed} />
