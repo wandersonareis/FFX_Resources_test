@@ -6,7 +6,7 @@ import { loggedToast as toast } from '@/lib/ffx/toast-logged';
 import { SHORTCUTS, shortcutTip } from '@/lib/ffx/shortcuts';
 import { openSearchDialog } from '@/lib/ffx/search-store';
 import { QuitApp } from '@/bindings/ffxresources/app';
-import { Events } from '@wailsio/runtime';
+import { SetGameVersion } from '@/bindings/ffxresources/configservice';
 import { GAME_VERSIONS, GameVersionId, isGameVersionId } from '@/lib/ffx/game-version';
 import { tabStorage } from '@/lib/ffx/tab-storage';
 import { useWailsEvent } from '@/lib/ffx/use-wails-event';
@@ -41,9 +41,8 @@ export function AppShell() {
     setSelectedIndex(tabStorage.load(GAME_VERSIONS.length));
   }, []);
 
-  const setVersion = useCallback((version: GameVersionId) => {
-    Events.Emit('GameVersionChanged', version);
-    Events.Emit('Refresh_Tree');
+  const setVersion = useCallback(async (version: GameVersionId) => {
+    await SetGameVersion(version);
   }, []);
 
   // ---- Atalhos globais (TanStack Hotkeys) ----

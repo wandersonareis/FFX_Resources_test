@@ -11,6 +11,9 @@ import {
   SelectDirectory,
   SelectGameExeFile,
   SetEnableMods,
+  SetGameExeLocation,
+  SetGameLocation,
+  SetTranslateLocation,
 } from "@/bindings/ffxresources/configservice";
 import { Events } from "@wailsio/runtime";
 import { useWailsEvent } from "@/lib/ffx/use-wails-event";
@@ -32,7 +35,6 @@ type LocationKey = "GameFilesLocation" | "TranslateLocation";
 
 interface DirectoryInput {
   key: LocationKey;
-  eventName: string;
   label: string;
   hint: string;
   dialogTitle: string;
@@ -99,7 +101,6 @@ export function ConfigDialog({
   const inputs: DirectoryInput[] = [
     {
       key: "GameFilesLocation",
-      eventName: "GameLocationChanged",
       label: "Arquivos originais do jogo",
       hint: "Padrão: <execução>/data",
       dialogTitle: "Selecione a pasta dos arquivos originais do jogo",
@@ -107,7 +108,6 @@ export function ConfigDialog({
     },
     {
       key: "TranslateLocation",
-      eventName: "TranslateLocationChanged",
       label: "Arquivos traduzidos (reimport)",
       hint: "Padrão: <jogo>/mods/translated",
       dialogTitle: "Selecione a pasta dos arquivos traduzidos",
@@ -115,7 +115,7 @@ export function ConfigDialog({
     },
   ];
 
-  const apply = (item: DirectoryInput, raw: string) => {
+  const apply = async (item: DirectoryInput, raw: string) => {
     const path = (raw ?? "").trim();
     if (!path) {
       toast("Informe um diretório válido.", { duration: 3000 });
@@ -123,7 +123,11 @@ export function ConfigDialog({
     }
     if (path === item.value) return;
     try {
-      Events.Emit(item.eventName, path);
+      if (item.key === "GameFilesLocation") {
+        await SetGameLocation(path);
+      } else {
+        await SetTranslateLocation(path);
+      }
     } catch (error) {
       notify(error);
     }
@@ -144,7 +148,7 @@ export function ConfigDialog({
    * Enter/blur/seletor: gravar a cada tecla fecharia os containers abertos
    * a cada passo. O backend re-emite o valor e recarrega a árvore.
    */
-  const commitExe = (raw: string) => {
+  const commitExe = async (raw: string) => {
     const path = (raw ?? "").trim();
     if (path === gameExe) return;
     setGameExe(path);
@@ -152,7 +156,7 @@ export function ConfigDialog({
     // aponta para containers que podem nem existir mais.
     invalidateVbfCache();
     try {
-      Events.Emit("GameExeLocationChanged", path);
+      await SetGameExeLocation(path);
     } catch (error) {
       notify(error);
     }

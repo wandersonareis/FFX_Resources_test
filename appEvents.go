@@ -1,22 +1,17 @@
 package main
 
 import (
-	"ffxresources/backend/common"
 	"ffxresources/backend/interactions"
-	"ffxresources/backend/services"
-	"fmt"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// Este arquivo era todo parametrizado por um context.Context que existia só
-// para runtime.EventsOn/EventsEmit. No Wails v3 os eventos vivem no
-// EventManager da aplicação, então o parâmetro threaded passou a ser o
-// *application.EventManager — mesma forma, tipo novo.
+// Este arquivo emite o estado inicial de localizações quando o frontend fica
+// pronto (domReady). Os handlers FE→BE (GameVersionChanged, etc.) foram
+// movidos para ConfigService como métodos bindados.
 
 func EventsOnStartup(bus *application.EventManager) {
 	emitLocationsEvents(bus)
-	eventsOnLocations(bus)
 }
 
 func emitLocationsEvents(bus *application.EventManager) {
@@ -24,21 +19,6 @@ func emitLocationsEvents(bus *application.EventManager) {
 	emitGameLocation(bus)
 	emitGameExeLocation(bus)
 	emitTranslateLocation(bus)
-}
-
-func eventsOnLocations(bus *application.EventManager) {
-	eventOnSetGameVersion(bus)
-	eventOnSetGameLocation(bus)
-	eventOnSetGameExeLocation(bus)
-	eventOnSetTranslateLocation(bus)
-}
-
-func EventsOnSaveConfig(bus *application.EventManager) {
-	bus.On("SaveConfig", func(e *application.CustomEvent) {
-		fmt.Println("SaveConfig", e.Data)
-
-		interactions.NewInteractionService().FFXAppConfig().ToJson()
-	})
 }
 
 func emitGameVersion(bus *application.EventManager) {
@@ -75,83 +55,4 @@ func emitTranslateLocation(bus *application.EventManager) {
 		return
 	}
 	bus.Emit("TranslateLocation", translateLocation)
-}
-func eventOnSetGameVersion(bus *application.EventManager) {
-	updateGameVersion := func(version common.GameVersion) {
-		interactions.NewInteractionService().FFXAppConfig().SetGameVersion(version)
-	}
-
-	bus.On("GameVersionChanged", func(e *application.CustomEvent) {
-		fmt.Println("GameVersionChanged", e.Data)
-
-		gameVer, err := common.ParseGameVersionStrict(e.Data.(string))
-		if err != nil {
-			fmt.Println("ParseGameVersion error:", err)
-			return
-		}
-		updateGameVersion(gameVer)
-
-		emitGameVersion(bus)
-	})
-}
-
-func eventOnSetGameLocation(bus *application.EventManager) {
-	bus.On("GameLocationChanged", func(e *application.CustomEvent) {
-		fmt.Println("GameLocationChanged", e.Data)
-
-		service := interactions.NewInteractionService()
-		oldGameDir := service.GameLocation.GetTargetDirectory()
-		oldDefaultTranslate := common.DefaultTranslatedDir(oldGameDir)
-
-		service.GameLocation.SetTargetDirectory(e.Data.(string))
-
-		// A árvore de gamefiles mudou: tudo que foi derivado dela (DTOs
-		// deduplicados, original pristine de data/ e os stores de formato)
-		// pertence ao diretório anterior — descarta, senão a view serviria
-		// texto de outro diretório.
-		services.InvalidateViewCaches()
-
-		// Se o translated ainda apontava para o default derivado do
-		// gamefiles anterior, acompanha o novo gamefiles.
-		if service.TranslateLocation.GetTargetDirectory() == oldDefaultTranslate {
-			newDefaultTranslate := common.DefaultTranslatedDir(service.GameLocation.GetTargetDirectory())
-			_ = service.TranslateLocation.SetTargetDirectory(newDefaultTranslate)
-			emitTranslateLocation(bus)
-		}
-
-		emitGameLocation(bus)
-		// Aplica imediatamente: config já foi persistido por
-		// SetTargetDirectory; avisa o frontend para recarregar a árvore.
-		bus.Emit("Refresh_Tree")
-	})
-}
-
-// eventOnSetGameExeLocation grava o executável do jogo (caminho de ARQUIVO,
-// fora do map Locations) e recarrega a árvore VBF.
-func eventOnSetGameExeLocation(bus *application.EventManager) {
-	bus.On("GameExeLocationChanged", func(e *application.CustomEvent) {
-		fmt.Println("GameExeLocationChanged", e.Data)
-
-		interactions.NewInteractionService().FFXAppConfig().
-			SetGameExeLocation(e.Data.(string))
-
-		// A pasta de busca dos .vbf mudou: os containers abertos seguram
-		// handle de leitura do caminho anterior — fecha; a próxima listagem
-		// reabre os da nova pasta.
-		services.CloseVbfArchives()
-		emitGameExeLocation(bus)
-		bus.Emit("Refresh_Tree")
-	})
-}
-func eventOnSetTranslateLocation(bus *application.EventManager) {
-	bus.On("TranslateLocationChanged", func(e *application.CustomEvent) {
-		fmt.Println("TranslateLocationChanged", e.Data)
-
-		interactions.NewInteractionService().TranslateLocation.SetTargetDirectory(e.Data.(string))
-
-		emitTranslateLocation(bus)
-		// Fonte da tradução do reimport (mods/translated); recarrega
-		// metadados da árvore para refletir disponibilidade.
-		bus.Emit("Refresh_Tree")
-	})
 }

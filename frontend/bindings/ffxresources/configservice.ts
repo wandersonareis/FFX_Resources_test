@@ -72,7 +72,30 @@ export function SetEnableMods(enabled: boolean): $CancellablePromise<void> {
  * SetGameExeLocation persiste o caminho do executável do jogo. Os containers
  * abertos são fechados: a pasta de busca mudou e os handles antigos não são
  * mais alcançáveis (a próxima ListVbfRoots reabre os da nova pasta).
+ * Emite GameExeLocation + Refresh_Tree para o frontend sincronizar.
  */
 export function SetGameExeLocation(path: string): $CancellablePromise<void> {
     return $Call.ByID(2136912450, path);
+}
+
+/**
+ * SetGameLocation persiste o diretório dos arquivos do jogo, invalida caches,
+ * acompanha o translated se ele era derivado, e emite os eventos.
+ */
+export function SetGameLocation(path: string): $CancellablePromise<void> {
+    return $Call.ByID(1043169468, path);
+}
+
+/**
+ * SetGameVersion persiste a versão do jogo e emite o valor + Refresh_Tree.
+ */
+export function SetGameVersion(version: string): $CancellablePromise<void> {
+    return $Call.ByID(451997909, version);
+}
+
+/**
+ * SetTranslateLocation persiste o diretório de tradução e emite o valor + Refresh_Tree.
+ */
+export function SetTranslateLocation(path: string): $CancellablePromise<void> {
+    return $Call.ByID(1228565642, path);
 }

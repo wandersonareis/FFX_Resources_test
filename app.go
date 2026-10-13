@@ -144,8 +144,6 @@ func (a *App) domReady() {
 	}
 
 	EventsOnStartup(app.Event)
-
-	EventsOnSaveConfig(app.Event)
 }
 
 // shouldQuit substitui o OnBeforeClose do v2: roda a cada pedido de saída
