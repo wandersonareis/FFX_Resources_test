@@ -123,29 +123,6 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	return nil
 }
 
-// domReady registra os listeners Go↔JS e publica o estado inicial das
-// localizações. Equivale ao OnDomReady do v2: em main.go é acionado pelo
-// evento events.Common.WindowRuntimeReady, disparado quando o frontend manda
-// "wails:runtime:ready" — só então o JS consegue receber o que emitirmos.
-func (a *App) domReady() {
-	// Add your action here
-	defer func() {
-		if err := recover(); err != nil {
-			log.Println("panic occurred:", err)
-
-			l := loggingService.Get()
-			l.Fatal().Caller(2).Err(err.(error)).Msg("panic occurred")
-		}
-	}()
-
-	app := application.Get()
-	if app == nil {
-		return
-	}
-
-	EventsOnStartup(app.Event)
-}
-
 // shouldQuit substitui o OnBeforeClose do v2: roda a cada pedido de saída
 // (fechar a última janela, Alt+F4 ou QuitApp — o v2 cobria os mesmos casos).
 // Devolve true para PERMITIR a saída, o inverso do `prevent` do v2.

@@ -16,7 +16,6 @@ import {
   SetTranslateLocation,
 } from "@/bindings/ffxresources/configservice";
 import { Events } from "@wailsio/runtime";
-import { useWailsEvent } from "@/lib/ffx/use-wails-event";
 import { invalidateVbfCache } from "@/lib/ffx/vbf";
 import {
   Dialog,
@@ -60,16 +59,6 @@ export function ConfigDialog({
   const [translatedDirectory, setTranslatedDirectory] = useState("");
   const [gameExe, setGameExe] = useState("");
   const [enableMods, setEnableMods] = useState(true);
-
-  useWailsEvent("GameFilesLocation", (data) =>
-    setGameDirectory((data as string) ?? ""),
-  );
-  useWailsEvent("TranslateLocation", (data) =>
-    setTranslatedDirectory((data as string) ?? ""),
-  );
-  useWailsEvent("GameExeLocation", (data) =>
-    setGameExe((data as string) ?? ""),
-  );
 
   useEffect(() => {
     if (!open) return;

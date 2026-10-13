@@ -55,28 +55,23 @@ func (c *ConfigService) GetGameExeLocation() string {
 // SetGameExeLocation persiste o caminho do executável do jogo. Os containers
 // abertos são fechados: a pasta de busca mudou e os handles antigos não são
 // mais alcançáveis (a próxima ListVbfRoots reabre os da nova pasta).
-// Emite GameExeLocation + Refresh_Tree para o frontend sincronizar.
 func (c *ConfigService) SetGameExeLocation(path string) {
 	interactions.NewInteractionService().FFXAppConfig().SetGameExeLocation(path)
 	services.CloseVbfArchives()
-	services.EmitEvent("GameExeLocation", path)
-	services.EmitEvent("Refresh_Tree")
 }
 
-// SetGameVersion persiste a versão do jogo e emite o valor + Refresh_Tree.
+// SetGameVersion persiste a versão do jogo.
 func (c *ConfigService) SetGameVersion(version string) error {
 	v, err := common.ParseGameVersionStrict(version)
 	if err != nil {
 		return err
 	}
 	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(v)
-	services.EmitEvent("GameVersion", version)
-	services.EmitEvent("Refresh_Tree")
 	return nil
 }
 
-// SetGameLocation persiste o diretório dos arquivos do jogo, invalida caches,
-// acompanha o translated se ele era derivado, e emite os eventos.
+// SetGameLocation persiste o diretório dos arquivos do jogo, invalida caches
+// e acompanha o translated se ele era derivado.
 func (c *ConfigService) SetGameLocation(path string) error {
 	service := interactions.NewInteractionService()
 	oldGameDir := service.GameLocation.GetTargetDirectory()
@@ -90,19 +85,13 @@ func (c *ConfigService) SetGameLocation(path string) error {
 	if service.TranslateLocation.GetTargetDirectory() == oldDefaultTranslate {
 		newDefaultTranslate := common.DefaultTranslatedDir(path)
 		_ = service.TranslateLocation.SetTargetDirectory(newDefaultTranslate)
-		services.EmitEvent("TranslateLocation", newDefaultTranslate)
 	}
-
-	services.EmitEvent("GameFilesLocation", path)
-	services.EmitEvent("Refresh_Tree")
 	return nil
 }
 
-// SetTranslateLocation persiste o diretório de tradução e emite o valor + Refresh_Tree.
+// SetTranslateLocation persiste o diretório de tradução.
 func (c *ConfigService) SetTranslateLocation(path string) error {
 	interactions.NewInteractionService().TranslateLocation.SetTargetDirectory(path)
-	services.EmitEvent("TranslateLocation", path)
-	services.EmitEvent("Refresh_Tree")
 	return nil
 }
 

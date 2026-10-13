@@ -7,7 +7,7 @@ import { SHORTCUTS, shortcutTip } from '@/lib/ffx/shortcuts';
 import { openSearchDialog } from '@/lib/ffx/search-store';
 import { QuitApp } from '@/bindings/ffxresources/app';
 import { SetGameVersion } from '@/bindings/ffxresources/configservice';
-import { GAME_VERSIONS, GameVersionId, isGameVersionId } from '@/lib/ffx/game-version';
+import { GAME_VERSIONS, GameVersionId } from '@/lib/ffx/game-version';
 import { tabStorage } from '@/lib/ffx/tab-storage';
 import { useWailsEvent } from '@/lib/ffx/use-wails-event';
 import { saveAllDrafts } from '@/lib/ffx/save-all';
@@ -100,16 +100,6 @@ export function AppShell() {
     },
     { meta: { name: SHORTCUTS.save.label, group: 'Global' } }
   );
-
-  useWailsEvent('GameVersion', (data) => {
-    if (isGameVersionId(data)) {
-      const index = GAME_VERSIONS.findIndex((t) => t.id === data);
-      if (index >= 0 && index !== selectedIndex) {
-        startTransition(() => setSelectedIndex(index));
-        tabStorage.save(index);
-      }
-    }
-  });
 
   useWailsEvent('SaveRequested', () => {
     void saveAllDrafts(() => saving, setSaving).then(() => QuitApp());

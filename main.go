@@ -7,7 +7,6 @@ import (
 	"log/slog"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
-	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 //go:embed all:frontend/out
@@ -57,7 +56,7 @@ func main() {
 	// moravam em options.App; no v3 viraram opções da janela. O menu e o menu
 	// de contexto padrão continuam desligados/ligados por default
 	// (EnableDefaultContextMenu: true vira DefaultContextMenuDisabled: false).
-	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
+	_ = app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            "FINAL FANTASY X and X-2 HD Remaster Resources Editor",
 		Width:            1280,
 		Height:           800,
@@ -75,12 +74,6 @@ func main() {
 			},
 			Appearance: application.NSAppearanceNameDarkAqua,
 		},
-	})
-
-	// v2: OnDomReady. WindowRuntimeReady dispara quando o frontend manda
-	// "wails:runtime:ready" — só então o JS recebe o que emitirmos.
-	window.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) {
-		appInstance.domReady()
 	})
 
 	if err := app.Run(); err != nil {
