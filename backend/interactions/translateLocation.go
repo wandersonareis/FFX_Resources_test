@@ -11,8 +11,6 @@ type (
 	}
 	ITranslateLocation interface {
 		interfaces.IInteractionBase
-
-		WithTargetDirectory(path string) ITranslateLocation
 	}
 )
 
@@ -26,11 +24,6 @@ func newTranslateLocation(path string, config ISetAppConfig) ITranslateLocation 
 	}
 	translateLocation.SetTargetDirectory(path)
 	return translateLocation
-}
-
-func (t *TranslateLocation) WithTargetDirectory(path string) ITranslateLocation {
-	_ = t.SetTargetDirectory(path)
-	return t
 }
 
 // SetTargetDirectory persiste imediatamente no config.json (via base)

@@ -7,9 +7,6 @@ import (
 
 type IGameLocation interface {
 	interfaces.IInteractionBase
-
-	WithTargetDirectory(path string) IGameLocation
-	IsSpira() error
 }
 
 type GameLocation struct {
@@ -28,11 +25,6 @@ func newGameLocation(path string, config ISetAppConfig) IGameLocation {
 	return gameLocation
 }
 
-func (g *GameLocation) WithTargetDirectory(path string) IGameLocation {
-	_ = g.SetTargetDirectory(path)
-	return g
-}
-
 // SetTargetDirectory persiste imediatamente no config.json (via base),
 // garante a existência do diretório e sincroniza common.GameFilesRoot
 // para que BuildTree/leituras usem o novo gamefiles sem restart.
@@ -45,14 +37,5 @@ func (g *GameLocation) SetTargetDirectory(path string) error {
 		_ = common.EnsurePathExists(target)
 		common.SetGameFilesRoot(target)
 	}
-	return nil
-}
-
-func (g *GameLocation) IsSpira() error {
-	_, err := common.CheckFFXPath(g.GetTargetDirectory())
-	if err != nil {
-		return err
-	}
-
 	return nil
 }

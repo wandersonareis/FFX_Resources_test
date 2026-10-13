@@ -23,6 +23,5 @@ type (
 	IInteractionBase interface {
 		SetTargetDirectory(path string) error
 		GetTargetDirectory() string
-		ProvideTargetDirectory() error
 	}
 )

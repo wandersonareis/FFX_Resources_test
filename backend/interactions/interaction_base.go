@@ -1,7 +1,6 @@
 package interactions
 
 import (
-	"ffxresources/backend/common"
 	"fmt"
 	"path/filepath"
 )
@@ -29,30 +28,4 @@ func (e *interactionBase) SetTargetDirectory(path string) error {
 	}
 
 	return nil
-}
-
-func (e *interactionBase) ProvideTargetDirectory() error {
-	if e.targetDir == "" {
-		e.targetDir = defaultDirForKey(e.configKey)
-	}
-
-	err := common.EnsurePathExists(e.targetDir)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// defaultDirForKey devolve o default por chave de config.
-// GameFiles = <exec>/data; Translate deriva dele (<game>/mods/translated).
-func defaultDirForKey(configKey string) string {
-	execDir := common.GetExecDir()
-	switch configKey {
-	case "GameFilesLocation":
-		return filepath.Join(execDir, common.DirData)
-	case "TranslateLocation":
-		return common.DefaultTranslatedDir(filepath.Join(execDir, common.DirData))
-	default:
-		return filepath.Join(common.ResourcesRoot, common.DirData)
-	}
 }
