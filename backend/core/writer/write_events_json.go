@@ -6,13 +6,12 @@ import (
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/formatters/json"
 	strfmt "ffxresources/backend/formatters/strings"
-	"ffxresources/backend/interactions"
 	"fmt"
 	"sort"
 )
 
 func currentGameVersion() common.GameVersion {
-	return interactions.CurrentGameVersion()
+	return common.CurrentGameVersion()
 }
 
 func getSortedEventIDs() []string {
