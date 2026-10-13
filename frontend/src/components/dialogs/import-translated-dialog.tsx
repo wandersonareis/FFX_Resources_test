@@ -40,7 +40,7 @@ export function ImportTranslatedDialog({
         if (!o || !importing) onOpenChange(o);
       }}
     >
-      <DialogContent className="max-w-xl sm:max-w-xl">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Importar textos de mods/translated</DialogTitle>
           <DialogDescription>
