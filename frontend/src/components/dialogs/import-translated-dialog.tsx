@@ -66,9 +66,9 @@ export function ImportTranslatedDialog({
               <span>{batch.changed_texts} texto(s) alterado(s)</span>
             </div>
 
-            <p className="break-all break-words text-xs text-muted-foreground">{batch.root}</p>
+            <p className="break-all wrap-break-word text-xs text-muted-foreground">{batch.root}</p>
             {nada ? (
-              <div className="rounded-md border border-muted bg-muted/40 p-2 text-sm break-words">
+              <div className="rounded-md border border-muted bg-muted/40 p-2 text-sm wrap-break-word">
                 Nenhum arquivo compatível em {batch.root} — exporte para a
                 subpasta text/ ou use &quot;Importar de…&quot;.
               </div>
@@ -82,7 +82,7 @@ export function ImportTranslatedDialog({
                 <ScrollArea className="mt-1 max-h-40">
                   <ul className="list-disc pl-5">
                     {errors.map((e, i) => (
-                      <li key={`${i}:${e}`} className="break-all break-words">
+                      <li key={`${i}:${e}`} className="break-all wrap-break-word">
                         {e}
                       </li>
                     ))}
