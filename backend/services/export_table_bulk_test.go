@@ -1,14 +1,18 @@
 package services
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"ffxresources/backend/common"
+	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/eventtable"
 	jsonfmt "ffxresources/backend/formatters/json"
+	strfmt "ffxresources/backend/formatters/strings"
 )
 
 // repoDataRootLocal sobe do arquivo de teste até o go.mod e devolve
@@ -251,4 +255,245 @@ func TestExportTableKindsBulkSingleFile(t *testing.T) {
 			t.Fatalf("entrada %s ausente no bulk cloud (%v)", id, cread.SortedKeys())
 		}
 	}
+}
+
+// ---- round-trip export bulk → import bulk → binário ---------------------------
+//
+// TestExportBulkImportRoundtripBinary: o ciclo completo do "exportar tudo →
+// importar tudo" com I/O real e conferência de BINÁRIO byte-a-byte, nos dois
+// formatos (JSON e .strings):
+//
+//  1. export completo do kind (bulk único em edits/) lendo os binários de data/;
+//  2. ImportFile do artefato SEM edição — nada muda: changed=0 e nenhum
+//     binário regravado em mods/ (o apply só salva o que recebeu texto novo);
+//  3. ImportFile do artefato COM edição (1 caractere regular, mesmo
+//     comprimento em bytes): changed=1, só o binário da entrada editada em
+//     mods/, mesmo tamanho do original, exatamente 1 byte divergente, e o
+//     texto novo volta na releitura direta de mods/.
+func TestExportBulkImportRoundtripBinary(t *testing.T) {
+	t.Run("json", func(t *testing.T) { bulkImportRoundtripScenario(t, "json") })
+	t.Run("strings", func(t *testing.T) { bulkImportRoundtripScenario(t, "strings") })
+}
+
+// bulkImportRoundtripScenario roda o ciclo em um GameFilesRoot temporário
+// próprio (os dois formatos não compartilham estado de store/mods).
+func bulkImportRoundtripScenario(t *testing.T, format string) {
+	t.Helper()
+	tableBulkFixtures(t, common.GameVersionFFX, []string{
+		"battle/btl/bika00_10/bika00_10.bin",
+		"battle/btl/zzzz03_19/zzzz03_19.bin",
+	})
+	if err := ensureVersionReady(common.GameVersionFFX); err != nil {
+		t.Fatalf("prepare version: %v", err)
+	}
+	svc := NewMetadataService(nil)
+
+	// (1) Export completo: o bulk único de battletext.
+	var paths []string
+	var err error
+	if format == "json" {
+		paths, err = svc.ExportJSON(KindBattleText, common.GameVersionFFX, nil, nil)
+	} else {
+		paths, err = svc.ExportStrings(KindBattleText, common.GameVersionFFX, nil, nil)
+	}
+	if err != nil {
+		t.Fatalf("export %s: %v", format, err)
+	}
+	if len(paths) != 1 {
+		t.Fatalf("export %s: %d arquivo(s) (%v), queria o bulk único", format, len(paths), paths)
+	}
+	artifact := paths[0]
+
+	// (2) Import do artefato SEM edição: nada a regravar.
+	changed, err := svc.ImportFile(artifact, common.GameVersionFFX)
+	if err != nil {
+		t.Fatalf("import %s sem edição: %v", format, err)
+	}
+	if changed != 0 {
+		t.Fatalf("import sem edição: changed=%d, queria 0 (artefato idêntico à store)", changed)
+	}
+	if bins := modsBinFiles(t); len(bins) > 0 {
+		t.Fatalf("import sem edição regravou binário(s): %v", bins)
+	}
+
+	// (3) Edita UMA row do artefato: 1 caractere regular após a última tag
+	// (mesmo comprimento em bytes — offsets da tabela de strings intactos),
+	// hash preservado (a régua do tradutor: só o valor muda).
+	imported := parseBulkArtifact(t, format, artifact)
+	editID, editIndex, oldText, newText := pickBulkEditableRow(t, imported)
+	for i := range imported[editID].Rows {
+		if imported[editID].Rows[i].Index == editIndex {
+			imported[editID].Rows[i].Text[common.DefaultLocalization] = newText
+			break
+		}
+	}
+	edited := filepath.Join(t.TempDir(), "edited."+format)
+	if err := os.WriteFile(edited, marshalBulkArtifact(t, format, imported), 0o644); err != nil {
+		t.Fatalf("gravar artefato editado: %v", err)
+	}
+
+	changed, err = svc.ImportFile(edited, common.GameVersionFFX)
+	if err != nil {
+		t.Fatalf("import %s com edição: %v", format, err)
+	}
+	if changed != 1 {
+		t.Fatalf("import com edição: changed=%d, queria 1", changed)
+	}
+
+	// (4) mods/: somente o binário da entrada editada (nenhum da outra).
+	for _, bin := range modsBinFiles(t) {
+		if !strings.Contains(filepath.ToSlash(bin), "/battle/btl/"+editID+"/") {
+			t.Fatalf("binário inesperado em mods/ (entrada intocada?): %s", bin)
+		}
+	}
+
+	// (5) Binário regravado: mesmo tamanho e exatamente 1 byte divergente do
+	// original de data/ — a tabela de strings inteira foi recompilada e a
+	// troca de mesmo comprimento não moveu nenhum offset.
+	locRoot := filepath.FromSlash(common.GetLocalizationRootForVersion(common.GameVersionFFX, common.DefaultLocalization))
+	origData, err := os.ReadFile(filepath.Join(common.GameFilesRoot, locRoot, "battle", "btl", editID, editID+".bin"))
+	if err != nil {
+		t.Fatalf("original de data/: %v", err)
+	}
+	modData, err := os.ReadFile(filepath.Join(common.GameFilesRoot, common.ModsFolder, locRoot, "battle", "btl", editID, editID+".bin"))
+	if err != nil {
+		t.Fatalf("binário de mods/: %v", err)
+	}
+	if len(origData) != len(modData) {
+		t.Fatalf("binário de mods/ mudou de tamanho: orig=%d mod=%d", len(origData), len(modData))
+	}
+	diffs := byteDiffPositions(origData, modData)
+	if len(diffs) != 1 {
+		t.Fatalf("binário de mods/ divergiu em %d byte(s) (%v…), queria exatamente 1 (só a troca de caractere)",
+			len(diffs), firstFewInts(diffs))
+	}
+
+	// (6) O texto novo volta na releitura DIRETA de mods/, na posição certa.
+	strs, err := eventtable.ReadLocalizedStringsFrom(KindBattleText, editID, common.GameVersionFFX, common.SourceMods)
+	if err != nil {
+		t.Fatalf("releitura de mods/: %v", err)
+	}
+	if editIndex >= len(strs) {
+		t.Fatalf("posição editada %d fora da tabela regravada (%d strings)", editIndex, len(strs))
+	}
+	if got := strs[editIndex].GetLocalizedString(common.DefaultLocalization); got != newText {
+		t.Fatalf("releitura de mods/: texto %q, queria %q (antes era %q)", got, newText, oldText)
+	}
+}
+
+// parseBulkArtifact lê e parseia o artefato exportado de volta ao DTO.
+func parseBulkArtifact(t *testing.T, format, path string) dto.Collection {
+	t.Helper()
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ler artefato: %v", err)
+	}
+	if format == "json" {
+		c, err := jsonfmt.NewJSONObjectFormatter().Unmarshal(raw)
+		if err != nil {
+			t.Fatalf("parse json: %v", err)
+		}
+		return c
+	}
+	c, err := strfmt.NewStringsFormatter().Unmarshal(raw)
+	if err != nil {
+		t.Fatalf("parse strings: %v", err)
+	}
+	return c
+}
+
+// marshalBulkArtifact serializa o DTO editado de volta ao formato de origem.
+func marshalBulkArtifact(t *testing.T, format string, c dto.Collection) []byte {
+	t.Helper()
+	if format == "json" {
+		raw, err := jsonfmt.NewJSONObjectFormatter().Marshal(c)
+		if err != nil {
+			t.Fatalf("marshal json: %v", err)
+		}
+		return raw
+	}
+	raw, err := strfmt.Marshal(c)
+	if err != nil {
+		t.Fatalf("marshal strings: %v", err)
+	}
+	return raw
+}
+
+// pickBulkEditableRow escolhe a row do lote para a edição do round-trip:
+// texto 'us' literal (não-ref de dedup) e ÚNICO entre as entradas (a edição
+// não pode propagar por dedup para a outra entrada), com final pós-tags em
+// ASCII e ≥2 caracteres distintos — a troca de 1 caractere preserva o
+// comprimento em bytes e, com ele, os offsets da tabela de strings.
+func pickBulkEditableRow(t *testing.T, c dto.Collection) (id string, index int, oldText, newText string) {
+	t.Helper()
+	count := make(map[string]int)
+	for _, k := range c.SortedKeys() {
+		for _, r := range c[k].Rows {
+			count[r.Text[common.DefaultLocalization]]++
+		}
+	}
+	for _, k := range c.SortedKeys() {
+		for _, r := range c[k].Rows {
+			old := r.Text[common.DefaultLocalization]
+			if old == "" || count[old] != 1 || strings.HasPrefix(old, "$") {
+				continue
+			}
+			cut := strings.LastIndex(old, "}") + 1 // após a última tag fechada
+			tail := old[cut:]
+			ascii := len(tail) >= 2
+			for i := 0; i < len(tail); i++ {
+				if tail[i] >= 0x80 {
+					ascii = false // fora do ASCII: comprimento em bytes incerto
+					break
+				}
+			}
+			if !ascii || tail[0] == tail[1] {
+				continue
+			}
+			return k, r.Index, old, old[:cut] + string(tail[1]) + tail[1:]
+		}
+	}
+	t.Fatal("nenhuma row editável no lote (texto único + final ASCII ≥2)")
+	return
+}
+
+// modsBinFiles lista os .bin gravados sob mods/ da raiz de trabalho corrente.
+func modsBinFiles(t *testing.T) []string {
+	t.Helper()
+	var out []string
+	_ = filepath.WalkDir(filepath.Join(common.GameFilesRoot, common.ModsFolder),
+		func(path string, d fs.DirEntry, err error) error {
+			if err != nil || d == nil || d.IsDir() {
+				return nil
+			}
+			if strings.EqualFold(filepath.Ext(d.Name()), ".bin") {
+				out = append(out, path)
+			}
+			return nil
+		})
+	return out
+}
+
+// byteDiffPositions devolve as posições em que a e b divergem (mesmo
+// comprimento conferido pelo chamador).
+func byteDiffPositions(a, b []byte) []int {
+	n := len(a)
+	if len(b) < n {
+		n = len(b)
+	}
+	var diffs []int
+	for i := 0; i < n; i++ {
+		if a[i] != b[i] {
+			diffs = append(diffs, i)
+		}
+	}
+	return diffs
+}
+
+// firstFewInts corta a lista para a mensagem de falha não despejar tudo.
+func firstFewInts(v []int) []int {
+	if len(v) > 8 {
+		return v[:8]
+	}
+	return v
 }
