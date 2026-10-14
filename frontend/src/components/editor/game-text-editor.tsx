@@ -233,7 +233,7 @@ export function GameTextEditor({
       className="relative flex flex-col gap-2"
     >
       <div
-        className="flex flex-wrap items-center gap-1 rounded border border-border px-2 py-1"
+        className="flex flex-wrap items-center justify-between gap-1 rounded border border-border px-2 py-1"
         role="toolbar"
         aria-label="Formatação do texto do jogo"
       >
@@ -241,7 +241,7 @@ export function GameTextEditor({
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
-              size="sm"
+              size="icon-sm"
               className="data-[active=true]:bg-accent data-[active=true]:text-accent-foreground"
               data-active={editor?.isActive('italic') ?? false}
               onClick={() => editor?.chain().focus().toggleItalic().run()}
@@ -267,7 +267,7 @@ export function GameTextEditor({
           <TooltipContent>Texto normal ({'{TEXT_NORMAL}'})</TooltipContent>
         </Tooltip>
 
-        <Separator orientation="vertical" className="mx-1 my-1 w-px" />
+        <Separator orientation="vertical" className="my-1 w-px" />
 
         <SpriteTemplateDropdown
           ariaLabel="Botões ({BUTTON:…})"
@@ -291,10 +291,10 @@ export function GameTextEditor({
           onSelect={insertControlTag}
         />
 
-        <Separator orientation="vertical" className="mx-1 my-1 w-px" />
+        <Separator orientation="vertical" className="my-1 w-px" />
 
         <span
-          className="inline-flex items-center gap-1"
+          className="inline-flex items-center gap-0.5"
           role="group"
           aria-label="Cores ({CLR:…})"
         >
@@ -325,7 +325,7 @@ export function GameTextEditor({
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
-                size="icon"
+                size="icon-sm"
                 aria-label="Resetar cor"
                 onClick={() => editor?.chain().focus().unsetColor().run()}
               >
@@ -336,13 +336,13 @@ export function GameTextEditor({
           </Tooltip>
         </span>
 
-        <Separator orientation="vertical" className="mx-1 my-1 w-px" />
+        <Separator orientation="vertical" className="my-1 w-px" />
 
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
-              size="icon"
+              size="icon-sm"
               disabled={!editor?.can().undo()}
               aria-label="Desfazer"
               onClick={() => editor?.chain().focus().undo().run()}
@@ -356,7 +356,7 @@ export function GameTextEditor({
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
-              size="icon"
+              size="icon-sm"
               disabled={!editor?.can().redo()}
               aria-label="Refazer"
               onClick={() => editor?.chain().focus().redo().run()}
