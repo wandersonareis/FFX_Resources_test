@@ -91,7 +91,10 @@ export function EntryTable({ view }: { view: EntryView }) {
 
   return (
     <div className="mt-2" ref={tableRef}>
-      <Table>
+      {/* table-fixed: as larguras vêm do <thead> (definidas no header) em
+          vez do conteúdo — é o que garante o "#" travado e o 50/50 entre
+          Original e Traduzido, em vez de crescer com o texto de cada linha. */}
+      <Table className="table-fixed">
         <EntryTableHeader table={table} />
         <EntryTableBody
           table={table}

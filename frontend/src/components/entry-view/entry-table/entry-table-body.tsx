@@ -38,10 +38,7 @@ export function EntryTableBody({
             }
           >
             {tRow.getAllCells().map((cell) => (
-              <TableCell
-                key={cell.id}
-                className={cell.column.id === 'original' ? 'text-cell' : undefined}
-              >
+              <TableCell key={cell.id}>
                 <table.FlexRender cell={cell} />
               </TableCell>
             ))}

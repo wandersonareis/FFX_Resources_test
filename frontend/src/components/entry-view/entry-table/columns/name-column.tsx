@@ -11,11 +11,15 @@ export function buildNameColumn(activeKind: EntryKind) {
     header: activeKind === 'lockit' ? 'Tipo' : 'Nome',
     cell: (info) =>
       activeKind === 'lockit' ? (
-        <span className="text-muted-foreground">
+        <span className="block whitespace-normal wrap-break-word text-muted-foreground">
           {resolveSegmentLabel(info.getValue())}
         </span>
       ) : (
-        <span>{info.getValue()}</span>
+        // Layout fixo: a coluna tem 160px fixos e o <td> é nowrap, então o
+        // nome precisa quebrar linha aqui para não vazar na coluna vizinha.
+        <span className="block whitespace-normal wrap-break-word">
+          {info.getValue()}
+        </span>
       ),
   });
 }

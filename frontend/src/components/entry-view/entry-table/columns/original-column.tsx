@@ -20,7 +20,10 @@ export function buildOriginalColumn(textLoc: string) {
         <GameTextView
           text={value ?? ''}
           fallback={value === undefined ? '—' : ''}
-          className={missing ? MISSING_SIDE : undefined}
+          // .text-cell na célula (e não no <td>): com o layout fixo quem
+          // precisa do wrap/quebra é o conteúdo — o <td> tem
+          // whitespace-nowrap (camada utilities) que venceria o pre-wrap.
+          className={`text-cell${missing ? ` ${MISSING_SIDE}` : ''}`}
         />
       );
     },

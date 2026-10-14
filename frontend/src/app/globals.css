@@ -234,11 +234,12 @@
     text-align: center;
   }
 
-  /* ── Células da tabela de tradução ── */
+  /* ── Células da tabela de tradução ──
+     Sem max-width: com o layout fixo da tabela o limite é a coluna
+     (50% para Original/Traduzido) e o texto deve ocupar essa largura. */
   .text-cell {
     white-space: pre-wrap;
     word-break: break-word;
-    max-width: 480px;
   }
 
   .translated-cell {
