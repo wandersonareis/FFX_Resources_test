@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"ffxresources/backend/fileFormats/objectsfile"
+	ffxstr "ffxresources/backend/core/strings"
 )
 
 /*
@@ -71,10 +71,10 @@ func medirEvent(root string) (arquivos, refs, mid, oob int) {
 			base := i * 8
 			for _, pos := range []int{base, base + 4} {
 				refs++
-				switch objectsfile.PointerStatusAt(data, int(binary.LittleEndian.Uint16(data[pos:pos+2]))) {
-				case objectsfile.PointerMid:
+				switch ffxstr.PointerStatusAt(data, int(binary.LittleEndian.Uint16(data[pos:pos+2]))) {
+				case ffxstr.PointerMid:
 					mid++
-				case objectsfile.PointerOOB:
+				case ffxstr.PointerOOB:
 					oob++
 				}
 			}

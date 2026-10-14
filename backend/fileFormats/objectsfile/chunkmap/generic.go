@@ -94,6 +94,7 @@ func loadGenericFrom[T any](version common.GameVersion, patternPath string, src 
 // SchemaMeasurer aplica as rows em memória e devolve o tamanho da string
 // table reconstruída no idioma da carga (sem gravar).
 type SchemaMeasurer func(version common.GameVersion, patternPath string, rows []dto.TextRow) (int, error)
+
 // measureGeneric aplica as rows em memória e devolve o tamanho da string
 // table reconstruída (com dedup) no idioma da carga. Sem gravar nada.
 func measureGeneric[T any](version common.GameVersion, patternPath string, rows []dto.TextRow) (int, error) {
@@ -106,6 +107,7 @@ func measureGeneric[T any](version common.GameVersion, patternPath string, rows 
 	}
 	return f.MeasureStringTable(rows, common.DefaultLocalization)
 }
+
 // applyGeneric aplica rows de volta no binario e persiste em mods/.
 func applyGeneric[T any](version common.GameVersion, patternPath string, entry dto.FileEntry) error {
 	if err := ffxencoding.EnsureAllCharsetsLoaded(version); err != nil {

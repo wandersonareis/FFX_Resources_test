@@ -263,13 +263,13 @@ func (c *MacroDictionaryBinaryFile) GetObjects() components.IList[datastore.IGlo
 }
 
 // PublishStrings merges every chunk of this localization into the datastore,
-// mirroring PopulateDataObjectLocalizationsWithIlist: objects are shared by
+// mirroring the objects container: objects are shared by
 // ID across localizations, so entries published first (default localization)
 // gain extra localized content as the other containers publish afterwards.
 // MCR lookups in getStringAtLookupOffsetBinary resolve through
 // datastore.GetMacro(gameVersion, chunk*0x100 + index).
 func (c *MacroDictionaryBinaryFile) PublishStrings() error {
-		gameVersion := c.Version
+	gameVersion := c.Version
 	macros := c.GetMapObjects()
 	var firstErr error
 	macros.ForEach(func(key int, macroO datastore.IGlobalLocalizedMacroStringObject) {

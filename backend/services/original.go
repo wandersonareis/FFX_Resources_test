@@ -588,7 +588,6 @@ func InvalidateViewCaches() {
 	clearDedupViewCache()
 	event.ClearAllEvents()
 	helpfile.ClearAllHelp()
-	objectsfile.ObjectFileDataStore.Clear()
 	lockit.DataStore.Clear()
 	eventtable.ClearStore()
 	datastore.Instance.ClearAllMacros()

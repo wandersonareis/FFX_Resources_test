@@ -8,7 +8,7 @@ import (
 
 	"ffxresources/backend/common"
 	ffxencoding "ffxresources/backend/core/encoding"
-	"ffxresources/backend/fileFormats/objectsfile"
+	ffxstr "ffxresources/backend/core/strings"
 	"ffxresources/backend/fileFormats/objectsfile/schema/ffx"
 	"ffxresources/backend/fileFormats/objectsfile/schema/ffx2"
 	"ffxresources/backend/models"
@@ -106,7 +106,7 @@ type slotKey struct {
 // slotState é o estado de um campo no idioma primário.
 type slotState struct {
 	key    string
-	status objectsfile.PointerStatus
+	status ffxstr.PointerStatus
 	offset models.Offset
 	text   string
 }
@@ -132,13 +132,13 @@ func snapshotOf[T any](f *File[T]) map[slot]slotState {
 func countStatuses(before map[slot]slotState) (ok, empty, mid, oob, created int) {
 	for _, st := range before {
 		switch st.status {
-		case objectsfile.PointerEmpty:
+		case ffxstr.PointerEmpty:
 			empty++
-		case objectsfile.PointerMid:
+		case ffxstr.PointerMid:
 			mid++
-		case objectsfile.PointerOOB:
+		case ffxstr.PointerOOB:
 			oob++
-		case objectsfile.PointerCreated:
+		case ffxstr.PointerCreated:
 			created++
 		default:
 			ok++
@@ -243,7 +243,7 @@ func checkSaveKeepsSegments[T any](t *testing.T, pattern string, version common.
 	for ci := range f.Objects {
 		for fi, field := range f.Objects[ci].fields {
 			st := before[slot{ci, fi}]
-			if st.status != objectsfile.PointerOK || st.text == "" {
+			if st.status != ffxstr.PointerOK || st.text == "" {
 				continue
 			}
 			if found && len(newText) <= len(st.text) {
@@ -332,7 +332,7 @@ func checkSaveKeepsSegments[T any](t *testing.T, pattern string, version common.
 		// O que o jogo lê é "há texto?". OOB pode virar empty quando a
 		// tabela cresce (os dois significam SEM texto); o que não pode
 		// acontecer é virar ponteiro válido.
-		if cur.status == objectsfile.PointerOK || cur.text != "" {
+		if cur.status == ffxstr.PointerOK || cur.text != "" {
 			t.Errorf("%s: chunk %d campo %q: segmento quebrado virou ponteiro válido (%s @ %d, texto %q)",
 				pattern, k.chunk, old.key, cur.status, cur.offset, cur.text)
 		}

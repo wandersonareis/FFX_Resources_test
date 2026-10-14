@@ -64,8 +64,8 @@ func (h FileHeader) Chunk(chunks []byte, i int) []byte {
 	return chunks[from : from+h.IndividualLength]
 }
 
-// ReadFileHeader lê e valida o cabeçalho de data. A regra V1/V2 é a mesma de
-// objectsfile.PopulateDataObjectLocalizationsWithIlist: só FFX usa V1.
+// ReadFileHeader le e valida o cabecalho de data do arquivo de objects.
+// A regra V1/V2 e a mesma do formato original: so FFX usa V1.
 func ReadFileHeader(data []byte, version common.GameVersion) (FileHeader, error) {
 	var h FileHeader
 	if version == common.GameVersionFFX {

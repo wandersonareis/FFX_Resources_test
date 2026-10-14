@@ -6,9 +6,9 @@ import (
 
 	"ffxresources/backend/common"
 	ffxencoding "ffxresources/backend/core/encoding"
+	"ffxresources/backend/core/strings"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/dto"
-	"ffxresources/backend/fileFormats/objectsfile"
 )
 
 /*
@@ -213,7 +213,7 @@ func (f *File[T]) encodeLanguage(languageCode string) ([]byte, error) {
 	}
 	// A string table ORIGINAL é a base: refs quebrados (MID/OOB) e campos
 	// vazios mantêm o segmento cru, e textos já gravados não são recompilados.
-	strtab := objectsfile.RebuildKeyedStrings(
+	strtab := strings.RebuildKeyedStrings(
 		keyed, ffxencoding.GetCharsetForLanguage(languageCode), f.Version, f.StringBytes,
 	)
 
@@ -254,10 +254,11 @@ func (f *File[T]) rebuildEditedStringTable(rows []dto.TextRow, languageCode stri
 			}
 		}
 	}
-	return objectsfile.RebuildKeyedStrings(
+	return strings.RebuildKeyedStrings(
 		keyed, ffxencoding.GetCharsetForLanguage(languageCode), f.Version, clone.StringBytes,
 	), nil
 }
+
 // MeasureStringTable aplica as rows em memória e devolve o tamanho da string
 // table reconstruída (dedup inclusive) no idioma pedido, sem gravar nada.
 // Espelha o encodeLanguage byte a byte — sem gerar os bytes, medindo apenas.
@@ -271,6 +272,7 @@ func (f *File[T]) MeasureStringTable(rows []dto.TextRow, languageCode string) (i
 	}
 	return len(strtab), nil
 }
+
 // SaveToBinary grava o arquivo na árvore mods (a localização canônica do
 // patternPath — o overlay que o app lê de volta) e, quando filePath é
 // absoluto, uma cópia extra (rotina de teste/reimport). Caminho relativo é

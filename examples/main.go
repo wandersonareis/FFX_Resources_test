@@ -38,38 +38,10 @@ func main() {
 		common.LogError("Erro ao inicializar sistema: %v\n", err)
 		return
 	}
-	// Executa os exemplos para FFX v1
-	runFFXExamples()
-	runEventsExamples(common.GameVersionFFX)
-
-	// ===== FFX-2 (v2) =====
-	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(common.GameVersionFFX2)
-	if err := interactions.NewInteractionService().GameLocation.SetTargetDirectory("F:\\ffxWails\\FFX_Resources\\examples"); err != nil {
-		common.LogError("Erro ao definir diretório de destino: %v\n", err)
-		return
-	}
-
-	common.LogInfo("\n=== FFX-2 (v2) ===")
-	common.LogInfo("Reinicializando dicionários para FFX-2...")
-	if err := reader.InitializeInternals(common.GameVersionFFX2); err != nil {
-		common.LogError("Erro ao inicializar sistema: %v\n", err)
-		return
-	}
-	runFFX2Examples()
-	runEventsExamples(common.GameVersionFFX2)
-
-	// Mapeamento struct <-> binário (uma struct Go por chunk, sem tags — o
+	// Mapeamento struct <-> binário (uma struct Go por chunk, sem tags - o
 	// tipo do campo diz se é texto ou dado). Auto-contido: não depende do
 	// diretório do jogo nem da inicialização.
 	runChunkMappingExample()
-
-	// ===== LastMiss (lastmiss) =====
-	interactions.NewInteractionService().FFXAppConfig().SetGameVersion(common.GameVersionLastMiss)
-
-	common.LogInfo("\n=== LastMiss (lastmiss) ===")
-	runLastMissExamples()
-
-	runObjectFileStore()
 }
 
 func showMainMenu() {

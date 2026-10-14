@@ -18,13 +18,15 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 
 	"ffxresources/backend/common"
 	ffxencoding "ffxresources/backend/core/encoding"
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/fileFormats/event"
-	"ffxresources/backend/fileFormats/objectsfile"
+	"ffxresources/backend/fileFormats/objectsfile/chunkmap"
+	"ffxresources/backend/fileFormats/objectsfile/weaponnames"
 	"ffxresources/backend/interactions"
 )
 
@@ -94,21 +96,22 @@ func main() {
 		record(obj.ToString(common.DefaultLocalization))
 	}
 
-	// Objects (battle/menu/help etc.) via FileLayouts da versão.
-	for _, layout := range objectsfile.FileLayouts {
-		if layout.Version != version {
+	// Objects (battle/menu/help etc.) via schemas chunkmap da versão.
+	weaponnames.Register()
+	for key, load := range chunkmap.SchemaRegistry {
+		if !strings.HasPrefix(key, version.String()+"/") {
 			continue
 		}
-		binFile, err := objectsfile.LoadObjectFileFromStoreByLayout(layout)
-		if err != nil || binFile == nil {
+		c, err := load(version, strings.TrimPrefix(key, version.String()+"/"))
+		if err != nil {
 			continue
 		}
-		list := binFile.GetObjects()
-		if list == nil || list.IsEmpty() {
-			continue
-		}
-		for _, obj := range list.Items() {
-			record(obj.ToString(common.DefaultLocalization))
+		for _, entry := range c {
+			for _, row := range entry.Rows {
+				if text := row.Text[common.DefaultLocalization]; text != "" {
+					record(text)
+				}
+			}
 		}
 	}
 

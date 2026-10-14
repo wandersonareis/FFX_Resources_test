@@ -282,10 +282,9 @@ func Apply(file *chunkmap.File[ffx.WeaponName], rows []dto.TextRow) error {
 }
 
 // Collection monta a dto.Collection de w_name.bin para os formatters. As
-// chaves seguem os padrões dos demais objetos: entry = basename sem extensão
-// (ObjectsCollectionKey) e metadata.key = FileLayoutKey — o mesmo valor que
-// ApplyObjectsEntry valida no import, então o artefato do fluxo novo é
-// aceito pelo pipeline do app sem tradução.
+// chaves seguem os padroes dos demais objetos: entry = basename sem extensao
+// e metadata.key = FileLayoutKey - aceito pelo pipeline de import do app.
+// aceito pelo pipeline do app sem traducao.
 func Collection(version common.GameVersion, rows []dto.TextRow) (dto.Collection, error) {
 	key := strings.TrimSuffix(filepath.Base(Pattern), filepath.Ext(Pattern))
 	entry := dto.FileEntry{

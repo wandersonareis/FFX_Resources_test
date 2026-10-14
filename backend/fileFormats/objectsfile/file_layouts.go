@@ -4,30 +4,16 @@ import (
 	"strings"
 
 	"ffxresources/backend/common"
-	"ffxresources/backend/datastore"
 )
 
-// FileLayout declarativo especifica como carregar/decodificar um arquivo binário de objetos.
-// Cada layout é único por (Version, DirPattern, FileName) — arquivos como "command.bin"
-// existem em FFX e FFX2 com campos diferentes. Cada entrada carrega seus Fields
-// inline explícitos (repetição intencional para ajuste posterior por arquivo).
-//
-// Fields/Formatter é ignorado quando Creator está definido (ex. weapons); caso
-// contrário um creator genérico KeyedStringFileStore é construído a partir de
-// LayoutSet{Version: Fields}. O primeiro segmento sempre começa em 0; saltos
-// são expressos via Gap (0 = contíguo, >0 = bytes pulados após o segmento).
-//
-// DEPRECATED: O fluxo chunkmap (backend/fileFormats/objectsfile/chunkmap)
-// substitui este para todos os arquivos com schema registrado em SchemaRegistry.
-// Este mapa permanece para resolveObjectLayouts e objectKeyForID funcionarem,
-// e como fallback para pipeline de import de JSON antigo.
+// FileLayout declara a identidade de um arquivo de objetos: versão, diretório
+// e nome. A leitura/gravação pertence ao fluxo chunkmap
+// (backend/fileFormats/objectsfile/chunkmap); este mapa serve ao
+// resolveObjectLayouts/objectKeyForID (iteração e resolução de layouts por id).
 type FileLayout struct {
 	Version    common.GameVersion
 	DirPattern string
 	FileName   string
-	Fields     []SegmentField
-	Formatter  StringFormatterStore
-	Creator    CreatorFunc
 }
 
 func (l FileLayout) PatternPath() string { return l.DirPattern + "/" + l.FileName }
@@ -59,99 +45,71 @@ var FileLayouts = map[string]FileLayout{
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "command.bin",
-		Fields:     CommandLayout[common.GameVersionFFX],
-		Formatter:  commandLegacyFmtStore,
 	},
 	"ffx/battle/kernel/important.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "important.bin",
-		Fields:     KeyItemPairLayout[common.GameVersionFFX],
-		Formatter:  commandLegacyFmtStore,
 	},
 	"ffx/battle/kernel/item.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "item.bin",
-		Fields:     CommandLayout[common.GameVersionFFX],
-		Formatter:  commandLegacyFmtStore,
 	},
 	"ffx/battle/kernel/a_ability.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "a_ability.bin",
-		Fields:     CommandLayout[common.GameVersionFFX],
-		Formatter:  commandLegacyFmtStore,
 	},
 	"ffx/battle/kernel/panel.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "panel.bin",
-		Fields:     KeyItemPairLayout[common.GameVersionFFX],
-		Formatter:  commandLegacyFmtStore,
 	},
 	"ffx/battle/kernel/arms_txt.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "arms_txt.bin",
-		Fields:     MenuTextPairLayout[common.GameVersionFFX],
-		Formatter:  nameOnlyLegacyFmtStore,
 	},
 	"ffx/battle/kernel/config_txt.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "config_txt.bin",
-		Fields:     MenuTextPairLayout[common.GameVersionFFX],
-		Formatter:  nameOnlyLegacyFmtStore,
 	},
 	"ffx/battle/kernel/item_txt.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "item_txt.bin",
-		Fields:     MenuTextPairLayout[common.GameVersionFFX],
-		Formatter:  nameOnlyLegacyFmtStore,
 	},
 	"ffx/battle/kernel/mmain_txt.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "mmain_txt.bin",
-		Fields:     MenuTextPairLayout[common.GameVersionFFX],
-		Formatter:  nameOnlyLegacyFmtStore,
 	},
 	"ffx/battle/kernel/menu_txt.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "menu_txt.bin",
-		Fields:     MenuTextPairLayout[common.GameVersionFFX],
-		Formatter:  nameOnlyLegacyFmtStore,
 	},
 	"ffx/battle/kernel/summon_txt.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "summon_txt.bin",
-		Fields:     MenuTextPairLayout[common.GameVersionFFX],
-		Formatter:  nameOnlyLegacyFmtStore,
 	},
 	"ffx/battle/kernel/status_txt.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "status_txt.bin",
-		Fields:     MenuTextPairLayout[common.GameVersionFFX],
-		Formatter:  nameOnlyLegacyFmtStore,
 	},
 	"ffx/battle/kernel/btl_txt.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "btl_txt.bin",
-		Fields:     HelpPairLayout[common.GameVersionFFX],
-		Formatter:  nameOnlyLegacyFmtStore,
 	},
 	"ffx/battle/kernel/btlend_txt.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "btlend_txt.bin",
-		Fields:     MenuTextPairLayout[common.GameVersionFFX],
-		Formatter:  nameOnlyLegacyFmtStore,
 	},
 	// monmagic1/2.bin: o C# (FFX.Command) tem os 4 campos de texto
 	// (name + desc) — confirmados no binário; antes lia só o par name.
@@ -159,79 +117,57 @@ var FileLayouts = map[string]FileLayout{
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "monmagic1.bin",
-		Fields:     CommandLayout[common.GameVersionFFX],
-		Formatter:  commandLegacyFmtStore,
 	},
 	"ffx/battle/kernel/monmagic2.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "monmagic2.bin",
-		Fields:     CommandLayout[common.GameVersionFFX],
-		Formatter:  commandLegacyFmtStore,
 	},
 	"ffx/battle/kernel/build_txt.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "build_txt.bin",
-		Fields:     MenuTextPairLayout[common.GameVersionFFX],
-		Formatter:  nameOnlyLegacyFmtStore,
 	},
 	"ffx/battle/kernel/name_txt.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "name_txt.bin",
-		Fields:     MenuTextPairLayout[common.GameVersionFFX],
-		Formatter:  nameOnlyLegacyFmtStore,
 	},
 	"ffx/battle/kernel/monster1.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "monster1.bin",
-		Fields:     MonsterLayout[common.GameVersionFFX],
-		Formatter:  nil,
 	},
 	"ffx/battle/kernel/monster2.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "monster2.bin",
-		Fields:     MonsterLayout[common.GameVersionFFX],
-		Formatter:  nil,
 	},
 	"ffx/battle/kernel/monster3.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "monster3.bin",
-		Fields:     MonsterLayout[common.GameVersionFFX],
-		Formatter:  nil,
 	},
 	"ffx/battle/kernel/ply_rom.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "ply_rom.bin",
-		Fields:     PlyRomPairLayout[common.GameVersionFFX],
-		Formatter:  nameOnlyLegacyFmtStore,
 	},
 
 	"ffx/battle/kernel/ply_save.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "ply_save.bin",
-		Fields:     NameOnlyV2Layout[common.GameVersionFFX],
-		Formatter:  nil,
 	},
 	"ffx/battle/kernel/sphere.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "sphere.bin",
-		Fields:     HelpPairLayout[common.GameVersionFFX],
-		Formatter:  nameOnlyLegacyFmtStore,
 	},
 	"ffx/battle/kernel/save_txt.bin": {
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "save_txt.bin",
-		Fields:     MenuTextPairLayout[common.GameVersionFFX],
-		Formatter:  nameOnlyLegacyFmtStore,
 	},
 	// w_name.bin — weapon names (FFX). DEPRECATED: o fluxo chunkmap
 	// (SchemaRegistry["ffx/battle/kernel/w_name.bin"]) substitui este Creator.
@@ -241,11 +177,6 @@ var FileLayouts = map[string]FileLayout{
 		Version:    common.GameVersionFFX,
 		DirPattern: "battle/kernel",
 		FileName:   "w_name.bin",
-		Fields:     nil, // Creator dedicado ignora Fields (ver FileLayout)
-		Formatter:  nil, // o objeto formata a si próprio (weaponLegacyFmt)
-		Creator: func(chunkBytes, stringBytes []byte, headerLength int, languageCode string) (datastore.IGlobalLocalizedTextObject, error) {
-			return NewWeaponsNameTextObject(chunkBytes, stringBytes, headerLength, languageCode, common.GameVersionFFX)
-		},
 	},
 
 	// ===== FFX-2 (v2) - battle/kernel =====
@@ -253,65 +184,41 @@ var FileLayouts = map[string]FileLayout{
 		Version:    common.GameVersionFFX2,
 		DirPattern: "battle/kernel",
 		FileName:   "command.bin",
-		Fields:     CommandV2Layout[common.GameVersionFFX2],
-		Formatter:  nil,
 	},
 	"ffx2/battle/kernel/item.bin": {
 		Version:    common.GameVersionFFX2,
 		DirPattern: "battle/kernel",
 		FileName:   "item.bin",
-		Fields:     CommandV2Layout[common.GameVersionFFX2],
-		Formatter:  nil,
 	},
 	"ffx2/battle/kernel/important.bin": {
 		Version:    common.GameVersionFFX2,
 		DirPattern: "battle/kernel",
 		FileName:   "important.bin",
-		Fields:     CommandV2Layout[common.GameVersionFFX2],
-		Formatter:  nil,
 	},
 	"ffx2/battle/kernel/accessory.bin": {
 		Version:    common.GameVersionFFX2,
 		DirPattern: "battle/kernel",
 		FileName:   "accessory.bin",
-		Fields: []SegmentField{
-			{"name", 0},
-			{"help", 0x1C},
-			{"creature_data_help", 0},
-		},
-		Formatter: threePartLegacyFmtStore,
 	},
 	"ffx2/battle/kernel/job.bin": {
 		Version:    common.GameVersionFFX2,
 		DirPattern: "battle/kernel",
 		FileName:   "job.bin",
-		Fields: []SegmentField{
-			{"name", 0},
-			{"help", 0xA4},
-			{"creature_data_help", 0},
-		},
-		Formatter: threePartLegacyFmtStore,
 	},
 	"ffx2/battle/kernel/plate.bin": {
 		Version:    common.GameVersionFFX2,
 		DirPattern: "battle/kernel",
 		FileName:   "plate.bin",
-		Fields:     PlateLayout[common.GameVersionFFX2],
-		Formatter:  threePartLegacyFmtStore,
 	},
 	"ffx2/battle/kernel/a_ability.bin": {
 		Version:    common.GameVersionFFX2,
 		DirPattern: "battle/kernel",
 		FileName:   "a_ability.bin",
-		Fields:     CommandV2Layout[common.GameVersionFFX2],
-		Formatter:  nil,
 	},
 	"ffx2/battle/kernel/menu_txt.bin": {
 		Version:    common.GameVersionFFX2,
 		DirPattern: "battle/kernel",
 		FileName:   "menu_txt.bin",
-		Fields:     MenuTextV2Layout[common.GameVersionFFX2],
-		Formatter:  nil,
 	},
 	// monmagic/monster/monster2: name + help (MCommand/Monster/Monster2 —
 	// confirmados no binário; antes lia só o name).
@@ -319,43 +226,31 @@ var FileLayouts = map[string]FileLayout{
 		Version:    common.GameVersionFFX2,
 		DirPattern: "battle/kernel",
 		FileName:   "monmagic.bin",
-		Fields:     CommandV2Layout[common.GameVersionFFX2],
-		Formatter:  nil,
 	},
 	"ffx2/battle/kernel/monster.bin": {
 		Version:    common.GameVersionFFX2,
 		DirPattern: "battle/kernel",
 		FileName:   "monster.bin",
-		Fields:     CommandV2Layout[common.GameVersionFFX2],
-		Formatter:  nil,
 	},
 	"ffx2/battle/kernel/monster2.bin": {
 		Version:    common.GameVersionFFX2,
 		DirPattern: "battle/kernel",
 		FileName:   "monster2.bin",
-		Fields:     CommandV2Layout[common.GameVersionFFX2],
-		Formatter:  nil,
 	},
 	"ffx2/battle/kernel/oversoul.bin": {
 		Version:    common.GameVersionFFX2,
 		DirPattern: "battle/kernel",
 		FileName:   "oversoul.bin",
-		Fields:     NameOnlyV2Layout[common.GameVersionFFX2],
-		Formatter:  nil,
 	},
 	"ffx2/battle/kernel/btl_txt.bin": {
 		Version:    common.GameVersionFFX2,
 		DirPattern: "battle/kernel",
 		FileName:   "btl_txt.bin",
-		Fields:     HelpTextV2Layout[common.GameVersionFFX2],
-		Formatter:  nil,
 	},
 	"ffx2/battle/kernel/btlend_txt.bin": {
 		Version:    common.GameVersionFFX2,
 		DirPattern: "battle/kernel",
 		FileName:   "btlend_txt.bin",
-		Fields:     MenuTextV2Layout[common.GameVersionFFX2],
-		Formatter:  nil,
 	},
 
 	// ===== LastMission (lastmiss) =====
@@ -363,86 +258,55 @@ var FileLayouts = map[string]FileLayout{
 		Version:    common.GameVersionLastMiss,
 		DirPattern: "lastmiss/kernel",
 		FileName:   "lm_accesary.bin",
-		Fields: []SegmentField{
-			{"name", 0},
-			{"help", 0},
-			{"effect", 0},
-			{"effect_description", 0},
-		},
-		Formatter: nil,
 	},
 	"lastmiss/kernel/lm_command.bin": {
 		Version:    common.GameVersionLastMiss,
 		DirPattern: "lastmiss/kernel",
 		FileName:   "lm_command.bin",
-		Fields: []SegmentField{
-			{"name", 4},
-			{"help", 4},
-			{"information", 0},
-		},
-		Formatter: threePartLegacyFmtStore,
 	},
 	"lastmiss/kernel/lm_item.bin": {
 		Version:    common.GameVersionLastMiss,
 		DirPattern: "lastmiss/kernel",
 		FileName:   "lm_item.bin",
-		Fields:     LastMissionItemLayout[common.GameVersionLastMiss],
-		Formatter:  threePartLegacyFmtStore,
 	},
 	"lastmiss/kernel/lm_dress.bin": {
 		Version:    common.GameVersionLastMiss,
 		DirPattern: "lastmiss/kernel",
 		FileName:   "lm_dress.bin",
-		Fields:     LastMissionDressLayout[common.GameVersionLastMiss],
-		Formatter:  threePartLegacyFmtStore,
 	},
 	"lastmiss/kernel/lm_mes.bin": {
 		Version:    common.GameVersionLastMiss,
 		DirPattern: "lastmiss/kernel",
 		FileName:   "lm_mes.bin",
-		Fields:     CommandV2Layout[common.GameVersionLastMiss],
-		Formatter:  nil,
 	},
 	"lastmiss/kernel/lm_monmagic.bin": {
 		Version:    common.GameVersionLastMiss,
 		DirPattern: "lastmiss/kernel",
 		FileName:   "lm_monmagic.bin",
-		Fields:     LastMissionMonmagicLayout[common.GameVersionLastMiss],
-		Formatter:  threePartLegacyFmtStore,
 	},
 	"lastmiss/kernel/lm_monster.bin": {
 		Version:    common.GameVersionLastMiss,
 		DirPattern: "lastmiss/kernel",
 		FileName:   "lm_monster.bin",
-		Fields:     CommandV2Layout[common.GameVersionLastMiss],
-		Formatter:  nil,
 	},
 	"lastmiss/kernel/lm_player.bin": {
 		Version:    common.GameVersionLastMiss,
 		DirPattern: "lastmiss/kernel",
 		FileName:   "lm_player.bin",
-		Fields:     CommandV2Layout[common.GameVersionLastMiss],
-		Formatter:  nil,
 	},
 	"lastmiss/kernel/lm_trap.bin": {
 		Version:    common.GameVersionLastMiss,
 		DirPattern: "lastmiss/kernel",
 		FileName:   "lm_trap.bin",
-		Fields:     LastMissionDressLayout[common.GameVersionLastMiss],
-		Formatter:  threePartLegacyFmtStore,
 	},
 	"lastmiss/kernel/lm_warehouse.bin": {
 		Version:    common.GameVersionLastMiss,
 		DirPattern: "lastmiss/kernel",
 		FileName:   "lm_warehouse.bin",
-		Fields:     CommandV2Layout[common.GameVersionLastMiss],
-		Formatter:  nil,
 	},
 	"lastmiss/kernel/lm_floorname.bin": {
 		Version:    common.GameVersionLastMiss,
 		DirPattern: "lastmiss/kernel",
 		FileName:   "lm_floorname.bin",
-		Fields:     NameOnlyV2Layout[common.GameVersionLastMiss],
-		Formatter:  nil,
 	},
 }

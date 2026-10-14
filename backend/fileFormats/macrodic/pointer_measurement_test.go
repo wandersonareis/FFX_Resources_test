@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"ffxresources/backend/common"
+	ffxstr "ffxresources/backend/core/strings"
 	"ffxresources/backend/fileFormats/macrodic"
-	"ffxresources/backend/fileFormats/objectsfile"
 )
 
 /*
@@ -81,20 +81,20 @@ func medirMacrodic(path string, version common.GameVersion) (chunks, refs, mid, 
 		chunks++
 		for _, seg := range textFile.Segments {
 			refs++
-			switch objectsfile.PointerStatusAt(textFile.Bytes, int(seg.NameOffset)) {
-			case objectsfile.PointerMid:
+			switch ffxstr.PointerStatusAt(textFile.Bytes, int(seg.NameOffset)) {
+			case ffxstr.PointerMid:
 				mid++
-			case objectsfile.PointerOOB:
+			case ffxstr.PointerOOB:
 				oob++
 			}
 			if seg.SimplifiedNameOffset == seg.NameOffset {
 				continue
 			}
 			refs++
-			switch objectsfile.PointerStatusAt(textFile.Bytes, int(seg.SimplifiedNameOffset)) {
-			case objectsfile.PointerMid:
+			switch ffxstr.PointerStatusAt(textFile.Bytes, int(seg.SimplifiedNameOffset)) {
+			case ffxstr.PointerMid:
 				mid++
-			case objectsfile.PointerOOB:
+			case ffxstr.PointerOOB:
 				oob++
 			}
 		}

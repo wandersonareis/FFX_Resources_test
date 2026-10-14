@@ -8,7 +8,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/converter"
 	ffxencoding "ffxresources/backend/core/encoding"
-	"ffxresources/backend/fileFormats/objectsfile"
+	"ffxresources/backend/core/strings"
 	"ffxresources/backend/models"
 )
 
@@ -25,14 +25,14 @@ type TextContent struct {
 	// Status é a classificação do Segment.Offset contra a tabela lida — a
 	// validação comum da string table. Refs quebrados ficam sem texto e mantêm
 	// o segmento original no save.
-	Status objectsfile.PointerStatus
+	Status strings.PointerStatus
 	// edited marca texto trocado depois da leitura (SetString).
 	edited bool
 }
 
 // PointerStatus devolve a classificação do ref lido (contrato tableRef do
 // objectsfile — é o que permite o rebuild compartilhar a mesma guarda).
-func (c *TextContent) PointerStatus() objectsfile.PointerStatus { return c.Status }
+func (c *TextContent) PointerStatus() strings.PointerStatus { return c.Status }
 
 // StoredBytes devolve os bytes ARMAZENADOS do ref, sem terminador.
 func (c *TextContent) StoredBytes() []byte { return c.Bytes }
@@ -117,14 +117,14 @@ func readTextContent(strtab []byte, seg models.Segment, languageCode string, ver
 	if strtab == nil || (seg.Offset == 0 && seg.Key == 0) {
 		return nil
 	}
-	status := objectsfile.PointerStatusAt(strtab, int(seg.Offset))
+	status := strings.PointerStatusAt(strtab, int(seg.Offset))
 	content := &TextContent{
 		Charset: ffxencoding.GetCharsetForLanguage(languageCode),
 		Version: version,
 		Segment: seg,
 		Status:  status,
 	}
-	if status == objectsfile.PointerOK {
+	if status == strings.PointerOK {
 		content.Bytes = converter.GetStringBytesAtLookupOffset(strtab, int(seg.Offset))
 	}
 	return content
@@ -167,6 +167,7 @@ func (s *TextSlot) clone() *TextSlot {
 	}
 	return c
 }
+
 type textUpdate struct {
 	languageCode string
 	content      *TextContent
@@ -195,7 +196,7 @@ func (s *TextSlot) prepareTexts(texts map[string]string, version common.GameVers
 				Charset: charset,
 				Version: version,
 				Bytes:   encoded,
-				Status:  objectsfile.PointerCreated,
+				Status:  strings.PointerCreated,
 				edited:  true,
 			}
 		}

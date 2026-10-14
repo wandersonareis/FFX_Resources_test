@@ -18,7 +18,8 @@ import (
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/fileFormats/event"
-	"ffxresources/backend/fileFormats/objectsfile"
+	"ffxresources/backend/fileFormats/objectsfile/chunkmap"
+	"ffxresources/backend/fileFormats/objectsfile/weaponnames"
 	"ffxresources/backend/interactions"
 )
 
@@ -104,24 +105,23 @@ func main() {
 		fmt.Printf("macros (pares idioma/texto não vazios): %d\n", macroTexts)
 	}
 
-	// Objects (battle/menu/help etc.) via FileLayouts da versão.
+	// Objects (battle/menu/help etc.) via schemas chunkmap da versão.
 	objCount := 0
-	for _, layout := range objectsfile.FileLayouts {
-		if layout.Version != version {
+	weaponnames.Register()
+	for key, load := range chunkmap.SchemaRegistry {
+		if !strings.HasPrefix(key, version.String()+"/") {
 			continue
 		}
-		binFile, err := objectsfile.LoadObjectFileFromStoreByLayout(layout)
-		if err != nil || binFile == nil {
-			continue
-		}
-		list := binFile.GetObjects()
-		if list == nil || list.IsEmpty() {
+		c, err := load(version, strings.TrimPrefix(key, version.String()+"/"))
+		if err != nil {
 			continue
 		}
 		objCount++
-		for _, obj := range list.Items() {
-			for loc := range common.SupportedLanguages {
-				record(obj.ToString(loc), "object:"+layout.FileName)
+		for _, entry := range c {
+			for _, row := range entry.Rows {
+				for _, text := range row.Text {
+					record(text, "object:"+filepath.Base(entry.Metadata.Key))
+				}
 			}
 		}
 	}

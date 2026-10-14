@@ -1,13 +1,23 @@
-package objectsfile
+// Package strings é o motor compartilhado de string table do formato de
+// objetos: um bloco de texto no fim do arquivo e ponteiros (pares
+// offset/key) cujos VALORES são gerados pelo text len acumulado do bloco.
+//
+// O mesmo formato serve objectsfile (fluxo chunkmap), event e macrodic —
+// a lógica de cálculo de ponteiros é idêntica entre eles: um bloco de
+// texto e o text len gera o valor dos ponteiros. As implementações
+// (KeyedString deste pacote, chunkmap.TextContent, event.FieldString)
+// compartilham o contrato TableRef.
+package strings
 
 import (
 	"bytes"
 	"encoding/binary"
+	"sort"
+
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/converter"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/models"
-	"sort"
 )
 
 // PointerStatus classifica um ref (offset na string table).
@@ -78,7 +88,7 @@ func PointerStatusAt(table []byte, offset int) PointerStatus {
 // tabela da qual veio, os bytes armazenados e se o texto foi trocado depois.
 // Implementado por *KeyedString (fluxo legado) e por chunkmap.TextContent —
 // os dois domínios compartilham a mesma guarda.
-type tableRef interface {
+type TableRef interface {
 	PointerStatus() PointerStatus
 	StoredBytes() []byte
 	Edited() bool
@@ -251,7 +261,7 @@ func UsableStringTableBase(list []datastore.IGlobalKeyedString, candidate []byte
 		if ks == nil {
 			continue
 		}
-		ref, ok := ks.(tableRef)
+		ref, ok := ks.(TableRef)
 		if !ok {
 			// Ref de outro domínio: não dá para validar contra a tabela.
 			return nil
@@ -360,7 +370,7 @@ func rebuildOnStringTableBase(list []datastore.IGlobalKeyedString, base []byte, 
 		if ks == nil {
 			continue
 		}
-		ref, ok := ks.(tableRef)
+		ref, ok := ks.(TableRef)
 		if !ok {
 			continue // base não teria sido aceita, mas não se arrisca
 		}
@@ -468,7 +478,7 @@ func rebuildOnStringTableBase(list []datastore.IGlobalKeyedString, base []byte, 
 		appended = append(appended, appendedRef{ks: ks, tail: tailPos})
 	}
 	for _, p := range shift {
-		if r, ok := p.ks.(tableRef); ok && r.PointerStatus() == PointerOOB {
+		if r, ok := p.ks.(TableRef); ok && r.PointerStatus() == PointerOOB {
 			preservedOOB = append(preservedOOB, p.origOff+deltaAntes(p.origOff))
 		}
 	}
@@ -590,7 +600,7 @@ func registerOnce(index map[string]models.Offset, raw []byte, off int) {
 
 // storedBytesOf devolve os bytes ARMAZENADOS do ref (sem terminador).
 func storedBytesOf(ks datastore.IGlobalKeyedString, charset string, version common.GameVersion) []byte {
-	if ref, ok := ks.(tableRef); ok {
+	if ref, ok := ks.(TableRef); ok {
 		return ref.StoredBytes()
 	}
 	raw, err := converter.StringToBytes(ks.GetString(), charset, version)
@@ -622,7 +632,7 @@ func (r PointerReport) Broken() int {
 func ReportKeyedStrings(list []datastore.IGlobalKeyedString) PointerReport {
 	var r PointerReport
 	for _, ks := range list {
-		ref, ok := ks.(tableRef)
+		ref, ok := ks.(TableRef)
 		if !ok {
 			continue
 		}
