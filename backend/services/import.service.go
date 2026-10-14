@@ -1013,6 +1013,21 @@ func (s *MetadataService) ExportJSON(kind string, version common.GameVersion, id
 		}
 		return paths, nil
 	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		if len(ids) == 0 {
+			// Export completo: UM arquivo por kind (irmão do bulk de
+			// objects), com dedup global entre as entradas — nunca um
+			// arquivo por entrada como na seleção.
+			path, perr := tableBulkPath(kind, version)
+			if perr != nil {
+				return nil, perr
+			}
+			p, werr := jsonfmt.NewJSONObjectFormatter().WriteObjectsFile(c, path, langs)
+			if werr != nil {
+				return nil, werr
+			}
+			return []string{p}, nil
+		}
+		// Seleção: um arquivo por entrada (dedup intra-arquivo, self-contained).
 		return jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)

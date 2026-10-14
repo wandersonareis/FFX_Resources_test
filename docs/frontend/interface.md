@@ -205,11 +205,18 @@ No header da aba (lado direito), dois menus:
 
 O menu Exportar tem duas ações e um escopo:
 
-- **Exportar** — todos os tipos de uma vez, no formato selecionado;
+- **Exportar** — todos os tipos de uma vez, no formato selecionado. Cada tipo
+  sai em **um único arquivo** `<tipo>_all_localizations_<versão>` em
+  `mods/edits` (ex.: `events_all_localizations_ffx.json`,
+  `battletext_all_localizations_ffx.json`, `cloudsave_all_localizations_ffx.json`,
+  `mainmenu_all_localizations_ffx.json`, `tuto_all_localizations_ffx.json`,
+  `objects_all_localizations_ffx.json`, `help_all_localizations_ffx.json`;
+  o dicionário mantém o canônico `macro_dictionary_all_localizations`);
 - **Escopo** — os tipos incluídos (Eventos, Sistema, Dicionário...): marcar
   e desmarcar o que entra na exportação;
 - **Exportar seleção** — apenas os itens marcados na árvore (exige ao
-  menos um marcado).
+  menos um marcado); nessa via cada entrada ganha seu próprio arquivo
+  (`<id>_all_localizations_<versão>`), separado do arquivo completo do tipo.
 
 ### Importar
 

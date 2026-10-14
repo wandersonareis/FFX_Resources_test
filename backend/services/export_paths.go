@@ -43,6 +43,40 @@ func objectsBulkPath(version common.GameVersion) (string, error) {
 	return filepath.Join(editsPath, common.WithVersionSuffixFor("objects_all_localizations.json", version)), nil
 }
 
+// tableBulkNames mapeia kind de tabela → base do artefato bulk em edits/.
+// O nome é da FAMÍLIA FÍSICA, nunca de um id de entrada — é a régua do
+// topo deste arquivo: o bulk completo não pode colidir com o artefato
+// por-entrada, senão a seleção sobrescreveria o arquivo do tradutor:
+//   - battletext → battletext (nenhuma entrada tem esse id);
+//   - cloud      → cloudsave (diretório real do jogo; a entrada "cloud"
+//     já usa cloud_all_localizations);
+//   - menumain   → mainmenu (a entrada "menumain" já usa
+//     menumain_all_localizations);
+//   - tutorial   → tuto (as entradas "tutorial"/"tuto0000" já usam
+//     tutorial_all_localizations/tuto0000_all_localizations).
+var tableBulkNames = map[string]string{
+	KindBattleText: "battletext",
+	KindCloud:      "cloudsave",
+	KindMenuMain:   "mainmenu",
+	KindTutorial:   "tuto",
+}
+
+// tableBulkPath resolve o caminho do artefato JSON ÚNICO do export
+// completo (ids vazio) dos kinds de tabela: edits/<base>_all_localizations
+// [_<versão>].json — irmão do bulk de objects (objectsBulkPath), mesmo
+// padrão de dedup global entre entradas no WriteObjectsFile.
+func tableBulkPath(kind string, version common.GameVersion) (string, error) {
+	base, ok := tableBulkNames[kind]
+	if !ok {
+		return "", fmt.Errorf("sem nome bulk registrado para o kind: %s", kind)
+	}
+	editsPath := filepath.Join(common.GameFilesRoot, common.ModsFolder, "edits")
+	if err := common.EnsurePathExists(editsPath); err != nil {
+		return "", fmt.Errorf("error creating edits directory: %w", err)
+	}
+	return filepath.Join(editsPath, common.WithVersionSuffixFor(base+"_all_localizations.json", version)), nil
+}
+
 // macroExportPath resolve o caminho do artefato JSON do dicionário:
 //   - ids vazio (tudo)  → edits/macrodic/macro_dictionary_all_localizations
 //     (artefato canônico, mesmo do import padrão);

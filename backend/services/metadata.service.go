@@ -1355,6 +1355,19 @@ func (s *MetadataService) ExportStrings(kind string, version common.GameVersion,
 	case KindHelp:
 		return f.WriteHelp(c, version, langs)
 	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		if len(ids) == 0 {
+			// Export completo: UM arquivo por kind (espelho do JSON bulk,
+			// mesmo basename com .strings) — nunca um por entrada.
+			path, perr := tableBulkPath(kind, version)
+			if perr != nil {
+				return nil, perr
+			}
+			p, werr := f.WriteObjectsFile(c, strfmt.StringsPathFor(path), langs)
+			if werr != nil {
+				return nil, werr
+			}
+			return []string{p}, nil
+		}
 		return f.WriteObjects(c, version, langs)
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
