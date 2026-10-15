@@ -25,7 +25,7 @@ export function LinkedCell({
   return (
     <div className="group flex items-center gap-1">
       <div
-        className={`text-cell translated-cell min-w-0 flex-1${defTranslated ? ' edited' : ''}`}
+        className={`text-cell translated-cell px-2 min-w-0 flex-1${defTranslated ? ' edited' : ''}`}
         title={
           defTranslated
             ? `Repetição de: ${original}`

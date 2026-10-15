@@ -105,7 +105,7 @@ export function buildTranslatedColumn({
         if (missing) {
           return (
             <div
-              className="text-cell translated-cell"
+              className="text-cell translated-cell px-2"
               title="Linha inexistente no arquivo traduzido"
             >
               <span className={MISSING_SIDE}>—</span>
