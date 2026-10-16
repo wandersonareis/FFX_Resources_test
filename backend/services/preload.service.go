@@ -67,7 +67,7 @@ func (s *MetadataService) preloadVersion(version common.GameVersion, gen int64) 
 	if err := ensureVersionReady(version); err != nil {
 		return err
 	}
-	if err := ensureEventsLoaded(version); err != nil {
+	if err := s.ensureEventsLoaded(version); err != nil {
 		return err
 	}
 	// KindImages fica de fora: não tem store nem coleção para aquecer — é

@@ -31,7 +31,6 @@ import (
 
 	"ffxresources/backend/builders"
 	"ffxresources/backend/common"
-	coreprogress "ffxresources/backend/core/progress"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/ddsphyre"
 	"ffxresources/backend/fileFormats/event"
@@ -419,7 +418,7 @@ func (s *MetadataService) ListVbfMacroChunks(vbfPath, macroPath string) ([]dto.V
 	}
 
 	keys, err := vbfRun(a, t, macroPath, func() ([]string, error) {
-		c, cerr := builders.BuildMacroDTOFromSource(t.Version, common.SourceVbf)
+		c, cerr := builders.BuildMacroDTOFromSource(t.Version, common.SourceVbf, nil)
 		if cerr != nil {
 			return nil, cerr
 		}
@@ -565,7 +564,7 @@ func (s *MetadataService) decodeVbfEstado(t vbfTarget, src common.FileSource) (*
 			if err != nil {
 				return nil, dto.FileEntry{}, false, err
 			}
-			c, err := builders.BuildLockitDTOFrom([]*lockit.LockitFile{f})
+			c, err := builders.BuildLockitDTOFrom([]*lockit.LockitFile{f}, nil)
 			if err != nil {
 				return nil, dto.FileEntry{}, false, err
 			}
@@ -609,7 +608,7 @@ func (s *MetadataService) decodeVbfEstado(t vbfTarget, src common.FileSource) (*
 		// O dicionário é UM artefato por localização: o estado guardado é o
 		// dicionário INTEIRO (base do rebuild — os outros chunks não podem
 		// sumir quando só um foi aberto).
-		full, err := builders.BuildMacroDTOFromSource(t.Version, src)
+		full, err := builders.BuildMacroDTOFromSource(t.Version, src, nil)
 		if err != nil {
 			return nil, dto.FileEntry{}, false, err
 		}
@@ -872,8 +871,8 @@ func (s *MetadataService) ReplicateVbfImage(vbfPath, sourcePath string, targetPa
 	}
 
 	result := dto.BatchResult{Done: []string{}, Failed: []string{}, Total: len(selection)}
-	coreprogress.Begin(fmt.Sprintf("Replicando para %d cópia(s)", len(selection)), len(selection))
-	defer coreprogress.End()
+	prog, step := s.progressStep(fmt.Sprintf("Replicando para %d cópia(s)", len(selection)), len(selection))
+	defer prog.End()
 	for _, replica := range selection {
 		target := replica.target
 		original, readErr := a.Read(replica.path)
@@ -882,14 +881,14 @@ func (s *MetadataService) ReplicateVbfImage(vbfPath, sourcePath string, targetPa
 		}
 		if readErr != nil {
 			result.Failed = append(result.Failed, target.ID+": "+readErr.Error())
-			coreprogress.Issue(target.ID, readErr.Error())
+			step.Issue(target.ID, readErr.Error())
 			continue
 		}
 		if _, extractErr := ddsphyre.Extract(target.Version, target.ID); extractErr != nil {
 			common.LogWarning("vbf images %s/%s: replicação ok, mas falhou a atualização dos .dds/.png: %v", target.Version, target.ID, extractErr)
 		}
 		result.Done = append(result.Done, target.ID)
-		coreprogress.Step(target.ID)
+		step.Step(target.ID)
 	}
 	if len(result.Done) > 0 {
 		ddsphyre.InvalidateIndex(source.Version)

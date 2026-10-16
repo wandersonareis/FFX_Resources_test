@@ -1,45 +1,21 @@
 package services
 
 import (
-	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"ffxresources/backend/common"
-	"ffxresources/backend/core/progress"
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/loggingService"
+	"ffxresources/backend/progress"
 )
 
-func sprintf(format string, args ...any) string { return fmt.Sprintf(format, args...) }
-
-// fakeReporter é a ponte de teste do core/progress: captura os eventos sem
-// tocar no wails.
-type fakeReporter struct {
-	events []string
-}
-
-func (f *fakeReporter) record(format string, args ...any) {
-	f.events = append(f.events, sprintf(format, args...))
-}
-
-func (f *fakeReporter) Begin(label string, total int) { f.record("begin %s total=%d", label, total) }
-func (f *fakeReporter) Step(item string)              { f.record("step %s", item) }
-func (f *fakeReporter) Issue(item, message string)    { f.record("issue %s: %s", item, message) }
-func (f *fakeReporter) End()                          { f.record("end") }
-
-// TestLoadFromBinarySilentProgress: a carga de eventos é IMPLÍCITA
-// (boot/carga de árvore) e não abre a barra de "Processando" — dois modais
-// seguidos no boot (a pré-carga das outras versões em background dispara
-// outra carga). Com o reporter fake, uma carga feliz emite ZERO eventos.
+// A carga de eventos é IMPLÍCITA (boot/carga de árvore) e não abre modal:
+// o loader coleta os pulados em Skipped e uma carga feliz deixa a lista
+// VAZIA — quem reporta é o chamador (ensureEventsLoaded).
 func TestLoadFromBinarySilentProgress(t *testing.T) {
-	fake := &fakeReporter{}
-	progress.Set(fake)
-	t.Cleanup(func() { progress.Set(nil) })
-
 	root := t.TempDir()
 	prevRoot := common.GameFilesRoot
 	common.GameFilesRoot = root
@@ -59,13 +35,13 @@ func TestLoadFromBinarySilentProgress(t *testing.T) {
 		t.Fatalf("load: %v", err)
 	}
 
-	if joined := strings.Join(fake.events, "\n"); joined != "" {
-		t.Fatalf("carga de eventos deve ser silenciosa, emitiu:\n%s", joined)
+	if len(b.Skipped) != 0 {
+		t.Fatalf("carga feliz não deveria pular nada, pulou: %+v", b.Skipped)
 	}
 }
 
-// TestLoadFromBinarySkipsBrokenEvent: evento com binário corrompido é
-// pulado com Issue (toast/log individual) e o restante carrega.
+// Evento com binário corrompido é pulado com Skipped (o services reporta
+// cada um: toast com cap + arquivo de diagnóstico) e o restante carrega.
 func TestLoadFromBinarySkipsBrokenEvent(t *testing.T) {
 	root := t.TempDir()
 	prevRoot := common.GameFilesRoot
@@ -83,7 +59,7 @@ func TestLoadFromBinarySkipsBrokenEvent(t *testing.T) {
 
 	// zev002: TODOS os binários de leitura (data/ por localização) viram
 	// DIRETÓRIOS → a leitura falha em todos, o evento sai vazio e é PULADO
-	// (Issue individual) enquanto o resto carrega.
+	// enquanto o resto carrega.
 	for loc := range common.SupportedLanguages {
 		lroot := common.GetLocalizationRootForVersion(common.GameVersionFFX2, loc)
 		rel, _ := event.EventRelPath("zev002")
@@ -100,75 +76,69 @@ func TestLoadFromBinarySkipsBrokenEvent(t *testing.T) {
 	common.DisableMods = true
 	t.Cleanup(func() { common.DisableMods = prevMods })
 
-	fake := &fakeReporter{}
-	progress.Set(fake)
-	t.Cleanup(func() { progress.Set(nil) })
-
 	b := event.NewEventsBinaryFile(common.GameVersionFFX2)
 	if err := b.LoadFromBinary(); err != nil {
 		t.Fatalf("load: %v", err)
 	}
 
-	joined := strings.Join(fake.events, "\n")
-	if !strings.Contains(joined, "issue zev002") {
-		t.Fatalf("issue do arquivo corrompido ausente:\n%s", joined)
-	}
-	if strings.Contains(joined, "begin") || strings.Contains(joined, "end") {
-		t.Fatalf("carga de eventos não abre ciclo de progresso:\n%s", joined)
+	if len(b.Skipped) != 1 || b.Skipped[0].ID != "zev002" {
+		t.Fatalf("zev002 deveria vir pulado em Skipped, veio %+v", b.Skipped)
 	}
 	if b.Objects == nil || b.Objects.Len() != 1 {
 		t.Fatalf("a carga deveria seguir com o evento válido: %v", b.Objects)
 	}
-}
 
-// ProgressService: máquina de estados Begin/Step/End + Issue com cap de
-// toasts por ciclo (o arquivo recebe tudo).
-func TestProgressServiceCycle(t *testing.T) {
+	// reportEventSkips: diagnóstico + toast com cap (além dele, silencia).
 	loggingService.ResetForTest(t.TempDir())
 	t.Cleanup(func() { loggingService.ResetForTest(t.TempDir()) })
 
-	p := NewProgressService(nil) // sem app wails: EmitEvent é no-op
-	p.Begin("Exportando events (ffx2)…", 3)
-	if _, total, processed, pct, _ := p.stateSnapshot(); processed != 0 || total != 3 || pct != 0 {
-		t.Fatalf("begin: processed=%d total=%d pct=%d", processed, total, pct)
+	fake := &fakeNotifier{}
+	s := NewMetadataService(fake)
+	s.reportEventSkips(b.Skipped)
+	if len(fake.warns) != 1 || !strings.Contains(fake.warns[0], "zev002") {
+		t.Fatalf("skip deveria virar toast de aviso, veio %v", fake.warns)
 	}
+	many := make([]event.EventSkip, maxSkipToasts+5)
+	for i := range many {
+		many[i] = event.EventSkip{ID: "zev", Reason: "x"}
+	}
+	fake.warns = nil
+	s.reportEventSkips(many)
+	if len(fake.warns) != maxSkipToasts {
+		t.Fatalf("cap de toasts: %d, esperado %d", len(fake.warns), maxSkipToasts)
+	}
+}
 
-	p.Step("zev001")
-	p.Step("zev002")
-	if _, _, processed, pct, item := p.stateSnapshot(); processed != 2 || pct != 66 || item != "zev002" {
-		t.Fatalf("step: processed=%d pct=%d item=%q", processed, pct, item)
-	}
-	p.Issue("zev003", "fixture failure")
-	if event := p.snapshot(false); event.Processed != 3 || event.IssueCount != 1 || event.Percentage != 100 {
-		t.Fatalf("issue deve contar como item concluído com falha: %+v", event)
-	}
-	encoded, err := json.Marshal(p.snapshot(true))
-	if err != nil {
-		t.Fatalf("serializando evento de progresso: %v", err)
-	}
-	var payload map[string]any
-	if err := json.Unmarshal(encoded, &payload); err != nil {
-		t.Fatalf("lendo evento de progresso: %v", err)
-	}
-	if payload["total"] != float64(3) || payload["processed"] != float64(3) || payload["issueCount"] != float64(1) || payload["done"] != true {
-		t.Fatalf("payload JSON incompleto: %s", encoded)
-	}
+// (fakeNotifier vive em vbf_service_test.go — reutilizado aqui.)
 
-	// End encerra: Steps fora de ciclo são ignorados.
-	p.End()
-	p.Step("depois-do-end")
-	if _, _, processed, _, _ := p.stateSnapshot(); processed != 3 {
-		t.Fatalf("step após end deveria ser ignorado (processed=%d)", processed)
+// Sem emitter, o MetadataService segue operando sem progresso: os batches
+// são nil e todos os métodos no-op — nada derruba por falta de ponte.
+func TestMetadataServiceWithoutProgress(t *testing.T) {
+	s := NewMetadataService(nil)
+	batch, step := s.progressStep("Teste", 3)
+	if batch != nil || step != nil {
+		t.Fatalf("sem emitter deveria devolver (nil, nil)")
 	}
-	p.End() // idempotente
+	// Canais nil-safe: chamar direto não pânica.
+	step.Begin("", 3)
+	step.Step("x")
+	step.Issue("x", "boom")
+	step.End()
+	step.Fail("boom")
+	batch.SetSummary(0, "")
+	batch.End()
+
+	if _, ok := progress.OrNop(nil).(interface{ Step(string) }); !ok {
+		t.Fatal("OrNop(nil) deveria devolver um Reporter no-op")
+	}
 }
 
 // PreloadVersions é idempotente e aborta quando a árvore muda no meio.
 func TestPreloadVersionsIdempotentAndInvalidated(t *testing.T) {
 
 	// Ambiente sem gamefiles válidos: a pré-carga falha por versão — mas o
-	// Set marca/consome igualmente (idempotência é sobre a fila, não sobre
-	// o sucesso).
+	// Set marca/consome igualmente (idempotência é sobre a fila, não sobre o
+	// sucesso).
 	version := common.GameVersionFFX2
 	if !markPreloaded(version) {
 		t.Fatal("primeira marca deveria ser nova")

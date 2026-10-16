@@ -8,14 +8,11 @@ import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import { GAME_VERSIONS, GameVersionId } from '@/lib/ffx/game-version';
 import { EntryKind, KIND_LABELS } from '@/lib/ffx/display-names';
 import { exportSelection, EXPORT_FORMAT_LABELS, useExportSelection } from '@/lib/ffx/export-selection';
-import { exportProgress } from '@/lib/ffx/export-progress';
 import { parseError } from '@/lib/ffx/error-handler';
+import { progressWasShown } from '@/lib/ffx/progress-store';
 import {
   entryKindsFor,
-  exportDestination,
-  exportJSON,
-  exportStrings,
-  exportBatch,
+  exportArtifactBatch,
   importFile,
   importTranslated,
   previewImport,
@@ -34,7 +31,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ImportSummaryDialog } from '@/components/dialogs/import-summary-dialog';
 import { ImportTranslatedDialog } from '@/components/dialogs/import-translated-dialog';
-import { ExportToastContent } from '@/components/progress-notifier';
 
 /**
  * Controles Exportar/Importar da barra de abas + diálogo de resumo de import.
@@ -90,9 +86,11 @@ export function ExportImportControls({ version }: { version: GameVersionId }) {
     });
   };
 
-  // Exporta os kinds no FORMATO SELECIONADO (JSON | Strings | CSV | XLSX), em sequência
-  // (evita GetCollection concorrente). useCheckedIds=false força ids=[] →
-  // tudo do kind; com seleção, exigirá ≥1 marcado.
+  // Exporta os kinds no FORMATO SELECIONADO como UMA operação agrupada:
+  // o modal de progresso cuida de tudo (um step por kind com barra própria
+  // + resumo de arquivos/destino no final) — nada de toast paralelo.
+  // useCheckedIds=false força ids=[] → tudo do kind; com seleção, exigirá
+  // ≥1 marcado.
   const runExport = useCallback(
     async (kinds: EntryKind[], useCheckedIds: boolean) => {
       const format = activeFormat;
@@ -100,38 +98,23 @@ export function ExportImportControls({ version }: { version: GameVersionId }) {
         toast.info('Nada para exportar — selecione itens na árvore.');
         return;
       }
-      const label = EXPORT_FORMAT_LABELS[format];
-      const toastId = 'export';
-      exportProgress.begin();
-      toast.loading(
-        <ExportToastContent label={`Exportando (${label})…`} processed={0} total={0} value={0} />,
-        { id: toastId }
-      );
+      const items = kinds
+        .map((kind) => ({ kind, ids: useCheckedIds ? exportSelection.idsOf(version, kind) : [] }))
+        .filter((item) => !useCheckedIds || item.ids.length > 0);
+      if (items.length === 0) {
+        toast.info('Nada para exportar.');
+        return;
+      }
       try {
-        let written = 0;
-        const allPaths: string[] = [];
-        for (const kind of kinds) {
-          const ids = useCheckedIds ? exportSelection.idsOf(version, kind) : [];
-          // Exportar seleção = atalho do Exportar do contexto.
-          if (useCheckedIds && ids.length === 0) continue;
-          const paths = await exportBatch(kind, version, ids, [], format);
-          allPaths.push(...(paths ?? []));
-          written += (paths ?? []).length;
+        const paths = await exportArtifactBatch(items, version, [], format);
+        if ((paths ?? []).length === 0) {
+          toast.info('Nada para exportar.');
         }
-        exportProgress.end();
-        if (written === 0) {
-          toast.info('Nada para exportar.', { id: toastId });
-        } else {
-          const dest = exportDestination(allPaths);
-          toast.success(
-            `Exportado (${label}): ${dest || `${written} arquivo(s)`}.`,
-            { id: toastId }
-          );
-        }
+        // Saiu arquivo: o modal mostrou o resumo — sem toast de sucesso.
       } catch (error) {
-        toast.error(parseError(error), { id: toastId });
-      } finally {
-        exportProgress.end();
+        // Erro ANTES do batch abrir (formato/kind inválido, lote vazio):
+        // toast. Erro no meio da operação: o modal já exibiu (step falho).
+        if (!progressWasShown()) toast.error(parseError(error));
       }
     },
     [version, activeFormat]

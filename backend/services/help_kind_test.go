@@ -98,7 +98,7 @@ func TestGetEntryHelpDedupsDTO(t *testing.T) {
 	seedFFXHelpRoot(t)
 	svc := NewMetadataService(nil)
 
-	raw, err := svc.GetCollection(KindHelp, common.GameVersionFFX, []string{"now_help_page"})
+	raw, err := svc.GetCollection(KindHelp, common.GameVersionFFX, []string{"now_help_page"}, nil)
 	if err != nil {
 		t.Fatalf("collection: %v", err)
 	}
@@ -129,7 +129,7 @@ func TestGetEntryHelpDedupsDTO(t *testing.T) {
 	}
 
 	// Toda ref tem a def literal correspondente em algum dos 6 painéis.
-	full, err := svc.GetCollection(KindHelp, common.GameVersionFFX, nil)
+	full, err := svc.GetCollection(KindHelp, common.GameVersionFFX, nil, nil)
 	if err != nil {
 		t.Fatalf("full: %v", err)
 	}

@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"ffxresources/backend/common"
-	coreprogress "ffxresources/backend/core/progress"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/loggingService"
+	"ffxresources/backend/progress"
 	"ffxresources/backend/services"
 	"fmt"
 	"log"
@@ -23,8 +23,6 @@ import (
 // service_text.go, service_image.go) e só isto permanece aqui.
 type App struct {
 	noticationService services.INotificationService
-
-	progressService services.IProgressService
 
 	statusBarService services.IStatusBarService
 
@@ -50,11 +48,10 @@ type App struct {
 func NewApp() *App {
 	notifier := services.NewEventNotifier()
 
-	// Ponte de progresso: operações longas (carga de árvore, export) publicam
-	// contadores pelo canal neutro core/progress e esta ponte emite os
-	// eventos do wails (Progress/ShowProgress) para a barra do frontend.
-	progressSvc := services.NewProgressService(notifier)
-	coreprogress.Set(progressSvc)
+	// Ponte de progresso: os serviços (export/extração) criam batches no
+	// emitter INJETADO e publicam snapshots nos eventos do wails
+	// (ProgressStart/Update/End) — sem global, sem canal de pacote.
+	progressEmitter := progress.NewEmitter(notifier.NotifyWarn)
 
 	// Ponte da barra de status: desalinhamentos (original vs tradução)
 	// publicados pelos services chegam à barra de rodapé do frontend.
@@ -64,11 +61,10 @@ func NewApp() *App {
 	// Um único MetadataService é compartilhado por todos os serviços de
 	// domínio: ele carrega os caches de índice/imagens, e instâncias
 	// separadas serviriam caches diferentes para o mesmo dado.
-	meta := services.NewMetadataService(notifier)
+	meta := services.NewMetadataService(notifier, progressEmitter)
 
 	return &App{
 		noticationService: notifier,
-		progressService:   progressSvc,
 		statusBarService:  statusSvc,
 		MetadataService:   meta,
 		config:            &ConfigService{notifier: notifier},

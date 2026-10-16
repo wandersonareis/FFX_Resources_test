@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"ffxresources/backend/common"
-	coreprogress "ffxresources/backend/core/progress"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/ddsphyre"
 )
@@ -158,14 +157,14 @@ func (s *MetadataService) importImagesBatch(version common.GameVersion, subdirs 
 	// O rotulo carrega "N de MAX N novas" (a leitura pedida na UI): o total
 	// e o numero de candidatos varridos, entao a barra cobre o lote inteiro,
 	// nao so os que mudam.
-	coreprogress.Begin(
+	prog, step := s.progressStep(
 		fmt.Sprintf("Importando imagens: %d novas de %d", batch.NewCount, batch.Max),
 		batch.Max)
-	defer coreprogress.End()
+	defer prog.End()
 
 	imported := 0
 	for _, c := range cands {
-		coreprogress.Step(c.id)
+		step.Step(c.id)
 		if !c.differs {
 			continue
 		}

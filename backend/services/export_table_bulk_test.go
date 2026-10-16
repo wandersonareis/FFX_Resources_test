@@ -152,7 +152,7 @@ func TestExportTableKindsBulkSingleFile(t *testing.T) {
 
 	// battletext: bulk único com as entradas da árvore (bika00_10 e
 	// zzzz03_19; menumain/ é excluído do battletext pela régua do eventtable).
-	paths, err := svc.ExportJSON(KindBattleText, common.GameVersionFFX, nil, nil)
+	paths, err := svc.ExportArtifactBatch([]ExportPlanItem{{Kind: KindBattleText}}, common.GameVersionFFX, nil, "json")
 	if err != nil {
 		t.Fatalf("export battletext: %v", err)
 	}
@@ -183,7 +183,7 @@ func TestExportTableKindsBulkSingleFile(t *testing.T) {
 	}
 
 	// Espelho .strings: mesmo basename, extensão trocada, também único.
-	spaths, err := svc.ExportStrings(KindBattleText, common.GameVersionFFX, nil, nil)
+	spaths, err := svc.ExportArtifactBatch([]ExportPlanItem{{Kind: KindBattleText}}, common.GameVersionFFX, nil, "strings")
 	if err != nil {
 		t.Fatalf("export .strings battletext: %v", err)
 	}
@@ -193,7 +193,7 @@ func TestExportTableKindsBulkSingleFile(t *testing.T) {
 
 	// Seleção mantém o artefato por-entrada (dedup intra-arquivo) e não pode
 	// sobrescrever o bulk.
-	sel, err := svc.ExportJSON(KindBattleText, common.GameVersionFFX, []string{"bika00_10"}, nil)
+	sel, err := svc.ExportArtifactBatch([]ExportPlanItem{{Kind: KindBattleText, IDs: []string{"bika00_10"}}}, common.GameVersionFFX, nil, "json")
 	if err != nil {
 		t.Fatalf("export seleção battletext: %v", err)
 	}
@@ -206,7 +206,7 @@ func TestExportTableKindsBulkSingleFile(t *testing.T) {
 
 	// menumain: bulk único com menumain + menumain_btl; o import detecta o
 	// kind certo mesmo com a key da entrada btl dentro de /battle/btl/.
-	mpaths, err := svc.ExportJSON(KindMenuMain, common.GameVersionFFX, nil, nil)
+	mpaths, err := svc.ExportArtifactBatch([]ExportPlanItem{{Kind: KindMenuMain}}, common.GameVersionFFX, nil, "json")
 	if err != nil {
 		t.Fatalf("export menumain: %v", err)
 	}
@@ -232,7 +232,7 @@ func TestExportTableKindsBulkSingleFile(t *testing.T) {
 
 	// cloud: bulk cloudsave_* não pode colidir com o artefato por-entrada de
 	// "cloud" (mesmo nome do kind).
-	cpaths, err := svc.ExportJSON(KindCloud, common.GameVersionFFX, nil, nil)
+	cpaths, err := svc.ExportArtifactBatch([]ExportPlanItem{{Kind: KindCloud}}, common.GameVersionFFX, nil, "json")
 	if err != nil {
 		t.Fatalf("export cloud: %v", err)
 	}
@@ -289,13 +289,7 @@ func bulkImportRoundtripScenario(t *testing.T, format string) {
 	svc := NewMetadataService(nil)
 
 	// (1) Export completo: o bulk único de battletext.
-	var paths []string
-	var err error
-	if format == "json" {
-		paths, err = svc.ExportJSON(KindBattleText, common.GameVersionFFX, nil, nil)
-	} else {
-		paths, err = svc.ExportStrings(KindBattleText, common.GameVersionFFX, nil, nil)
-	}
+	paths, err := svc.ExportArtifactBatch([]ExportPlanItem{{Kind: KindBattleText}}, common.GameVersionFFX, nil, format)
 	if err != nil {
 		t.Fatalf("export %s: %v", format, err)
 	}

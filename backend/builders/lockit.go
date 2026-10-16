@@ -8,6 +8,7 @@ import (
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/lockit"
 	"ffxresources/backend/formatters/hash"
+	"ffxresources/backend/progress"
 )
 
 // BuildLockitDTO monta a Collection do lockit: uma entrada por versão (id =
@@ -19,19 +20,24 @@ import (
 // entre os grupos e a posição dentro do grupo.
 //
 // ids vazio = todos os layouts da versão.
-func BuildLockitDTO(version common.GameVersion, ids []string) (dto.Collection, error) {
+// r recebe o progresso da extração: um Step por arquivo lido (nil = sem
+// progresso).
+func BuildLockitDTO(version common.GameVersion, ids []string, r progress.Reporter) (dto.Collection, error) {
 	files, err := lockitFiles(version, ids)
 	if err != nil {
 		return nil, err
 	}
-	return BuildLockitDTOFrom(files)
+	return BuildLockitDTOFrom(files, r)
 }
 
 // BuildLockitDTOFrom monta a Collection a partir de LockitFile já carregados
 // (qualquer fonte). É o caminho do ORIGINAL: lockit.LoadFrom(layout, SourceData).
-func BuildLockitDTOFrom(files []*lockit.LockitFile) (dto.Collection, error) {
+// r recebe o progresso: um Step por arquivo montado.
+func BuildLockitDTOFrom(files []*lockit.LockitFile, r progress.Reporter) (dto.Collection, error) {
+	r = progress.OrNop(r)
 	out := make(dto.Collection, len(files))
 	for _, f := range files {
+		r.Step(f.Layout().ID())
 		rows := buildLockitRows(f)
 		if len(rows) == 0 {
 			continue

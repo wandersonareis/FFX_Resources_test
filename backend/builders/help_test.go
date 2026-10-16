@@ -51,7 +51,7 @@ func TestBuildHelpDTOKeysAndRows(t *testing.T) {
 	root := seedTempHelpRoot(t)
 	_ = root
 
-	c, err := builders.BuildHelpDTO(common.GameVersionFFX, nil)
+	c, err := builders.BuildHelpDTO(common.GameVersionFFX, nil, nil)
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestBuildHelpDTOKeysAndRows(t *testing.T) {
 func TestApplyHelpDTORewritesBinary(t *testing.T) {
 	root := seedTempHelpRoot(t)
 
-	c, err := builders.BuildHelpDTO(common.GameVersionFFX, nil)
+	c, err := builders.BuildHelpDTO(common.GameVersionFFX, nil, nil)
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}
@@ -225,7 +225,7 @@ func TestApplyHelpDTORewritesBinary(t *testing.T) {
 func TestHelpArtifactRoundTripUnchanged(t *testing.T) {
 	root := seedTempHelpRoot(t)
 
-	c, err := builders.BuildHelpDTO(common.GameVersionFFX, nil)
+	c, err := builders.BuildHelpDTO(common.GameVersionFFX, nil, nil)
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}
@@ -306,7 +306,7 @@ func helpIsRef(r dto.TextRow) bool {
 func TestDedupHelpDTORefsAndDefs(t *testing.T) {
 	seedTempHelpRoot(t)
 
-	full, err := builders.BuildHelpDTO(common.GameVersionFFX, nil)
+	full, err := builders.BuildHelpDTO(common.GameVersionFFX, nil, nil)
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}
@@ -384,7 +384,7 @@ func TestDedupHelpDTORefsAndDefs(t *testing.T) {
 func TestHelpDedupApplyPropagatesToAllCopies(t *testing.T) {
 	root := seedTempHelpRoot(t)
 
-	full, err := builders.BuildHelpDTO(common.GameVersionFFX, nil)
+	full, err := builders.BuildHelpDTO(common.GameVersionFFX, nil, nil)
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}
@@ -535,7 +535,7 @@ func TestHelpDedupApplyPropagatesToAllCopies(t *testing.T) {
 func TestHelpDedupMultiEntryBatchKeepsEdit(t *testing.T) {
 	root := seedTempHelpRoot(t)
 
-	full, err := builders.BuildHelpDTO(common.GameVersionFFX, nil)
+	full, err := builders.BuildHelpDTO(common.GameVersionFFX, nil, nil)
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}

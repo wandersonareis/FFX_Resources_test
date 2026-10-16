@@ -74,7 +74,7 @@ func decodeAvulso(d Detection, version common.GameVersion, path string, data []b
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", filepath.Base(path), err)
 		}
-		return builders.BuildMacroDTOFromContainers(version, containers)
+		return builders.BuildMacroDTOFromContainers(version, containers, nil)
 
 	case services.KindLockit:
 		layout, ok := lockitLayoutFor(path, version)
@@ -85,7 +85,7 @@ func decodeAvulso(d Detection, version common.GameVersion, path string, data []b
 		if err != nil {
 			return nil, err
 		}
-		return builders.BuildLockitDTOFrom([]*lockit.LockitFile{f})
+		return builders.BuildLockitDTOFrom([]*lockit.LockitFile{f}, nil)
 
 	case services.KindHelp:
 		name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
@@ -142,7 +142,7 @@ func applyAvulso(d Detection, version common.GameVersion, path string, data []by
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", filepath.Base(path), err)
 		}
-		base, err := builders.BuildMacroDTOFromContainers(version, containers)
+		base, err := builders.BuildMacroDTOFromContainers(version, containers, nil)
 		if err != nil {
 			return nil, err
 		}

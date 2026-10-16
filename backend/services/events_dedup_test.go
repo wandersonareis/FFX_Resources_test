@@ -60,7 +60,7 @@ func TestGetEntryEventsDedupsDTO(t *testing.T) {
 	seedEventsSynthetic(common.GameVersionFFX2, "zev002", []string{"Frase única deste evento", "Frase compartilhada entre eventos"})
 
 	// GetCollection continua RAW: nenhuma ref na store.
-	raw, err := NewMetadataService(nil).GetCollection(KindEvents, common.GameVersionFFX2, nil)
+	raw, err := NewMetadataService(nil).GetCollection(KindEvents, common.GameVersionFFX2, nil, nil)
 	if err != nil {
 		t.Fatalf("collection: %v", err)
 	}

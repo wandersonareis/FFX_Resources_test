@@ -35,6 +35,39 @@ export class EntrySummary {
 }
 
 /**
+ * ExportPlanItem é UMA ação do lote: um kind e os ids dele (vazio = tudo
+ * do kind; com seleção, os ids marcados na árvore).
+ */
+export class ExportPlanItem {
+    "kind": string;
+    "ids": string[];
+
+    /** Creates a new ExportPlanItem instance. */
+    constructor($$source: Partial<ExportPlanItem> = {}) {
+        if (!("kind" in $$source)) {
+            this["kind"] = "";
+        }
+        if (!("ids" in $$source)) {
+            this["ids"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ExportPlanItem instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ExportPlanItem {
+        const $$createField1_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("ids" in $$parsedSource) {
+            $$parsedSource["ids"] = $$createField1_0($$parsedSource["ids"]);
+        }
+        return new ExportPlanItem($$parsedSource as Partial<ExportPlanItem>);
+    }
+}
+
+/**
  * TagCatalog é o catálogo servido ao frontend via binding GetTagCatalog.
  */
 export class TagCatalog {
@@ -57,7 +90,7 @@ export class TagCatalog {
      * Creates a new TagCatalog instance from a string or object.
      */
     static createFrom($$source: any = {}): TagCatalog {
-        const $$createField1_0 = $$createType1;
+        const $$createField1_0 = $$createType2;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("tags" in $$parsedSource) {
             $$parsedSource["tags"] = $$createField1_0($$parsedSource["tags"]);
@@ -113,7 +146,7 @@ export class TagCatalogEntry {
      * Creates a new TagCatalogEntry instance from a string or object.
      */
     static createFrom($$source: any = {}): TagCatalogEntry {
-        const $$createField3_0 = $$createType3;
+        const $$createField3_0 = $$createType4;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("values" in $$parsedSource) {
             $$parsedSource["values"] = $$createField3_0($$parsedSource["values"]);
@@ -242,7 +275,7 @@ export class TextSearchResponse {
      * Creates a new TextSearchResponse instance from a string or object.
      */
     static createFrom($$source: any = {}): TextSearchResponse {
-        const $$createField0_0 = $$createType5;
+        const $$createField0_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("results" in $$parsedSource) {
             $$parsedSource["results"] = $$createField0_0($$parsedSource["results"]);
@@ -278,7 +311,7 @@ export class TextSearchResult {
      * Creates a new TextSearchResult instance from a string or object.
      */
     static createFrom($$source: any = {}): TextSearchResult {
-        const $$createField2_0 = $$createType7;
+        const $$createField2_0 = $$createType8;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("rows" in $$parsedSource) {
             $$parsedSource["rows"] = $$createField2_0($$parsedSource["rows"]);
@@ -288,11 +321,12 @@ export class TextSearchResult {
 }
 
 // Private type creation functions
-const $$createType0 = TagCatalogEntry.createFrom;
-const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = TagSuggestion.createFrom;
-const $$createType3 = $Create.Array($$createType2);
-const $$createType4 = TextSearchResult.createFrom;
-const $$createType5 = $Create.Array($$createType4);
-const $$createType6 = TextSearchMatch.createFrom;
-const $$createType7 = $Create.Array($$createType6);
+const $$createType0 = $Create.Array($Create.Any);
+const $$createType1 = TagCatalogEntry.createFrom;
+const $$createType2 = $Create.Array($$createType1);
+const $$createType3 = TagSuggestion.createFrom;
+const $$createType4 = $Create.Array($$createType3);
+const $$createType5 = TextSearchResult.createFrom;
+const $$createType6 = $Create.Array($$createType5);
+const $$createType7 = TextSearchMatch.createFrom;
+const $$createType8 = $Create.Array($$createType7);

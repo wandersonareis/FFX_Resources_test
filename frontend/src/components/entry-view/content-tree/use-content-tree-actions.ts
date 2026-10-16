@@ -3,9 +3,7 @@
 import { useCallback, useMemo, useRef, type MouseEvent } from 'react';
 import { loggedToast as toast } from '@/lib/ffx/toast-logged';
 import {
-  exportDestination,
-  exportJSON,
-  exportStrings,
+  exportArtifactBatch,
   extractImageSelection,
 } from '@/lib/ffx/tree-data';
 import {
@@ -15,11 +13,8 @@ import {
   selectVbfImageExtractDir,
 } from '@/lib/ffx/vbf';
 import { parseError } from '@/lib/ffx/error-handler';
-import {
-  EXPORT_FORMAT_LABELS,
-  exportSelection,
-} from '@/lib/ffx/export-selection';
-import { vbfSelection } from '@/lib/ffx/vbf-selection';
+import { progressWasShown } from '@/lib/ffx/progress-store';
+import { exportSelection } from '@/lib/ffx/export-selection';import { vbfSelection } from '@/lib/ffx/vbf-selection';
 import {
   entryIdsInNode,
   type SideNode,
@@ -114,8 +109,9 @@ export function useContentTreeActions({
     });
   }, [actions, selectedImageIds]);
 
-  // Exporta só o que está marcado na árvore de data/, no FORMATO SELECIONADO
-  // no topo (JSON | Strings) — leitura imperativa do store compartilhado.
+  // Exporta só o que está marcado na árvore de data/ no FORMATO SELECIONADO
+  // no topo (JSON | Strings | CSV | XLSX) — leitura imperativa do store
+  // compartilhado. Uma ação = modal de progresso com o resumo no final.
   const onCtxExport = useCallback(async () => {
     const kind = ctxNode?.kind;
     if (!kind) return;
@@ -125,21 +121,14 @@ export function useContentTreeActions({
       return;
     }
     const format = exportSelection.formatOf();
-    const label = EXPORT_FORMAT_LABELS[format];
-    const toastId = 'export';
-    toast.loading(`Exportando (${label})…`, { id: toastId });
     try {
-      const paths =
-        format === 'json'
-          ? await exportJSON(kind, version, ids)
-          : await exportStrings(kind, version, ids);
-      const dest = exportDestination(paths);
-      toast.success(
-        `Exportado (${label}): ${dest || `${(paths ?? []).length} arquivo(s)`}.`,
-        { id: toastId }
-      );
+      const paths = await exportArtifactBatch([{ kind, ids }], version, [], format);
+      if ((paths ?? []).length === 0) {
+        toast.info('Nada para exportar.');
+      }
+      // Modal de progresso mostrou o resumo — sem toast de sucesso.
     } catch (error) {
-      toast.error(parseError(error), { id: toastId });
+      if (!progressWasShown()) toast.error(parseError(error));
     }
   }, [ctxNode, version]);
 
@@ -200,23 +189,16 @@ export function useContentTreeActions({
     setCtxNode(null);
     void (async () => {
       const format = exportSelection.formatOf();
-      const label = EXPORT_FORMAT_LABELS[format];
-      toast.loading(`Exportando (${label})…`, { id: 'export' });
       try {
         const exported = await exportVbfSelection(root, format, paths);
         if (exported.length === 0) {
-          toast.info('A seleção não contém textos compatíveis para extrair.', {
-            id: 'export',
-          });
+          toast.info('A seleção não contém textos compatíveis para extrair.');
           return;
         }
-        const dest = exportDestination(exported);
-        toast.success(
-          `Exportado (${label}): ${dest || `${exported.length} arquivo(s)`}.`,
-          { id: 'export' }
-        );
+        // O backend agrupa por tipo com um modal de progresso por ação —
+        // o resumo (arquivos + destino) aparece lá, sem toast paralelo.
       } catch (error) {
-        toast.error(parseError(error), { id: 'export' });
+        if (!progressWasShown()) toast.error(parseError(error));
       }
     })();
   }, [ctxNode, setCtxNode, vbfPathsForContext]);

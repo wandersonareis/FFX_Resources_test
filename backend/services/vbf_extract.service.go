@@ -30,7 +30,6 @@ import (
 	"strings"
 
 	"ffxresources/backend/common"
-	coreprogress "ffxresources/backend/core/progress"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/ddsphyre"
 	"ffxresources/backend/fileFormats/helpfile"
@@ -38,6 +37,7 @@ import (
 	jsonfmt "ffxresources/backend/formatters/json"
 	strfmt "ffxresources/backend/formatters/strings"
 	"ffxresources/backend/loggingService"
+	"ffxresources/backend/progress"
 )
 
 // vbfDefaultExtractRoot é o destino de "Extrair binário": a árvore data/
@@ -238,8 +238,8 @@ func (s *MetadataService) PreviewVbfExtraction(vbfPath string, paths []string, d
 
 // ExtractVbfSelection extrai os arquivos da seleção para destRoot
 // (vazio = data/ do jogo), preservando a estrutura interna de caminhos.
-// Progresso pelo canal do core/progress (a barra do frontend). O .vbf
-// nunca é escrito e data/ é tocado só aqui — cópia direta de bytes
+// Progresso: batch de UMA ação (modal do frontend, tick por arquivo). O
+// .vbf nunca é escrito e data/ é tocado só aqui — cópia direta de bytes
 // decomprimidos, sem passar pelos writers do app.
 func (s *MetadataService) ExtractVbfSelection(vbfPath string, paths []string, destRoot string) (dto.BatchResult, error) {
 	a, err := vbfArchiveFor(vbfPath)
@@ -261,23 +261,23 @@ func (s *MetadataService) ExtractVbfSelection(vbfPath string, paths []string, de
 	}
 
 	out := dto.BatchResult{Total: len(entries)}
-	coreprogress.Begin(fmt.Sprintf("Extraindo %s", filepath.Base(vbfPath)), len(entries))
-	defer coreprogress.End()
+	prog, step := s.progressStep(fmt.Sprintf("Extraindo %s", filepath.Base(vbfPath)), len(entries))
+	defer prog.End()
 
 	for _, e := range entries {
 		target, err := vbfExtractTarget(destRoot, e.Path, true)
 		if err != nil {
 			out.Failed = append(out.Failed, fmt.Sprintf("%s: %v", e.Path, err))
-			coreprogress.Issue(e.Path, err.Error())
+			step.Issue(e.Path, err.Error())
 			continue
 		}
 		if err := a.ExtractEntry(e, target); err != nil {
 			out.Failed = append(out.Failed, fmt.Sprintf("%s: %v", e.Path, err))
-			coreprogress.Issue(e.Path, err.Error())
+			step.Issue(e.Path, err.Error())
 			continue
 		}
 		out.Done = append(out.Done, e.Path)
-		coreprogress.Step(e.Path)
+		step.Step(e.Path)
 	}
 	loggingService.Info("vbf: extraídos %d/%d arquivos para %s",
 		len(out.Done), out.Total, destRoot)
@@ -317,31 +317,31 @@ func (s *MetadataService) ExtractVbfImagesSelection(vbfPath string, paths []stri
 		return dto.BatchResult{}, fmt.Errorf("criando destino %s: %w", destRoot, err)
 	}
 
-	coreprogress.Begin(fmt.Sprintf("Extraindo %d imagem(ns) de %s", len(images), base), len(images))
-	defer coreprogress.End()
+	prog, step := s.progressStep(fmt.Sprintf("Extraindo %d imagem(ns) de %s", len(images), base), len(images))
+	defer prog.End()
 	for _, entry := range images {
 		raw, err := a.Read(entry.Path)
 		if err != nil {
 			out.Failed = append(out.Failed, entry.Path+": "+err.Error())
-			coreprogress.Issue(entry.Path, err.Error())
+			step.Issue(entry.Path, err.Error())
 			continue
 		}
 		texture, err := ddsphyre.Parse(raw)
 		if err != nil {
 			out.Failed = append(out.Failed, entry.Path+": "+err.Error())
-			coreprogress.Issue(entry.Path, err.Error())
+			step.Issue(entry.Path, err.Error())
 			continue
 		}
 		dds, err := texture.ExtractToDDS()
 		if err != nil {
 			out.Failed = append(out.Failed, entry.Path+": "+err.Error())
-			coreprogress.Issue(entry.Path, err.Error())
+			step.Issue(entry.Path, err.Error())
 			continue
 		}
 		png, err := ddsphyre.DDSToPNG(dds)
 		if err != nil {
 			out.Failed = append(out.Failed, entry.Path+": "+err.Error())
-			coreprogress.Issue(entry.Path, err.Error())
+			step.Issue(entry.Path, err.Error())
 			continue
 		}
 		if !strings.HasSuffix(strings.ToLower(entry.Path), strings.ToLower(ddsphyre.Suffix)) {
@@ -355,11 +355,11 @@ func (s *MetadataService) ExtractVbfImagesSelection(vbfPath string, paths []stri
 		}
 		if err != nil {
 			out.Failed = append(out.Failed, entry.Path+": "+err.Error())
-			coreprogress.Issue(entry.Path, err.Error())
+			step.Issue(entry.Path, err.Error())
 			continue
 		}
 		out.Done = append(out.Done, entry.Path)
-		coreprogress.Step(entry.Path)
+		step.Step(entry.Path)
 	}
 	return out, nil
 }
@@ -449,18 +449,33 @@ func (s *MetadataService) ExportVbfSelection(vbfPath, format string, paths []str
 		KindEvents, KindBattleText, KindCloud, KindTutorial, KindMenuMain,
 		KindHelp, KindMacro, KindObjects, KindLockit,
 	}
-	selectedCount := 0
-	for _, selected := range byKind {
-		selectedCount += len(selected)
-	}
-	coreprogress.Begin(fmt.Sprintf("Extraindo texto de %s", base), selectedCount)
-	defer coreprogress.End()
-	var written []string
+	// Batch com UM STEP POR KIND presente na seleção — o modal lista as
+	// ações com a barra própria de cada uma (declara upfront).
+	present := make([]string, 0, len(byKind))
 	for _, kind := range order {
-		selected, ok := byKind[kind]
-		if !ok {
-			continue
+		if _, ok := byKind[kind]; ok {
+			present = append(present, kind)
 		}
+	}
+	labels := make([]string, len(present))
+	for i, kind := range present {
+		if l, ok := kindStepLabels[kind]; ok {
+			labels[i] = l
+		} else {
+			labels[i] = kind
+		}
+	}
+	batch := s.progress.NewBatch(fmt.Sprintf("Extraindo texto de %s", base))
+	steps := batch.Steps(labels...)
+	// Sem emitter: steps nil — um step nil (no-op) por kind.
+	if steps == nil {
+		steps = make([]*progress.Step, len(present))
+	}
+	defer batch.End()
+	var written []string
+	for ki, kind := range present {
+		selected := byKind[kind]
+		step := steps[ki]
 		if kind == KindHelp {
 			// Help é um único artefato com dedup/ref entre os seis painéis.
 			// Como no export de data/, se um painel foi marcado o artefato
@@ -485,13 +500,14 @@ func (s *MetadataService) ExportVbfSelection(vbfPath, format string, paths []str
 			}
 		}
 		sort.Strings(ids)
+		step.Begin("", len(ids))
 
 		collection := make(dto.Collection)
 		if kind == KindMacro {
 			macroPath := selected[""]
 			chunks, cerr := s.ListVbfMacroChunks(vbfPath, macroPath)
 			if cerr != nil {
-				coreprogress.Issue(kind, cerr.Error())
+				step.Fail(fmt.Errorf("listando chunks de macro do .vbf: %w", cerr).Error())
 				return written, fmt.Errorf("listando chunks de macro do .vbf: %w", cerr)
 			}
 			ids = ids[:0]
@@ -499,39 +515,43 @@ func (s *MetadataService) ExportVbfSelection(vbfPath, format string, paths []str
 				ids = append(ids, chunk.ID)
 			}
 			sort.Strings(ids)
+			step.SetTotal(len(ids))
 			for _, id := range ids {
 				entry, eerr := s.vbfExportEntry(a, kind, id, macroPath, version)
 				if eerr != nil {
-					coreprogress.Issue(kind+"/"+id, eerr.Error())
+					step.Fail(fmt.Errorf("lendo macro %s do .vbf: %w", id, eerr).Error())
 					return written, fmt.Errorf("lendo macro %s do .vbf: %w", id, eerr)
 				}
 				collection[id] = entry
-				coreprogress.Step(kind + "/" + id)
+				step.Step(id)
 			}
 		} else {
 			for _, id := range ids {
 				entry, eerr := s.vbfExportEntry(a, kind, id, selected[id], version)
 				if eerr != nil {
-					coreprogress.Issue(kind+"/"+id, eerr.Error())
+					step.Fail(fmt.Errorf("lendo %s/%s do .vbf: %w", kind, id, eerr).Error())
 					return written, fmt.Errorf("lendo %s/%s do .vbf: %w", kind, id, eerr)
 				}
 				collection[id] = entry
-				coreprogress.Step(kind + "/" + id)
+				step.Step(id)
 			}
 		}
 		if len(collection) == 0 {
+			step.End()
 			continue
 		}
 		collection = filterExportRows(collection)
 		if len(collection) == 0 {
+			step.End()
 			continue
 		}
 		outputs, werr := writeVbfExport(kind, version, ids, collection, format, langs)
 		if werr != nil {
-			coreprogress.Issue(kind, werr.Error())
+			step.Fail(fmt.Errorf("export %s do .vbf: %w", kind, werr).Error())
 			return written, fmt.Errorf("export %s do .vbf: %w", kind, werr)
 		}
 		written = append(written, outputs...)
+		step.End()
 	}
 	return written, nil
 }

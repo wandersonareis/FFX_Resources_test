@@ -59,7 +59,7 @@ func clearEventsForTest(t *testing.T) {
 // artefato com hash/texto consistentes antes da edição.
 func collectionRawForTest(t *testing.T) dto.Collection {
 	t.Helper()
-	raw, err := NewMetadataService(nil).GetCollection(KindEvents, common.GameVersionFFX2, nil)
+	raw, err := NewMetadataService(nil).GetCollection(KindEvents, common.GameVersionFFX2, nil, nil)
 	if err != nil {
 		t.Fatalf("collection: %v", err)
 	}

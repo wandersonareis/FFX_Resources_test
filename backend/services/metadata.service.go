@@ -10,7 +10,6 @@ import (
 
 	"ffxresources/backend/builders"
 	"ffxresources/backend/common"
-	"ffxresources/backend/core/progress"
 	"ffxresources/backend/core/reader"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/ddsphyre"
@@ -23,6 +22,8 @@ import (
 	"ffxresources/backend/fileFormats/objectsfile/chunkmap"
 	jsonfmt "ffxresources/backend/formatters/json"
 	strfmt "ffxresources/backend/formatters/strings"
+	"ffxresources/backend/loggingService"
+	"ffxresources/backend/progress"
 )
 
 // Kinds lógicos servidos ao frontend: textos e imagens (.dds.phyre).
@@ -63,6 +64,30 @@ type EntrySummary struct {
 // continua intocado; este service é o "formato frontend".
 type MetadataService struct {
 	notifier INotificationService
+	// progress é a ponte wails dos batches (export/extração). nil = sem
+	// progresso: testes, CLI e appcore seguem silenciosos.
+	progress *progress.Emitter
+}
+
+// NewMetadataService cria o serviço. O emitter é OPCIONAL (variadic): o
+// app injeta o emitter real (batches publicam eventos do wails) e o
+// resto do mundo (testes/appcore) constrói sem progresso.
+func NewMetadataService(notifier INotificationService, em ...*progress.Emitter) *MetadataService {
+	s := &MetadataService{notifier: notifier}
+	if len(em) > 0 {
+		s.progress = em[0]
+	}
+	return s
+}
+
+// progressStep cria o batch de UMA ação (padrão das extrações/replicações
+// de imagem e .vbf): o título do modal é o label da ação. Sem emitter
+// devolve (nil, nil) — todos os métodos são nil-safe.
+func (s *MetadataService) progressStep(label string, total int) (*progress.Batch, *progress.Step) {
+	batch := s.progress.NewBatch(label)
+	step := batch.Step(label)
+	step.Begin(label, total)
+	return batch, step
 }
 
 // dedupViewKinds são os kinds cujo view (GetEntry) sai com dedup global
@@ -106,7 +131,7 @@ func (s *MetadataService) rawViewOf(kind string, version common.GameVersion) (ra
 	if v, ok := dedupViewCache[key]; ok {
 		return v, nil
 	}
-	full, err := s.GetCollection(kind, version, nil)
+	full, err := s.GetCollection(kind, version, nil, progress.Nop())
 	if err != nil {
 		return rawView{}, err
 	}
@@ -185,8 +210,24 @@ func clearDedupViewCache() {
 	vbfSessionResetAll()
 }
 
-func NewMetadataService(notifier INotificationService) *MetadataService {
-	return &MetadataService{notifier: notifier}
+func (s *MetadataService) notifyWarn(message string) {
+	if s.notifier != nil {
+		s.notifier.NotifyWarn(message)
+	}
+}
+
+// reportEventSkips leva os eventos pulados na carga implícita ao
+// diagnóstico + toast (cap anti-flood): a carga em si continua silenciosa
+// — quem reporta é o chamador, não o loader.
+const maxSkipToasts = 15
+
+func (s *MetadataService) reportEventSkips(skips []event.EventSkip) {
+	for i, skip := range skips {
+		loggingService.DiagWarn("carga/"+skip.ID, skip.Reason, map[string]any{"item": skip.ID})
+		if i < maxSkipToasts {
+			s.notifyWarn(skip.Reason)
+		}
+	}
 }
 
 // Cache de inicialização por versão: charsets + macros carregados uma única
@@ -352,16 +393,9 @@ func localizationPatternFromPath(slashAbs string) (string, bool) {
 	return strings.Join(segs[1:], "/"), true
 }
 
-// exportProgress emite o progresso do export por entrada: Begin com o
-// total de entradas da Collection e Step por key — os formatters chamam
-// progress.Step no loop de serialização; o defer fecha o ciclo.
-func exportProgress(kind string, version common.GameVersion, c dto.Collection) func() {
-	label := fmt.Sprintf("Exportando %s (%s)…", kind, version)
-	progress.Begin(label, len(c))
-	return func() {
-		progress.End()
-	}
-}
+// exportProgress deprecou: a barra agora nasce na EXTRAÇÃO (builders
+// fazem SetTotal + tick por entrada), dirigida pelo step do batch —
+// ver ExportArtifactBatch/exportKind em export_formats.go.
 
 // objectKeyForID procura nos layouts a key do basename (determinístico).
 func objectKeyForID(version common.GameVersion, id string) (string, bool) {
@@ -381,8 +415,9 @@ func objectKeyForID(version common.GameVersion, id string) (string, bool) {
 
 // ExportEntry monta o DTO da entrada (kind/id/version) e escreve os artefatos
 // JSON e .strings em mods/edits (caminhos padrão dos formatters). Devolve os
-// caminhos escritos. langs nil/vazio = todos os idiomas.
-func (s *MetadataService) ExportEntry(kind string, version common.GameVersion, id string, langs []string) ([]string, error) {
+// caminhos escritos. langs nil/vazio = todos os idiomas. Progresso: batch de
+// UMA ação — o step acompanha a extração (help carrega os 6 painéis).
+func (s *MetadataService) ExportEntry(kind string, version common.GameVersion, id string, langs []string) (paths []string, retErr error) {
 	kind = strings.ToLower(strings.TrimSpace(kind))
 	// help: o artefato é único e SEMPRE cobre os 6 painéis (as defs do dedup
 	// só resolvem com todos os arquivos no mesmo arquivo) — a seleção da
@@ -394,18 +429,33 @@ func (s *MetadataService) ExportEntry(kind string, version common.GameVersion, i
 		}
 		ids = helpfile.HelpEntryNames()
 	}
-	c, err := s.GetCollection(kind, version, ids)
+
+	label := id
+	if kind == KindHelp || kind == KindMacro || kind == KindLockit {
+		if l, ok := kindStepLabels[kind]; ok {
+			label = l
+		}
+	}
+	batch, step := s.progressStep(fmt.Sprintf("Exportando %s…", label), 0)
+	defer func() {
+		if retErr != nil {
+			step.Fail(retErr.Error())
+		} else {
+			batch.SetSummary(len(paths), exportSummaryDestination(paths))
+		}
+		batch.End()
+	}()
+
+	c, err := s.GetCollection(kind, version, ids, step)
 	if err != nil {
 		return nil, err
 	}
 	// Menu de contexto exportou com hifen: o filtro de rows em branco
 	// ('us' vazio/espaço/"-") vale para TODO artefato — mesmo contrato de
-	// ExportJSON/ExportStrings. Antes do exportProgress: a barra conta só
-	// o que sai.
+	// ExportArtifactBatch. Depois do filtro o step fecha cheio.
 	c = filterExportRows(c)
-	defer exportProgress(kind, version, c)()
+	step.End()
 
-	var paths []string
 	switch kind {
 	case KindEvents:
 		jp, jerr := jsonfmt.NewJSONEventsFormatter().WriteEvents(c, version, langs)
@@ -491,10 +541,10 @@ func (s *MetadataService) ImportEntry(kind string, version common.GameVersion, i
 
 	switch kind {
 	case KindEvents:
-		if err := ensureEventsLoaded(version); err != nil {
+		if err := s.ensureEventsLoaded(version); err != nil {
 			return nil, err
 		}
-		c, err := s.GetCollection(kind, version, []string{id})
+		c, err := s.GetCollection(kind, version, []string{id}, progress.Nop())
 		if err != nil {
 			return nil, err
 		}
@@ -609,7 +659,7 @@ func (s *MetadataService) ApplyEntry(kind string, version common.GameVersion, id
 
 	switch kind {
 	case KindEvents:
-		if err := ensureEventsLoaded(version); err != nil {
+		if err := s.ensureEventsLoaded(version); err != nil {
 			return err
 		}
 		return builders.ApplyEventsDTO(version, dto.Collection{id: entry}, []string{id})
@@ -617,7 +667,7 @@ func (s *MetadataService) ApplyEntry(kind string, version common.GameVersion, id
 		return s.applyObjectsEntry(version, id, entry)
 	case KindMacro:
 		// Aplica sobre o DTO completo para não perder os outros chunks.
-		c, err := builders.BuildMacroDTO(version)
+		c, err := builders.BuildMacroDTO(version, nil)
 		if err != nil {
 			return err
 		}
@@ -668,7 +718,7 @@ func (s *MetadataService) ApplyTextCollection(kind string, version common.GameVe
 
 	switch kind {
 	case KindEvents:
-		if err := ensureEventsLoaded(version); err != nil {
+		if err := s.ensureEventsLoaded(version); err != nil {
 			return err
 		}
 		return builders.ApplyEventsDTO(version, c, c.SortedKeys())
@@ -680,7 +730,7 @@ func (s *MetadataService) ApplyTextCollection(kind string, version common.GameVe
 
 	case KindMacro:
 		// Aplica sobre o DTO completo para não perder os outros chunks.
-		full, err := builders.BuildMacroDTO(version)
+		full, err := builders.BuildMacroDTO(version, nil)
 		if err != nil {
 			return err
 		}
@@ -735,6 +785,7 @@ func applyObjectsCollection(version common.GameVersion, c dto.Collection) error 
 	}
 	return nil
 }
+
 // applyMacroCollection sobrepõe o lote no dicionário COMPLETO e reconstrói
 // os binários (→ mods/). full vem da fonte da sessão: o dicionário inteiro
 // do .vbf no fluxo de container, o do store em data/. Refs "$hash" do
@@ -825,7 +876,7 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 	}
 	switch strings.ToLower(strings.TrimSpace(kind)) {
 	case KindEvents:
-		if err := ensureEventsLoaded(version); err != nil {
+		if err := s.ensureEventsLoaded(version); err != nil {
 			return nil, err
 		}
 		ids := filterEventIDsForVersion(event.GetAllEventIDs(version), version)
@@ -873,7 +924,7 @@ func (s *MetadataService) ListEntries(kind string, version common.GameVersion) (
 		}
 		// A árvore é definida por data/: o dicionário existe em data/ ou
 		// não existe. O que só estiver em mods/ não é exibido (regra 4).
-		c, err := builders.BuildMacroDTOFromSource(version, common.SourceData)
+		c, err := builders.BuildMacroDTOFromSource(version, common.SourceData, nil)
 		if err != nil {
 			common.LogWarning("macro %s: sem original em data/ — árvore vazia: %v", version, err)
 			return []EntrySummary{}, nil
@@ -1113,7 +1164,7 @@ func (s *MetadataService) currentEntry(kind, id string, version common.GameVersi
 		// Escopo do PRÓPRIO arquivo (refs não propagam entre objetos): a
 		// ordem dos ponteiros cobre só este arquivo, self-contained como o
 		// export por arquivo.
-		c, err := s.GetCollection(kind, version, []string{id})
+		c, err := s.GetCollection(kind, version, []string{id}, progress.Nop())
 		if err != nil {
 			return dto.FileEntry{}, 0, nil, err
 		}
@@ -1128,7 +1179,7 @@ func (s *MetadataService) currentEntry(kind, id string, version common.GameVersi
 		}
 		return entry, base, order, nil
 	}
-	c, err := s.GetCollection(kind, version, []string{id})
+	c, err := s.GetCollection(kind, version, []string{id}, progress.Nop())
 	if err != nil {
 		return dto.FileEntry{}, 0, nil, err
 	}
@@ -1213,14 +1264,19 @@ func (s *MetadataService) normalizeIDs(ids []string) []string {
 // ids vazio = tudo (bulk: 20MB FFX / 45MB FFX2+lastmiss em events —
 // uso excepcional; o padrão do frontend é ListEntries + GetEntry).
 // ids aceita ids ou keys (metadata.key/caminho resolvidos para id).
-func (s *MetadataService) GetCollection(kind string, version common.GameVersion, ids []string) (dto.Collection, error) {
+// GetCollection monta a Collection do kind (extração: leitura dos binários
+// + montagem do DTO). O Reporter r recebe o progresso da extração — os
+// builders fazem SetTotal e um tick por entrada; nil = sem progresso
+// (view/import/apply não abrem modal).
+func (s *MetadataService) GetCollection(kind string, version common.GameVersion, ids []string, r progress.Reporter) (dto.Collection, error) {
+	r = progress.OrNop(r)
 	if err := ensureVersionReady(version); err != nil {
 		return nil, err
 	}
 	ids = s.normalizeIDs(ids)
 	switch strings.ToLower(strings.TrimSpace(kind)) {
 	case KindEvents:
-		if err := ensureEventsLoaded(version); err != nil {
+		if err := s.ensureEventsLoaded(version); err != nil {
 			return nil, err
 		}
 		// Frescura bulk (export/lote): binário modificado no disco
@@ -1228,15 +1284,15 @@ func (s *MetadataService) GetCollection(kind string, version common.GameVersion,
 		if event.EnsureAllEventsFresh(version, ids) {
 			clearDedupViewCache()
 		}
-		return builders.BuildEventsDTO(version, ids)
+		return builders.BuildEventsDTO(version, ids, r)
 	case KindObjects:
-		return s.buildObjectsCollection(version, ids)
+		return s.buildObjectsCollection(version, ids, r)
 	case KindMacro:
 		if version == common.GameVersionLastMiss || version == common.GameVersionEternalCalm {
 			// Expansões sem dicionário próprio (macrodic do jogo-pai).
 			return dto.Collection{}, nil
 		}
-		c, err := builders.BuildMacroDTO(version)
+		c, err := builders.BuildMacroDTO(version, r)
 		if err != nil {
 			return nil, err
 		}
@@ -1263,18 +1319,18 @@ func (s *MetadataService) GetCollection(kind string, version common.GameVersion,
 			// vazio, sem erro).
 			return dto.Collection{}, nil
 		}
-		return builders.BuildLockitDTO(version, ids)
+		return builders.BuildLockitDTO(version, ids, r)
 	case KindHelp:
 		if version != common.GameVersionFFX {
 			// A árvore ffx2/expansões não tem a pasta help/.
 			return dto.Collection{}, nil
 		}
-		return builders.BuildHelpDTO(version, ids)
+		return builders.BuildHelpDTO(version, ids, r)
 	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
 		if !eventtableKindUsable(kind, version) {
 			return dto.Collection{}, nil
 		}
-		return builders.BuildTableDTO(kind, version, ids)
+		return builders.BuildTableDTO(kind, version, ids, r)
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
@@ -1290,99 +1346,23 @@ func helpExportIDs(kind string, ids []string) []string {
 	return ids
 }
 
-// ExportStrings monta o DTO em memória e escreve arquivos .strings,
-// ao lado dos .json (mesmo diretório, mesmo basename).
-// ids vazio = tudo; langs nil/vazio = todos os idiomas. O dedup do marshal
-// é por arquivo: o escopo do pedido vira o escopo do dedup (self-contained,
-// sem refs órfãs), e o nome do artefato reflete o escopo (eventsExportPath).
-func (s *MetadataService) ExportStrings(kind string, version common.GameVersion, ids, langs []string) (paths []string, retErr error) {
-	kind = strings.ToLower(strings.TrimSpace(kind))
-	if kind == KindEvents || kind == KindMacro {
-		ids = s.normalizeIDs(ids)
-	}
-	progress.Begin(fmt.Sprintf("Extraindo texto (%s)", kind), len(ids))
-	defer func() {
-		if retErr != nil {
-			progress.Issue("", retErr.Error())
-		}
-		progress.End()
-	}()
-	c, err := s.GetCollection(kind, version, helpExportIDs(kind, ids))
-	if err != nil {
-		return nil, err
-	}
-	c = filterExportRows(c)
-	progress.SetTotal(len(c))
-	f := strfmt.NewStringsFormatter()
-	switch kind {
-	case KindEvents:
-		path, perr := eventsExportPath(version, ids)
-		if perr != nil {
-			return nil, perr
-		}
-		p, werr := f.WriteEventsFile(c, strfmt.StringsPathFor(path), langs)
-		if werr != nil {
-			return nil, werr
-		}
-		return []string{p}, nil
-	case KindObjects:
-		if len(ids) == 0 {
-			// Export completo: arquivo único com dedup global entre as
-			// entradas (irmão do JSON bulk, mesmo basename).
-			path, perr := objectsBulkPath(version)
-			if perr != nil {
-				return nil, perr
-			}
-			p, werr := f.WriteObjectsFile(c, strfmt.StringsPathFor(path), langs)
-			if werr != nil {
-				return nil, werr
-			}
-			return []string{p}, nil
-		}
-		return f.WriteObjects(c, version, langs)
-	case KindMacro:
-		path, perr := macroExportPath(version, ids)
-		if perr != nil {
-			return nil, perr
-		}
-		p, werr := f.WriteMacroFile(c, path, langs)
-		if werr != nil {
-			return nil, werr
-		}
-		return []string{p}, nil
-	case KindLockit:
-		return f.WriteObjects(c, version, langs)
-	case KindHelp:
-		return f.WriteHelp(c, version, langs)
-	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
-		if len(ids) == 0 {
-			// Export completo: UM arquivo por kind (espelho do JSON bulk,
-			// mesmo basename com .strings) — nunca um por entrada.
-			path, perr := tableBulkPath(kind, version)
-			if perr != nil {
-				return nil, perr
-			}
-			p, werr := f.WriteObjectsFile(c, strfmt.StringsPathFor(path), langs)
-			if werr != nil {
-				return nil, werr
-			}
-			return []string{p}, nil
-		}
-		return f.WriteObjects(c, version, langs)
-	default:
-		return nil, fmt.Errorf("unknown kind: %s", kind)
-	}
-}
+// ExportStrings/ExportJSON/ExportArtifact dobraram em ExportArtifactBatch
+// (export_formats.go): a extração é UMA (builders tick a tick), só o write
+// muda por formato — sem triplicação de Begin/SetTotal por kind.
 
 // buildObjectsCollection carrega cada arquivo por demanda e monta o DTO.
-// ids vazio = todos os layouts da versão. Fluxo único: chunkmap.
-func (s *MetadataService) buildObjectsCollection(version common.GameVersion, ids []string) (dto.Collection, error) {
+// ids vazio = todos os layouts da versão. Fluxo único: chunkmap. O
+// Reporter r recebe um tick por layout visitado.
+func (s *MetadataService) buildObjectsCollection(version common.GameVersion, ids []string, r progress.Reporter) (dto.Collection, error) {
+	r = progress.OrNop(r)
 	layouts, err := s.resolveObjectLayouts(version, ids)
 	if err != nil {
 		return nil, err
 	}
+	r.SetTotal(len(layouts))
 	out := make(dto.Collection, len(layouts))
 	for _, layout := range layouts {
+		r.Step(layout.FileName)
 		key := objectsfile.FileLayoutKey(version, layout.PatternPath())
 		loader, ok := chunkmap.SchemaRegistry[key]
 		if !ok {
@@ -1443,13 +1423,19 @@ func (s *MetadataService) resolveObjectLayouts(version common.GameVersion, ids [
 // ensureEventsLoaded garante o store em memória (carga bulk única;
 // chamadas seguintes usam o datastore). Sem isso, o DTO viria vazio
 // onde o Extract direto do arquivo funcionaria.
-func ensureEventsLoaded(version common.GameVersion) error {
+// ensureEventsLoaded garante o store em memória (carga bulk única;
+// método: precisa do notifier para reportar os eventos pulados).
+func (s *MetadataService) ensureEventsLoaded(version common.GameVersion) error {
 	if event.HasEvents(version) {
 		return nil
 	}
-	if err := event.NewEventsBinaryFile(version).LoadFromBinary(); err != nil {
+	b := event.NewEventsBinaryFile(version)
+	if err := b.LoadFromBinary(); err != nil {
 		return fmt.Errorf("failed to load events for version %s: %w", version, err)
 	}
+	// A carga é silenciosa (implícita), mas os eventos pulados AVISAM:
+	// diagnóstico + toast com cap — ver reportEventSkips.
+	s.reportEventSkips(b.Skipped)
 	return nil
 }
 

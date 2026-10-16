@@ -213,7 +213,7 @@ func TestVbfSessionLockitSalvaSomenteEmMods(t *testing.T) {
 		t.Fatal("nenhum lockit decodificou de data/")
 	}
 	id := l.ID()
-	c, err := builders.BuildLockitDTOFrom([]*lockit.LockitFile{f})
+	c, err := builders.BuildLockitDTOFrom([]*lockit.LockitFile{f}, nil)
 	if err != nil {
 		t.Fatalf("DTO lockit: %v", err)
 	}
@@ -243,7 +243,7 @@ func TestVbfSessionLockitSalvaSomenteEmMods(t *testing.T) {
 	if err != nil {
 		t.Fatalf("releitura do lockit em mods/: %v", err)
 	}
-	rc, err := builders.BuildLockitDTOFrom([]*lockit.LockitFile{rb})
+	rc, err := builders.BuildLockitDTOFrom([]*lockit.LockitFile{rb}, nil)
 	if err != nil {
 		t.Fatalf("DTO da releitura: %v", err)
 	}
@@ -311,7 +311,7 @@ func TestVbfSessionMacroSalvaSomenteEmMods(t *testing.T) {
 	root := seedVbfEditRoot(t)
 	antes := snapshotOutsideMods(t, root)
 
-	full, err := builders.BuildMacroDTOFromSource(common.GameVersionFFX, common.SourceData)
+	full, err := builders.BuildMacroDTOFromSource(common.GameVersionFFX, common.SourceData, nil)
 	if err != nil {
 		t.Fatalf("dicionário macro de data/: %v", err)
 	}
@@ -352,7 +352,7 @@ func TestVbfSessionMacroSalvaSomenteEmMods(t *testing.T) {
 
 	requireNadaForaDeModsMudou(t, root, antes)
 
-	rb, err := builders.BuildMacroDTOFromSource(common.GameVersionFFX, common.SourceMods)
+	rb, err := builders.BuildMacroDTOFromSource(common.GameVersionFFX, common.SourceMods, nil)
 	if err != nil {
 		t.Fatalf("releitura do dicionário em mods/: %v", err)
 	}

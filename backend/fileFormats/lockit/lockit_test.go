@@ -151,7 +151,7 @@ func TestLockitDTOExportGroupingAndImportUsOnly(t *testing.T) {
 
 	l, _ := lockit.LayoutForID(common.GameVersionFFX, "ffx_loc_kit_ps3")
 
-	c, err := builders.BuildLockitDTO(common.GameVersionFFX, nil)
+	c, err := builders.BuildLockitDTO(common.GameVersionFFX, nil, nil)
 	if err != nil {
 		t.Fatalf("build dto: %v", err)
 	}
@@ -290,7 +290,7 @@ func TestLockitStoreReloadOnExternalChange(t *testing.T) {
 func TestLockitJSONExportShape(t *testing.T) {
 	setupTempData(t)
 
-	c, err := builders.BuildLockitDTO(common.GameVersionFFX, nil)
+	c, err := builders.BuildLockitDTO(common.GameVersionFFX, nil, nil)
 	if err != nil {
 		t.Fatalf("build dto: %v", err)
 	}

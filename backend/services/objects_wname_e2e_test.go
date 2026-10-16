@@ -17,7 +17,7 @@ func TestObjectsWeaponNamesCarregaNoFluxoChunkmap(t *testing.T) {
 
 	const id = "w_name"
 	s := NewMetadataService(nil)
-	c, err := s.buildObjectsCollection(common.GameVersionFFX, []string{id})
+	c, err := s.buildObjectsCollection(common.GameVersionFFX, []string{id}, nil)
 	if err != nil {
 		t.Fatalf("buildObjectsCollection: %v", err)
 	}
@@ -39,8 +39,6 @@ func TestObjectsWeaponNamesCarregaNoFluxoChunkmap(t *testing.T) {
 	}
 	_ = dto.RowKey(entry.Rows[0])
 }
-
-
 
 func min(a, b int) int {
 	if a < b {

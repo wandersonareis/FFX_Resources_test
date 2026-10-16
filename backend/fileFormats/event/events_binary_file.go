@@ -8,7 +8,6 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/components"
 	ffxencoding "ffxresources/backend/core/encoding"
-	"ffxresources/backend/core/progress"
 	"ffxresources/backend/datastore"
 	"ffxresources/backend/interactions"
 	"ffxresources/backend/models"
@@ -23,6 +22,17 @@ type EventsBinaryFile struct {
 	Version common.GameVersion
 	Infos   components.IList[*models.EventFileInfo]
 	Objects components.IList[datastore.IGlobalLocalizedTextObject]
+	// Skipped carrega os eventos pulados na carga (falha de leitura ou sem
+	// conteúdo): o loader não conhece progresso/toast — quem chama decide
+	// o que fazer com a lista (o services reporta cada um).
+	Skipped []EventSkip
+}
+
+// EventSkip é um evento pulado na carga: quem reporta (Issue/toast) usa o
+// motivo como mensagem.
+type EventSkip struct {
+	ID     string
+	Reason string
 }
 
 func NewEventsBinaryFile(version common.GameVersion) *EventsBinaryFile {
@@ -110,19 +120,25 @@ func (b *EventsBinaryFile) LoadFromBinary() error {
 	// Sem barra de progresso: a carga é implícita (boot/carga de árvore),
 	// à frente dela já existem os indicadores próprios da árvore — um modal
 	// aqui aparecia DOIS no boot (a pré-carga das outras versões dispara
-	// outra carga em background). Falhas por evento são PULADAS com aviso
-	// individual (Issue → toast com cap + arquivo de diagnóstico) e a carga
-	// segue com o que deu certo.
+	// outra carga em background). Falhas por evento são PULADAS e ficam
+	// coletadas em b.Skipped — quem chama (services) reporta cada uma (toast
+	// com cap + arquivo de diagnóstico) e a carga segue com o que deu certo.
 
 	for _, info := range loadedInfos.Items() {
 		eventFile, err := ReadCompleteEventFile(info)
 		if err != nil {
-			progress.Issue(info.EventID, fmt.Sprintf("evento pulado (falha de leitura): %s: %v", info.EventID, err))
+			b.Skipped = append(b.Skipped, EventSkip{
+				ID:     info.EventID,
+				Reason: fmt.Sprintf("evento pulado (falha de leitura): %s: %v", info.EventID, err),
+			})
 			common.LogWarning("failed to read event file %s: %v", info.EventID, err)
 			continue
 		}
 		if eventFile == nil {
-			progress.Issue(info.EventID, fmt.Sprintf("evento pulado (sem conteúdo): %s", info.EventID))
+			b.Skipped = append(b.Skipped, EventSkip{
+				ID:     info.EventID,
+				Reason: fmt.Sprintf("evento pulado (sem conteúdo): %s", info.EventID),
+			})
 			continue
 		}
 		if b.Objects == nil {

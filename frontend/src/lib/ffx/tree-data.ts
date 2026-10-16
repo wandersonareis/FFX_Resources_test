@@ -1,9 +1,6 @@
 import {
+  ExportArtifactBatch,
   ExportEntry,
-  ExportJSON,
-  ExportStrings,
-  ExportCSV,
-  ExportXLSX,
   GetTextEntry,
   ImportEntry,
   ImportFile,
@@ -449,47 +446,22 @@ export async function importEntry(
   );
 }
 
-/** Exporta o lote em JSON (ids vazio = tudo do kind; langs vazio = todos). */
-export async function exportJSON(
-  kind: EntryKind,
+/** Exporta o lote como UMA operação agrupada: um item {kind, ids} por ação
+ * (ids vazio = tudo do kind), no formato pedido (json | strings | csv |
+ * xlsx). O modal de progresso (steps por kind, barra própria por ação) é
+ * dirigido pelos eventos do backend — o caller não mexe em toast. */
+export async function exportArtifactBatch(
+  items: { kind: EntryKind; ids: string[] }[],
   version: GameVersionId,
-  ids: string[],
-  langs: string[] = []
-): Promise<string[]> {
-  return ExportJSON(kind, version as Parameters<typeof ExportJSON>[1], ids, langs);
-}
-
-/** Exporta o lote em .strings (mesmo contrato de exportJSON). */
-export async function exportStrings(
-  kind: EntryKind,
-  version: GameVersionId,
-  ids: string[],
-  langs: string[] = []
-): Promise<string[]> {
-  return ExportStrings(kind, version as Parameters<typeof ExportStrings>[1], ids, langs);
-}
-
-/** Exporta o lote no formato especificado (json | strings | csv | xlsx).
- * CSV e XLSX requerem implementação no backend — por enquanto fallback para JSON. */
-export async function exportBatch(
-  kind: EntryKind,
-  version: GameVersionId,
-  ids: string[],
-  langs: string[],
+  langs: string[] = [],
   format: ExportFormat
 ): Promise<string[]> {
-  switch (format) {
-    case 'json':
-      return ExportJSON(kind, version as Parameters<typeof ExportJSON>[1], ids, langs);
-    case 'strings':
-      return ExportStrings(kind, version as Parameters<typeof ExportStrings>[1], ids, langs);
-    case 'csv':
-      return ExportCSV(kind, version as Parameters<typeof ExportCSV>[1], ids, langs);
-    case 'xlsx':
-      return ExportXLSX(kind, version as Parameters<typeof ExportXLSX>[1], ids, langs);
-    default:
-      return ExportJSON(kind, version as Parameters<typeof ExportJSON>[1], ids, langs);
-  }
+  return ExportArtifactBatch(
+    items.map((it) => ({ kind: it.kind, ids: it.ids })),
+    version as Parameters<typeof ExportArtifactBatch>[1],
+    langs,
+    format
+  );
 }
 
 /**

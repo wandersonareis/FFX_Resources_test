@@ -190,12 +190,12 @@ func (s *MetadataService) buildTextSearchIndex(version common.GameVersion) (text
 }
 
 func (s *MetadataService) indexMacroSearch(version common.GameVersion, index *textSearchIndex) {
-	data, err := builders.BuildMacroDTOFromSource(version, common.SourceData)
+	data, err := builders.BuildMacroDTOFromSource(version, common.SourceData, nil)
 	if err != nil {
 		common.LogVerbose("busca de texto: sem índice de macro/%s em data/: %v", version, err)
 		return
 	}
-	mods, _ := builders.BuildMacroDTOFromSource(version, common.SourceMods)
+	mods, _ := builders.BuildMacroDTOFromSource(version, common.SourceMods, nil)
 	for _, id := range data.SortedKeys() {
 		dataEntry := data[id]
 		if !macroChunkHasText(dataEntry) {

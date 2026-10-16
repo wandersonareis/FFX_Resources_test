@@ -223,7 +223,7 @@ func (s *MetadataService) originalMacroEntry(id string, version common.GameVersi
 	}
 	originalMu.Unlock()
 
-	c, err := builders.BuildMacroDTOFromSource(version, originalSource)
+	c, err := builders.BuildMacroDTOFromSource(version, originalSource, nil)
 	if err != nil {
 		// Falha de leitura/interpretação: não memoiza (pode ser transitória).
 		return dto.FileEntry{}, false, err
@@ -240,7 +240,7 @@ func (s *MetadataService) originalMacroEntry(id string, version common.GameVersi
 // indicada, SEM cache — é o caminho do .vbf, onde o binário vem do overlay
 // e varia a cada escopo (o cache é só do pristine de data/).
 func (s *MetadataService) macroEntryFrom(id string, version common.GameVersion, src common.FileSource) (dto.FileEntry, bool, error) {
-	c, err := builders.BuildMacroDTOFromSource(version, src)
+	c, err := builders.BuildMacroDTOFromSource(version, src, nil)
 	if err != nil {
 		return dto.FileEntry{}, false, err
 	}
@@ -270,7 +270,7 @@ func (s *MetadataService) loadOriginalFrom(kind, id string, version common.GameV
 		}
 		return entry, true, nil
 
-		case KindObjects:
+	case KindObjects:
 		layouts, err := s.resolveObjectLayouts(version, []string{id})
 		if err != nil {
 			return dto.FileEntry{}, false, fmt.Errorf("objects %s: %w", id, err)
@@ -295,7 +295,7 @@ func (s *MetadataService) loadOriginalFrom(kind, id string, version common.GameV
 			return dto.FileEntry{}, false, nil
 		}
 		return entry, true, nil
-case KindLockit:
+	case KindLockit:
 		for _, l := range lockit.LayoutsForVersion(version) {
 			if l.ID() != id {
 				continue
@@ -304,7 +304,7 @@ case KindLockit:
 			if err != nil {
 				return dto.FileEntry{}, false, fmt.Errorf("lockit %s: %w", id, err)
 			}
-			c, err := builders.BuildLockitDTOFrom([]*lockit.LockitFile{f})
+			c, err := builders.BuildLockitDTOFrom([]*lockit.LockitFile{f}, nil)
 			if err != nil {
 				return dto.FileEntry{}, false, fmt.Errorf("lockit %s: %w", id, err)
 			}

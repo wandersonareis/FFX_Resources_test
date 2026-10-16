@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { parseError } from '@/lib/ffx/error-handler';
+import { progressWasShown } from '@/lib/ffx/progress-store';
 import { formatBytes } from '@/lib/ffx/bytes';
 import {
   extractVbfSelection,
@@ -90,30 +91,21 @@ export function VbfExtractDialog({
     if (!request || !preview || preview.files === 0 || extracting) return;
     setExtracting(true);
     setRunError(null);
-    const toastId = 'vbf-extract';
-    toast.loading(`Extraindo ${preview.files} arquivo(s)…`, { id: toastId });
     try {
       const result = await extractVbfSelection(
         request.root,
         request.paths,
         destRoot ?? ''
       );
-      const done = result.done ?? [];
-      const failed = result.failed ?? [];
-      if (failed.length > 0) {
-        toast.warning(
-          `Extraídos ${done.length} de ${result.total}. ${failed.length} arquivo(s) falharam.`,
-          { id: toastId }
-        );
-      } else {
-        toast.success(`Extraídos ${done.length} arquivo(s) para ${preview.destRoot}.`, {
-          id: toastId,
-        });
-      }
+      // O modal de progresso do backend acompanha arquivo a arquivo e
+      // mostra o resultado (falhas contam como issues) — sem toast paralelo.
+      void result;
       onDone();
     } catch (error) {
       const message = parseError(error);
-      toast.error(message, { id: toastId });
+      // Erro antes do batch abrir (seleção/destino): toast; durante a
+      // operação: o modal de progresso já exibiu.
+      if (!progressWasShown()) toast.error(message);
       setRunError(message);
       setExtracting(false);
     }

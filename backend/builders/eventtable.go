@@ -13,6 +13,7 @@ import (
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/fileFormats/eventtable"
 	"ffxresources/backend/formatters/hash"
+	"ffxresources/backend/progress"
 )
 
 // ResolveTableTargets implementa o fluxo estrito de seleção (padrão events):
@@ -49,14 +50,18 @@ func ResolveTableTargets(kind string, version common.GameVersion, ids []string) 
 
 // BuildTableDTO monta a Collection pronta (texto + metadata + hash) a
 // partir dos binários carregados no store. ids vazio = tudo.
-func BuildTableDTO(kind string, version common.GameVersion, ids []string) (dto.Collection, error) {
+// r recebe o progresso da extração (nil = sem progresso).
+func BuildTableDTO(kind string, version common.GameVersion, ids []string, r progress.Reporter) (dto.Collection, error) {
+	r = progress.OrNop(r)
 	targets, err := ResolveTableTargets(kind, version, ids)
 	if err != nil {
 		return nil, err
 	}
+	r.SetTotal(len(targets))
 	langs := SortedLocalizationKeys()
 	out := make(dto.Collection, len(targets))
 	for _, id := range targets {
+		r.Step(id)
 		f, err := eventtable.LoadFromStore(kind, version, id)
 		if err != nil {
 			common.LogVerbose("%s: skip %s: %v", kind, id, err)

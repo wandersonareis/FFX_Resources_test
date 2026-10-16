@@ -29,6 +29,7 @@ import { ConfigDialog } from '@/components/dialogs/config-dialog';
 import { AppHeader } from '@/components/app-header';
 import { ExportImportControls } from '@/components/export-import-controls';
 import { ProgressNotifier } from '@/components/progress-notifier';
+import { ProgressModal } from '@/components/progress/progress-modal';
 
 export function AppShell() {
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -156,6 +157,7 @@ export function AppShell() {
 
       <ConfigDialog open={configOpen} onOpenChange={setConfigOpen} />
       <ProgressNotifier />
+      <ProgressModal />
     </div>
   );
 }

@@ -11,6 +11,7 @@ import (
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/helpfile"
 	"ffxresources/backend/formatters/hash"
+	"ffxresources/backend/progress"
 )
 
 // ResolveHelpTargets implementa o fluxo estrito de seleção (padrão events):
@@ -52,14 +53,19 @@ func ResolveHelpTargets(version common.GameVersion, ids []string) ([]string, err
 // BuildHelpDTO monta a Collection pronta (texto + metadata + hash) a partir
 // dos binários carregados no store. Chave da Collection = id do painel
 // (now_help, now_help_page, mon_boku, s_monitor, dvdcopy, dvdcopy_page).
-func BuildHelpDTO(version common.GameVersion, ids []string) (dto.Collection, error) {
+// r recebe o progresso da extração: SetTotal com os painéis e um Step por
+// painel visitado (nil = sem progresso).
+func BuildHelpDTO(version common.GameVersion, ids []string, r progress.Reporter) (dto.Collection, error) {
+	r = progress.OrNop(r)
 	targets, err := ResolveHelpTargets(version, ids)
 	if err != nil {
 		return nil, err
 	}
+	r.SetTotal(len(targets))
 	langs := SortedLocalizationKeys()
 	out := make(dto.Collection, len(targets))
 	for _, name := range targets {
+		r.Step(name)
 		panel := helpfile.GetHelp(version, name)
 		if panel == nil {
 			continue

@@ -55,7 +55,7 @@ func TestResolveNoneFoundErrorsWithoutFallback(t *testing.T) {
 func TestBuildEventsDTOKeysAndRows(t *testing.T) {
 	event.ClearEvents(common.GameVersionFFX)
 	seedEvent("ev001")
-	c, err := builders.BuildEventsDTO(common.GameVersionFFX, []string{"ev001"})
+	c, err := builders.BuildEventsDTO(common.GameVersionFFX, []string{"ev001"}, nil)
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}

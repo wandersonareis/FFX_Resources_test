@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"ffxresources/backend/common"
-	coreprogress "ffxresources/backend/core/progress"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/ddsphyre"
 )
@@ -326,16 +325,16 @@ func (s *MetadataService) ExtractImageGroup(kind, id string, targets []string, v
 		return dto.BatchResult{}, err
 	}
 	res := dto.BatchResult{Done: []string{}, Failed: []string{}, Total: len(list)}
-	coreprogress.Begin(fmt.Sprintf("Extraindo %d textura(s)", len(list)), len(list))
-	defer coreprogress.End()
+	prog, step := s.progressStep(fmt.Sprintf("Extraindo %d textura(s)", len(list)), len(list))
+	defer prog.End()
 	for _, t := range list {
 		if _, eerr := ddsphyre.Extract(version, t); eerr != nil {
 			res.Failed = append(res.Failed, t+": "+eerr.Error())
-			coreprogress.Issue(t, eerr.Error())
+			step.Issue(t, eerr.Error())
 			continue
 		}
 		res.Done = append(res.Done, t)
-		coreprogress.Step(t)
+		step.Step(t)
 	}
 	// O aviso é do frontend (reportBatch → "N texturas extraídas.").
 	return res, nil
@@ -359,16 +358,16 @@ func (s *MetadataService) ExtractImageSelection(kind string, ids []string, versi
 	}
 
 	res := dto.BatchResult{Done: []string{}, Failed: []string{}, Total: len(list)}
-	coreprogress.Begin(fmt.Sprintf("Extraindo %d imagem(ns)", len(list)), len(list))
-	defer coreprogress.End()
+	prog, step := s.progressStep(fmt.Sprintf("Extraindo %d imagem(ns)", len(list)), len(list))
+	defer prog.End()
 	for _, id := range list {
 		if _, err := ddsphyre.Extract(version, id); err != nil {
 			res.Failed = append(res.Failed, id+": "+err.Error())
-			coreprogress.Issue(id, err.Error())
+			step.Issue(id, err.Error())
 			continue
 		}
 		res.Done = append(res.Done, id)
-		coreprogress.Step(id)
+		step.Step(id)
 	}
 	return res, nil
 }

@@ -37,7 +37,6 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/core/converter"
 	ffxencoding "ffxresources/backend/core/encoding"
-	coreprogress "ffxresources/backend/core/progress"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/fileFormats/eventtable"
@@ -49,6 +48,7 @@ import (
 	"ffxresources/backend/formatters/hash"
 	jsonfmt "ffxresources/backend/formatters/json"
 	strfmt "ffxresources/backend/formatters/strings"
+	"ffxresources/backend/progress"
 )
 
 // importUint16Limit é o teto de bytes por binário: os offsets são uint16
@@ -514,7 +514,7 @@ func (s *MetadataService) importKnownIDs(kind string, version common.GameVersion
 	var macroFull dto.Collection
 	switch kind {
 	case KindEvents:
-		if err := ensureEventsLoaded(version); err != nil {
+		if err := s.ensureEventsLoaded(version); err != nil {
 			return nil, nil, err
 		}
 		visible := make(map[string]bool)
@@ -544,7 +544,7 @@ func (s *MetadataService) importKnownIDs(kind string, version common.GameVersion
 			// as entradas importadas entram no resumo como desconhecidas.
 			return known, nil, nil
 		}
-		full, err := builders.BuildMacroDTO(version)
+		full, err := builders.BuildMacroDTO(version, nil)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -593,7 +593,7 @@ func (s *MetadataService) loadImportStore(kind string, version common.GameVersio
 		}
 		return out, nil
 	}
-	return s.GetCollection(kind, version, ids)
+	return s.GetCollection(kind, version, ids, progress.Nop())
 }
 
 // ---- capacidade uint16 (pós-rebuild, só leitura) ------------------------------
@@ -725,6 +725,7 @@ func importObjectsUsage(version common.GameVersion, id string, imp dto.FileEntry
 	usage.Over = used > importUint16Limit
 	return usage, nil
 }
+
 // importMacroUsage reconstrói o dicionário inteiro (todos os chunks, todos os
 // idiomas) com o 'us' mesclado e mede o container 'us'. Um uso só para o
 // arquivo: o limite é por binário. O layout (header + chunks) não é derivável
@@ -959,96 +960,8 @@ func (s *MetadataService) ImportFile(path string, version common.GameVersion) (i
 	return plan.summary.ChangedTexts, nil
 }
 
-// ExportJSON escreve os artefatos JSON do lote em mods/edits (ids vazio =
-// tudo; langs nil/vazio = todos os idiomas). O caminho do arquivo é o mesmo
-// usado na importação (seletor nativo). O dedup do marshal é por arquivo:
-// o escopo do pedido vira o escopo do dedup (self-contained, sem refs
-// órfãs), e o nome do artefato reflete o escopo (eventsExportPath).
-func (s *MetadataService) ExportJSON(kind string, version common.GameVersion, ids, langs []string) (paths []string, retErr error) {
-	kind = strings.ToLower(strings.TrimSpace(kind))
-	if kind == KindEvents || kind == KindMacro {
-		ids = s.normalizeIDs(ids)
-	}
-	coreprogress.Begin(fmt.Sprintf("Extraindo texto (%s)", kind), len(ids))
-	defer func() {
-		if retErr != nil {
-			coreprogress.Issue("", retErr.Error())
-		}
-		coreprogress.End()
-	}()
-	c, err := s.GetCollection(kind, version, helpExportIDs(kind, ids))
-	if err != nil {
-		return nil, err
-	}
-	c = filterExportRows(c)
-	coreprogress.SetTotal(len(c))
-	switch kind {
-	case KindEvents:
-		path, perr := eventsExportPath(version, ids)
-		if perr != nil {
-			return nil, perr
-		}
-		p, jerr := jsonfmt.NewJSONEventsFormatter().WriteEventsFile(c, path, langs)
-		if jerr != nil {
-			return nil, jerr
-		}
-		return []string{p}, nil
-	case KindObjects:
-		if len(ids) == 0 {
-			// Export completo: UM arquivo com todas as entradas (cada uma
-			// com sua metadata.key) e dedup GLOBAL entre elas — a repetição
-			// entre arquivos de sistema sai como refs do bulk.
-			path, perr := objectsBulkPath(version)
-			if perr != nil {
-				return nil, perr
-			}
-			p, werr := jsonfmt.NewJSONObjectFormatter().WriteObjectsFile(c, path, langs)
-			if werr != nil {
-				return nil, werr
-			}
-			return []string{p}, nil
-		}
-		// Seleção: um arquivo por entrada (dedup intra-arquivo, self-contained).
-		return jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
-	case KindMacro:
-		path, perr := macroExportPath(version, ids)
-		if perr != nil {
-			return nil, perr
-		}
-		p, jerr := jsonfmt.NewJSONMacroFormatter().WriteMacroFile(c, path, langs)
-		if jerr != nil {
-			return nil, jerr
-		}
-		return []string{p}, nil
-	case KindLockit:
-		return jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
-	case KindHelp:
-		paths, jerr := jsonfmt.NewJSONHelpFormatter().WriteHelp(c, version, langs)
-		if jerr != nil {
-			return nil, jerr
-		}
-		return paths, nil
-	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
-		if len(ids) == 0 {
-			// Export completo: UM arquivo por kind (irmão do bulk de
-			// objects), com dedup global entre as entradas — nunca um
-			// arquivo por entrada como na seleção.
-			path, perr := tableBulkPath(kind, version)
-			if perr != nil {
-				return nil, perr
-			}
-			p, werr := jsonfmt.NewJSONObjectFormatter().WriteObjectsFile(c, path, langs)
-			if werr != nil {
-				return nil, werr
-			}
-			return []string{p}, nil
-		}
-		// Seleção: um arquivo por entrada (dedup intra-arquivo, self-contained).
-		return jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
-	default:
-		return nil, fmt.Errorf("unknown kind: %s", kind)
-	}
-}
+// ExportJSON dobrou em ExportArtifactBatch (export_formats.go): a
+// extração compartilhada com strings/csv/xlsx, um step por kind.
 
 // CountChangedTexts devolve quantas rows têm 'us' diferente entre import e
 // store (utilitário de conferência para o frontend). Sem kind/version não há

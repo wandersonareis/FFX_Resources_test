@@ -13,6 +13,7 @@ import (
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/formatters/hash"
+	"ffxresources/backend/progress"
 )
 
 // SortedLocalizationKeys devolve as chaves de idioma ordenadas,
@@ -59,14 +60,19 @@ func ResolveEventTargets(version common.GameVersion, ids []string) ([]string, er
 // BuildEventsDTO monta a Collection pronta (texto + metadata + hash)
 // a partir dos dados brutos do store, para os ids dados.
 // ids vazio = tudo. Chave da Collection = eventID (basename sem extensão).
-func BuildEventsDTO(version common.GameVersion, ids []string) (dto.Collection, error) {
+// r recebe o progresso da extração: SetTotal com o lote e um Step por
+// evento visitado (nil = sem progresso).
+func BuildEventsDTO(version common.GameVersion, ids []string, r progress.Reporter) (dto.Collection, error) {
+	r = progress.OrNop(r)
 	targets, err := ResolveEventTargets(version, ids)
 	if err != nil {
 		return nil, err
 	}
+	r.SetTotal(len(targets))
 	langs := SortedLocalizationKeys()
 	out := make(dto.Collection, len(targets))
 	for _, id := range targets {
+		r.Step(id)
 		ev := event.GetEvent(version, id)
 		if ev == nil || len(ev.Strings) == 0 {
 			common.LogVerbose("No strings found for event %s, skipping", id)

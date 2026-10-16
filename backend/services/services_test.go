@@ -295,7 +295,7 @@ var _ = Describe("MetadataService", Ordered, func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(entries).To(BeEmpty(), "eternalcalm has no %s tree of its own", kind)
 
-			c, err := metadataService.GetCollection(kind, common.GameVersionEternalCalm, nil)
+			c, err := metadataService.GetCollection(kind, common.GameVersionEternalCalm, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(c).To(BeEmpty(), "eternalcalm must not serve the ffx %s", kind)
 		}
@@ -386,7 +386,7 @@ var _ = Describe("MetadataService", Ordered, func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(lm).To(BeEmpty(), "lastmiss não tem lockit próprio")
 
-		c, err := metadataService.GetCollection(services.KindLockit, common.GameVersionLastMiss, nil)
+		c, err := metadataService.GetCollection(services.KindLockit, common.GameVersionLastMiss, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c).To(BeEmpty(), "lastmiss não serve o lockit do ffx2")
 	})

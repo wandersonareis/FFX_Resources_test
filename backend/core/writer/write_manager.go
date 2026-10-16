@@ -15,7 +15,7 @@ import (
 // exports them into a single DTO-based JSON file holding all languages.
 func ExportMacroDictionaryToJSON() {
 	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	collection, err := builders.BuildMacroDTO(version)
+	collection, err := builders.BuildMacroDTO(version, nil)
 	if err != nil {
 		common.LogError("Error building macro dictionary DTO: %v\n", err)
 		return
@@ -42,7 +42,7 @@ func ExportMacroDictionaryToJSON() {
 // (langs nil/vazio = todos), ao lado do JSON.
 func ExportMacroDictionaryToStrings(langs []string) {
 	version := interactions.NewInteractionService().FFXAppConfig().GetGameVersion()
-	collection, err := builders.BuildMacroDTO(version)
+	collection, err := builders.BuildMacroDTO(version, nil)
 	if err != nil {
 		common.LogError("Error building macro dictionary DTO: %v\n", err)
 		return
@@ -74,7 +74,7 @@ func WriteMacroDictionaryForLocalizationJSON(localization string) {
 		return
 	}
 
-	collection, err := builders.BuildMacroDTOFromContainers(version, map[string]*macrodic.MacroDictionaryBinaryFile{localization: c})
+	collection, err := builders.BuildMacroDTOFromContainers(version, map[string]*macrodic.MacroDictionaryBinaryFile{localization: c}, nil)
 	if err != nil {
 		common.LogError("Error building macro dictionary DTO: %v\n", err)
 		return

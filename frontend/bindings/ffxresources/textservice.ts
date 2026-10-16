@@ -49,12 +49,15 @@ export function CountChangedTexts(imported: dto$0.Collection, store: dto$0.Colle
 }
 
 /**
- * ExportCSV escreve os artefatos CSV do lote em mods/edits, com o MESMO
- * nome canônico por escopo do JSON (só a extensão muda). Mesmo pipeline e
- * validações do export JSON; o acesso externo (menu) continua no appcore.
+ * ExportArtifactBatch exporta o lote como UMA operação agrupada: um step
+ * por kind no modal de progresso (eventos, sistema, dicionário...), cada
+ * um com a própria barra. items: [{kind, ids}] — ids vazio = tudo do kind;
+ * format: "json" | "strings" | "csv" | "xlsx". O progresso sai pelos
+ * eventos ProgressStart/Update/End; o resumo (arquivos + destino) fica no
+ * estado final do modal.
  */
-export function ExportCSV(kind: string, version: common$0.GameVersion, ids: string[], langs: string[]): $CancellablePromise<string[]> {
-    return $Call.ByID(1829033128, kind, version, ids, langs).then(($result: any) => {
+export function ExportArtifactBatch(items: services$0.ExportPlanItem[], version: common$0.GameVersion, langs: string[], format: string): $CancellablePromise<string[]> {
+    return $Call.ByID(1787707150, items, version, langs, format).then(($result: any) => {
         return $$createType0($result);
     });
 }
@@ -65,36 +68,6 @@ export function ExportCSV(kind: string, version: common$0.GameVersion, ids: stri
  */
 export function ExportEntry(kind: string, id: string, version: common$0.GameVersion, langs: string[]): $CancellablePromise<string[]> {
     return $Call.ByID(1541815524, kind, id, version, langs).then(($result: any) => {
-        return $$createType0($result);
-    });
-}
-
-/**
- * ExportJSON escreve os artefatos JSON do lote (ids vazio = tudo).
- * Caminho no padrão dos formatters (mods/edits) — o mesmo lido na importação.
- */
-export function ExportJSON(kind: string, version: common$0.GameVersion, ids: string[], langs: string[]): $CancellablePromise<string[]> {
-    return $Call.ByID(3811205058, kind, version, ids, langs).then(($result: any) => {
-        return $$createType0($result);
-    });
-}
-
-/**
- * ExportStrings escreve arquivos .strings ao lado dos .json.
- * kind: events, objects ou macro. ids vazio = tudo (aceita ids ou keys);
- * langs nil/vazio = todos os idiomas.
- */
-export function ExportStrings(kind: string, version: common$0.GameVersion, ids: string[], langs: string[]): $CancellablePromise<string[]> {
-    return $Call.ByID(1584413886, kind, version, ids, langs).then(($result: any) => {
-        return $$createType0($result);
-    });
-}
-
-/**
- * ExportXLSX é ExportCSV no formato XLSX (Excel).
- */
-export function ExportXLSX(kind: string, version: common$0.GameVersion, ids: string[], langs: string[]): $CancellablePromise<string[]> {
-    return $Call.ByID(1770952991, kind, version, ids, langs).then(($result: any) => {
         return $$createType0($result);
     });
 }

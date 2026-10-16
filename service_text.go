@@ -5,6 +5,7 @@ import (
 
 	"ffxresources/backend/common"
 	"ffxresources/backend/dto"
+	"ffxresources/backend/progress"
 	"ffxresources/backend/services"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -109,7 +110,7 @@ func (s *TextService) GetTextCollection(kind string, version common.GameVersion,
 	if s.meta == nil {
 		return nil, fmt.Errorf("metadata service not initialized")
 	}
-	return s.meta.GetCollection(kind, version, ids)
+	return s.meta.GetCollection(kind, version, ids, progress.Nop())
 }
 
 // RevealEntryFile abre o explorador com o arquivo da entrada selecionado
@@ -140,41 +141,17 @@ func (s *TextService) ListLanguages() []common.Language {
 	return s.meta.ListLanguages()
 }
 
-// ExportStrings escreve arquivos .strings ao lado dos .json.
-// kind: events, objects ou macro. ids vazio = tudo (aceita ids ou keys);
-// langs nil/vazio = todos os idiomas.
-func (s *TextService) ExportStrings(kind string, version common.GameVersion, ids, langs []string) ([]string, error) {
+// ExportArtifactBatch exporta o lote como UMA operação agrupada: um step
+// por kind no modal de progresso (eventos, sistema, dicionário...), cada
+// um com a própria barra. items: [{kind, ids}] — ids vazio = tudo do kind;
+// format: "json" | "strings" | "csv" | "xlsx". O progresso sai pelos
+// eventos ProgressStart/Update/End; o resumo (arquivos + destino) fica no
+// estado final do modal.
+func (s *TextService) ExportArtifactBatch(items []services.ExportPlanItem, version common.GameVersion, langs []string, format string) ([]string, error) {
 	if s.meta == nil {
 		return nil, fmt.Errorf("metadata service not initialized")
 	}
-	return s.meta.ExportStrings(kind, version, ids, langs)
-}
-
-// ExportCSV escreve os artefatos CSV do lote em mods/edits, com o MESMO
-// nome canônico por escopo do JSON (só a extensão muda). Mesmo pipeline e
-// validações do export JSON; o acesso externo (menu) continua no appcore.
-func (s *TextService) ExportCSV(kind string, version common.GameVersion, ids, langs []string) ([]string, error) {
-	if s.meta == nil {
-		return nil, fmt.Errorf("metadata service not initialized")
-	}
-	return s.meta.ExportArtifact(kind, version, ids, langs, "csv")
-}
-
-// ExportXLSX é ExportCSV no formato XLSX (Excel).
-func (s *TextService) ExportXLSX(kind string, version common.GameVersion, ids, langs []string) ([]string, error) {
-	if s.meta == nil {
-		return nil, fmt.Errorf("metadata service not initialized")
-	}
-	return s.meta.ExportArtifact(kind, version, ids, langs, "xlsx")
-}
-
-// ExportJSON escreve os artefatos JSON do lote (ids vazio = tudo).
-// Caminho no padrão dos formatters (mods/edits) — o mesmo lido na importação.
-func (s *TextService) ExportJSON(kind string, version common.GameVersion, ids, langs []string) ([]string, error) {
-	if s.meta == nil {
-		return nil, fmt.Errorf("metadata service not initialized")
-	}
-	return s.meta.ExportJSON(kind, version, ids, langs)
+	return s.meta.ExportArtifactBatch(items, version, langs, format)
 }
 
 // SelectImportFile abre o seletor nativo de arquivo para importar

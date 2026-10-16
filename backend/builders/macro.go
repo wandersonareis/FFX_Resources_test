@@ -10,6 +10,7 @@ import (
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/macrodic"
 	"ffxresources/backend/formatters/hash"
+	"ffxresources/backend/progress"
 )
 
 // Macro name rows: o formato atual (chunks com ChunkIndex + strings
@@ -41,15 +42,16 @@ func parseMacroChunkKey(key string) (int, bool) {
 }
 
 // BuildMacroDTO monta a Collection pronta (texto + metadata + hash) lendo
-// os containers do disco para a versão dada.
-func BuildMacroDTO(version common.GameVersion) (dto.Collection, error) {
-	return BuildMacroDTOFromSource(version, common.SourcePreferred)
+// os containers do disco para a versão dada. r recebe o progresso da
+// extração (nil = sem progresso).
+func BuildMacroDTO(version common.GameVersion, r progress.Reporter) (dto.Collection, error) {
+	return BuildMacroDTOFromSource(version, common.SourcePreferred, r)
 }
 
 // BuildMacroDTOFromSource é BuildMacroDTO lendo os containers da árvore
 // indicada. SourceData entrega o dicionário pristine de data/ — é por ele
 // que se define a PRESENÇA dos chunks (árvore/coluna Original).
-func BuildMacroDTOFromSource(version common.GameVersion, src common.FileSource) (dto.Collection, error) {
+func BuildMacroDTOFromSource(version common.GameVersion, src common.FileSource, r progress.Reporter) (dto.Collection, error) {
 	containers, err := macrodic.ReadMacroDictionaryContainersFrom(version, src)
 	if err != nil {
 		return nil, err
@@ -57,12 +59,14 @@ func BuildMacroDTOFromSource(version common.GameVersion, src common.FileSource) 
 	if len(containers) == 0 {
 		return nil, fmt.Errorf("no macro dictionary data found")
 	}
-	return BuildMacroDTOFromContainers(version, containers)
+	return BuildMacroDTOFromContainers(version, containers, r)
 }
 
 // BuildMacroDTOFromContainers monta a Collection a partir de containers já
 // carregados (texto raw + metadata + hash xxHash64 por frase/idioma).
-func BuildMacroDTOFromContainers(version common.GameVersion, containers map[string]*macrodic.MacroDictionaryBinaryFile) (dto.Collection, error) {
+// r recebe o progresso: um Step por chunk montado.
+func BuildMacroDTOFromContainers(version common.GameVersion, containers map[string]*macrodic.MacroDictionaryBinaryFile, r progress.Reporter) (dto.Collection, error) {
+	r = progress.OrNop(r)
 	locs := make([]string, 0, len(containers))
 	for loc := range containers {
 		locs = append(locs, loc)
@@ -113,7 +117,14 @@ func BuildMacroDTOFromContainers(version common.GameVersion, containers map[stri
 	}
 
 	out := make(dto.Collection, len(chunks))
+	chunkList := make([]int, 0, len(chunks))
 	for chunk := range chunks {
+		chunkList = append(chunkList, chunk)
+	}
+	sort.Ints(chunkList)
+	r.SetTotal(len(chunkList))
+	for _, chunk := range chunkList {
+		r.Step(MacroChunkKey(chunk))
 		key := MacroChunkKey(chunk)
 		entry := dto.FileEntry{
 			Metadata: dto.NewMacroMetadata(version, chunk),

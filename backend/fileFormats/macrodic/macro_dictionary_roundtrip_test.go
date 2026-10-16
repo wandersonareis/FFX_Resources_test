@@ -37,7 +37,7 @@ func roundtripContainers(t *testing.T, raw []byte, loc string, version common.Ga
 	if err != nil {
 		t.Fatalf("parse original: %v", err)
 	}
-	collection, err := builders.BuildMacroDTOFromContainers(version, map[string]*macrodic.MacroDictionaryBinaryFile{loc: c})
+	collection, err := builders.BuildMacroDTOFromContainers(version, map[string]*macrodic.MacroDictionaryBinaryFile{loc: c}, nil)
 	if err != nil {
 		t.Fatalf("build DTO: %v", err)
 	}
@@ -148,7 +148,7 @@ func TestOtherLocalizationsReimport(t *testing.T) {
 		containers[loc] = c
 	}
 
-	exp, err := builders.BuildMacroDTOFromContainers(common.GameVersionFFX, containers)
+	exp, err := builders.BuildMacroDTOFromContainers(common.GameVersionFFX, containers, nil)
 	if err != nil {
 		t.Fatalf("build DTO: %v", err)
 	}
