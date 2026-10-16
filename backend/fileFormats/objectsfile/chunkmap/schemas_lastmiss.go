@@ -20,6 +20,12 @@ func registerLastMissSchemas() {
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.LmAccesary](v, "lastmiss/kernel/lm_accesary.bin", e)
 		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.LmAccesary](v, "lastmiss/kernel/lm_accesary.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.LmAccesary](v, "lastmiss/kernel/lm_accesary.bin", data, rows)
+		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.LmAccesary](v, "lastmiss/kernel/lm_accesary.bin", rows)
 		})
@@ -31,6 +37,12 @@ func registerLastMissSchemas() {
 		},
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.LmCommand](v, "lastmiss/kernel/lm_command.bin", e)
+		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.LmCommand](v, "lastmiss/kernel/lm_command.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.LmCommand](v, "lastmiss/kernel/lm_command.bin", data, rows)
 		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.LmCommand](v, "lastmiss/kernel/lm_command.bin", rows)
@@ -46,6 +58,12 @@ func registerLastMissSchemas() {
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.LmMonMagic](v, "lastmiss/kernel/lm_monmagic.bin", e)
 		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.LmMonMagic](v, "lastmiss/kernel/lm_monmagic.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.LmMonMagic](v, "lastmiss/kernel/lm_monmagic.bin", data, rows)
+		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.LmMonMagic](v, "lastmiss/kernel/lm_monmagic.bin", rows)
 		})
@@ -57,6 +75,12 @@ func registerLastMissSchemas() {
 		},
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.LmMonster](v, "lastmiss/kernel/lm_monster.bin", e)
+		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.LmMonster](v, "lastmiss/kernel/lm_monster.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.LmMonster](v, "lastmiss/kernel/lm_monster.bin", data, rows)
 		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.LmMonster](v, "lastmiss/kernel/lm_monster.bin", rows)
@@ -70,6 +94,12 @@ func registerLastMissSchemas() {
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.LmItem](v, "lastmiss/kernel/lm_item.bin", e)
 		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.LmItem](v, "lastmiss/kernel/lm_item.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.LmItem](v, "lastmiss/kernel/lm_item.bin", data, rows)
+		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.LmItem](v, "lastmiss/kernel/lm_item.bin", rows)
 		})
@@ -81,6 +111,12 @@ func registerLastMissSchemas() {
 		},
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.LmDress](v, "lastmiss/kernel/lm_dress.bin", e)
+		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.LmDress](v, "lastmiss/kernel/lm_dress.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.LmDress](v, "lastmiss/kernel/lm_dress.bin", data, rows)
 		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.LmDress](v, "lastmiss/kernel/lm_dress.bin", rows)
@@ -94,6 +130,12 @@ func registerLastMissSchemas() {
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.LmTrap](v, "lastmiss/kernel/lm_trap.bin", e)
 		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.LmTrap](v, "lastmiss/kernel/lm_trap.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.LmTrap](v, "lastmiss/kernel/lm_trap.bin", data, rows)
+		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.LmTrap](v, "lastmiss/kernel/lm_trap.bin", rows)
 		})
@@ -106,6 +148,12 @@ func registerLastMissSchemas() {
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.LmMes](v, "lastmiss/kernel/lm_mes.bin", e)
 		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.LmMes](v, "lastmiss/kernel/lm_mes.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.LmMes](v, "lastmiss/kernel/lm_mes.bin", data, rows)
+		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.LmMes](v, "lastmiss/kernel/lm_mes.bin", rows)
 		})
@@ -117,6 +165,12 @@ func registerLastMissSchemas() {
 		},
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.LmPlayer](v, "lastmiss/kernel/lm_player.bin", e)
+		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.LmPlayer](v, "lastmiss/kernel/lm_player.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.LmPlayer](v, "lastmiss/kernel/lm_player.bin", data, rows)
 		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.LmPlayer](v, "lastmiss/kernel/lm_player.bin", rows)
@@ -132,6 +186,12 @@ func registerLastMissSchemas() {
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.LmWarehouse](v, "lastmiss/kernel/lm_warehouse.bin", e)
 		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.LmWarehouse](v, "lastmiss/kernel/lm_warehouse.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.LmWarehouse](v, "lastmiss/kernel/lm_warehouse.bin", data, rows)
+		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.LmWarehouse](v, "lastmiss/kernel/lm_warehouse.bin", rows)
 		})
@@ -145,6 +205,12 @@ func registerLastMissSchemas() {
 		},
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.LmFloorName](v, "lastmiss/kernel/lm_floorname.bin", e)
+		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.LmFloorName](v, "lastmiss/kernel/lm_floorname.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.LmFloorName](v, "lastmiss/kernel/lm_floorname.bin", data, rows)
 		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.LmFloorName](v, "lastmiss/kernel/lm_floorname.bin", rows)

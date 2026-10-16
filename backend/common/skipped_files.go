@@ -395,3 +395,46 @@ func IsSkippedFilePath(path string, version GameVersion) bool {
 	}
 	return false
 }
+
+// IsSkippedBinaryName informa se um binário AVULSO (fora da árvore do
+// jogo, sem caminho canônico) casa com alguma entrada da lista de skip —
+// apenas pelo NOME do arquivo (último segmento da entrada), ignorando
+// caixa. É a régua do acesso externo (menu/CLI arquivo→arquivo): o
+// usuário aponta qualquer arquivo no disco e a lista continua valendo.
+func IsSkippedBinaryName(basename string, version GameVersion) bool {
+	name := strings.ToLower(strings.TrimSpace(strings.ReplaceAll(basename, "\\", "/")))
+	name = strings.TrimSuffix(name, "/")
+	if name == "" {
+		return false
+	}
+	if idx := strings.LastIndex(name, "/"); idx >= 0 {
+		name = name[idx+1:]
+	}
+	var list []string
+	switch version {
+	case GameVersionFFX, GameVersionEternalCalm:
+		list = SkippedFilePathsFFX
+	case GameVersionFFX2:
+		list = SkippedFilePathsFFX2
+	default:
+		return false
+	}
+	for _, e := range list {
+		entry := strings.ToLower(e)
+		if idx := strings.LastIndex(entry, "/"); idx >= 0 {
+			entry = entry[idx+1:]
+		}
+		if entry == name {
+			return true
+		}
+	}
+	return false
+}
+
+// IsSkippedBinaryAnyVersion é IsSkippedBinaryName sem versão conhecida:
+// confere as duas listas (FFX e FFX-2). O sniff de um binário avulso roda
+// ANTES da versão ser confirmada — um nome da lista em qualquer árvore já
+// é incompatível.
+func IsSkippedBinaryAnyVersion(basename string) bool {
+	return IsSkippedBinaryName(basename, GameVersionFFX) || IsSkippedBinaryName(basename, GameVersionFFX2)
+}

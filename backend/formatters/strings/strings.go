@@ -49,10 +49,32 @@ func Marshal(c dto.Collection) ([]byte, error) {
 	return MarshalLangs(c, nil)
 }
 
+// MarshalNoDedup serializa SEM o dedup de conteúdo: todo texto sai literal,
+// inclusive os que casariam como repetição (não viram ref "$hash"). É a
+// direção "dupe/resolve" do menu/CLI: expandir os hashes de conteúdo de
+// volta ao texto completo. O campo de identidade (hash da row) continua
+// presente, como no Marshal.
+func MarshalNoDedup(c dto.Collection) ([]byte, error) {
+	return marshalLangsOpt(c, nil, false)
+}
+
+// MarshalNoDedupLangs é MarshalNoDedup com o filtro de idiomas
+// (nil/vazio = todos).
+func MarshalNoDedupLangs(c dto.Collection, langs []string) ([]byte, error) {
+	return marshalLangsOpt(c, langs, false)
+}
+
 // MarshalLangs organiza a Collection pronta no formato Strings contendo
 // só os idiomas pedidos (nil/vazio = todos). Uma linha por (row, idioma)
 // não-vazio, com chaves e rows ordenadas (saída determinística).
 func MarshalLangs(c dto.Collection, langs []string) ([]byte, error) {
+	return marshalLangsOpt(c, langs, true)
+}
+
+// marshalLangsOpt é o motor único do Marshal/MarshalNoDedup: dedup=false
+// desliga só o colapso do TEXTO repetido em ref "$hash" — o hash de
+// identidade da linha permanece em qualquer modo.
+func marshalLangsOpt(c dto.Collection, langs []string, dedup bool) ([]byte, error) {
 	filter := langSet(langs)
 	var out stdstrings.Builder
 	seen := make(map[string]string) // hashHex bare -> texto (só default lang)
@@ -75,7 +97,7 @@ func MarshalLangs(c dto.Collection, langs []string) ([]byte, error) {
 					h = hash.Sum64Hex(text)
 				}
 				value := escapeValue(text)
-				if lang == common.DefaultLocalization && !row.Divergent {
+				if dedup && lang == common.DefaultLocalization && !row.Divergent {
 					if hash.IsDedupEligible(text) {
 						if _, dup := seen[h]; dup {
 							value = hash.Prefix(h)

@@ -166,6 +166,43 @@ func LoadFrom(l Layout, src common.FileSource) (*LockitFile, error) {
 	return &LockitFile{layout: l, terminated: terminated, langs: langs, records: records}, nil
 }
 
+// LoadFromBytes monta o LockitFile a partir dos bytes de UM arquivo físico
+// (<stem>_<lang>.bin) — o caminho avulso do menu/CLI (import/export
+// arquivo→arquivo), sem árvore do jogo. lang é o idioma do arquivo
+// (decide charset de decode/encode); a ausência dos outros idiomas é
+// esperada: rows só carregam o texto desse idioma.
+func LoadFromBytes(l Layout, lang string, data []byte) (*LockitFile, error) {
+	if len(l.Languages) == 0 {
+		l.Languages = common.SupportedLanguageCodes()
+	}
+	if err := ffxencoding.PrepareVersionCharsets(common.CharsetVersion(l.Version)); err != nil {
+		return nil, fmt.Errorf("lockit %s: preparar charsets: %w", l.Stem, err)
+	}
+	if len(data) == 0 {
+		return nil, fmt.Errorf("lockit %s: arquivo vazio (%s)", l.Stem, lang)
+	}
+
+	recs, terminated := splitRecords(data)
+	if len(recs) == 0 {
+		return nil, fmt.Errorf("lockit %s: nenhum registro em %s", l.Stem, lang)
+	}
+	rawByLang := map[string][][]byte{lang: recs}
+	kinds := detectKinds(rawByLang, len(recs))
+	records := make([]*Record, len(recs))
+	for i := 0; i < len(recs); i++ {
+		rec := &Record{
+			kind: kinds[i],
+			text: make(map[string]string, 1),
+			raw:  make(map[string][]byte, 1),
+		}
+		rec.raw[lang] = rawByLang[lang][i]
+		rec.text[lang] = decodeRecord(rawByLang[lang][i], kinds[i], lang, l.Version)
+		records[i] = rec
+	}
+
+	return &LockitFile{layout: l, terminated: terminated, langs: []string{lang}, records: records}, nil
+}
+
 // Bytes codifica o arquivo de cada idioma carregado (lang -> bytes), sem gravar.
 func (f *LockitFile) Bytes() (map[string][]byte, error) {
 	out := make(map[string][]byte, len(f.langs))

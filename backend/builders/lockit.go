@@ -83,8 +83,13 @@ func buildLockitRows(f *lockit.LockitFile) []dto.TextRow {
 // LockitApplyScope decide DE ONDE vem o arquivo do lockit a aplicar: o
 // store de data/ (mods-first) ou a sessão do .vbf (objeto decodificado do
 // container). O escopo é o único ponto que conhece a fonte.
+//
+// Save opcional redireciona a gravação: o fluxo arquivo→arquivo do menu/CLI
+// aponta o destino (imported/<basename>) em vez do padrão SaveLanguages
+// (mods/). nil = gravação padrão.
 type LockitApplyScope struct {
 	Load func(id string) (*lockit.LockitFile, error)
+	Save func(f *lockit.LockitFile) error
 }
 
 // StoreLockitScope monta o escopo do store de data/.
@@ -120,6 +125,14 @@ func ApplyLockitDTOWithScope(version common.GameVersion, c dto.Collection, scope
 		}
 		// Import escreve apenas a localização padrão (us), como nos demais
 		// formatos; os outros idiomas são apenas referência de tradução.
+		// Save do escopo (quando presente) é o destino do chamador — o
+		// menu/CLI grava ao lado do binário apontado, não em mods/.
+		if scope.Save != nil {
+			if err := scope.Save(f); err != nil {
+				return err
+			}
+			continue
+		}
 		if err := f.SaveLanguages(common.DefaultLocalization); err != nil {
 			return err
 		}

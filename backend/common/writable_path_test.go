@@ -110,3 +110,28 @@ func TestWriteBytesToFileErroDeixaClaraARegra(t *testing.T) {
 		t.Fatalf("erro deveria citar mods/: %v", err)
 	}
 }
+
+// A variante SEM a trava é o caminho do acesso externo (menu/CLI avulso):
+// grava dentro da árvore do jogo, em qualquer pasta.
+func TestWriteBytesToFileAnywhereGravaDentroDaArvore(t *testing.T) {
+	root := t.TempDir()
+	withGameFilesRoot(t, root)
+
+	target := filepath.Join(root, "data", "new_uspc", "event", "export_x.json")
+	if err := WriteBytesToFileAnywhere(target, []byte(`{"ok":true}`)); err != nil {
+		t.Fatalf("Anywhere deveria gravar em data/: %v", err)
+	}
+	got, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatalf("arquivo não criado: %v", err)
+	}
+	if string(got) != `{"ok":true}` {
+		t.Fatalf("conteúdo errado: %q", got)
+	}
+
+	// .vbf também é livre aqui — a regra de somente-leitura é dos escritores
+	// do frontend (WriteBytesToFile).
+	if err := WriteBytesToFileAnywhere(filepath.Join(root, "qualquer", "x.vbf"), []byte("x")); err != nil {
+		t.Fatalf("Anywhere deveria gravar .vbf: %v", err)
+	}
+}

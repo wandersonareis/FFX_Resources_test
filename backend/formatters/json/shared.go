@@ -45,6 +45,21 @@ func marshalCollection(c dto.Collection) ([]byte, error) {
 	return marshalCollectionLangs(c, nil)
 }
 
+// MarshalNoDedup serializa SEM o dedup de conteúdo: todo texto do idioma
+// default sai literal, inclusive repetições (não colapsam em ref "$hash").
+// É a direção "dupe/resolve" do menu/CLI: expandir os hashes de conteúdo de
+// volta ao texto completo. O hash de identidade das rows continua no
+// artefato, como no marshal com dedup.
+func MarshalNoDedup(c dto.Collection) ([]byte, error) {
+	return marshalCollectionOpt(c, nil, false)
+}
+
+// MarshalNoDedupLangs é MarshalNoDedup com o filtro de idiomas
+// (nil/vazio = todos).
+func MarshalNoDedupLangs(c dto.Collection, langs []string) ([]byte, error) {
+	return marshalCollectionOpt(c, langs, false)
+}
+
 // marshalCollectionLangs serializa a Collection contendo só os idiomas
 // pedidos (nil/vazio = todos).
 //
@@ -52,6 +67,13 @@ func marshalCollection(c dto.Collection) ([]byte, error) {
 // repetidos (hash.IsDedupEligible: > MinDedupRunes runes) viram referência
 // `$hash` — mesma regra do DedupHelpDTO do builders. O DTO de entrada nunca é mutado.
 func marshalCollectionLangs(c dto.Collection, langs []string) ([]byte, error) {
+	return marshalCollectionOpt(c, langs, true)
+}
+
+// marshalCollectionOpt é o motor único do marshal: dedup=false desliga só o
+// colapso do TEXTO repetido em ref "$hash" — o hash de identidade da row
+// (com prefixo `$`) permanece em qualquer modo.
+func marshalCollectionOpt(c dto.Collection, langs []string, dedup bool) ([]byte, error) {
 	filter := langSet(langs)
 	seen := make(map[string]string) // hashHex bare -> texto (só default lang)
 	ordered := make(map[string]dto.FileEntry, len(c))
@@ -79,7 +101,7 @@ func marshalCollectionLangs(c dto.Collection, langs []string) ([]byte, error) {
 					r.Text[lang] = t
 				}
 			}
-			if t := r.Text[common.DefaultLocalization]; !row.Divergent && hash.IsDedupEligible(t) {
+			if t := r.Text[common.DefaultLocalization]; !row.Divergent && dedup && hash.IsDedupEligible(t) {
 				if h, _ := hash.Strip(r.Hash[common.DefaultLocalization]); h != "" {
 					if _, ok := seen[h]; ok {
 						r.Text[common.DefaultLocalization] = hash.Prefix(h)

@@ -415,6 +415,13 @@ func stripHelpRowNames(c dto.Collection) {
 // ---- detecção ----------------------------------------------------------------
 
 // kindFromKey decide o kind pela metadata.key: macrodic.dcp → macro,
+// KindFromKey é kindFromKey exposto ao acesso externo (menu/CLI
+// arquivo→arquivo): resolve o kind lógico de uma metadata.key canônica.
+// "" = entrada fora do escopo do app (lista de skip / padrão desconhecido).
+func KindFromKey(key string, version common.GameVersion) string {
+	return kindFromKey(key, version)
+}
+
 // /event/ → events; /gamedata/ps3data/lockit/ → lockit; help/…/*.sps2 → help;
 // demais → objects.
 func kindFromKey(key string, version common.GameVersion) string {

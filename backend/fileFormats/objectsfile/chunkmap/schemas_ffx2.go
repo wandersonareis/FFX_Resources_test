@@ -17,6 +17,12 @@ func registerFFX2Schemas() {
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.PCommand](v, "battle/kernel/command.bin", e)
 		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.PCommand](v, "battle/kernel/command.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.PCommand](v, "battle/kernel/command.bin", data, rows)
+		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.PCommand](v, "battle/kernel/command.bin", rows)
 		})
@@ -28,6 +34,12 @@ func registerFFX2Schemas() {
 		},
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.Item](v, "battle/kernel/item.bin", e)
+		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.Item](v, "battle/kernel/item.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.Item](v, "battle/kernel/item.bin", data, rows)
 		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.Item](v, "battle/kernel/item.bin", rows)
@@ -41,6 +53,12 @@ func registerFFX2Schemas() {
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.KeyItem](v, "battle/kernel/important.bin", e)
 		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.KeyItem](v, "battle/kernel/important.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.KeyItem](v, "battle/kernel/important.bin", data, rows)
+		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.KeyItem](v, "battle/kernel/important.bin", rows)
 		})
@@ -52,6 +70,12 @@ func registerFFX2Schemas() {
 		},
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.Accessory](v, "battle/kernel/accessory.bin", e)
+		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.Accessory](v, "battle/kernel/accessory.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.Accessory](v, "battle/kernel/accessory.bin", data, rows)
 		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.Accessory](v, "battle/kernel/accessory.bin", rows)
@@ -65,6 +89,12 @@ func registerFFX2Schemas() {
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.Job](v, "battle/kernel/job.bin", e)
 		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.Job](v, "battle/kernel/job.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.Job](v, "battle/kernel/job.bin", data, rows)
+		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.Job](v, "battle/kernel/job.bin", rows)
 		})
@@ -76,6 +106,12 @@ func registerFFX2Schemas() {
 		},
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.Plate](v, "battle/kernel/plate.bin", e)
+		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.Plate](v, "battle/kernel/plate.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.Plate](v, "battle/kernel/plate.bin", data, rows)
 		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.Plate](v, "battle/kernel/plate.bin", rows)
@@ -91,6 +127,12 @@ func registerFFX2Schemas() {
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.AutoAbility](v, "battle/kernel/a_ability.bin", e)
 		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.AutoAbility](v, "battle/kernel/a_ability.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.AutoAbility](v, "battle/kernel/a_ability.bin", data, rows)
+		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.AutoAbility](v, "battle/kernel/a_ability.bin", rows)
 		})
@@ -102,6 +144,12 @@ func registerFFX2Schemas() {
 		},
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.MenuTxt](v, "battle/kernel/menu_txt.bin", e)
+		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.MenuTxt](v, "battle/kernel/menu_txt.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.MenuTxt](v, "battle/kernel/menu_txt.bin", data, rows)
 		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.MenuTxt](v, "battle/kernel/menu_txt.bin", rows)
@@ -115,6 +163,12 @@ func registerFFX2Schemas() {
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.BtlEndTxt](v, "battle/kernel/btlend_txt.bin", e)
 		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.BtlEndTxt](v, "battle/kernel/btlend_txt.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.BtlEndTxt](v, "battle/kernel/btlend_txt.bin", data, rows)
+		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.BtlEndTxt](v, "battle/kernel/btlend_txt.bin", rows)
 		})
@@ -126,6 +180,12 @@ func registerFFX2Schemas() {
 		},
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.Monster](v, "battle/kernel/monster.bin", e)
+		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.Monster](v, "battle/kernel/monster.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.Monster](v, "battle/kernel/monster.bin", data, rows)
 		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.Monster](v, "battle/kernel/monster.bin", rows)
@@ -139,6 +199,12 @@ func registerFFX2Schemas() {
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.Monster2](v, "battle/kernel/monster2.bin", e)
 		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.Monster2](v, "battle/kernel/monster2.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.Monster2](v, "battle/kernel/monster2.bin", data, rows)
+		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.Monster2](v, "battle/kernel/monster2.bin", rows)
 		})
@@ -150,6 +216,12 @@ func registerFFX2Schemas() {
 		},
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.Oversoul](v, "battle/kernel/oversoul.bin", e)
+		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.Oversoul](v, "battle/kernel/oversoul.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.Oversoul](v, "battle/kernel/oversoul.bin", data, rows)
 		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.Oversoul](v, "battle/kernel/oversoul.bin", rows)
@@ -163,6 +235,12 @@ func registerFFX2Schemas() {
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.MCommand](v, "battle/kernel/monmagic.bin", e)
 		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.MCommand](v, "battle/kernel/monmagic.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.MCommand](v, "battle/kernel/monmagic.bin", data, rows)
+		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.MCommand](v, "battle/kernel/monmagic.bin", rows)
 		})
@@ -174,6 +252,12 @@ func registerFFX2Schemas() {
 		},
 		func(v common.GameVersion, e dto.FileEntry) error {
 			return applyGeneric[ffx2.BtlTxt](v, "battle/kernel/btl_txt.bin", e)
+		},
+		func(v common.GameVersion, data []byte) (dto.Collection, error) {
+			return loadGenericFromBytes[ffx2.BtlTxt](v, "battle/kernel/btl_txt.bin", data)
+		},
+		func(v common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error) {
+			return rebuildGeneric[ffx2.BtlTxt](v, "battle/kernel/btl_txt.bin", data, rows)
 		},
 		func(v common.GameVersion, p string, rows []dto.TextRow) (int, error) {
 			return measureGeneric[ffx2.BtlTxt](v, "battle/kernel/btl_txt.bin", rows)

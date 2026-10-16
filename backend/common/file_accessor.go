@@ -106,25 +106,28 @@ func getModdedFile(path string) string {
 	return filepath.Join(GameFilesRoot, ModsFolder, path)
 }
 
+// WriteBytesToFileAnywhere writes a slice of integers as bytes to a file
+// WITHOUT the tree guard: o acesso externo (menu/CLI avulso) lê e grava em
+// QUALQUER lugar — inclusive dentro da árvore do jogo, ao lado do arquivo
+// apontado pelo usuário (regra: o menu não respeita a estrutura do frontend).
+// Cria os diretórios necessários antes de gravar.
+func WriteBytesToFileAnywhere(path string, bytes []byte) error {
+	CreateDirectories(path)
+	return os.WriteFile(path, bytes, 0644)
+}
+
 // WriteBytesToFile writes a slice of integers as bytes to a file
 // Creates necessary directories before writing
 //
-// Todo escritor de binário/texto do app passa por aqui, então é também o
-// ponto único da trava de gravação: alvo .vbf ou fora de mods/ é recusado
-// antes de criar diretório (ver CheckWritablePath).
+// Todo escritor de binário/texto do app (frontend) passa por aqui, então é
+// também o ponto único da trava de gravação: alvo .vbf ou fora de mods/ é
+// recusado antes de criar diretório (ver CheckWritablePath). O caminho SEM
+// a trava é WriteBytesToFileAnywhere — é o que o menu/CLI usa.
 func WriteBytesToFile(path string, bytes []byte) error {
 	if err := CheckWritablePath(path); err != nil {
 		return err
 	}
-	CreateDirectories(path)
-
-	err := os.WriteFile(path, bytes, 0644)
-	if err != nil {
-		fmt.Println("Failed to write file")
-		return err
-	}
-
-	return nil
+	return WriteBytesToFileAnywhere(path, bytes)
 }
 
 // CreateDirectories creates the necessary directories for a given file path

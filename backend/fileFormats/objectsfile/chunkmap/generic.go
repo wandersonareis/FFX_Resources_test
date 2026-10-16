@@ -95,6 +95,15 @@ func loadGenericFrom[T any](version common.GameVersion, patternPath string, src 
 // table reconstruída no idioma da carga (sem gravar).
 type SchemaMeasurer func(version common.GameVersion, patternPath string, rows []dto.TextRow) (int, error)
 
+// SchemaBytesLoader decodifica um binário avulso (bytes crus) no DTO pronto
+// de uma entrada — o caminho do menu/CLI: o usuário aponta qualquer cópia
+// do arquivo, fora da árvore do jogo.
+type SchemaBytesLoader func(version common.GameVersion, data []byte) (dto.Collection, error)
+
+// SchemaRebuilder aplica as rows num binário avulso e devolve os bytes
+// reconstruídos, sem gravar na árvore (o destino é decisão do chamador).
+type SchemaRebuilder func(version common.GameVersion, data []byte, rows []dto.TextRow) ([]byte, error)
+
 // measureGeneric aplica as rows em memória e devolve o tamanho da string
 // table reconstruída (com dedup) no idioma da carga. Sem gravar nada.
 func measureGeneric[T any](version common.GameVersion, patternPath string, rows []dto.TextRow) (int, error) {
@@ -122,6 +131,43 @@ func applyGeneric[T any](version common.GameVersion, patternPath string, entry d
 		return err
 	}
 	return file.SaveToBinary("")
+}
+
+// loadGenericFromBytes decodifica um binário AVULSO (bytes crus apontados
+// pelo usuário) no DTO de uma entrada. Só o idioma padrão existe na carga
+// — rows carregam apenas o texto desse idioma. É o export do menu/CLI
+// arquivo→arquivo: nenhuma árvore é consultada.
+func loadGenericFromBytes[T any](version common.GameVersion, patternPath string, data []byte) (dto.Collection, error) {
+	if err := ffxencoding.EnsureAllCharsetsLoaded(version); err != nil {
+		return nil, fmt.Errorf("%s: charsets: %w", patternPath, err)
+	}
+
+	f, err := LoadFileFromBytesForLanguage[T](version, patternPath, common.DefaultLocalization, data)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := GenericRows[T](f, map[string]*File[T]{common.DefaultLocalization: f})
+	if err != nil {
+		return nil, err
+	}
+	return BuildCollectionFromChunks(version, patternPath, rows)
+}
+
+// rebuildGeneric aplica as rows num binário AVULSO e devolve os bytes
+// reconstruídos (sem gravar): o import arquivo→arquivo do menu/CLI. As
+// rows não presentes no DTO ficam com o conteúdo original do binário.
+func rebuildGeneric[T any](version common.GameVersion, patternPath string, data []byte, rows []dto.TextRow) ([]byte, error) {
+	if err := ffxencoding.EnsureAllCharsetsLoaded(version); err != nil {
+		return nil, fmt.Errorf("%s: charsets: %w", patternPath, err)
+	}
+	f, err := LoadFileFromBytesForLanguage[T](version, patternPath, common.DefaultLocalization, data)
+	if err != nil {
+		return nil, err
+	}
+	if err := GenericApply[T](f, rows); err != nil {
+		return nil, err
+	}
+	return f.ToBytes()
 }
 
 // GenericRows monta as rows de export de qualquer File[T]. Cada campo
