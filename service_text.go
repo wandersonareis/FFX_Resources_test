@@ -150,6 +150,24 @@ func (s *TextService) ExportStrings(kind string, version common.GameVersion, ids
 	return s.meta.ExportStrings(kind, version, ids, langs)
 }
 
+// ExportCSV escreve os artefatos CSV do lote em mods/edits, com o MESMO
+// nome canônico por escopo do JSON (só a extensão muda). Mesmo pipeline e
+// validações do export JSON; o acesso externo (menu) continua no appcore.
+func (s *TextService) ExportCSV(kind string, version common.GameVersion, ids, langs []string) ([]string, error) {
+	if s.meta == nil {
+		return nil, fmt.Errorf("metadata service not initialized")
+	}
+	return s.meta.ExportArtifact(kind, version, ids, langs, "csv")
+}
+
+// ExportXLSX é ExportCSV no formato XLSX (Excel).
+func (s *TextService) ExportXLSX(kind string, version common.GameVersion, ids, langs []string) ([]string, error) {
+	if s.meta == nil {
+		return nil, fmt.Errorf("metadata service not initialized")
+	}
+	return s.meta.ExportArtifact(kind, version, ids, langs, "xlsx")
+}
+
 // ExportJSON escreve os artefatos JSON do lote (ids vazio = tudo).
 // Caminho no padrão dos formatters (mods/edits) — o mesmo lido na importação.
 func (s *TextService) ExportJSON(kind string, version common.GameVersion, ids, langs []string) ([]string, error) {
@@ -160,12 +178,14 @@ func (s *TextService) ExportJSON(kind string, version common.GameVersion, ids, l
 }
 
 // SelectImportFile abre o seletor nativo de arquivo para importar
-// (.json / .strings). Devolve "" quando o usuário cancela.
+// (.json / .strings / .csv / .xlsx). Devolve "" quando o usuário cancela.
 func (s *TextService) SelectImportFile() string {
 	return pickFile("Selecionar arquivo para importar", "",
-		application.FileFilter{DisplayName: "Arquivos de importação (*.json; *.strings)", Pattern: "*.json;*.strings"},
+		application.FileFilter{DisplayName: "Arquivos de importação (*.json; *.strings; *.csv; *.xlsx)", Pattern: "*.json;*.strings;*.csv;*.xlsx"},
 		application.FileFilter{DisplayName: "JSON (*.json)", Pattern: "*.json"},
 		application.FileFilter{DisplayName: "Strings (*.strings)", Pattern: "*.strings"},
+		application.FileFilter{DisplayName: "CSV (*.csv)", Pattern: "*.csv"},
+		application.FileFilter{DisplayName: "XLSX (*.xlsx)", Pattern: "*.xlsx"},
 		application.FileFilter{DisplayName: "Todos os arquivos (*.*)", Pattern: "*.*"},
 	)
 }

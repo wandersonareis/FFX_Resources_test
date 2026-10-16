@@ -1,4 +1,4 @@
-// ExportText: binário de texto APONTADO → artefato (.json/.strings) ao
+// ExportText: binário de texto APONTADO → artefato (.json/.strings/.csv/.xlsx) ao
 // lado da entrada, com o NOME CANÔNICO do frontend (ExportBaseName). O
 // binário pode estar em qualquer pasta — o decode é todo avulso (avulso.go).
 //
@@ -15,6 +15,9 @@ import (
 
 	"ffxresources/backend/common"
 	"ffxresources/backend/dto"
+	"ffxresources/backend/formatters"
+	_ "ffxresources/backend/formatters/csv"   // registra CSV formatter
+	_ "ffxresources/backend/formatters/xlsx" // registra XLSX formatter
 	jsonfmt "ffxresources/backend/formatters/json"
 	strfmt "ffxresources/backend/formatters/strings"
 	"ffxresources/backend/services"
@@ -156,6 +159,15 @@ func exportOne(req ExportRequest, input string) FileOutcome {
 func marshalArtifact(kind string, format ArtifactFormat, langs []string, c dto.Collection) ([]byte, error) {
 	if len(c) == 0 {
 		return nil, fmt.Errorf("nada para exportar")
+	}
+
+	// Para CSV e XLSX, usa o registry de formatters (independente do kind)
+	if format == FormatCSV || format == FormatXLSX {
+		f, ok := formatters.Get(format.String())
+		if !ok {
+			return nil, fmt.Errorf("formatter %s não registrado", format.String())
+		}
+		return f.MarshalLangs(c, langs)
 	}
 
 	if format == FormatStrings {

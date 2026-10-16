@@ -51,6 +51,8 @@ const (
 	FormatPhyre        // textura (.dds.phyre)
 	FormatArtifactJSON // artefato de texto exportado (.json)
 	FormatArtifactStrings
+	FormatArtifactCSV
+	FormatArtifactXLSX
 	FormatVBF // container (somente leitura — não é entrada de menu)
 )
 
@@ -77,6 +79,10 @@ func (f Format) String() string {
 		return "artefato JSON"
 	case FormatArtifactStrings:
 		return "artefato Strings"
+	case FormatArtifactCSV:
+		return "artefato CSV"
+	case FormatArtifactXLSX:
+		return "artefato XLSX"
 	case FormatVBF:
 		return "container .vbf"
 	default:
@@ -202,6 +208,18 @@ func DetectBytes(path string, head []byte) (Detection, error) {
 			return Detection{}, Incompatible(path, "artefato Strings", "", "sem cabeçalho /*key=*/ do formato .strings")
 		}
 		return Detection{Format: FormatArtifactStrings, Detail: "artefato Strings"}, nil
+
+	case filepath.Ext(base) == ".csv":
+		if !looksLikeCSV(head) {
+			return Detection{}, Incompatible(path, "artefato CSV", "", "conteúdo não parece CSV válido")
+		}
+		return Detection{Format: FormatArtifactCSV, Detail: "artefato CSV"}, nil
+
+	case filepath.Ext(base) == ".xlsx":
+		if !looksLikeXLSX(head) {
+			return Detection{}, Incompatible(path, "artefato XLSX", "", "conteúdo não é XLSX válido (assinatura PK)")
+		}
+		return Detection{Format: FormatArtifactXLSX, Detail: "artefato XLSX"}, nil
 
 	case filepath.Ext(base) == ".vbf":
 		return Detection{}, Incompatible(path, "", "container .vbf", "container é somente leitura — use o navegador de .vbf do app")
@@ -528,4 +546,46 @@ func looksLikeJSON(head []byte) bool {
 // looksLikeStrings confere o cabeçalho de bloco do formato .strings.
 func looksLikeStrings(head []byte) bool {
 	return strings.Contains(string(head), "/*key=")
+}
+
+// looksLikeCSV confere se o conteúdo parece CSV (tem vírgulas e linhas).
+func looksLikeCSV(head []byte) bool {
+	s := string(head)
+	// CSV deve ter pelo menos uma vírgula e quebra de linha
+	if !strings.Contains(s, ",") {
+		return false
+	}
+	if !strings.Contains(s, "\n") && !strings.Contains(s, "\r") {
+		return false
+	}
+	// Header esperado: version,id,name,index,lang,hash,text,divergent
+	// Aceita se tem "version,id" ou "hash,text" nas primeiras linhas
+	lines := strings.SplitN(s, "\n", 3)
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if strings.Contains(line, "version") && strings.Contains(line, "id") {
+			return true
+		}
+		if strings.Contains(line, "hash") && strings.Contains(line, "text") {
+			return true
+		}
+	}
+	// Se tem estrutura de CSV com múltiplas colunas, aceita
+	fields := strings.Split(lines[0], ",")
+	return len(fields) >= 7
+}
+
+// looksLikeXLSX confere a assinatura PK (ZIP) do XLSX.
+func looksLikeXLSX(head []byte) bool {
+	// XLSX é um ZIP com assinatura PK\x03\x04 ou PK\x05\x06 ou PK\x07\x08
+	if len(head) < 4 {
+		return false
+	}
+	return (head[0] == 'P' && head[1] == 'K' &&
+		(head[2] == 0x03 && head[3] == 0x04 ||
+			head[2] == 0x05 && head[3] == 0x06 ||
+			head[2] == 0x07 && head[3] == 0x08))
 }

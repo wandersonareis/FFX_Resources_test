@@ -29,7 +29,7 @@ import (
 // o appcore respeita o ctx para um CLI futuro poder abortar).
 func ctxOp() context.Context { return context.Background() }
 
-// onExportText é Texto ▸ <kind> ▸ Exportar JSON|Strings.
+// onExportText é Texto ▸ <kind> ▸ Exportar JSON|Strings|CSV|XLSX.
 func (c *Controller) onExportText(kind string, format appcore.ArtifactFormat) {
 	label := kindLabel(kind)
 
@@ -353,7 +353,7 @@ func (c *Controller) onImportImage() {
 	c.reportImport("Importar imagem", outcomes)
 }
 
-// onImportText é Importar ▸ <kind> ▸ Importar JSON|Strings.
+// onImportText é Importar ▸ <kind> ▸ Importar JSON|Strings|CSV|XLSX.
 func (c *Controller) onImportText(kind string, format appcore.ArtifactFormat) {
 	label := kindLabel(kind)
 

@@ -9,6 +9,7 @@ require (
 	github.com/rs/zerolog v1.35.1
 	github.com/wailsapp/wails/v3 v3.0.0-beta.30
 	github.com/woozymasta/bcn v0.7.0
+	github.com/xuri/excelize/v2 v2.11.0
 	golang.org/x/sys v0.49.0
 	golang.org/x/text v0.43.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1

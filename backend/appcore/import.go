@@ -1,4 +1,4 @@
-// ImportText: artefato de texto APONTADO (.json/.strings) + binários
+// ImportText: artefato de texto APONTADO (.json/.strings/.csv/.xlsx) + binários
 // APONTADOS (multi-seleção) → binários reconstruídos em imported/ ao lado
 // de CADA binário. O import é ON THE FLY: tudo acontece apenas ali —
 // nenhum store do frontend é mutado, nada vai para mods/.
@@ -22,6 +22,7 @@ import (
 
 	"ffxresources/backend/common"
 	"ffxresources/backend/dto"
+	"ffxresources/backend/formatters"
 	"ffxresources/backend/loggingService"
 	jsonfmt "ffxresources/backend/formatters/json"
 	strfmt "ffxresources/backend/formatters/strings"
@@ -186,8 +187,28 @@ func readArtifact(path string) (dto.Collection, ArtifactFormat, error) {
 			return nil, 0, fmt.Errorf("falha ao analisar .strings: %w", err)
 		}
 		return c, FormatStrings, nil
+	case FormatArtifactCSV:
+		f, ok := formatters.Get("csv")
+		if !ok {
+			return nil, 0, fmt.Errorf("formatter CSV não registrado")
+		}
+		c, err := f.Unmarshal(raw)
+		if err != nil {
+			return nil, 0, fmt.Errorf("falha ao analisar CSV: %w", err)
+		}
+		return c, FormatCSV, nil
+	case FormatArtifactXLSX:
+		f, ok := formatters.Get("xlsx")
+		if !ok {
+			return nil, 0, fmt.Errorf("formatter XLSX não registrado")
+		}
+		c, err := f.Unmarshal(raw)
+		if err != nil {
+			return nil, 0, fmt.Errorf("falha ao analisar XLSX: %w", err)
+		}
+		return c, FormatXLSX, nil
 	default:
-		return nil, 0, Incompatible(path, "artefato de texto", d.Format.String(), "arquivo não é .json nem .strings")
+		return nil, 0, Incompatible(path, "artefato de texto", d.Format.String(), "arquivo não é .json, .strings, .csv nem .xlsx")
 	}
 }
 

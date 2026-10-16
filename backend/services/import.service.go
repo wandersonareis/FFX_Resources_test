@@ -45,6 +45,7 @@ import (
 	"ffxresources/backend/fileFormats/lockit"
 	"ffxresources/backend/fileFormats/objectsfile"
 	"ffxresources/backend/fileFormats/objectsfile/chunkmap"
+	"ffxresources/backend/formatters"
 	"ffxresources/backend/formatters/hash"
 	jsonfmt "ffxresources/backend/formatters/json"
 	strfmt "ffxresources/backend/formatters/strings"
@@ -774,8 +775,16 @@ func (s *MetadataService) prepareImport(path string, version common.GameVersion)
 	case ".strings":
 		format = "strings"
 		imported, err = strfmt.NewStringsFormatter().Unmarshal(raw)
+	case ".csv", ".xlsx":
+		name := strings.TrimPrefix(ext, ".")
+		f, ok := formatters.Get(name)
+		if !ok {
+			return nil, fmt.Errorf("formatter %s não registrado", name)
+		}
+		format = name
+		imported, err = f.Unmarshal(raw)
 	default:
-		return nil, fmt.Errorf("extensão não suportada: %s (use .json ou .strings)", ext)
+		return nil, fmt.Errorf("extensão não suportada: %s (use .json, .strings, .csv ou .xlsx)", ext)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("falha ao analisar o arquivo: %w", err)
