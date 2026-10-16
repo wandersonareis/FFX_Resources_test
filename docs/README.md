@@ -16,6 +16,7 @@ arquivo por formato. Cada página descreve o **layout binário** e as
 | Loc kit (`ffx_loc_kit_*.bin`) | [lockit.md](formatos/lockit.md) | Registros CRLF com charset do jogo e UTF-8 no mesmo arquivo |
 | Container `.vbf` | [vbf.md](formatos/vbf.md) | Container leitura-only com índice e blocos comprimidos |
 | Texturas `.dds.phyre` | [texturas-phyre.md](formatos/texturas-phyre.md) | Container PhyreEngine DX11 com payload DDS |
+| Exportação JSON / Strings (`.json` / `.strings`) | [exportacao-json-strings.md](formatos/exportacao-json-strings.md) | Artefatos de texto do editor: estrutura do DTO, dedup `$hash`, round-trip |
 | Exportação CSV / XLSX (`.csv` / `.xlsx`) | [exportacao-csv-xlsx.md](formatos/exportacao-csv-xlsx.md) | Tabela de tradução externa: colunas, dedup `$hash`, proteção de metadata |
 
 ## Motor compartilhado

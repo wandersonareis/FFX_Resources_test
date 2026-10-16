@@ -4,7 +4,8 @@ Os formatos tabulares de tradução externa: a MESMA tabela em dois arquivos —
 `.csv` (texto puro) e `.xlsx` (planilha estilizada, com as colunas de
 metadata protegidas contra edição). Feitos para o trabalho em planilha
 (Excel, LibreOffice, Google Sheets): o tradutor mexe nas colunas de texto e
-devolve o arquivo pelo import.
+devolve o arquivo pelo import. É a versão tabular dos mesmos dados do
+[JSON / Strings](exportacao-json-strings.md).
 
 Pacotes: `backend/formatters/csv` e `backend/formatters/xlsx`, registrados no
 registry `backend/formatters/formatter.go` (interface `Formatter`:

@@ -37,6 +37,7 @@ diagramas e as funções principais do pacote Go correspondente — está em
 - [Loc kit](docs/formatos/lockit.md) — `ffx_loc_kit_*.bin`
 - [Container `.vbf`](docs/formatos/vbf.md) — leitura-only
 - [Texturas `.dds.phyre`](docs/formatos/texturas-phyre.md) — PhyreEngine DX11
+- [Exportação JSON / Strings](docs/formatos/exportacao-json-strings.md) — artefatos de texto do editor (DTO, dedup, round-trip)
 - [Exportação CSV / XLSX](docs/formatos/exportacao-csv-xlsx.md) — tabela de
   tradução externa (colunas, dedup, proteção de metadata)
 

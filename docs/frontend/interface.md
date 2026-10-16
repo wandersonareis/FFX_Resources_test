@@ -240,9 +240,12 @@ o botão Importar** — nada entra pela metade. Há duas origens no menu:
 
 Os formatos que circulam por aí:
 
-- **JSON** — estrutura completa (metadados + textos), para backup ou
-  ferramentas externas;
-- **.strings** — pares chave/valor, formato simples para tradutores;
+- **JSON** — estrutura completa (metadados + textos por idioma), para
+  backup ou ferramentas externas (ver
+  [Exportação JSON / Strings](../formatos/exportacao-json-strings.md));
+- **.strings** — uma linha por (row, idioma), formato texto simples para
+  tradutores (ver
+  [Exportação JSON / Strings](../formatos/exportacao-json-strings.md));
 - **CSV / XLSX** — a mesma tabela para planilhas (Excel, LibreOffice,
   Google Sheets): o tradutor mexe só em `text` e `divergent`, e no XLSX as
   colunas de metadata já saem travadas (ver
