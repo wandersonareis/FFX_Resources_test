@@ -16,6 +16,7 @@ arquivo por formato. Cada página descreve o **layout binário** e as
 | Loc kit (`ffx_loc_kit_*.bin`) | [lockit.md](formatos/lockit.md) | Registros CRLF com charset do jogo e UTF-8 no mesmo arquivo |
 | Container `.vbf` | [vbf.md](formatos/vbf.md) | Container leitura-only com índice e blocos comprimidos |
 | Texturas `.dds.phyre` | [texturas-phyre.md](formatos/texturas-phyre.md) | Container PhyreEngine DX11 com payload DDS |
+| Exportação CSV / XLSX (`.csv` / `.xlsx`) | [exportacao-csv-xlsx.md](formatos/exportacao-csv-xlsx.md) | Tabela de tradução externa: colunas, dedup `$hash`, proteção de metadata |
 
 ## Motor compartilhado
 
@@ -32,5 +33,5 @@ do texto geram o valor dos ponteiros. Documentado em
   `backend/core/converter` (`StringToBytes` / `BytesToString`).
 - O texto flui pela app como DTO (`backend/dto`): os pacotes de formato
   leem/escrevem binário; os builders (`backend/builders`) montam/aplicam o
-  DTO; os formatters (`backend/formatters`) serializam JSON/.strings.
+  DTO; os formatters (`backend/formatters`) serializam JSON/.strings/CSV/XLSX.
 - Edits são sempre salvos em `mods/<localização>/...`, nunca em `data/`.

@@ -35,7 +35,8 @@ aba (`Ctrl+1..4`) troca a árvore inteira. O layout (largura das colunas,
 
 - **Abas de versão** — uma por versão do jogo (`Ctrl+1..4`); trocar de
   aba recarrega a árvore inteira com os arquivos daquela versão.
-- **Formato** (JSON / Strings) — define o formato usado pelo **Exportar**.
+- **Formato** (JSON / Strings / CSV / XLSX) — define o formato usado pelo
+  **Exportar**.
 - **Exportar ▾ / Importar ▾** — ver [Exportar / Importar](#exportar--importar).
 - **Engrenagem** (`Ctrl+,`) — abre a [Configuração](#configuração-ctrl).
 - **Alternar tema** — claro/escuro.
@@ -218,6 +219,11 @@ O menu Exportar tem duas ações e um escopo:
   menos um marcado); nessa via cada entrada ganha seu próprio arquivo
   (`<id>_all_localizations_<versão>`), separado do arquivo completo do tipo.
 
+CSV e XLSX usam os mesmos nomes e caminhos com a extensão trocada (ver
+[Exportação CSV / XLSX](../formatos/exportacao-csv-xlsx.md)) — no XLSX as
+colunas de metadata saem **protegidas** contra edição acidental: só `text`
+e `divergent` aceitam edição.
+
 ### Importar
 
 ![Modal de importação com o resumo antes de aplicar](../imagens/interface-import-modal.png)
@@ -229,14 +235,18 @@ o botão Importar** — nada entra pela metade. Há duas origens no menu:
 
 - **Importar** (`mods/translated`) — lote: importa os textos em inglês
   ("us") de todos os tipos encontrados na pasta de traduções;
-- **Importar de... arquivo** — um único JSON/`.strings`, com prévia
+- **Importar de... arquivo** — um único JSON/`.strings`/CSV/XLSX, com prévia
   (o modal acima) antes de aplicar.
 
-Três formatos circulam por aí:
+Os formatos que circulam por aí:
 
 - **JSON** — estrutura completa (metadados + textos), para backup ou
   ferramentas externas;
 - **.strings** — pares chave/valor, formato simples para tradutores;
+- **CSV / XLSX** — a mesma tabela para planilhas (Excel, LibreOffice,
+  Google Sheets): o tradutor mexe só em `text` e `divergent`, e no XLSX as
+  colunas de metadata já saem travadas (ver
+  [Exportação CSV / XLSX](../formatos/exportacao-csv-xlsx.md));
 - **Texto importado** — arquivo de tradução pronto (produzido pelo
   próprio editor) reaplicado com prévia do que vai mudar.
 
