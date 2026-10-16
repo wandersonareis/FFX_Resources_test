@@ -49,6 +49,17 @@ export function CountChangedTexts(imported: dto$0.Collection, store: dto$0.Colle
 }
 
 /**
+ * ExportCSV escreve os artefatos CSV do lote em mods/edits, com o MESMO
+ * nome canônico por escopo do JSON (só a extensão muda). Mesmo pipeline e
+ * validações do export JSON; o acesso externo (menu) continua no appcore.
+ */
+export function ExportCSV(kind: string, version: common$0.GameVersion, ids: string[], langs: string[]): $CancellablePromise<string[]> {
+    return $Call.ByID(1829033128, kind, version, ids, langs).then(($result: any) => {
+        return $$createType0($result);
+    });
+}
+
+/**
  * ExportEntry monta o DTO da entrada e escreve os artefatos JSON e .strings
  * em mods/edits. Devolve os caminhos escritos. langs nil/vazio = todos.
  */
@@ -75,6 +86,15 @@ export function ExportJSON(kind: string, version: common$0.GameVersion, ids: str
  */
 export function ExportStrings(kind: string, version: common$0.GameVersion, ids: string[], langs: string[]): $CancellablePromise<string[]> {
     return $Call.ByID(1584413886, kind, version, ids, langs).then(($result: any) => {
+        return $$createType0($result);
+    });
+}
+
+/**
+ * ExportXLSX é ExportCSV no formato XLSX (Excel).
+ */
+export function ExportXLSX(kind: string, version: common$0.GameVersion, ids: string[], langs: string[]): $CancellablePromise<string[]> {
+    return $Call.ByID(1770952991, kind, version, ids, langs).then(($result: any) => {
         return $$createType0($result);
     });
 }
@@ -212,7 +232,7 @@ export function SearchTextEntries(version: common$0.GameVersion, query: string):
 
 /**
  * SelectImportFile abre o seletor nativo de arquivo para importar
- * (.json / .strings). Devolve "" quando o usuário cancela.
+ * (.json / .strings / .csv / .xlsx). Devolve "" quando o usuário cancela.
  */
 export function SelectImportFile(): $CancellablePromise<string> {
     return $Call.ByID(2853090985);

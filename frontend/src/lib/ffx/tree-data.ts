@@ -2,6 +2,8 @@ import {
   ExportEntry,
   ExportJSON,
   ExportStrings,
+  ExportCSV,
+  ExportXLSX,
   GetTextEntry,
   ImportEntry,
   ImportFile,
@@ -37,6 +39,7 @@ import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import * as services from '@/bindings/ffxresources/backend/services/models';
 import { resolveEntryLabel, EntryKind } from './display-names';
 import type { GameVersionId } from './game-version';
+import type { ExportFormat } from './export-selection';
 
 export interface EntryRow {
   kind: EntryKind;
@@ -466,6 +469,29 @@ export async function exportStrings(
   return ExportStrings(kind, version as Parameters<typeof ExportStrings>[1], ids, langs);
 }
 
+/** Exporta o lote no formato especificado (json | strings | csv | xlsx).
+ * CSV e XLSX requerem implementação no backend — por enquanto fallback para JSON. */
+export async function exportBatch(
+  kind: EntryKind,
+  version: GameVersionId,
+  ids: string[],
+  langs: string[],
+  format: ExportFormat
+): Promise<string[]> {
+  switch (format) {
+    case 'json':
+      return ExportJSON(kind, version as Parameters<typeof ExportJSON>[1], ids, langs);
+    case 'strings':
+      return ExportStrings(kind, version as Parameters<typeof ExportStrings>[1], ids, langs);
+    case 'csv':
+      return ExportCSV(kind, version as Parameters<typeof ExportCSV>[1], ids, langs);
+    case 'xlsx':
+      return ExportXLSX(kind, version as Parameters<typeof ExportXLSX>[1], ids, langs);
+    default:
+      return ExportJSON(kind, version as Parameters<typeof ExportJSON>[1], ids, langs);
+  }
+}
+
 /**
  * Resumo do destino do export para o toast: os artefatos saem em mods/edits
  * (todos os kinds), então mostra a contagem + diretório (ou o caminho único).
@@ -478,7 +504,7 @@ export function exportDestination(paths: string[]): string {
   return `${list.length} arquivos em ${dir}`;
 }
 
-/** Seletor nativo de arquivo (.json/.strings). "" = cancelado. */
+/** Seletor nativo de arquivo (.json/.strings/.csv/.xlsx). "" = cancelado. */
 export function selectImportFile(): Promise<string> {
   return SelectImportFile();
 }

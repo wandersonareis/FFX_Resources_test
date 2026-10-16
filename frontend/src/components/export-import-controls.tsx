@@ -7,7 +7,7 @@ import { Events } from '@wailsio/runtime';
 import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import { GAME_VERSIONS, GameVersionId } from '@/lib/ffx/game-version';
 import { EntryKind, KIND_LABELS } from '@/lib/ffx/display-names';
-import { exportSelection, EXPORT_FORMAT_LABELS } from '@/lib/ffx/export-selection';
+import { exportSelection, EXPORT_FORMAT_LABELS, useExportSelection } from '@/lib/ffx/export-selection';
 import { exportProgress } from '@/lib/ffx/export-progress';
 import { parseError } from '@/lib/ffx/error-handler';
 import {
@@ -15,6 +15,7 @@ import {
   exportDestination,
   exportJSON,
   exportStrings,
+  exportBatch,
   importFile,
   importTranslated,
   previewImport,
@@ -64,6 +65,11 @@ export function ExportImportControls({ version }: { version: GameVersionId }) {
   const [importBatch, setImportBatch] = useState<dto.ImportBatch | null>(null);
   const activeImportScope = importScopes[version] ?? servedKinds;
 
+  // Formato de exportação vem do BOTÃO DE FORMATO do header (direita do
+  // botão de configurações) — a store `exportSelection` é a única fonte;
+  // o popover do export não tem seletor próprio.
+  const activeFormat = useExportSelection().format;
+
   const toggleImportScope = (kind: EntryKind) => {
     setImportScopes((prev) => {
       const current = prev[version] ?? entryKindsFor(version);
@@ -84,12 +90,12 @@ export function ExportImportControls({ version }: { version: GameVersionId }) {
     });
   };
 
-  // Exporta os kinds no FORMATO SELECIONADO (JSON | Strings), em sequência
+  // Exporta os kinds no FORMATO SELECIONADO (JSON | Strings | CSV | XLSX), em sequência
   // (evita GetCollection concorrente). useCheckedIds=false força ids=[] →
   // tudo do kind; com seleção, exigirá ≥1 marcado.
   const runExport = useCallback(
     async (kinds: EntryKind[], useCheckedIds: boolean) => {
-      const format = exportSelection.formatOf();
+      const format = activeFormat;
       if (useCheckedIds && kinds.every((kind) => exportSelection.countOf(version, kind) === 0)) {
         toast.info('Nada para exportar — selecione itens na árvore.');
         return;
@@ -108,10 +114,7 @@ export function ExportImportControls({ version }: { version: GameVersionId }) {
           const ids = useCheckedIds ? exportSelection.idsOf(version, kind) : [];
           // Exportar seleção = atalho do Exportar do contexto.
           if (useCheckedIds && ids.length === 0) continue;
-          const paths =
-            format === 'json'
-              ? await exportJSON(kind, version, ids)
-              : await exportStrings(kind, version, ids);
+          const paths = await exportBatch(kind, version, ids, [], format);
           allPaths.push(...(paths ?? []));
           written += (paths ?? []).length;
         }
@@ -131,7 +134,7 @@ export function ExportImportControls({ version }: { version: GameVersionId }) {
         exportProgress.end();
       }
     },
-    [version]
+    [version, activeFormat]
   );
 
   const onImportClick = useCallback(async () => {
@@ -225,7 +228,7 @@ export function ExportImportControls({ version }: { version: GameVersionId }) {
           <Button
             size="sm"
             variant="outline"
-            title="Exportar textos — JSON ou Strings, de todos os tipos ou da seleção marcada"
+            title={`Exportar textos — ${EXPORT_FORMAT_LABELS[activeFormat]} (formato do seletor ao lado das configurações), de todos os tipos ou da seleção marcada`}
           >
             <Download size={16} />
             Exportar

@@ -15,6 +15,7 @@ import {
   SaveVbfImage,
 } from '@/bindings/ffxresources/vbfservice';
 import * as dto from '@/bindings/ffxresources/backend/dto/models';
+import type { ExportFormat } from './export-selection';
 
 /**
  * Navegador de container .vbf (SOMENTE LEITURA).
@@ -226,12 +227,12 @@ export function selectVbfImageExtractDir(): Promise<string> {
 }
 
 /**
- * Exporta os kinds de TEXTO da seleção em JSON ou .strings — mesmo lugar
+ * Exporta os kinds de TEXTO da seleção em JSON, .strings, CSV ou XLSX — mesmo lugar
  * (mods/edits) e convenção do export de data/.
  */
 export function exportVbfSelection(
   root: string,
-  format: 'json' | 'strings',
+  format: ExportFormat,
   paths: string[],
   langs: string[] = []
 ): Promise<string[]> {
