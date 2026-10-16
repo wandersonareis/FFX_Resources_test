@@ -41,8 +41,9 @@ ordenadas, rows por index, idiomas em ordem alfabética.
 
 - Indentação de 2 espaços, **sem escape HTML** (`&`, `<`, `>` saem
   literais).
-- TODO hash sai com prefixo `$` — o marcador de ponteiro de conteúdo
-  (no CSV/XLSX o hash da coluna é bare; o `$` só aparece em ref).
+- TODO hash sai com prefixo `$` — o marcador de ponteiro de conteúdo,
+  uniforme nos QUATRO formatos de artefato (JSON, .strings, CSV e XLSX
+  carregam `$` na coluna/campo hash; o prefixo vive no pacote `hash`).
 
 Trecho de exemplo:
 

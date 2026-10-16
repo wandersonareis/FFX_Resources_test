@@ -25,7 +25,7 @@ entradas por key, rows por index, idiomas em ordem alfabética.
 | `name` | C | nome da row dentro do arquivo (ex.: `name_simplified`); vazio quando o formato não nomeia rows |
 | `index` | D | posição da row no binário (reconstrução posicional) |
 | `lang` | E | idioma do texto da linha (`us`, `jp`, ...) |
-| `hash` | F | `hash.Sum64Hex` do texto (16 hex) — a identidade do texto no dedup |
+| `hash` | F | hash do texto no formato de artefato: `$` + `hash.Sum64Hex` (16 hex) — a identidade do texto no dedup. O `$` é o marcador do pacote `hash` (`RefPrefix`); no XLSX também garante que a célula fique tipada como texto (hash todo-numérico não vira número) |
 | `text` | G | **o texto editável** — a coluna a mexer na tradução |
 | `divergent` | H | `true` quando a row tem texto próprio, divergindo da tabela compartilhada |
 
@@ -107,7 +107,10 @@ mesmo escopo.
   `.xlsx` — dispatch por extensão em `backend/services/import.service.go`) e
   o menu nativo Importar ▸ <tipo> ▸ Importar CSV/XLSX.
 - Regras: exige `key` por linha (linha sem key aborta com erro — re-exporte
-  o arquivo no formato atual); resolve as refs `$hash`; o XLSX aceita
+  o arquivo no formato atual); exige hash com prefixo `$` — célula não-vazia
+  sem o `$` é artefato do formato antigo e aborta com o mesmo erro de
+  re-export (célula vazia é tolerada: artefato feito à mão, o import
+  recalcula pelo texto); resolve as refs `$hash`; o XLSX aceita
   colunas extras desde que as 8 primeiras existam.
 - O import SEMPRE mostra prévia antes de aplicar; qualquer erro bloqueia o
   botão Importar, e nada é salvo no binário sem o "Salvar" explícito.
