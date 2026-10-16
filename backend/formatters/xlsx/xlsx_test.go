@@ -69,7 +69,7 @@ func TestMarshalLargurasCalculadas(t *testing.T) {
 		{"B", float64(xlsxWidthBase)},                                     // id: "chunk_07" (8) < base
 		{"C", float64(len("name_simplified"))},                            // name: maior name
 		{"D", float64(xlsxWidthBase)},                                     // index: dígitos < base
-		{"G", 80}, // text: estourou o teto → clamp
+		{"G", 80},                                                         // text: estourou o teto → clamp
 	}
 	for _, tc := range cases {
 		got, err := f.GetColWidth("Sheet1", tc.col)
@@ -105,6 +105,111 @@ func TestMarshalWrapNaColunaText(t *testing.T) {
 	}
 	if style.Alignment == nil || !style.Alignment.WrapText {
 		t.Error("célula G2 deveria ter WrapText (queca de linha)")
+	}
+}
+
+// Proteção das colunas: metadata (A–F) e header travados, text (G) e
+// divergent (H) destravados — planilha protegida SEM senha (quem
+// insistir desprotege em um clique) e validação A:F carregando o aviso
+// "Edição não permitida".
+func TestMarshalProtegeColunasMetadata(t *testing.T) {
+	marshallers := []struct {
+		nome  string
+		marsh func(dto.Collection) ([]byte, error)
+	}{
+		{"xlsx", NewXLSXFormatter().Marshal},
+		{"xlsx-no-dedup", XLSXFormatterNoDedup{}.Marshal},
+	}
+
+	for _, m := range marshallers {
+		t.Run(m.nome, func(t *testing.T) {
+			raw, err := m.marsh(sampleCollection())
+			if err != nil {
+				t.Fatalf("marshal: %v", err)
+			}
+			f, err := excelize.OpenReader(strings.NewReader(string(raw)))
+			if err != nil {
+				t.Fatalf("open: %v", err)
+			}
+			defer f.Close()
+
+			cellStyle := func(cell string) *excelize.Style {
+				t.Helper()
+				styleID, err := f.GetCellStyle("Sheet1", cell)
+				if err != nil {
+					t.Fatalf("GetCellStyle(%s): %v", cell, err)
+				}
+				style, err := f.GetStyle(styleID)
+				if err != nil {
+					t.Fatalf("GetStyle(%s): %v", cell, err)
+				}
+				return style
+			}
+
+			// Metadata (A–F) e header (linha 1): travadas. Protection
+			// nil é o PADRÃO do xlsx (célula travada).
+			for _, cell := range []string{"A1", "G1", "H1", "A2", "C3", "F2"} {
+				if style := cellStyle(cell); style.Protection != nil && !style.Protection.Locked {
+					t.Errorf("%s (metadata/header) deveria estar travada", cell)
+				}
+			}
+
+			// text (G) e divergent (H): destravadas (Locked false
+			// explícito no estilo).
+			for _, cell := range []string{"G2", "H2", "G5", "H5"} {
+				if style := cellStyle(cell); style.Protection == nil || style.Protection.Locked {
+					t.Errorf("%s (text/divergent) deveria estar destravada", cell)
+				}
+			}
+
+			// O Protection entrou NO textStyle: WrapText preservado.
+			if style := cellStyle("G2"); style.Alignment == nil || !style.Alignment.WrapText {
+				t.Error("G2 perdeu o WrapText ao ganhar Protection")
+			}
+
+			// Proteção da planilha: seleção/cópia e AutoFilter
+			// liberados; estrutura (inserir/deletar/formatar) segue
+			// bloqueada.
+			prot, err := f.GetSheetProtection("Sheet1")
+			if err != nil {
+				t.Fatalf("GetSheetProtection: %v", err)
+			}
+			if !prot.SelectLockedCells || !prot.SelectUnlockedCells || !prot.AutoFilter {
+				t.Errorf("esperava seleção+cópia e autofilter liberados, got %+v", prot)
+			}
+			if prot.InsertRows || prot.DeleteRows || prot.FormatCells {
+				t.Errorf("estrutura deveria seguir bloqueada, got %+v", prot)
+			}
+
+			// Validação A:F: regra custom sempre-inválida com o aviso
+			// customizado em estilo Stop.
+			dvs, err := f.GetDataValidations("Sheet1")
+			if err != nil {
+				t.Fatalf("GetDataValidations: %v", err)
+			}
+			if len(dvs) != 1 {
+				t.Fatalf("validações: %d, esperado 1", len(dvs))
+			}
+			dv := dvs[0]
+			if dv.Sqref != "A:F" {
+				t.Errorf("sqref %q, esperado \"A:F\"", dv.Sqref)
+			}
+			if dv.Type != "custom" || dv.Formula1 != "FALSE" {
+				t.Errorf("regra custom sempre-inválida, got type=%q formula1=%q", dv.Type, dv.Formula1)
+			}
+			if !dv.ShowErrorMessage {
+				t.Error("validação deveria mostrar a mensagem de erro")
+			}
+			if dv.ErrorStyle == nil || *dv.ErrorStyle != "stop" {
+				t.Errorf("errorStyle %v, esperado \"stop\"", dv.ErrorStyle)
+			}
+			if dv.ErrorTitle == nil || *dv.ErrorTitle != metadataEditErrorTitle {
+				t.Errorf("título %v, esperado %q", dv.ErrorTitle, metadataEditErrorTitle)
+			}
+			if dv.Error == nil || *dv.Error != metadataEditErrorMsg {
+				t.Errorf("mensagem %v, esperado %q", dv.Error, metadataEditErrorMsg)
+			}
+		})
 	}
 }
 

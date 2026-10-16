@@ -67,6 +67,13 @@ const (
 	colDivergent = 7
 )
 
+// Mensagem da validação das colunas de metadata (A–F): aparece quando
+// alguém digita em metadata com a planilha desprotegida.
+const (
+	metadataEditErrorTitle = "Edição não permitida"
+	metadataEditErrorMsg   = "Não altere os valores desta coluna."
+)
+
 // xlsxWidthMax é o teto das colunas calculadas (texto que passa disso
 // fica com a linha quebrada pelo WrapText da coluna text).
 const xlsxWidthMax = 80
@@ -161,9 +168,22 @@ func (XLSXFormatter) MarshalLangs(c dto.Collection, langs []string) ([]byte, err
 	// Estilo de queca de linha da coluna text: UM estilo, aplicado em
 	// range no final. Com WrapText e SEM altura de linha explícita, o
 	// Excel cresce a altura da linha sozinho ao abrir (regra: nunca
-	// SetRowHeight, senão o excedente fica escondido).
+	// SetRowHeight, senão o excedente fica escondido). É também uma das
+	// DUAS colunas editáveis (text + divergent): Protection destrava a
+	// célula para quando a planilha é protegida (ver
+	// protectMetadataColumns).
 	textStyle, err := f.NewStyle(&excelize.Style{
-		Alignment: &excelize.Alignment{WrapText: true, Vertical: "top"},
+		Alignment:  &excelize.Alignment{WrapText: true, Vertical: "top"},
+		Protection: &excelize.Protection{Locked: false},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// divergent (H) é a outra coluna editável: destravada, sem WrapText
+	// ("true"/"false" não quebra linha).
+	divergentStyle, err := f.NewStyle(&excelize.Style{
+		Protection: &excelize.Protection{Locked: false},
 	})
 	if err != nil {
 		return nil, err
@@ -238,9 +258,11 @@ func (XLSXFormatter) MarshalLangs(c dto.Collection, langs []string) ([]byte, err
 		f.SetColWidth(sheet, col, col, float64(w))
 	}
 
-	// Queca de linha da coluna text: UM estilo, UM range (não um por linha).
+	// Queca de linha da coluna text (G) e destravamento da divergent
+	// (H): UM estilo, UM range cada (não um por linha).
 	if rowIdx > 2 {
 		f.SetCellStyle(sheet, "G2", fmt.Sprintf("G%d", rowIdx-1), textStyle)
+		f.SetCellStyle(sheet, "H2", fmt.Sprintf("H%d", rowIdx-1), divergentStyle)
 	}
 
 	// Auto-filter
@@ -253,6 +275,12 @@ func (XLSXFormatter) MarshalLangs(c dto.Collection, langs []string) ([]byte, err
 			YSplit:      1,
 			TopLeftCell: "A2",
 		})
+	}
+
+	// Proteção: metadata (A–F) e header travados, só text e divergent
+	// editáveis — sem senha, é contra edição acidental.
+	if err := protectMetadataColumns(f, sheet); err != nil {
+		return nil, err
 	}
 
 	buf, err := f.WriteToBuffer()
@@ -301,6 +329,35 @@ func rowLangs(row dto.TextRow, filter map[string]bool) []string {
 	}
 	sort.Strings(langs)
 	return langs
+}
+
+// protectMetadataColumns trava as colunas de metadata (A–F, header
+// incluso) contra edição ERRADA — o alvo é o acidente, não a segurança:
+// a planilha é protegida SEM senha (desproteger é um clique em Revisão,
+// e colar bypassa a validação), então quem insistir ainda edita. Célula
+// travada é o PADRÃO do xlsx; só text (G) e divergent (H) saem dos
+// marshallers com estilo Protection{Locked: false}. O aviso
+// customizado vive numa DataValidation "custom" sempre-inválida
+// (Formula1 FALSE) sobre A:F: com a planilha desprotegida, digitar em
+// metadata mostra "Edição não permitida" e rejeita — protegida, quem
+// digita recebe o aviso padrão do próprio Excel (o formato não permite
+// customizar aquele aviso).
+func protectMetadataColumns(f *excelize.File, sheet string) error {
+	if err := f.ProtectSheet(sheet, &excelize.SheetProtectionOptions{
+		SelectLockedCells:   true, // deixa clicar/copiar células travadas
+		SelectUnlockedCells: true,
+		AutoFilter:          true, // mantém o AutoFilter da planilha usável
+		Sort:                true,
+	}); err != nil {
+		return err
+	}
+
+	dv := excelize.NewDataValidation(true)
+	dv.Sqref = "A:F"
+	dv.Type = "custom"
+	dv.Formula1 = "FALSE"
+	dv.SetError(excelize.DataValidationErrorStyleStop, metadataEditErrorTitle, metadataEditErrorMsg)
+	return f.AddDataValidation(sheet, dv)
 }
 
 // Unmarshal parseia o XLSX de volta para a Collection (DTO).
@@ -495,10 +552,16 @@ func marshalNoDedupLangs(c dto.Collection, langs []string) ([]byte, error) {
 	}
 
 	// Mesma régua de larguras do MarshalLangs: base 10 + maior texto
-	// observado (runes), teto 80 — aplicada no final.
+	// observado (runes), teto 80 — aplicada no final. Mesmas duas
+	// colunas editáveis também: text (WrapText + destravada) e divergent
+	// (só destravada).
 	widths := newXlsxWidths()
 	textStyle, _ := f.NewStyle(&excelize.Style{
-		Alignment: &excelize.Alignment{WrapText: true, Vertical: "top"},
+		Alignment:  &excelize.Alignment{WrapText: true, Vertical: "top"},
+		Protection: &excelize.Protection{Locked: false},
+	})
+	divergentStyle, _ := f.NewStyle(&excelize.Style{
+		Protection: &excelize.Protection{Locked: false},
 	})
 
 	rowIdx := 2
@@ -550,6 +613,7 @@ func marshalNoDedupLangs(c dto.Collection, langs []string) ([]byte, error) {
 	}
 	if rowIdx > 2 {
 		f.SetCellStyle(sheet, "G2", fmt.Sprintf("G%d", rowIdx-1), textStyle)
+		f.SetCellStyle(sheet, "H2", fmt.Sprintf("H%d", rowIdx-1), divergentStyle)
 	}
 
 	if rowIdx > 2 {
@@ -560,6 +624,12 @@ func marshalNoDedupLangs(c dto.Collection, langs []string) ([]byte, error) {
 			YSplit:      1,
 			TopLeftCell: "A2",
 		})
+	}
+
+	// Mesma proteção do MarshalLangs: metadata travada, text/divergent
+	// editáveis.
+	if err := protectMetadataColumns(f, sheet); err != nil {
+		return nil, err
 	}
 
 	buf, err := f.WriteToBuffer()
