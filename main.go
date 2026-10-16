@@ -6,6 +6,8 @@ import (
 	"log"
 	"log/slog"
 
+	"ffxresources/backend/appmenu"
+
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -14,6 +16,13 @@ var assets embed.FS
 
 //go:embed build/appicon.png
 var icon []byte
+
+// logoUS é o logo usado na documentação (docs/imagens/logo_us.png) —
+// embutido no package main (go:embed não aceita "..") e entregue à janela
+// Sobre do menu.
+//
+//go:embed docs/imagens/logo_us.png
+var logoUS []byte
 
 func main() {
 	// Create an instance of the app structure
@@ -52,19 +61,31 @@ func main() {
 		},
 	})
 
+	// Menu nativo do app (backend puro, zero JS): os handlers moram em
+	// backend/appmenu e as operações em backend/appcore — o mesmo núcleo
+	// que um CLI futuro usaria. Instalado após o app existir e antes do
+	// event loop.
+	menuController := appmenu.NewController(logoUS)
+	app.Menu.Set(appmenu.Build(app, menuController))
+
 	// v2: Title/Width/Height/MinWidth/MinHeight/BackgroundColour/WindowStartState
 	// moravam em options.App; no v3 viraram opções da janela. O menu e o menu
 	// de contexto padrão continuam desligados/ligados por default
 	// (EnableDefaultContextMenu: true vira DefaultContextMenuDisabled: false).
+	//
+	// UseApplicationMenu: no v3 o app.Menu.Set NÃO basta no Windows/Linux —
+	// cada janela precisa ACEITAR o menu do app (o default é false, por
+	// compatibilidade). No macOS não há efeito: lá o menu é sempre global.
 	_ = app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:            "FINAL FANTASY X and X-2 HD Remaster Resources Editor",
-		Width:            1280,
-		Height:           800,
-		MinWidth:         1024,
-		MinHeight:        600,
-		StartState:       application.WindowStateNormal,
-		BackgroundColour: application.NewRGB(255, 255, 255),
-		URL:              "/",
+		Title:              "FINAL FANTASY X and X-2 HD Remaster Resources Editor",
+		Width:              1280,
+		Height:             800,
+		MinWidth:           1024,
+		MinHeight:          600,
+		StartState:         application.WindowStateNormal,
+		BackgroundColour:   application.NewRGB(255, 255, 255),
+		URL:                "/",
+		UseApplicationMenu: true,
 		// v2: mac.Options{TitleBar, Appearance} — no v3 essas opções passaram
 		// para a janela.
 		Mac: application.MacWindow{
