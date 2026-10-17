@@ -82,22 +82,26 @@ Formato java-like, um bloco por entrada — header + uma linha por
 
 ```
 /*key=<key> row_count=<n>*/
-<versão>:<id>[:<name>]:<index>:<lang>║$<hash> = <literal | $hash>
+<id>[:<name>]:<index>:<lang>║$<hash> = <literal | $hash>
 ```
 
 Exemplo:
 
 ```
 /*key=ffx/event/obj_ps3/az/azit0000/azit0000.bin row_count=2*/
-ffx:azit0000:0:us║$aaaa0000aaaa0000 = Frase de teste comum ao arquivo
-ffx:azit0000:name_simplified:1:jp║$cccc2222cccc2222 = テスト
-ffx:azit0000:name_simplified:1:us║$bbbb1111bbbb1111 = 你好世界，这是一段很长的文字用来测试
+azit0000:0:us║$aaaa0000aaaa0000 = Frase de teste comum ao arquivo
+azit0000:name_simplified:1:jp║$cccc2222cccc2222 = テスト
+azit0000:name_simplified:1:us║$bbbb1111bbbb1111 = 你好世界，这是一段很长的文字用来测试
 ```
 
+- **A versão não vai na linha** — vive só no header `/*key=*/`, de onde
+  `ParseKey` a recupera; a linha começa no arquivo (id) em diante, como a
+  key dos demais formatos. Linha cujo primeiro campo é nome de versão
+  (`ffx`, `ffx2`, …) é erro de formato.
 - **Âncora semântica à direita** — último campo = lang, penúltimo =
-  index; campos novos (versão, path) crescem pela esquerda sem quebrar o
-  parser. `name` é omitido quando vazio (events/help); objects/macro emitem
-  `<id>:<name>:<index>:<lang>`.
+  index; campos NOVOS (ex.: path/region) crescem pela esquerda sem
+  quebrar o parser. `name` é omitido quando vazio (events/help);
+  objects/macro emitem `<id>:<name>:<index>:<lang>`.
 - **`║` (U+2566)** liga a chave ao hash de identidade; **` = `** liga o
   hash ao valor, com split no PRIMEIRO `=` (o texto pode conter `=` à
   vontade).

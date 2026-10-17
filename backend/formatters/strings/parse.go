@@ -156,7 +156,9 @@ func parseHeader(line string) (key string, rowCount int, ok bool) {
 
 // parseLine decompõe uma linha de conteúdo com âncora à direita:
 // último campo = lang, penúltimo = index, resto = prefixo opaco
-// ([versão:]... id [:name]).
+// (campos futuros crescem pela esquerda) com id [:name]. A versão NÃO é
+// campo da linha: vive só no header /*key=*/ — no primeiro campo da
+// chave é erro de formato, nunca absorvida como prefixo.
 func parseLine(line string, lineno int) (parsedLine, error) {
 	fail := func(format string, args ...any) (parsedLine, error) {
 		return parsedLine{}, fmt.Errorf("strings line %d: %s", lineno, fmt.Sprintf(format, args...))
@@ -196,8 +198,12 @@ func parseLine(line string, lineno int) (parsedLine, error) {
 	}
 	left := fields[:len(fields)-2]
 	if len(left) > 0 {
+		// A versão vive só no header /*key=*/ (ParseKey a recupera). No
+		// primeiro campo da chave ela é erro de formato: sem isto, seria
+		// absorvida como prefixo futuro e a linha parsearia ERRADO em
+		// silêncio (id="ffx", name=<id>).
 		if _, verr := common.ParseGameVersionStrict(left[0]); verr == nil {
-			left = left[1:]
+			return fail("unexpected version prefix in key %q", keyPart)
 		}
 	}
 	var id, name string

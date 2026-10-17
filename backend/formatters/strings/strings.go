@@ -11,8 +11,12 @@
 //	<keyfields>   := [<prefix> ":"]... <id> [":" <name>] ":" <index> ":" <lang>
 //	<value>       := <literal> | "$" <hash16>          // def | ref
 //
-// Âncora semântica à direita: último campo = lang, penúltimo = index;
-// campos novos (versão, path) crescem pela esquerda sem quebrar o parser.
+// A versão NÃO vai na linha: vive só no header /*key=*/, de onde
+// ParseKey a recupera — a linha começa no arquivo (id) em diante, como
+// a key dos demais formatos. Âncora semântica à direita: último campo =
+// lang, penúltimo = index; campos NOVOS (ex.: path/region) crescem pela
+// esquerda sem quebrar o parser — versão no primeiro campo é erro de
+// formato, nunca campo tolerado.
 // "║" liga a chave ao hash de identidade; "=" liga ao valor com split no
 // primeiro ("=" dentro do texto passa intacto; a chave nunca tem espaço).
 // def: literal cujo xxh64 == hash da chave (verificação grátis na leitura).
@@ -83,7 +87,7 @@ func marshalLangsOpt(c dto.Collection, langs []string, dedup bool) ([]byte, erro
 		rows := make([]dto.TextRow, len(entry.Rows))
 		copy(rows, entry.Rows)
 		dto.SortRows(rows)
-		version, id := versionAndID(entry.Metadata, k)
+		id := lineID(entry.Metadata, k)
 		for _, row := range rows {
 			for _, lang := range rowLangs(row, filter) {
 				text := row.Text[lang]
@@ -104,9 +108,6 @@ func marshalLangsOpt(c dto.Collection, langs []string, dedup bool) ([]byte, erro
 						}
 					}
 				}
-				if version != "" {
-					out.WriteString(version + ":")
-				}
 				out.WriteString(id)
 				if row.Name != "" {
 					out.WriteString(":" + row.Name)
@@ -118,17 +119,14 @@ func marshalLangsOpt(c dto.Collection, langs []string, dedup bool) ([]byte, erro
 	return []byte(out.String()), nil
 }
 
-// versionAndID resolve o prefixo esquerdo da linha a partir da metadata
-// (fallback: chave do mapa como id, sem versão).
-func versionAndID(m dto.Metadata, mapKey string) (version, id string) {
-	id = m.ID
-	if id == "" {
-		id = mapKey
+// lineID resolve o id da linha a partir da metadata (fallback: chave da
+// Collection). A versão NÃO entra na linha — vive só no header /*key=*/,
+// de onde ParseKey a recupera.
+func lineID(m dto.Metadata, mapKey string) string {
+	if id := m.ID; id != "" {
+		return id
 	}
-	if p, ok := dto.ParseKey(m.Key); ok {
-		version = p.Version
-	}
-	return version, id
+	return mapKey
 }
 
 // langSet normaliza o filtro de idiomas (nil = todos).

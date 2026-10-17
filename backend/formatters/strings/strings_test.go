@@ -59,12 +59,13 @@ func sampleCollection() dto.Collection {
 }
 
 func TestGoldenExampleLines(t *testing.T) {
-	// Linhas no estilo do exemplo do usuário: parser deve aceitar
-	// def, ref e chaves das 3 famílias (hash mismatch aqui só loga).
+	// Linhas no estilo do exemplo do usuário: a versão NÃO vai na linha
+	// (vive só no header) — parser aceita def, ref e chaves das 3 famílias
+	// (hash mismatch aqui só loga).
 	raw := "/*key=ffx/event/obj_ps3/az/azit0000/azit0000.bin row_count=309*/\n" +
-		"ffx:azit0000:0:us║$ba7b73bfc15bb6ea = {PC:04:WAKKA}{TEXT_NEWLINE}{PC:01:YUNA}! Where are you?\n" +
-		"ffx:azit0000:1:us║$ba7b73bfc15bb6ea = $ba7b73bfc15bb6ea\n" +
-		"ffx:azit0042:17:us║$ba7b73bfc15bb6ea = $ba7b73bfc15bb6ea\n"
+		"azit0000:0:us║$ba7b73bfc15bb6ea = {PC:04:WAKKA}{TEXT_NEWLINE}{PC:01:YUNA}! Where are you?\n" +
+		"azit0000:1:us║$ba7b73bfc15bb6ea = $ba7b73bfc15bb6ea\n" +
+		"azit0042:17:us║$ba7b73bfc15bb6ea = $ba7b73bfc15bb6ea\n"
 	c, err := fmtstrings.Unmarshal([]byte(raw))
 	if err != nil {
 		t.Fatalf("unmarshal: %v", err)
@@ -95,11 +96,11 @@ func TestMarshalShapesOutput(t *testing.T) {
 		"/*key=ffx/event/obj_ps3/az/azit0000/azit0000.bin row_count=2*/",
 		"/*key=ffx/battle/kernel/command.bin row_count=2*/",
 		"/*key=ffx/menu/macrodic.dcp row_count=1*/",
-		"ffx:azit0000:0:us║$",
-		"ffx:azit0000:0:sp║$",
-		"ffx:command:name:0:us║$",
-		"ffx:command:desc:0:us║$",
-		"ffx:chunk_00:name:0:us║$",
+		"azit0000:0:us║$",
+		"azit0000:0:sp║$",
+		"command:name:0:us║$",
+		"command:desc:0:us║$",
+		"chunk_00:name:0:us║$",
 		"Tom & Jerry",
 	} {
 		if !strings.Contains(out, want) {
@@ -135,10 +136,10 @@ func TestMarshalKeepsDivergentCopyLiteralAndCanonicalizesRefs(t *testing.T) {
 		t.Fatalf("marshal: %v", err)
 	}
 	out := string(raw)
-	if !strings.Contains(out, "ffx:aaa_divergent:0:us║$"+bare+" = "+divergent) {
+	if !strings.Contains(out, "aaa_divergent:0:us║$"+bare+" = "+divergent) {
 		t.Fatalf("divergent text must remain literal:\n%s", out)
 	}
-	if !strings.Contains(out, "ffx:zzz_reference:0:us║$"+bare+" = $"+bare) {
+	if !strings.Contains(out, "zzz_reference:0:us║$"+bare+" = $"+bare) {
 		t.Fatalf("ordinary copy must remain a ref to canonical def:\n%s", out)
 	}
 }
@@ -149,11 +150,11 @@ func TestUnmarshalInfersExternalLiteralAsDivergentCopy(t *testing.T) {
 	bare := hash.Sum64Hex(original)
 	artifact := strings.Join([]string{
 		"/*key=ffx/events/aaa_definition.bin row_count=1*/",
-		"ffx:aaa_definition:0:us║$" + bare + " = " + original,
+		"aaa_definition:0:us║$" + bare + " = " + original,
 		"/*key=ffx/events/mmm_divergent.bin row_count=1*/",
-		"ffx:mmm_divergent:0:us║$" + bare + " = " + divergent,
+		"mmm_divergent:0:us║$" + bare + " = " + divergent,
 		"/*key=ffx/events/zzz_reference.bin row_count=1*/",
-		"ffx:zzz_reference:0:us║$" + bare + " = $" + bare,
+		"zzz_reference:0:us║$" + bare + " = $" + bare,
 	}, "\n")
 	parsed, err := fmtstrings.Unmarshal([]byte(artifact))
 	if err != nil {
@@ -272,8 +273,8 @@ func TestEmptyCellsSkipped(t *testing.T) {
 	}
 	// Def vazio escrito à mão é preservado como "".
 	hand := "/*key=ffx/event/obj_ps3/ev/ev001/ev001.bin row_count=1*/\n" +
-		"ffx:ev001:0:us║$" + hash.Sum64Hex("Hi") + " = Hi\n" +
-		"ffx:ev001:0:sp║$" + hash.Sum64Hex("") + " = \n"
+		"ev001:0:us║$" + hash.Sum64Hex("Hi") + " = Hi\n" +
+		"ev001:0:sp║$" + hash.Sum64Hex("") + " = \n"
 	back, err := fmtstrings.Unmarshal([]byte(hand))
 	if err != nil {
 		t.Fatalf("unmarshal: %v", err)
@@ -285,12 +286,12 @@ func TestEmptyCellsSkipped(t *testing.T) {
 
 func TestMalformedLines(t *testing.T) {
 	for _, line := range []string{
-		"ffx:ev001:0:us $abc = Hi",               // sem ║
-		"ffx:ev001:0:us║Hi",                      // sem =
-		"ffx:ev001:0:us║abc = Hi",                // sem $ no hash
-		"ffx:ev001:0:us║$xyz = Hi",               // hash não-hex
-		"ffx:ev001:xx:us║$0000000000000000 = Hi", // index inválido
-		"ffx:us║$0000000000000000 = Hi",          // sem index
+		"ev001:0:us $abc = Hi",               // sem ║
+		"ev001:0:us║Hi",                      // sem =
+		"ev001:0:us║abc = Hi",                // sem $ no hash
+		"ev001:0:us║$xyz = Hi",               // hash não-hex
+		"ev001:xx:us║$0000000000000000 = Hi", // index inválido
+		"us║$0000000000000000 = Hi",          // sem index
 	} {
 		if _, err := fmtstrings.Unmarshal([]byte(line + "\n")); err == nil {
 			t.Fatalf("expected error for %q", line)
@@ -298,10 +299,27 @@ func TestMalformedLines(t *testing.T) {
 	}
 }
 
+// A versão NÃO é campo da linha — vive só no header /*key=*/. Linha com
+// prefixo de versão é erro de formato normal (nada de strip silencioso,
+// que parsearia errado: id="ffx", name=<id>).
+func TestUnmarshalRejectsVersionPrefix(t *testing.T) {
+	for _, line := range []string{
+		"ffx:ev001:0:us║$" + hash.Sum64Hex("Hi") + " = Hi",
+		"ffx2:ev001:0:us║$" + hash.Sum64Hex("Hi") + " = Hi",
+		"lastmiss:ev001:0:us║$" + hash.Sum64Hex("Hi") + " = Hi",
+	} {
+		if _, err := fmtstrings.Unmarshal([]byte(line + "\n")); err == nil ||
+			!strings.Contains(err.Error(), "version prefix") {
+			t.Fatalf("esperava erro de version prefix para %q, veio: %v", line, err)
+		}
+	}
+}
+
 func TestRightAnchorGrowth(t *testing.T) {
 	// Campos novos crescem pela esquerda: id/name continuam resolvidos.
+	// (Versão NÃO é um desses campos — ver TestUnmarshalRejectsVersionPrefix.)
 	raw := "/*key=ffx/battle/kernel/command.bin row_count=1*/\n" +
-		"region:ffx:command:name:0:us║$" + hash.Sum64Hex("Potion") + " = Potion\n"
+		"region:command:name:0:us║$" + hash.Sum64Hex("Potion") + " = Potion\n"
 	back, err := fmtstrings.Unmarshal([]byte(raw))
 	if err != nil {
 		t.Fatalf("unmarshal: %v", err)
