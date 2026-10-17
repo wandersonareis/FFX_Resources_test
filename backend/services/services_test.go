@@ -460,7 +460,7 @@ var _ = Describe("MetadataService", Ordered, func() {
 		// staleness, não um derivado do texto editado.
 		target.Text[common.DefaultLocalization] = newText
 
-		raw, err := jsonfmt.NewJSONObjectFormatter().Marshal(dto.Collection{id: entry})
+		raw, err := jsonfmt.JSONFormatter{}.Marshal(dto.Collection{id: entry})
 		Expect(err).NotTo(HaveOccurred())
 		importPath := filepath.Join(tmpRoot, "reimported", "lockit_import.json")
 		Expect(os.MkdirAll(filepath.Dir(importPath), 0o755)).To(Succeed())

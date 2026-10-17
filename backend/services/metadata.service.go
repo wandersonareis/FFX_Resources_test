@@ -20,8 +20,9 @@ import (
 	"ffxresources/backend/fileFormats/macrodic"
 	"ffxresources/backend/fileFormats/objectsfile"
 	"ffxresources/backend/fileFormats/objectsfile/chunkmap"
+	"ffxresources/backend/formatters"
 	jsonfmt "ffxresources/backend/formatters/json"
-	strfmt "ffxresources/backend/formatters/strings"
+	_ "ffxresources/backend/formatters/strings"
 	"ffxresources/backend/loggingService"
 	"ffxresources/backend/progress"
 )
@@ -456,27 +457,39 @@ func (s *MetadataService) ExportEntry(kind string, version common.GameVersion, i
 	c = filterExportRows(c)
 	step.End()
 
-	switch kind {
-	case KindEvents:
-		jp, jerr := jsonfmt.NewJSONEventsFormatter().WriteEvents(c, version, langs)
-		if jerr != nil {
-			return paths, jerr
+	// O export de entrada grava o PAR json+strings (contrato do menu de
+	// contexto) — camada de arquivo padronizada: formatters do registry e
+	// naming canônico por kind/escopo (a mesma régua do ExportArtifactBatch).
+	jsonF, ok := formatters.Get("json")
+	if !ok {
+		return paths, fmt.Errorf("formatter json não registrado")
+	}
+	stringsF, ok := formatters.Get("strings")
+	if !ok {
+		return paths, fmt.Errorf("formatter strings não registrado")
+	}
+	writePair := func(col dto.Collection, jsonPath string) error {
+		jp, werr := formatters.NewWriter(jsonF, col, jsonPath, langs).Write()
+		if werr != nil {
+			return werr
 		}
-		sp, serr := strfmt.NewStringsFormatter().WriteEvents(c, version, langs)
-		if serr != nil {
-			return paths, serr
+		sp, werr := formatters.NewWriter(stringsF, col, formatters.SwapExt(stringsF, jsonPath), langs).Write()
+		if werr != nil {
+			return werr
 		}
 		paths = append(paths, jp, sp)
-	case KindObjects:
-		jps, jerr := jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
-		if jerr != nil {
-			return paths, jerr
+		return nil
+	}
+
+	switch kind {
+	case KindEvents:
+		path, perr := eventsExportPath(version, []string{id})
+		if perr != nil {
+			return nil, perr
 		}
-		sps, serr := strfmt.NewStringsFormatter().WriteObjects(c, version, langs)
-		if serr != nil {
-			return paths, serr
+		if err := writePair(c, path); err != nil {
+			return paths, err
 		}
-		paths = append(append(paths, jps...), sps...)
 	case KindMacro:
 		// Chunk selecionado não pode sobrescrever o artefato canônico
 		// (macro_dictionary): o naming segue o escopo do pedido.
@@ -484,45 +497,29 @@ func (s *MetadataService) ExportEntry(kind string, version common.GameVersion, i
 		if perr != nil {
 			return nil, perr
 		}
-		jp, jerr := jsonfmt.NewJSONMacroFormatter().WriteMacroFile(c, path, langs)
-		if jerr != nil {
-			return paths, jerr
+		if err := writePair(c, path); err != nil {
+			return paths, err
 		}
-		sp, serr := strfmt.NewStringsFormatter().WriteMacroFile(c, strfmt.StringsPathFor(path), langs)
-		if serr != nil {
-			return paths, serr
-		}
-		paths = append(paths, jp, sp)
-	case KindLockit:
-		jps, jerr := jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
-		if jerr != nil {
-			return paths, jerr
-		}
-		sps, serr := strfmt.NewStringsFormatter().WriteObjects(c, version, langs)
-		if serr != nil {
-			return paths, serr
-		}
-		paths = append(append(paths, jps...), sps...)
 	case KindHelp:
-		jps, jerr := jsonfmt.NewJSONHelpFormatter().WriteHelp(c, version, langs)
-		if jerr != nil {
-			return paths, jerr
+		path, perr := jsonfmt.HelpJSONPath(version)
+		if perr != nil {
+			return nil, perr
 		}
-		sps, serr := strfmt.NewStringsFormatter().WriteHelp(c, version, langs)
-		if serr != nil {
-			return paths, serr
+		if err := writePair(c, path); err != nil {
+			return paths, err
 		}
-		paths = append(append(paths, jps...), sps...)
-	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
-		jps, jerr := jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
-		if jerr != nil {
-			return paths, jerr
+	case KindObjects, KindLockit, KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		// Um arquivo por entrada (mesmo nome do JSON por entrada; dedup
+		// intra-arquivo = self-contained).
+		for _, key := range c.SortedKeys() {
+			jp, perr := jsonfmt.ObjectsJSONPath(key, version)
+			if perr != nil {
+				return nil, perr
+			}
+			if err := writePair(dto.Collection{key: c[key]}, jp); err != nil {
+				return paths, err
+			}
 		}
-		sps, serr := strfmt.NewStringsFormatter().WriteObjects(c, version, langs)
-		if serr != nil {
-			return paths, serr
-		}
-		paths = append(append(paths, jps...), sps...)
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
@@ -552,7 +549,7 @@ func (s *MetadataService) ImportEntry(kind string, version common.GameVersion, i
 		if err != nil {
 			return nil, err
 		}
-		read, err := jsonfmt.NewJSONEventsFormatter().ReadEvents(path)
+		read, err := formatters.NewReader(jsonfmt.JSONFormatter{}, path).Read()
 		if err != nil {
 			return nil, err
 		}
@@ -566,7 +563,7 @@ func (s *MetadataService) ImportEntry(kind string, version common.GameVersion, i
 		if err != nil {
 			return nil, err
 		}
-		read, err := jsonfmt.NewJSONObjectFormatter().ReadObjects(path)
+		read, err := formatters.NewReader(jsonfmt.JSONFormatter{}, path).Read()
 		if err != nil {
 			return nil, err
 		}
@@ -582,7 +579,7 @@ func (s *MetadataService) ImportEntry(kind string, version common.GameVersion, i
 		if err != nil {
 			return nil, err
 		}
-		read, err := jsonfmt.NewJSONMacroFormatter().ReadMacro(path)
+		read, err := formatters.NewReader(jsonfmt.JSONFormatter{}, path).Read()
 		if err != nil {
 			return nil, err
 		}
@@ -596,7 +593,7 @@ func (s *MetadataService) ImportEntry(kind string, version common.GameVersion, i
 		if err != nil {
 			return nil, err
 		}
-		read, err := jsonfmt.NewJSONObjectFormatter().ReadObjects(path)
+		read, err := formatters.NewReader(jsonfmt.JSONFormatter{}, path).Read()
 		if err != nil {
 			return nil, err
 		}
@@ -618,7 +615,7 @@ func (s *MetadataService) ImportEntry(kind string, version common.GameVersion, i
 		if err != nil {
 			return nil, err
 		}
-		read, err := jsonfmt.NewJSONHelpFormatter().ReadHelp(path)
+		read, err := formatters.NewReader(jsonfmt.JSONFormatter{}, path).Read()
 		if err != nil {
 			return nil, err
 		}
@@ -633,7 +630,7 @@ func (s *MetadataService) ImportEntry(kind string, version common.GameVersion, i
 		if err != nil {
 			return nil, err
 		}
-		read, err := jsonfmt.NewJSONObjectFormatter().ReadObjects(path)
+		read, err := formatters.NewReader(jsonfmt.JSONFormatter{}, path).Read()
 		if err != nil {
 			return nil, err
 		}

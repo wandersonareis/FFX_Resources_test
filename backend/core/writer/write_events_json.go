@@ -5,7 +5,6 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/event"
 	"ffxresources/backend/formatters/json"
-	strfmt "ffxresources/backend/formatters/strings"
 	"fmt"
 	"sort"
 )
@@ -31,7 +30,11 @@ func ExportEventsToJSON(ids []string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := json.NewJSONEventsFormatter().WriteEvents(collection, version, nil); err != nil {
+	path, err := json.EventsJSONPath(collection, version)
+	if err != nil {
+		return err
+	}
+	if _, err := writeArtifact("json", collection, path, nil); err != nil {
 		return err
 	}
 	return nil
@@ -46,7 +49,11 @@ func ExportEventsToStrings(ids, langs []string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := strfmt.NewStringsFormatter().WriteEvents(collection, version, langs); err != nil {
+	path, err := json.EventsJSONPath(collection, version)
+	if err != nil {
+		return err
+	}
+	if _, err := writeArtifact("strings", collection, path, langs); err != nil {
 		return err
 	}
 	return nil

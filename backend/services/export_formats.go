@@ -14,7 +14,7 @@ import (
 	"ffxresources/backend/formatters"
 	_ "ffxresources/backend/formatters/csv"
 	jsonfmt "ffxresources/backend/formatters/json"
-	strfmt "ffxresources/backend/formatters/strings"
+	_ "ffxresources/backend/formatters/strings"
 	_ "ffxresources/backend/formatters/xlsx"
 	"ffxresources/backend/progress"
 )
@@ -141,205 +141,74 @@ func (s *MetadataService) exportKind(r progress.Reporter, kind, format string, v
 	}
 	c = filterExportRows(c)
 
-	// Escreve pelo formato pedido — mesmos caminhos canônicos por escopo
-	// (só a extensão muda), regra do dedup por arquivo preservada.
-	switch format {
-	case "csv", "xlsx":
-		f, ok := formatters.Get(format)
-		if !ok {
-			return nil, fmt.Errorf("formatter %s não registrado", format)
+	// Escreve pelo formato pedido — caminhos canônicos por escopo (só a
+	// extensão muda), regra do dedup por arquivo preservada. O formatter
+	// vem do registry e a gravação é a camada de arquivo padronizada
+	// (formatters.NewWriter): o switch abaixo é SÓ a política de caminho
+	// por kind/escopo — a mesma para os quatro formatos.
+	f, ok := formatters.Get(format)
+	if !ok {
+		return nil, fmt.Errorf("formatter %s não registrado", format)
+	}
+	write := func(col dto.Collection, jsonPath string) (string, error) {
+		return formatters.NewWriter(f, col, formatters.SwapExt(f, jsonPath), langs).Write()
+	}
+
+	switch kind {
+	case KindEvents:
+		path, perr := eventsExportPath(version, ids)
+		if perr != nil {
+			return nil, perr
 		}
-		ext := f.Extension()
-		swapExt := func(jsonPath string) string {
-			return strings.TrimSuffix(jsonPath, filepath.Ext(jsonPath)) + ext
+		p, werr := write(c, path)
+		return []string{p}, werr
+	case KindMacro:
+		path, perr := macroExportPath(version, ids)
+		if perr != nil {
+			return nil, perr
 		}
-		write := func(col dto.Collection, path string) (string, error) {
-			raw, werr := f.MarshalLangs(col, langs)
-			if werr != nil {
-				return "", werr
+		p, werr := write(c, path)
+		return []string{p}, werr
+	case KindHelp:
+		path, perr := jsonfmt.HelpJSONPath(version)
+		if perr != nil {
+			return nil, perr
+		}
+		p, werr := write(c, path)
+		return []string{p}, werr
+	case KindObjects, KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		if len(ids) == 0 {
+			// Export completo: UM arquivo por kind (bulk, dedup global).
+			var path string
+			var perr error
+			if kind == KindObjects {
+				path, perr = objectsBulkPath(version)
+			} else {
+				path, perr = tableBulkPath(kind, version)
 			}
-			if werr = common.WriteBytesToFile(path, raw); werr != nil {
-				return "", werr
-			}
-			return path, nil
-		}
-		switch kind {
-		case KindEvents:
-			path, perr := eventsExportPath(version, ids)
 			if perr != nil {
 				return nil, perr
 			}
-			p, werr := write(c, swapExt(path))
+			p, werr := write(c, path)
 			return []string{p}, werr
-		case KindMacro:
-			path, perr := macroExportPath(version, ids)
-			if perr != nil {
-				return nil, perr
-			}
-			p, werr := write(c, swapExt(path))
-			return []string{p}, werr
-		case KindHelp:
-			path, perr := jsonfmt.HelpJSONPath(version)
-			if perr != nil {
-				return nil, perr
-			}
-			p, werr := write(c, swapExt(path))
-			return []string{p}, werr
-		case KindObjects, KindBattleText, KindCloud, KindTutorial, KindMenuMain:
-			if len(ids) == 0 {
-				// Export completo: UM arquivo por kind (bulk, dedup global).
-				var path string
-				var perr error
-				if kind == KindObjects {
-					path, perr = objectsBulkPath(version)
-				} else {
-					path, perr = tableBulkPath(kind, version)
-				}
-				if perr != nil {
-					return nil, perr
-				}
-				p, werr := write(c, swapExt(path))
-				return []string{p}, werr
-			}
-			fallthrough
-		case KindLockit:
-			// Um arquivo por entrada (mesmo nome do JSON por entrada).
-			for _, key := range c.SortedKeys() {
-				jp, perr := jsonfmt.ObjectsJSONPath(key, version)
-				if perr != nil {
-					return nil, perr
-				}
-				p, werr := write(dto.Collection{key: c[key]}, swapExt(jp))
-				if werr != nil {
-					return nil, werr
-				}
-				paths = append(paths, p)
-			}
-			return paths, nil
-		default:
-			return nil, fmt.Errorf("unknown kind: %s", kind)
 		}
-	case "strings":
-		f := strfmt.NewStringsFormatter()
-		switch kind {
-		case KindEvents:
-			path, perr := eventsExportPath(version, ids)
+		fallthrough
+	case KindLockit:
+		// Um arquivo por entrada (mesmo nome do JSON por entrada; dedup
+		// intra-arquivo = self-contained).
+		for _, key := range c.SortedKeys() {
+			jp, perr := jsonfmt.ObjectsJSONPath(key, version)
 			if perr != nil {
 				return nil, perr
 			}
-			p, werr := f.WriteEventsFile(c, strfmt.StringsPathFor(path), langs)
+			p, werr := write(dto.Collection{key: c[key]}, jp)
 			if werr != nil {
 				return nil, werr
 			}
-			return []string{p}, nil
-		case KindObjects:
-			if len(ids) == 0 {
-				path, perr := objectsBulkPath(version)
-				if perr != nil {
-					return nil, perr
-				}
-				p, werr := f.WriteObjectsFile(c, strfmt.StringsPathFor(path), langs)
-				if werr != nil {
-					return nil, werr
-				}
-				return []string{p}, nil
-			}
-			return f.WriteObjects(c, version, langs)
-		case KindMacro:
-			path, perr := macroExportPath(version, ids)
-			if perr != nil {
-				return nil, perr
-			}
-			p, werr := f.WriteMacroFile(c, path, langs)
-			if werr != nil {
-				return nil, werr
-			}
-			return []string{p}, nil
-		case KindLockit:
-			return f.WriteObjects(c, version, langs)
-		case KindHelp:
-			paths, werr := f.WriteHelp(c, version, langs)
-			if werr != nil {
-				return nil, werr
-			}
-			return paths, nil
-		case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
-			if len(ids) == 0 {
-				path, perr := tableBulkPath(kind, version)
-				if perr != nil {
-					return nil, perr
-				}
-				p, werr := f.WriteObjectsFile(c, strfmt.StringsPathFor(path), langs)
-				if werr != nil {
-					return nil, werr
-				}
-				return []string{p}, nil
-			}
-			return f.WriteObjects(c, version, langs)
-		default:
-			return nil, fmt.Errorf("unknown kind: %s", kind)
+			paths = append(paths, p)
 		}
-	default: // json
-		switch kind {
-		case KindEvents:
-			path, perr := eventsExportPath(version, ids)
-			if perr != nil {
-				return nil, perr
-			}
-			p, jerr := jsonfmt.NewJSONEventsFormatter().WriteEventsFile(c, path, langs)
-			if jerr != nil {
-				return nil, jerr
-			}
-			return []string{p}, nil
-		case KindObjects:
-			if len(ids) == 0 {
-				// Export completo: UM arquivo com todas as entradas (cada
-				// uma com sua metadata.key) e dedup GLOBAL entre elas.
-				path, perr := objectsBulkPath(version)
-				if perr != nil {
-					return nil, perr
-				}
-				p, werr := jsonfmt.NewJSONObjectFormatter().WriteObjectsFile(c, path, langs)
-				if werr != nil {
-					return nil, werr
-				}
-				return []string{p}, nil
-			}
-			// Seleção: um arquivo por entrada (dedup intra-arquivo).
-			return jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
-		case KindMacro:
-			path, perr := macroExportPath(version, ids)
-			if perr != nil {
-				return nil, perr
-			}
-			p, jerr := jsonfmt.NewJSONMacroFormatter().WriteMacroFile(c, path, langs)
-			if jerr != nil {
-				return nil, jerr
-			}
-			return []string{p}, nil
-		case KindLockit:
-			return jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
-		case KindHelp:
-			paths, jerr := jsonfmt.NewJSONHelpFormatter().WriteHelp(c, version, langs)
-			if jerr != nil {
-				return nil, jerr
-			}
-			return paths, nil
-		case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
-			if len(ids) == 0 {
-				path, perr := tableBulkPath(kind, version)
-				if perr != nil {
-					return nil, perr
-				}
-				p, werr := jsonfmt.NewJSONObjectFormatter().WriteObjectsFile(c, path, langs)
-				if werr != nil {
-					return nil, werr
-				}
-				return []string{p}, nil
-			}
-			return jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
-		default:
-			return nil, fmt.Errorf("unknown kind: %s", kind)
-		}
+		return paths, nil
+	default:
+		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}
 }

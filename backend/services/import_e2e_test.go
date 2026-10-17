@@ -90,7 +90,7 @@ func TestImportE2ESwappedOrder(t *testing.T) {
 	edited[2].Text[common.DefaultLocalization] = "Segunda traduzida"
 	entry.Rows = []dto.TextRow{edited[2], edited[0], edited[1]}
 
-	out, err := jsonfmt.NewJSONEventsFormatter().Marshal(dto.Collection{"zev001": entry})
+	out, err := jsonfmt.JSONFormatter{}.Marshal(dto.Collection{"zev001": entry})
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
@@ -122,7 +122,7 @@ func TestImportE2EPartial(t *testing.T) {
 	// Só a row 2 vai no arquivo, traduzida; hash = texto do export.
 	entry.Rows = []dto.TextRow{hEditRow(2, "", "Terceira frase do evento", "Terceira traduzida")}
 
-	out, err := jsonfmt.NewJSONEventsFormatter().Marshal(dto.Collection{"zev001": entry})
+	out, err := jsonfmt.JSONFormatter{}.Marshal(dto.Collection{"zev001": entry})
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
@@ -155,7 +155,7 @@ func TestImportE2EStaleHash(t *testing.T) {
 	entry.Rows[0].Text[common.DefaultLocalization] = "Tradução anterior"
 	entry.Rows[1].Text[common.DefaultLocalization] = "Segunda traduzida"
 	// O artefato é exportado com ESTE estado...
-	out, err := jsonfmt.NewJSONEventsFormatter().Marshal(dto.Collection{"zev001": entry})
+	out, err := jsonfmt.JSONFormatter{}.Marshal(dto.Collection{"zev001": entry})
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
@@ -194,7 +194,7 @@ func TestImportE2EUnknownEntry(t *testing.T) {
 	seedEventsSynthetic(common.GameVersionFFX2, "zev001", []string{"Frase qualquer aqui"})
 
 	impPath := filepath.Join(t.TempDir(), "unknown.json")
-	out, err := jsonfmt.NewJSONEventsFormatter().Marshal(dto.Collection{
+	out, err := jsonfmt.JSONFormatter{}.Marshal(dto.Collection{
 		"zz_inexistente": dto.FileEntry{
 			Metadata: dto.Metadata{Key: "ffx-2/event/zz/zzinexistente.bin", ID: "zz_inexistente"},
 			Rows:     []dto.TextRow{hRow(0, "", "Texto solto")},

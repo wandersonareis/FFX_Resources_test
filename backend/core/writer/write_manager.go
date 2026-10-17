@@ -3,13 +3,37 @@ package writer
 import (
 	"ffxresources/backend/builders"
 	"ffxresources/backend/common"
+	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/macrodic"
+	"ffxresources/backend/formatters"
 	"ffxresources/backend/formatters/json"
-	strfmt "ffxresources/backend/formatters/strings"
+	_ "ffxresources/backend/formatters/strings"
 	"ffxresources/backend/interactions"
 	"fmt"
 	"path/filepath"
 )
+
+// writeArtifact grava a collection no formato pedido (registry) sobre o
+// caminho CANÔNICO .json — a extensão é trocada para a do formato. É a
+// camada de arquivo padronizada (formatters.NewWriter) que substitui os
+// antigos métodos Write*File por kind dos pacotes de formato.
+func writeArtifact(format string, c dto.Collection, jsonPath string, langs []string) (string, error) {
+	f, ok := formatters.Get(format)
+	if !ok {
+		return "", fmt.Errorf("formatter %s não registrado", format)
+	}
+	return formatters.NewWriter(f, c, formatters.SwapExt(f, jsonPath), langs).Write()
+}
+
+// readArtifactFile lê o arquivo no formato pedido (registry) de volta
+// para a Collection (DTO).
+func readArtifactFile(format, path string) (dto.Collection, error) {
+	f, ok := formatters.Get(format)
+	if !ok {
+		return nil, fmt.Errorf("formatter %s não registrado", format)
+	}
+	return formatters.NewReader(f, path).Read()
+}
 
 // ExportMacroDictionaryToJSON reads every available localization container and
 // exports them into a single DTO-based JSON file holding all languages.
@@ -27,7 +51,12 @@ func ExportMacroDictionaryToJSON() {
 		}
 	}
 
-	if _, err := json.NewJSONMacroFormatter().WriteMacro(collection, version, nil); err != nil {
+	path, err := json.MacroJSONPath(version)
+	if err != nil {
+		common.LogError("Error resolving macro dictionary path: %v\n", err)
+		return
+	}
+	if _, err := writeArtifact("json", collection, path, nil); err != nil {
 		common.LogError("Error writing macro dictionary JSON: %v\n", err)
 		return
 	}
@@ -48,7 +77,12 @@ func ExportMacroDictionaryToStrings(langs []string) {
 		return
 	}
 
-	if _, err := strfmt.NewStringsFormatter().WriteMacro(collection, version, langs); err != nil {
+	path, err := json.MacroJSONPath(version)
+	if err != nil {
+		common.LogError("Error resolving macro dictionary path: %v\n", err)
+		return
+	}
+	if _, err := writeArtifact("strings", collection, path, langs); err != nil {
 		common.LogError("Error writing macro dictionary strings: %v\n", err)
 		return
 	}
@@ -86,7 +120,7 @@ func WriteMacroDictionaryForLocalizationJSON(localization string) {
 		common.LogError("Error creating macro edits directory: %v\n", err)
 		return
 	}
-	if _, err := json.NewJSONMacroFormatter().WriteMacroFile(collection, filepath.Join(dir, common.WithVersionSuffix(fileName)), nil); err != nil {
+	if _, err := writeArtifact("json", collection, filepath.Join(dir, common.WithVersionSuffix(fileName)), nil); err != nil {
 		common.LogError("Error writing macro dictionary JSON: %v\n", err)
 		return
 	}
@@ -110,7 +144,7 @@ func EditAndSaveMacrodicFromJson(jsonFilePath string) error {
 	if err != nil {
 		return fmt.Errorf("erro ao resolver caminho do arquivo JSON: %v", err)
 	}
-	collection, err := json.NewJSONMacroFormatter().ReadMacro(resolvedFile.ResolvedPath)
+	collection, err := readArtifactFile("json", resolvedFile.ResolvedPath)
 	if err != nil {
 		return fmt.Errorf("erro ao ler arquivo JSON: %v", err)
 	}

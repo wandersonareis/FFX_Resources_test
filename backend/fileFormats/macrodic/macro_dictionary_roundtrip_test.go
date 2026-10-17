@@ -41,7 +41,7 @@ func roundtripContainers(t *testing.T, raw []byte, loc string, version common.Ga
 	if err != nil {
 		t.Fatalf("build DTO: %v", err)
 	}
-	formatter := json.NewJSONMacroFormatter()
+	formatter := json.JSONFormatter{}
 	js, err := formatter.Marshal(collection)
 	if err != nil {
 		t.Fatalf("marshal JSON: %v", err)
@@ -171,7 +171,7 @@ func TestOtherLocalizationsReimport(t *testing.T) {
 		}
 	}
 
-	formatter := json.NewJSONMacroFormatter()
+	formatter := json.JSONFormatter{}
 	js, err := formatter.Marshal(exp)
 	if err != nil {
 		t.Fatalf("marshal JSON: %v", err)

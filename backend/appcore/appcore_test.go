@@ -390,7 +390,7 @@ func TestImportTextEventsRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := jsonfmt.NewJSONEventsFormatter().Unmarshal(raw)
+	c, err := jsonfmt.JSONFormatter{}.Unmarshal(raw)
 	if err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -404,7 +404,7 @@ func TestImportTextEventsRoundTrip(t *testing.T) {
 		}
 		c[id] = entry
 	}
-	editedRaw, err := jsonfmt.NewJSONEventsFormatter().MarshalLangs(c, nil)
+	editedRaw, err := jsonfmt.JSONFormatter{}.MarshalLangs(c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

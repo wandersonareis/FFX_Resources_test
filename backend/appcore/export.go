@@ -16,10 +16,10 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/formatters"
-	_ "ffxresources/backend/formatters/csv"   // registra CSV formatter
-	_ "ffxresources/backend/formatters/xlsx" // registra XLSX formatter
-	jsonfmt "ffxresources/backend/formatters/json"
-	strfmt "ffxresources/backend/formatters/strings"
+	_ "ffxresources/backend/formatters/csv"
+	_ "ffxresources/backend/formatters/json"
+	_ "ffxresources/backend/formatters/strings"
+	_ "ffxresources/backend/formatters/xlsx"
 	"ffxresources/backend/services"
 )
 
@@ -122,7 +122,7 @@ func exportOne(req ExportRequest, input string) FileOutcome {
 		return outcome
 	}
 
-	raw, err := marshalArtifact(d.Kind, req.Format, req.Langs, c)
+	raw, err := marshalArtifact(req.Format, req.Langs, c)
 	if err != nil {
 		outcome.Reason = fmt.Sprintf("serializando artefato: %v", err)
 		return outcome
@@ -154,35 +154,18 @@ func exportOne(req ExportRequest, input string) FileOutcome {
 }
 
 // marshalArtifact serializa a collection no formato pedido, com o MESMO
-// formatter que o frontend usaria para o kind (a saída é idêntica à do
-// export do app para o mesmo escopo).
-func marshalArtifact(kind string, format ArtifactFormat, langs []string, c dto.Collection) ([]byte, error) {
+// formatter do registry para todo kind (os bytes JSON/strings são
+// idênticos entre kinds) — a gravação em si é do chamador (writeChecked:
+// política de colisão é do appcore, não do formato).
+func marshalArtifact(format ArtifactFormat, langs []string, c dto.Collection) ([]byte, error) {
 	if len(c) == 0 {
 		return nil, fmt.Errorf("nada para exportar")
 	}
-
-	// Para CSV e XLSX, usa o registry de formatters (independente do kind)
-	if format == FormatCSV || format == FormatXLSX {
-		f, ok := formatters.Get(format.String())
-		if !ok {
-			return nil, fmt.Errorf("formatter %s não registrado", format.String())
-		}
-		return f.MarshalLangs(c, langs)
+	f, ok := formatters.Get(format.String())
+	if !ok {
+		return nil, fmt.Errorf("formatter %s não registrado", format)
 	}
-
-	if format == FormatStrings {
-		return strfmt.MarshalLangs(c, langs)
-	}
-	switch kind {
-	case services.KindEvents:
-		return jsonfmt.NewJSONEventsFormatter().MarshalLangs(c, langs)
-	case services.KindMacro:
-		return jsonfmt.NewJSONMacroFormatter().MarshalLangs(c, langs)
-	case services.KindHelp:
-		return jsonfmt.NewJSONHelpFormatter().MarshalLangs(c, langs)
-	default:
-		return jsonfmt.NewJSONObjectFormatter().MarshalLangs(c, langs)
-	}
+	return f.MarshalLangs(c, langs)
 }
 
 // artifactKeyOf devolve a chave da (primeira) entrada — o componente do

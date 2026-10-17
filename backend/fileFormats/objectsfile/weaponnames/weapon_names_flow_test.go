@@ -14,8 +14,9 @@ import (
 	"ffxresources/backend/fileFormats/objectsfile/chunkmap"
 	"ffxresources/backend/fileFormats/objectsfile/schema/ffx"
 	"ffxresources/backend/fileFormats/objectsfile/weaponnames"
+	"ffxresources/backend/formatters"
 	jsonfmt "ffxresources/backend/formatters/json"
-	stringsfmt "ffxresources/backend/formatters/strings"
+	_ "ffxresources/backend/formatters/strings"
 )
 
 /*
@@ -274,12 +275,20 @@ func TestWeaponNameExternalRoundTrip(t *testing.T) {
 	}
 
 	jsonPath := filepath.Join(t.TempDir(), "w_name_all_localizations.json")
-	jsonPath, err = jsonfmt.NewJSONObjectFormatter().WriteObjectsFile(collection, jsonPath, []string{lang})
+	jsonF, ok := formatters.Get("json")
+	if !ok {
+		t.Fatal("formatter json não registrado")
+	}
+	jsonPath, err = formatters.NewWriter(jsonF, collection, jsonPath, []string{lang}).Write()
 	if err != nil {
 		t.Fatalf("escrever JSON: %v", err)
 	}
-	stringsPath := stringsfmt.StringsPathFor(jsonPath)
-	if _, err := stringsfmt.NewStringsFormatter().WriteObjectsFile(collection, stringsPath, []string{lang}); err != nil {
+	stringsF, ok := formatters.Get("strings")
+	if !ok {
+		t.Fatal("formatter strings não registrado")
+	}
+	stringsPath := formatters.SwapExt(stringsF, jsonPath)
+	if _, err := formatters.NewWriter(stringsF, collection, stringsPath, []string{lang}).Write(); err != nil {
 		t.Fatalf("escrever Strings: %v", err)
 	}
 	if _, err := os.Stat(stringsPath); err != nil {
@@ -307,7 +316,7 @@ func TestWeaponNameExternalRoundTrip(t *testing.T) {
 		t.Fatalf("JSON não deveria conter modelId:\n%.400s", text)
 	}
 
-	back, err := jsonfmt.NewJSONObjectFormatter().Unmarshal(raw)
+	back, err := jsonfmt.JSONFormatter{}.Unmarshal(raw)
 	if err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}

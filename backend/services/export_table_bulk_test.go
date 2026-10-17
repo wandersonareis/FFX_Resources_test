@@ -11,6 +11,7 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/eventtable"
+	"ffxresources/backend/formatters"
 	jsonfmt "ffxresources/backend/formatters/json"
 	strfmt "ffxresources/backend/formatters/strings"
 )
@@ -162,7 +163,7 @@ func TestExportTableKindsBulkSingleFile(t *testing.T) {
 	if base := filepath.Base(paths[0]); base != "battletext_all_localizations_ffx.json" {
 		t.Fatalf("bulk battletext: %q", base)
 	}
-	read, err := jsonfmt.NewJSONObjectFormatter().ReadObjects(paths[0])
+	read, err := formatters.NewReader(jsonfmt.JSONFormatter{}, paths[0]).Read()
 	if err != nil {
 		t.Fatalf("releitura do bulk: %v", err)
 	}
@@ -213,7 +214,7 @@ func TestExportTableKindsBulkSingleFile(t *testing.T) {
 	if len(mpaths) != 1 || filepath.Base(mpaths[0]) != "mainmenu_all_localizations_ffx.json" {
 		t.Fatalf("bulk menumain: %v", mpaths)
 	}
-	mread, err := jsonfmt.NewJSONObjectFormatter().ReadObjects(mpaths[0])
+	mread, err := formatters.NewReader(jsonfmt.JSONFormatter{}, mpaths[0]).Read()
 	if err != nil {
 		t.Fatalf("releitura do bulk menumain: %v", err)
 	}
@@ -246,7 +247,7 @@ func TestExportTableKindsBulkSingleFile(t *testing.T) {
 	if cpaths[0] == perCloud {
 		t.Fatal("bulk cloud colide com o artefato por-entrada de \"cloud\"")
 	}
-	cread, err := jsonfmt.NewJSONObjectFormatter().ReadObjects(cpaths[0])
+	cread, err := formatters.NewReader(jsonfmt.JSONFormatter{}, cpaths[0]).Read()
 	if err != nil {
 		t.Fatalf("releitura do bulk cloud: %v", err)
 	}
@@ -383,13 +384,13 @@ func parseBulkArtifact(t *testing.T, format, path string) dto.Collection {
 		t.Fatalf("ler artefato: %v", err)
 	}
 	if format == "json" {
-		c, err := jsonfmt.NewJSONObjectFormatter().Unmarshal(raw)
+		c, err := jsonfmt.JSONFormatter{}.Unmarshal(raw)
 		if err != nil {
 			t.Fatalf("parse json: %v", err)
 		}
 		return c
 	}
-	c, err := strfmt.NewStringsFormatter().Unmarshal(raw)
+	c, err := strfmt.StringsFormatter{}.Unmarshal(raw)
 	if err != nil {
 		t.Fatalf("parse strings: %v", err)
 	}
@@ -400,7 +401,7 @@ func parseBulkArtifact(t *testing.T, format, path string) dto.Collection {
 func marshalBulkArtifact(t *testing.T, format string, c dto.Collection) []byte {
 	t.Helper()
 	if format == "json" {
-		raw, err := jsonfmt.NewJSONObjectFormatter().Marshal(c)
+		raw, err := jsonfmt.JSONFormatter{}.Marshal(c)
 		if err != nil {
 			t.Fatalf("marshal json: %v", err)
 		}

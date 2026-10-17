@@ -10,9 +10,10 @@ import (
 	"ffxresources/backend/common"
 	"ffxresources/backend/dto"
 	"ffxresources/backend/fileFormats/helpfile"
+	"ffxresources/backend/formatters"
 	"ffxresources/backend/formatters/hash"
 	jsonfmt "ffxresources/backend/formatters/json"
-	strfmt "ffxresources/backend/formatters/strings"
+	_ "ffxresources/backend/formatters/strings"
 )
 
 // Copia a árvore help/ dos fixtures para um GameFilesRoot temporário: o e2e
@@ -230,31 +231,39 @@ func TestHelpArtifactRoundTripUnchanged(t *testing.T) {
 		t.Fatalf("build: %v", err)
 	}
 
-	jps, err := jsonfmt.NewJSONHelpFormatter().WriteHelp(c, common.GameVersionFFX, nil)
+	jp, err := jsonfmt.HelpJSONPath(common.GameVersionFFX)
 	if err != nil {
+		t.Fatalf("json path: %v", err)
+	}
+	jf, ok := formatters.Get("json")
+	if !ok {
+		t.Fatal("formatter json não registrado")
+	}
+	if _, err := formatters.NewWriter(jf, c, jp, nil).Write(); err != nil {
 		t.Fatalf("write json: %v", err)
 	}
-	sps, err := strfmt.NewStringsFormatter().WriteHelp(c, common.GameVersionFFX, nil)
-	if err != nil {
+	sf, ok := formatters.Get("strings")
+	if !ok {
+		t.Fatal("formatter strings não registrado")
+	}
+	sp := formatters.SwapExt(sf, jp)
+	if _, err := formatters.NewWriter(sf, c, sp, nil).Write(); err != nil {
 		t.Fatalf("write strings: %v", err)
 	}
 	// Artefato ÚNICO por versão: 1 JSON + 1 .strings com os 6 painéis.
-	if len(jps) != 1 || len(sps) != 1 {
-		t.Fatalf("artefatos: json=%d strings=%d (want 1/1)", len(jps), len(sps))
-	}
 	editsDir := filepath.Join(root, "mods", "edits")
-	for _, p := range append(append([]string{}, jps...), sps...) {
+	for _, p := range []string{jp, sp} {
 		if filepath.Dir(p) != editsDir {
 			t.Fatalf("artefato fora de mods/edits: %s", p)
 		}
 	}
 	// Nome único com sufixo de versão (padrão dos demais kinds); as entradas
 	// se diferenciam pela metadata.key (nome dos .sps2), não por nome de arquivo.
-	if filepath.Base(jps[0]) != "help_all_localizations_ffx.json" {
-		t.Fatalf("nome do artefato único: %s", filepath.Base(jps[0]))
+	if filepath.Base(jp) != "help_all_localizations_ffx.json" {
+		t.Fatalf("nome do artefato único: %s", filepath.Base(jp))
 	}
-	if filepath.Base(sps[0]) != "help_all_localizations_ffx.strings" {
-		t.Fatalf("nome do artefato strings: %s", filepath.Base(sps[0]))
+	if filepath.Base(sp) != "help_all_localizations_ffx.strings" {
+		t.Fatalf("nome do artefato strings: %s", filepath.Base(sp))
 	}
 
 	before, err := os.ReadFile(helpFilePathIn(root, "now_help", "now_help"))
@@ -262,7 +271,7 @@ func TestHelpArtifactRoundTripUnchanged(t *testing.T) {
 		t.Fatalf("read: %v", err)
 	}
 
-	read, err := jsonfmt.NewJSONHelpFormatter().ReadHelp(jps[0])
+	read, err := formatters.NewReader(jf, jp).Read()
 	if err != nil {
 		t.Fatalf("read json: %v", err)
 	}
@@ -285,7 +294,7 @@ func TestHelpArtifactRoundTripUnchanged(t *testing.T) {
 	}
 
 	// O mesmo vale para o .strings.
-	readS, err := strfmt.NewStringsFormatter().ReadHelp(sps[0])
+	readS, err := formatters.NewReader(sf, sp).Read()
 	if err != nil {
 		t.Fatalf("read strings: %v", err)
 	}

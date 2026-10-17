@@ -33,7 +33,7 @@ func sampleCollection() dto.Collection {
 }
 
 func TestJSONEventsFormatterRoundTrip(t *testing.T) {
-	f := json.NewJSONEventsFormatter()
+	f := json.JSONFormatter{}
 	if f.Extension() != ".json" {
 		t.Fatalf("unexpected extension: %s", f.Extension())
 	}
@@ -67,7 +67,7 @@ func TestJSONEventsFormatterRoundTrip(t *testing.T) {
 }
 
 func TestJSONEventsFormatterShapesOutput(t *testing.T) {
-	raw, err := json.NewJSONEventsFormatter().Marshal(sampleCollection())
+	raw, err := json.JSONFormatter{}.Marshal(sampleCollection())
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
@@ -93,11 +93,11 @@ func TestJSONEventsFormatterSortsRows(t *testing.T) {
 			},
 		},
 	}
-	raw, err := json.NewJSONEventsFormatter().Marshal(c)
+	raw, err := json.JSONFormatter{}.Marshal(c)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	back, err := json.NewJSONEventsFormatter().Unmarshal(raw)
+	back, err := json.JSONFormatter{}.Unmarshal(raw)
 	if err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -110,7 +110,7 @@ func TestJSONEventsFormatterSortsRows(t *testing.T) {
 }
 
 func TestJSONObjectFormatterRoundTrip(t *testing.T) {
-	f := json.NewJSONObjectFormatter()
+	f := json.JSONFormatter{}
 	if f.Extension() != ".json" {
 		t.Fatalf("unexpected extension: %s", f.Extension())
 	}
@@ -166,7 +166,7 @@ func TestJSONObjectFormatterRoundTrip(t *testing.T) {
 // (omitempty; exports antigos permanecem idênticos) — e que o model_id
 // NUNCA entra no artefato: a identidade da row é Index+Name.
 func TestJSONObjectFormatterWeaponNameMetadata(t *testing.T) {
-	f := json.NewJSONObjectFormatter()
+	f := json.JSONFormatter{}
 	version := common.GameVersionFFX
 	c := dto.Collection{
 		"w_name": {
@@ -218,7 +218,7 @@ func TestJSONObjectFormatterWeaponNameMetadata(t *testing.T) {
 // TestJSONPreservesLayoutFieldOrder garante que campos de um mesmo objeto
 // (mesmo Index) saem na ordem do layout, não em ordem alfabética por Name.
 func TestJSONPreservesLayoutFieldOrder(t *testing.T) {
-	f := json.NewJSONObjectFormatter()
+	f := json.JSONFormatter{}
 	version := common.GameVersionFFX
 	order := []string{"name", "name_simplified", "desc", "desc_simplified"}
 	rows := make([]dto.TextRow, 0, len(order))
@@ -252,7 +252,7 @@ func TestJSONPreservesLayoutFieldOrder(t *testing.T) {
 }
 
 func TestJSONMacroFormatterRoundTrip(t *testing.T) {
-	f := json.NewJSONMacroFormatter()
+	f := json.JSONFormatter{}
 	if f.Extension() != ".json" {
 		t.Fatalf("unexpected extension: %s", f.Extension())
 	}
@@ -297,7 +297,7 @@ func TestJSONMacroFormatterRoundTrip(t *testing.T) {
 
 func TestMetadataOmitsEmptyFields(t *testing.T) {
 	// Novo formato: só key/row_count/id/is_dir podem sair no JSON.
-	raw, err := json.NewJSONEventsFormatter().Marshal(sampleCollection())
+	raw, err := json.JSONFormatter{}.Marshal(sampleCollection())
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
@@ -308,7 +308,7 @@ func TestMetadataOmitsEmptyFields(t *testing.T) {
 		}
 	}
 	// Macro carrega id=chunk_NN; row_count omitido quando zero.
-	macroRaw, err := json.NewJSONMacroFormatter().Marshal(dto.Collection{
+	macroRaw, err := json.JSONFormatter{}.Marshal(dto.Collection{
 		"chunk_00": {
 			Metadata: dto.NewMacroMetadata(common.GameVersionFFX, 0),
 			Rows:     []dto.TextRow{{Index: 0, Name: "name", Text: map[string]string{"us": "Hi"}}},
@@ -358,7 +358,7 @@ func dedupCollection() dto.Collection {
 }
 
 func TestMarshalDedupsDefaultLangRepeats(t *testing.T) {
-	f := json.NewJSONEventsFormatter()
+	f := json.JSONFormatter{}
 	raw, err := f.Marshal(dedupCollection())
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
@@ -424,7 +424,7 @@ func TestMarshalKeepsDivergentCopyLiteralAndCanonicalizesRefs(t *testing.T) {
 			Index: 0, Hash: map[string]string{"us": bare}, Text: map[string]string{"us": original},
 		}}},
 	}
-	raw, err := json.NewJSONEventsFormatter().Marshal(c)
+	raw, err := json.JSONFormatter{}.Marshal(c)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
@@ -462,7 +462,7 @@ func TestUnmarshalInfersExternalLiteralAsDivergentCopy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal fixture: %v", err)
 	}
-	parsed, err := json.NewJSONEventsFormatter().Unmarshal(raw)
+	parsed, err := json.JSONFormatter{}.Unmarshal(raw)
 	if err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -489,11 +489,11 @@ func TestMarshalSkipsShortCJKTexts(t *testing.T) {
 			},
 		},
 	}
-	raw, err := json.NewJSONEventsFormatter().Marshal(c)
+	raw, err := json.JSONFormatter{}.Marshal(c)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	back, err := json.NewJSONEventsFormatter().Unmarshal(raw)
+	back, err := json.JSONFormatter{}.Unmarshal(raw)
 	if err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -512,7 +512,7 @@ func TestUnmarshalExpandsEditedValue(t *testing.T) {
 		{"index": 0, "hash": {"us": "$` + h + `"}, "text": {"us": "Texto alterado"}},
 		{"index": 7, "hash": {"us": "$` + h + `"}, "text": {"us": "$` + h + `"}}
 	]}}`)
-	back, err := json.NewJSONEventsFormatter().Unmarshal(raw)
+	back, err := json.JSONFormatter{}.Unmarshal(raw)
 	if err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -534,7 +534,7 @@ func TestUnmarshalKeepsOrphanAndLiteralDollar(t *testing.T) {
 		{"index": 0, "hash": {"us": "$deadbeefdeadbeef"}, "text": {"us": "$deadbeefdeadbeef"}},
 		{"index": 1, "hash": {"us": "$` + h + `"}, "text": {"us": "$nao-eh-ref"}}
 	]}}`)
-	back, err := json.NewJSONEventsFormatter().Unmarshal(raw)
+	back, err := json.JSONFormatter{}.Unmarshal(raw)
 	if err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -552,11 +552,11 @@ func TestUnmarshalKeepsOrphanAndLiteralDollar(t *testing.T) {
 
 func TestMarshalUnmarshalIdentity(t *testing.T) {
 	in := dedupCollection()
-	raw, err := json.NewJSONEventsFormatter().Marshal(in)
+	raw, err := json.JSONFormatter{}.Marshal(in)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	back, err := json.NewJSONEventsFormatter().Unmarshal(raw)
+	back, err := json.JSONFormatter{}.Unmarshal(raw)
 	if err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -584,7 +584,7 @@ func TestMarshalNoEscapeKeepsAmpersand(t *testing.T) {
 			},
 		},
 	}
-	raw, err := json.NewJSONEventsFormatter().Marshal(c)
+	raw, err := json.JSONFormatter{}.Marshal(c)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
@@ -597,7 +597,7 @@ func TestMarshalNoEscapeKeepsAmpersand(t *testing.T) {
 }
 
 func TestMarshalLangsFilter(t *testing.T) {
-	raw, err := json.NewJSONEventsFormatter().MarshalLangs(sampleCollection(), []string{"us"})
+	raw, err := json.JSONFormatter{}.MarshalLangs(sampleCollection(), []string{"us"})
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
@@ -608,7 +608,7 @@ func TestMarshalLangsFilter(t *testing.T) {
 	if !strings.Contains(out, `"us"`) {
 		t.Fatalf("us must be kept:\n%s", out)
 	}
-	back, err := json.NewJSONEventsFormatter().Unmarshal(raw)
+	back, err := json.JSONFormatter{}.Unmarshal(raw)
 	if err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -619,7 +619,7 @@ func TestMarshalLangsFilter(t *testing.T) {
 		t.Fatalf("us lost: %+v", back["ev001"].Rows[0])
 	}
 	// nil = todos (compatível com Marshal).
-	full, err := json.NewJSONEventsFormatter().MarshalLangs(sampleCollection(), nil)
+	full, err := json.JSONFormatter{}.MarshalLangs(sampleCollection(), nil)
 	if err != nil {
 		t.Fatalf("marshal nil langs: %v", err)
 	}

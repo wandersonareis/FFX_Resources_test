@@ -34,8 +34,8 @@ import (
 	"ffxresources/backend/fileFormats/ddsphyre"
 	"ffxresources/backend/fileFormats/helpfile"
 	"ffxresources/backend/fileFormats/vbf"
+	"ffxresources/backend/formatters"
 	jsonfmt "ffxresources/backend/formatters/json"
-	strfmt "ffxresources/backend/formatters/strings"
 	"ffxresources/backend/loggingService"
 	"ffxresources/backend/progress"
 )
@@ -573,66 +573,66 @@ func (s *MetadataService) vbfExportEntry(a *vbf.Archive, kind, id, clicked strin
 	})
 }
 
-// writeVbfExport espelha os mesmos formatters/caminhos de ExportJSON e
-// ExportStrings, mas recebe a collection já montada a partir do container.
+// writeVbfExport espelha os mesmos caminhos de ExportJSON e
+// ExportStrings, mas recebe a collection já montada a partir do
+// container. O formatter vem do registry; a gravação é a camada de
+// arquivo padronizada (formatters.NewWriter) — o MESMO shape do
+// exportKind, com a extensão trocada pelo formato pedido.
 func writeVbfExport(kind string, version common.GameVersion, ids []string, c dto.Collection, format string, langs []string) ([]string, error) {
 	format = strings.ToLower(strings.TrimSpace(format))
-	if format != "" && format != "json" && format != "strings" {
+	switch format {
+	case "":
+		format = "json"
+	case "json", "strings":
+	default:
 		return nil, fmt.Errorf("formato de export desconhecido: %s", format)
 	}
-	stringsFormat := format == "strings"
-	if stringsFormat {
-		f := strfmt.NewStringsFormatter()
-		switch kind {
-		case KindEvents:
-			p, err := eventsExportPath(version, ids)
-			if err != nil {
-				return nil, err
-			}
-			written, err := f.WriteEventsFile(c, strfmt.StringsPathFor(p), langs)
-			return []string{written}, err
-		case KindObjects:
-			return f.WriteObjects(c, version, langs)
-		case KindMacro:
-			p, err := macroExportPath(version, nil)
-			if err != nil {
-				return nil, err
-			}
-			written, err := f.WriteMacroFile(c, p, langs)
-			return []string{written}, err
-		case KindLockit:
-			return f.WriteObjects(c, version, langs)
-		case KindHelp:
-			return f.WriteHelp(c, version, langs)
-		case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
-			return f.WriteObjects(c, version, langs)
-		default:
-			return nil, fmt.Errorf("unknown kind: %s", kind)
-		}
+	f, ok := formatters.Get(format)
+	if !ok {
+		return nil, fmt.Errorf("formatter %s não registrado", format)
 	}
+	write := func(col dto.Collection, jsonPath string) (string, error) {
+		return formatters.NewWriter(f, col, formatters.SwapExt(f, jsonPath), langs).Write()
+	}
+
 	switch kind {
 	case KindEvents:
 		p, err := eventsExportPath(version, ids)
 		if err != nil {
 			return nil, err
 		}
-		written, err := jsonfmt.NewJSONEventsFormatter().WriteEventsFile(c, p, langs)
-		return []string{written}, err
-	case KindObjects:
-		return jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
+		written, werr := write(c, p)
+		return []string{written}, werr
+	case KindObjects, KindLockit, KindBattleText, KindCloud, KindTutorial, KindMenuMain:
+		// Um arquivo por entrada (mesmo nome do JSON por entrada; dedup
+		// intra-arquivo = self-contained).
+		var paths []string
+		for _, key := range c.SortedKeys() {
+			jp, perr := jsonfmt.ObjectsJSONPath(key, version)
+			if perr != nil {
+				return nil, perr
+			}
+			p, werr := write(dto.Collection{key: c[key]}, jp)
+			if werr != nil {
+				return nil, werr
+			}
+			paths = append(paths, p)
+		}
+		return paths, nil
 	case KindMacro:
 		p, err := macroExportPath(version, nil)
 		if err != nil {
 			return nil, err
 		}
-		written, err := jsonfmt.NewJSONMacroFormatter().WriteMacroFile(c, p, langs)
-		return []string{written}, err
-	case KindLockit:
-		return jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
+		written, werr := write(c, p)
+		return []string{written}, werr
 	case KindHelp:
-		return jsonfmt.NewJSONHelpFormatter().WriteHelp(c, version, langs)
-	case KindBattleText, KindCloud, KindTutorial, KindMenuMain:
-		return jsonfmt.NewJSONObjectFormatter().WriteObjects(c, version, langs)
+		p, err := jsonfmt.HelpJSONPath(version)
+		if err != nil {
+			return nil, err
+		}
+		written, werr := write(c, p)
+		return []string{written}, werr
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", kind)
 	}

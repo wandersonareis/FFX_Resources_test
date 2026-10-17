@@ -294,7 +294,7 @@ func TestLockitJSONExportShape(t *testing.T) {
 	if err != nil {
 		t.Fatalf("build dto: %v", err)
 	}
-	raw, err := jsonfmt.NewJSONObjectFormatter().Marshal(c)
+	raw, err := jsonfmt.JSONFormatter{}.Marshal(c)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}

@@ -149,7 +149,7 @@ func BinaryReconstructionExample() {
 		common.LogError("Erro ao ler containers: %v\n", err)
 		return
 	}
-	formatter := json.NewJSONMacroFormatter()
+	formatter := json.JSONFormatter{}
 	collection, err := builders.BuildMacroDTOFromContainers(version, containers, nil)
 	if err != nil {
 		common.LogError("Erro ao montar DTO: %v\n", err)

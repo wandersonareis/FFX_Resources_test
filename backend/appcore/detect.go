@@ -110,6 +110,23 @@ func (f Format) TextKind() string {
 	}
 }
 
+// artifactRegistryKey devolve a chave canônica do registry de formatters
+// (formatters.Get) para o artefato detectado — "" quando não é artefato
+// de texto (.json/.strings/.csv/.xlsx).
+func (f Format) artifactRegistryKey() string {
+	switch f {
+	case FormatArtifactJSON:
+		return "json"
+	case FormatArtifactStrings:
+		return "strings"
+	case FormatArtifactCSV:
+		return "csv"
+	case FormatArtifactXLSX:
+		return "xlsx"
+	}
+	return ""
+}
+
 // Detection é o resultado da sniff: formato, kind, versão (adivinhada) e o
 // detalhe que explica a classificação (para dialogs e logs).
 type Detection struct {

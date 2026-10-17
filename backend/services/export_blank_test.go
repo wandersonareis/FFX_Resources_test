@@ -6,6 +6,7 @@ import (
 
 	"ffxresources/backend/common"
 	"ffxresources/backend/fileFormats/event"
+	"ffxresources/backend/formatters"
 	jsonfmt "ffxresources/backend/formatters/json"
 )
 
@@ -44,7 +45,7 @@ func TestExportEntryFiltersBlankRows(t *testing.T) {
 	}
 
 	// O JSON volta SEM a row em branco e com a contagem recalculada.
-	out, err := jsonfmt.NewJSONEventsFormatter().ReadEvents(paths[0])
+	out, err := formatters.NewReader(jsonfmt.JSONFormatter{}, paths[0]).Read()
 	if err != nil {
 		t.Fatalf("releitura: %v", err)
 	}

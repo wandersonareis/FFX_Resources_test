@@ -24,8 +24,6 @@ import (
 	"ffxresources/backend/dto"
 	"ffxresources/backend/formatters"
 	"ffxresources/backend/loggingService"
-	jsonfmt "ffxresources/backend/formatters/json"
-	strfmt "ffxresources/backend/formatters/strings"
 	"ffxresources/backend/services"
 )
 
@@ -165,51 +163,39 @@ func importOne(req ImportRequest, art dto.Collection, artFormat ArtifactFormat, 
 
 // readArtifact parseia o artefato pelo formato detectado (extensão +
 // conteúdo — o sniff pega o artefato trocado antes do parse genérico).
+// O formatter vem do registry (chave canônica do formato); o parse é o
+// MESMO para todo kind — os bytes JSON/strings são idênticos.
 func readArtifact(path string) (dto.Collection, ArtifactFormat, error) {
 	d, err := DetectFile(path)
 	if err != nil {
 		return nil, 0, err
 	}
+	var format ArtifactFormat
+	switch d.Format {
+	case FormatArtifactJSON:
+		format = FormatJSON
+	case FormatArtifactStrings:
+		format = FormatStrings
+	case FormatArtifactCSV:
+		format = FormatCSV
+	case FormatArtifactXLSX:
+		format = FormatXLSX
+	default:
+		return nil, 0, Incompatible(path, "artefato de texto", d.Format.String(), "arquivo não é .json, .strings, .csv nem .xlsx")
+	}
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return nil, 0, err
 	}
-	switch d.Format {
-	case FormatArtifactJSON:
-		c, err := jsonfmt.NewJSONEventsFormatter().Unmarshal(raw)
-		if err != nil {
-			return nil, 0, fmt.Errorf("falha ao analisar JSON: %w", err)
-		}
-		return c, FormatJSON, nil
-	case FormatArtifactStrings:
-		c, err := strfmt.NewStringsFormatter().Unmarshal(raw)
-		if err != nil {
-			return nil, 0, fmt.Errorf("falha ao analisar .strings: %w", err)
-		}
-		return c, FormatStrings, nil
-	case FormatArtifactCSV:
-		f, ok := formatters.Get("csv")
-		if !ok {
-			return nil, 0, fmt.Errorf("formatter CSV não registrado")
-		}
-		c, err := f.Unmarshal(raw)
-		if err != nil {
-			return nil, 0, fmt.Errorf("falha ao analisar CSV: %w", err)
-		}
-		return c, FormatCSV, nil
-	case FormatArtifactXLSX:
-		f, ok := formatters.Get("xlsx")
-		if !ok {
-			return nil, 0, fmt.Errorf("formatter XLSX não registrado")
-		}
-		c, err := f.Unmarshal(raw)
-		if err != nil {
-			return nil, 0, fmt.Errorf("falha ao analisar XLSX: %w", err)
-		}
-		return c, FormatXLSX, nil
-	default:
-		return nil, 0, Incompatible(path, "artefato de texto", d.Format.String(), "arquivo não é .json, .strings, .csv nem .xlsx")
+	f, ok := formatters.Get(format.String())
+	if !ok {
+		return nil, 0, fmt.Errorf("formatter %s não registrado", format)
 	}
+	c, err := f.Unmarshal(raw)
+	if err != nil {
+		return nil, 0, fmt.Errorf("falha ao analisar %s: %w", format, err)
+	}
+	return c, format, nil
 }
 
 // artifactTarget valida as keys do artefato: kind único, versão presente e

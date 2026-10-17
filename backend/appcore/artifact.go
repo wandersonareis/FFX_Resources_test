@@ -17,9 +17,7 @@ import (
 	"fmt"
 	"os"
 
-	"ffxresources/backend/dto"
-	jsonfmt "ffxresources/backend/formatters/json"
-	strfmt "ffxresources/backend/formatters/strings"
+	"ffxresources/backend/formatters"
 )
 
 // ArtifactRequest é o pedido dedupe/dupe (um artefato por chamada — o menu
@@ -72,15 +70,19 @@ func artifactOp(ctx context.Context, req ArtifactRequest, prefix, label string) 
 		return outcome, fmt.Errorf("lendo artefato: %w", err)
 	}
 
-	// O Unmarshal EXPANDE as refs "$hash" atuais pelo valor da tabela
-	// hash→texto do próprio arquivo — o merge de entrada é sempre texto
-	// completo, não importa o estado do artefato escolhido.
-	var c dto.Collection
-	if d.Format == FormatArtifactJSON {
-		c, err = jsonfmt.NewJSONEventsFormatter().Unmarshal(raw)
-	} else {
-		c, err = strfmt.NewStringsFormatter().Unmarshal(raw)
+	// O formatter vem do registry (chave canônica do formato detectado);
+	// o parse é o MESMO para todo kind. O Unmarshal EXPANDE as refs
+	// "$hash" atuais pelo valor da tabela hash→texto do próprio arquivo —
+	// o merge de entrada é sempre texto completo, não importa o estado
+	// do artefato escolhido.
+	rf, ok := formatters.Get(d.Format.artifactRegistryKey())
+	if !ok {
+		outcome.Status = StatusMismatch
+		outcome.Reason = Incompatible(req.Path, "artefato .json ou .strings", d.Format.String(),
+			"operação "+label+" só roda em artefato de texto").Error()
+		return outcome, nil
 	}
+	c, err := rf.Unmarshal(raw)
 	if err != nil {
 		outcome.Status = StatusMismatch
 		outcome.Reason = fmt.Sprintf("falha ao analisar artefato: %v", err)
@@ -94,20 +96,16 @@ func artifactOp(ctx context.Context, req ArtifactRequest, prefix, label string) 
 
 	// dedupe: marshal padrão (colapsa repetidos em $hash);
 	// dupe: MarshalNoDedup (texto literal — resolve os hashes de conteúdo).
-	var out []byte
-	if prefix == PrefixDedupe {
-		if d.Format == FormatArtifactJSON {
-			out, err = jsonfmt.NewJSONObjectFormatter().MarshalLangs(c, req.Langs)
-		} else {
-			out, err = strfmt.MarshalLangs(c, req.Langs)
-		}
-	} else {
-		if d.Format == FormatArtifactJSON {
-			out, err = jsonfmt.MarshalNoDedupLangs(c, req.Langs)
-		} else {
-			out, err = strfmt.MarshalNoDedupLangs(c, req.Langs)
-		}
+	key := d.Format.artifactRegistryKey()
+	if prefix == PrefixDupe {
+		key += "-no-dedup"
 	}
+	mf, ok := formatters.Get(key)
+	if !ok {
+		outcome.Reason = fmt.Sprintf("formatter %s não registrado", key)
+		return outcome, nil
+	}
+	out, err := mf.MarshalLangs(c, req.Langs)
 	if err != nil {
 		outcome.Reason = fmt.Sprintf("serializando %s: %v", label, err)
 		return outcome, nil
