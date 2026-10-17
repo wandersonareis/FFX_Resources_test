@@ -161,6 +161,9 @@ type defRef struct {
 	orig  string
 	index int
 	name  string
+	// onlyInTranslation marca a row que existe só na tradução (sem
+	// contraparte em data/): sem Original, mas já é tradução.
+	onlyInTranslation bool
 }
 
 // NewHashOrder percorre a Collection RAW em ordem canônica (SortedKeys →
@@ -204,11 +207,12 @@ func (ho *HashOrder) Extend(id string, rows []dto.TextRow) int {
 			ho.pointerAt[pos] = h
 			if _, seen := ho.first[h]; !seen {
 				ho.first[h] = defRef{
-					pos:   pos,
-					text:  t,
-					orig:  r.Original[common.DefaultLocalization],
-					index: r.Index,
-					name:  r.Name,
+					pos:               pos,
+					text:              t,
+					orig:              r.Original[common.DefaultLocalization],
+					index:             r.Index,
+					name:              r.Name,
+					onlyInTranslation: r.MissingInOriginal,
 				}
 			}
 		}
@@ -253,11 +257,12 @@ func (ho *HashOrder) Replace(id string, rows []dto.TextRow) {
 			ho.pointerAt[pos] = h
 			if _, seen := ho.first[h]; !seen {
 				ho.first[h] = defRef{
-					pos:   pos,
-					text:  t,
-					orig:  sorted[i].Original[common.DefaultLocalization],
-					index: sorted[i].Index,
-					name:  sorted[i].Name,
+					pos:               pos,
+					text:              t,
+					orig:              sorted[i].Original[common.DefaultLocalization],
+					index:             sorted[i].Index,
+					name:              sorted[i].Name,
+					onlyInTranslation: sorted[i].MissingInOriginal,
 				}
 			} else if ho.first[h].pos == pos {
 				// Mesma def, texto novo (tradução aplicada): o link das
@@ -267,6 +272,7 @@ func (ho *HashOrder) Replace(id string, rows []dto.TextRow) {
 				ref.orig = sorted[i].Original[common.DefaultLocalization]
 				ref.index = sorted[i].Index
 				ref.name = sorted[i].Name
+				ref.onlyInTranslation = sorted[i].MissingInOriginal
 				ho.first[h] = ref
 			}
 		}
@@ -304,6 +310,29 @@ func (ho *HashOrder) defText(h string) (string, bool) {
 	return ref.text, ok
 }
 
+// DefPending informa se a def do ponteiro AINDA está pendente de tradução
+// (texto atual == original de data/). É a metade que falta da régua de
+// dedupe: original → tradução apenas enquanto a def não foi traduzida —
+// uma def traduzida nunca é alvo de colapso, mesmo com a twin no mesmo
+// ponteiro (mesmo original). Ref só existe entre células não traduzidas.
+//
+// Sem Original na def (row só na tradução, ou entrada sem binário em
+// mods/) o estado não é aferível pelo texto: sem mods/ a def está por
+// construção pendente, e row só na tradução é tradução — o teste é pelo
+// Original da row registrada na ordem.
+func (ho *HashOrder) DefPending(h string) bool {
+	ref, ok := ho.first[h]
+	if !ok {
+		return false
+	}
+	if ref.orig != "" {
+		return ref.text == ref.orig
+	}
+	// Sem Original: ou a entrada não tem binário em mods/ (nunca saiu de
+	// data/ — pendente), ou a row existe só na tradução (já traduzida).
+	return !ref.onlyInTranslation
+}
+
 // collapseInto escreve a ref "$h" no texto 'us' da row (cópia do map).
 func collapseInto(r *dto.TextRow, h string) {
 	text := make(map[string]string, len(r.Text))
@@ -320,14 +349,16 @@ func collapseInto(r *dto.TextRow, h string) {
 // que não seja a 1ª ocorrência do ponteiro na ordem global (base+i).
 //
 // Regras:
-//   - Sem Original na row (divergência/sem contraparte) → nunca colapsa:
-//     o domínio do ponteiro não pode ser validado contra data/, e o texto
-//     segue visível.
 //   - Célula traduzida (texto difere do original) → nunca colapsa: dupe
 //     sobre texto já traduzido é proibido por decisão — é carga real de
 //     revisão.
-//   - Def pode estar traduzida: a ref aponta para o PONTEIRO do original e
-//     o apply resolve defs[ponteiro] → texto atual da def (a tradução).
+//   - Célula sem Original (divergência/sem contraparte) → o estado não é
+//     aferível contra data/ e o colapso volta a ser por texto, igual ao da
+//     1ª ocorrência (comportamento pré-original).
+//   - Def traduzida → nunca atrai a twin: dedupe é só de original para
+//     original, e uma def pendente é pré-requisito de ref (DefPending).
+//     Com a def traduzida, a gêmea ainda em inglês é exibida em inglês —
+//     sem ref apontando para a tradução de outro binário.
 //
 // base é o nº de rows que precedem a entrada na ordem canônica da versão
 // (HashOrder.Offset). A entrada não é mutada.
@@ -357,6 +388,13 @@ func DedupDisplayDTO(entry dto.FileEntry, base int, ho *HashOrder) dto.FileEntry
 			elegivel = t == origUS && hash.IsDedupEligible(origUS)
 		} else if def, ok := ho.defText(h); ok {
 			elegivel = def == t && hash.IsDedupEligible(t)
+		}
+		// Dedupe é só de original para original: a def precisa estar
+		// pendente (sem tradução). Def traduzida nunca atrai a twin,
+		// mesmo com o mesmo ponteiro — tradução repetida fica repetida,
+		// e o gêmeo ainda em inglês é exibido em inglês, sem ref.
+		if elegivel && !ho.DefPending(h) {
+			elegivel = false
 		}
 		if !elegivel {
 			continue

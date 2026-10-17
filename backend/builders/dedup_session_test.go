@@ -75,24 +75,29 @@ func TestDedupDisplaySessionAnnotatesLinkedRef(t *testing.T) {
 	}
 }
 
-// Traduzido nunca colapsa — a cópia traduzida em mods permanece literal.
-func TestDedupDisplaySessionTranslatedStaysLiteral(t *testing.T) {
+// Def traduzida NUNCA atrai a gêmea: a cópia ainda não traduzida fica
+// literal e em inglês — sem ref apontando para a tradução de outro binário.
+// (Decisão: dedupe é só de original para original; tradução repetida fica
+// repetida, e gêmea em inglês é exibida em inglês.)
+func TestDedupDisplayTranslatedDefKeepsTwinLiteral(t *testing.T) {
 	const orig = "Repetição idêntica que o jogo carrega como dupe"
 	ho := builders.NewHashOrder(nil)
-	def := rowLinked(0, orig, "Tradução da def") // def traduzida: ref resolve nela
+	def := rowLinked(0, orig, "Tradução da def") // def traduzida
 	ho.Extend("bika236", []dto.TextRow{def})
 	twin := rowLinked(1, orig, orig) // cópia ainda não traduzida
 	entry := dto.FileEntry{Rows: []dto.TextRow{twin}}
 	ho.Extend("bika237", []dto.TextRow{twin})
 	base, _ := ho.Offset("bika237")
 	view := builders.DedupDisplayDTO(entry, base, ho)
-	if _, isRef := refOf(view.Rows[0]); !isRef {
-		t.Fatalf("cópia NÃO traduzida deveria colapsar contra a def traduzida")
+	if _, isRef := refOf(view.Rows[0]); isRef {
+		t.Fatalf("cópia NÃO traduzida não pode colapsar contra def traduzida: %q",
+			view.Rows[0].Text[common.DefaultLocalization])
 	}
-	// …e o link entrega a TRADUÇÃO da def (o que o apply resolveria).
-	link := view.Refs[dto.RowKey(view.Rows[0])]
-	if link.Text != "Tradução da def" {
-		t.Fatalf("link deveria apontar o texto atual da def: %q", link.Text)
+	if len(view.Refs) != 0 {
+		t.Fatalf("sem ref para anotar: %+v", view.Refs)
+	}
+	if got := view.Rows[0].Text[common.DefaultLocalization]; got != orig {
+		t.Fatalf("célula deveria seguir em inglês (estado real do binário): %q", got)
 	}
 
 	// Cópia JÁ traduzida (texto divergente do original) nunca colapsa.
@@ -105,35 +110,46 @@ func TestDedupDisplaySessionTranslatedStaysLiteral(t *testing.T) {
 	}
 }
 
-// Replace (frescura ao re-clicar um arquivo): a def traduzida atualiza o
-// texto do link e a célula que deixou de ter o ponteiro perde a def — o
-// que conservadoramente deixa de colapsar.
-func TestHashOrderReplaceRefreshesDefText(t *testing.T) {
+// Replace (frescura ao re-clicar um arquivo): enquanto a def está pendente a
+// cópia colapsa; quando o re-clica chega TRADUZIDO, a def sai de pendente e a
+// cópia volta a ser célula própria (em inglês), sem ref.
+func TestHashOrderReplaceTranslatedDefStopsCollapse(t *testing.T) {
 	const orig = "Definicia carregada no primeiro clique da sessão"
 	ho := builders.NewHashOrder(nil)
 	ho.Extend("bika236", []dto.TextRow{rowLinked(0, orig, orig)})
 	ho.Extend("bika237", []dto.TextRow{rowLinked(0, orig, orig)})
 
+	h := hash.Sum64Hex(orig)
+	if !ho.DefPending(h) {
+		t.Fatal("def recém-registrada sem tradução deveria estar pendente")
+	}
+
 	// 236 foi traduzido fora da sessão (via data/): re-clique re-decodifica
 	// e Replace re-registra a entrada. No domínio display o ponteiro é do
-	// ORIGINAL e não muda — o que muda é o TEXTO da def.
+	// ORIGINAL e não muda — o que muda é o TEXTO da def, que sai de
+	// pendente e com isso deixa de poder atrair a cópia.
 	ho.Replace("bika236", []dto.TextRow{rowLinked(0, orig, "Tradução aplicada depois")})
+	if ho.DefPending(h) {
+		t.Fatal("def traduzida não pode mais estar pendente")
+	}
+	if id, index, _, ok := ho.Resolve(h); !ok || id != "bika236" || index != 0 {
+		t.Fatalf("def do ponteiro: %q/%d ok=%v, esperava bika236/0", id, index, ok)
+	}
 
-	// O link da cópia resolve para o TEXTO NOVO da def (mesma posição,
-	// mesmo dono).
+	// A cópia (ainda em inglês) vira célula própria: sem ref, sem link.
 	base, _ := ho.Offset("bika237")
 	view := builders.DedupDisplayDTO(
 		dto.FileEntry{Rows: []dto.TextRow{rowLinked(0, orig, orig)}},
 		base, ho,
 	)
-	link, ok := view.Refs[dto.RowKey(view.Rows[0])]
-	if !ok {
-		t.Fatalf("cópia deveria colapsar contra a def")
+	if _, isRef := refOf(view.Rows[0]); isRef {
+		t.Fatalf("cópia não pode colapsar contra def traduzida: %q",
+			view.Rows[0].Text[common.DefaultLocalization])
 	}
-	if link.Text != "Tradução aplicada depois" {
-		t.Fatalf("link deveria mostrar o texto novo da def: %q", link.Text)
+	if len(view.Refs) != 0 {
+		t.Fatalf("sem ref para anotar: %+v", view.Refs)
 	}
-	if link.SourceID != "bika236" || link.SourceIndex != 0 {
-		t.Fatalf("origem do link: %q/%d, esperava bika236/0", link.SourceID, link.SourceIndex)
+	if got := view.Rows[0].Text[common.DefaultLocalization]; got != orig {
+		t.Fatalf("célula deveria seguir em inglês: %q", got)
 	}
 }

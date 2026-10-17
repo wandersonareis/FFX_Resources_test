@@ -76,8 +76,9 @@ func mutateStoreEvent(t *testing.T, version common.GameVersion, id, newText stri
 }
 
 // TestGetEntryDisplayPointerIsOriginalHash: def traduzida (mods) + twin não
-// traduzida — o grupo estrutural sobrevive à tradução da def e a twin
-// colapsa em ref do PONTEIRO DO ORIGINAL.
+// traduzida — o grupo estrutural sobrevive à tradução da def (ponteiro = o
+// do ORIGINAL nos dois), mas a twin NÃO colapsa: dedupe é só de original
+// para original, e gêmea em inglês é exibida em inglês.
 func TestGetEntryDisplayPointerIsOriginalHash(t *testing.T) {
 	svc := seedDisplayRoot(t)
 	seedEventsSynthetic(common.GameVersionFFX2, "zev001", []string{sharedOriginal})
@@ -115,11 +116,17 @@ func TestGetEntryDisplayPointerIsOriginalHash(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get twin: %v", err)
 	}
-	if !displayRowIsRef(after.Rows[0]) {
-		t.Fatalf("twin não traduzida deveria colapsar sob a def traduzida: %q", after.Rows[0].Text["us"])
+	// Dedupe é só de original para original: com a def traduzida, a twin
+	// ainda em inglês NÃO colapsa — fica célula própria, em inglês, e o
+	// ponteiro dela continua sendo o do ORIGINAL (grupo estrutural intacto).
+	if displayRowIsRef(after.Rows[0]) {
+		t.Fatalf("twin não traduzida não pode colapsar sob def traduzida: %q", after.Rows[0].Text["us"])
 	}
-	if bare, _ := hash.Strip(after.Rows[0].Text[common.DefaultLocalization]); bare != wantPointer {
-		t.Fatalf("ref deveria apontar para o ponteiro do original: %q != %q", bare, wantPointer)
+	if got := after.Rows[0].Hash[common.DefaultLocalization]; got != wantPointer {
+		t.Fatalf("ponteiro da twin deveria continuar o do ORIGINAL: %q != %q", got, wantPointer)
+	}
+	if got := after.Rows[0].Text[common.DefaultLocalization]; got != sharedOriginal {
+		t.Fatalf("twin deveria seguir em inglês (estado real do binário): %q", got)
 	}
 }
 
@@ -295,8 +302,11 @@ func TestApplyDivergentCopyKeepsDefinitionGroupSeparate(t *testing.T) {
 		}
 	}
 
-	// Reverter a cópia para o pristine é outro self-target. No view seguinte
-	// ela volta a ser ref azul e espelha a tradução atual da definição.
+	// Reverter a cópia para o pristine é outro self-target: o binário dela
+	// volta ao inglês. A def (zev001) continua traduzida, então o view
+	// seguinte entrega a cópia como célula própria, em inglês — dedupe é
+	// só de original para original e nunca pinta a tradução da def em cima
+	// de binário não traduzido.
 	reverted, err := svc.GetEntry(KindEvents, "zev002", common.GameVersionFFX2)
 	if err != nil {
 		t.Fatalf("get divergent copy to revert: %v", err)
@@ -310,11 +320,11 @@ func TestApplyDivergentCopyKeepsDefinitionGroupSeparate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reload reverted copy: %v", err)
 	}
-	if !displayRowIsRef(afterRevert.Rows[0]) {
-		t.Fatalf("copy reverted to original should converge back to blue ref, got %q", afterRevert.Rows[0].Text[common.DefaultLocalization])
+	if displayRowIsRef(afterRevert.Rows[0]) {
+		t.Fatalf("cópia revertida não pode virar ref sob def traduzida, got %q", afterRevert.Rows[0].Text[common.DefaultLocalization])
 	}
-	if got := afterRevert.Refs[dto.RowKey(afterRevert.Rows[0])].Text; got != translationA {
-		t.Fatalf("re-converged link should mirror definition A, got %q", got)
+	if got := afterRevert.Rows[0].Text[common.DefaultLocalization]; got != sharedOriginal {
+		t.Fatalf("cópia revertida deveria exibir o original em inglês, got %q", got)
 	}
 }
 
