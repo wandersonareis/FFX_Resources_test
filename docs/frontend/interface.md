@@ -15,7 +15,7 @@ WebView nativo pelo Wails v3, consumindo os bindings Go
 
 ```
 +--------------------------------------------------------------+
-| AppHeader: título, abas de versão, Exportar/Importar, ⚙ config |
+| AppHeader: título, Formato/Idiomas, Exportar/Importar, ⚙ config|
 +--------------+-----------------------------------------------+
 | ContentTree  | EntryTable (linhas = textos do arquivo)        |
 | (árvore de   |                                                |
@@ -37,6 +37,11 @@ aba (`Ctrl+1..4`) troca a árvore inteira. O layout (largura das colunas,
   aba recarrega a árvore inteira com os arquivos daquela versão.
 - **Formato** (JSON / Strings / CSV / XLSX) — define o formato usado pelo
   **Exportar**.
+- **Idiomas** (`Todos` / `us + N` / `us`) — quais idiomas entram nos
+  artefatos de texto exportados: o idioma default (`us`, inglês) sai
+  **sempre**, sem marcação; os extras têm checkbox, vêm marcados por
+  padrão e a escolha fica salva entre sessões (ver
+  [Exportar / Importar](#exportar--importar)).
 - **Exportar ▾ / Importar ▾** — ver [Exportar / Importar](#exportar--importar).
 - **Engrenagem** (`Ctrl+,`) — abre a [Configuração](#configuração-ctrl).
 - **Alternar tema** — claro/escuro.
@@ -218,6 +223,16 @@ O menu Exportar tem duas ações e um escopo:
 - **Exportar seleção** — apenas os itens marcados na árvore (exige ao
   menos um marcado); nessa via cada entrada ganha seu próprio arquivo
   (`<id>_all_localizations_<versão>`), separado do arquivo completo do tipo.
+
+**Idiomas** — o artefato sai só com os idiomas marcados no seletor
+**Idiomas** do header (à direita do formato): o default `us` (inglês)
+sempre entra; os extras (`ch`, `de`, `fr`, `it`, `jp`, `kr`, `sp`) são
+escolhidos a partir dele. A seleção vale para **todas** as vias —
+Exportar, Exportar seleção, menu de contexto da árvore e exportação de
+VBF — e fica salva entre sessões (`localStorage` `ffx.export-langs`); sem
+preferência salva, sai tudo. O formato do arquivo não muda — só entram
+menos idiomas nele (em .strings/CSV/XLSX, que geram uma linha por
+(row, idioma), só `us` reduz o arquivo a cerca de 1/8).
 
 CSV e XLSX usam os mesmos nomes e caminhos com a extensão trocada (ver
 [Exportação CSV / XLSX](../formatos/exportacao-csv-xlsx.md)) — no XLSX as

@@ -8,6 +8,7 @@ import * as dto from '@/bindings/ffxresources/backend/dto/models';
 import { GAME_VERSIONS, GameVersionId } from '@/lib/ffx/game-version';
 import { EntryKind, KIND_LABELS } from '@/lib/ffx/display-names';
 import { exportSelection, EXPORT_FORMAT_LABELS, useExportSelection } from '@/lib/ffx/export-selection';
+import { exportLangs } from '@/lib/ffx/export-langs';
 import { parseError } from '@/lib/ffx/error-handler';
 import { progressWasShown } from '@/lib/ffx/progress-store';
 import {
@@ -106,7 +107,9 @@ export function ExportImportControls({ version }: { version: GameVersionId }) {
         return;
       }
       try {
-        const paths = await exportArtifactBatch(items, version, [], format);
+        // Idiomas: array do seletor do header (default + extras marcados);
+        // `[]` (pré-hidratação) = todos, o contrato do backend.
+        const paths = await exportArtifactBatch(items, version, exportLangs.langsOf(), format);
         if ((paths ?? []).length === 0) {
           toast.info('Nada para exportar.');
         }

@@ -18,6 +18,11 @@ Uma linha por (row, idioma) com texto não-vazio — o mesmo texto em inglês e
 japonês são DUAS linhas, a coluna `lang` distingue. A saída é determinística:
 entradas por key, rows por index, idiomas em ordem alfabética.
 
+Quais idiomas viram linha é decidido pelo filtro de idiomas do export
+(`MarshalLangs`): vazio = todos; com seleção (seletor **Idiomas** do
+header, salvo no `localStorage` `ffx.export-langs`) = o default `us`
+sempre + os extras marcados — mesma tabela, menos idiomas.
+
 | Coluna | Planilha | Conteúdo |
 |---|---|---|
 | `key` | A | metadata.key COMPLETA (versão/padrão/arquivo) — a identidade da entrada no app: é dela que saem o kind, a versão e o casamento por basename, então um artefato com várias entradas (`events_all`, `objects_all`) volta inteiro no import |

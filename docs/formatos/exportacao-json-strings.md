@@ -142,6 +142,16 @@ A régua é a do `export_paths.go`: o dedup do marshal é por ARQUIVO, então
 o NOME reflete o escopo — um subconjunto nunca sobrescreve o artefato
 completo do tradutor.
 
+## Idiomas
+
+Todos os formatos aceitam o filtro de idiomas (`MarshalLangs`): vazio =
+TODOS os idiomas carregados (regra do backend). Pelo seletor **Idiomas**
+do header, o frontend manda `[default, ...extras marcados]` — o default
+(`us`, `common.DefaultLocalization`) sai sempre e os extras vêm do
+`ListLanguages`, com a escolha salva no `localStorage`
+(`ffx.export-langs`). A estrutura não muda: só entram menos chaves no
+`text`/`hash` (JSON) e menos linhas (.strings).
+
 ## Importação (round-trip)
 
 - Vias: **Importar de... arquivo** (aceita `.json`, `.strings`, `.csv`,

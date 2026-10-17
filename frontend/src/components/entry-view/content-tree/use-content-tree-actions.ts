@@ -14,7 +14,9 @@ import {
 } from '@/lib/ffx/vbf';
 import { parseError } from '@/lib/ffx/error-handler';
 import { progressWasShown } from '@/lib/ffx/progress-store';
-import { exportSelection } from '@/lib/ffx/export-selection';import { vbfSelection } from '@/lib/ffx/vbf-selection';
+import { exportSelection } from '@/lib/ffx/export-selection';
+import { exportLangs } from '@/lib/ffx/export-langs';
+import { vbfSelection } from '@/lib/ffx/vbf-selection';
 import {
   entryIdsInNode,
   type SideNode,
@@ -122,7 +124,7 @@ export function useContentTreeActions({
     }
     const format = exportSelection.formatOf();
     try {
-      const paths = await exportArtifactBatch([{ kind, ids }], version, [], format);
+      const paths = await exportArtifactBatch([{ kind, ids }], version, exportLangs.langsOf(), format);
       if ((paths ?? []).length === 0) {
         toast.info('Nada para exportar.');
       }
@@ -190,7 +192,7 @@ export function useContentTreeActions({
     void (async () => {
       const format = exportSelection.formatOf();
       try {
-        const exported = await exportVbfSelection(root, format, paths);
+        const exported = await exportVbfSelection(root, format, paths, exportLangs.langsOf());
         if (exported.length === 0) {
           toast.info('A seleção não contém textos compatíveis para extrair.');
           return;
