@@ -101,7 +101,7 @@ func (CSVFormatter) MarshalLangs(c dto.Collection, langs []string) ([]byte, erro
 				value := text
 				if lang == common.DefaultLocalization && !row.Divergent && hash.IsDedupEligible(text) {
 					if _, dup := seen[h]; dup {
-						value = "$" + h
+						value = hash.Prefix(h)
 					} else {
 						seen[h] = text
 					}
@@ -118,7 +118,7 @@ func (CSVFormatter) MarshalLangs(c dto.Collection, langs []string) ([]byte, erro
 					row.Name,
 					fmt.Sprintf("%d", row.Index),
 					lang,
-					h,
+					hash.Prefix(h),
 					value,
 					divergent,
 				}
@@ -201,12 +201,12 @@ func (CSVFormatter) Unmarshal(data []byte) (dto.Collection, error) {
 			continue // pula linha malformada
 		}
 		lang := rec[4]
-		hashHex := rec[5]
+		hashHex, _ := hash.Strip(rec[5])
 		text := rec[6]
 		divergent := rec[7] == "true"
 
 		// Só registra canônica no default lang e não-divergent
-		if lang == common.DefaultLocalization && !divergent && text != "" && !strings.HasPrefix(text, "$") {
+		if lang == common.DefaultLocalization && !divergent && text != "" && !hash.IsRef(text) {
 			if canonical, exists := table[hashHex]; !exists {
 				table[hashHex] = text
 			} else if canonical != text {
@@ -230,7 +230,13 @@ func (CSVFormatter) Unmarshal(data []byte) (dto.Collection, error) {
 		name := rec[2]
 		indexStr := rec[3]
 		lang := rec[4]
-		hashHex := rec[5]
+		// Polícia estrita do formato: todo hash de artefato tem prefixo $
+		// (a mesma régua do .strings). Célula vazia é tolerada — artefato
+		// feito à mão, o import recalcula pelo texto.
+		hashHex, hasPrefix := hash.Strip(rec[5])
+		if !hasPrefix && hashHex != "" {
+			return nil, fmt.Errorf("hash %q sem prefixo $ (re-exporte o arquivo no formato atual)", rec[5])
+		}
 		text := rec[6]
 		divergent := rec[7] == "true"
 
@@ -239,8 +245,7 @@ func (CSVFormatter) Unmarshal(data []byte) (dto.Collection, error) {
 		}
 
 		// Resolve referências "$hash"
-		if strings.HasPrefix(text, "$") {
-			refHash := strings.TrimPrefix(text, "$")
+		if refHash, isRef := hash.Strip(text); isRef {
 			if canonical, ok := table[refHash]; ok {
 				text = canonical
 			} else {
@@ -397,7 +402,7 @@ func marshalNoDedupLangs(c dto.Collection, langs []string) ([]byte, error) {
 				if row.Divergent {
 					divergent = "true"
 				}
-				record := []string{key, id, row.Name, fmt.Sprintf("%d", row.Index), lang, h, text, divergent}
+				record := []string{key, id, row.Name, fmt.Sprintf("%d", row.Index), lang, hash.Prefix(h), text, divergent}
 				if err := writer.Write(record); err != nil {
 					return nil, err
 				}

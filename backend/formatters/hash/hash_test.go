@@ -73,3 +73,22 @@ func TestDedupIndexGroups(t *testing.T) {
 		t.Fatalf("unexpected grouping: %+v", got)
 	}
 }
+
+// IsRef é o detector do prefixo de artefato — a pergunta que os formatters
+// fazem sem tocar no literal "$".
+func TestIsRefDetectsPrefix(t *testing.T) {
+	cases := []struct {
+		in   string
+		want bool
+	}{
+		{"$abc", true},
+		{"$" + hash.Sum64Hex("Hi"), true},
+		{"abc", false},
+		{"", false},
+	}
+	for _, c := range cases {
+		if got := hash.IsRef(c.in); got != c.want {
+			t.Errorf("IsRef(%q) = %v, esperado %v", c.in, got, c.want)
+		}
+	}
+}

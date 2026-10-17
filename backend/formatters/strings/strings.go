@@ -205,7 +205,3 @@ func unescapeValue(s string) string {
 	}
 	return out.String()
 }
-
-func runeCount(s string) int {
-	return len([]rune(s))
-}

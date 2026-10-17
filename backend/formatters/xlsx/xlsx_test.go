@@ -63,7 +63,7 @@ func TestMarshalLargurasCalculadas(t *testing.T) {
 		want float64
 	}{
 		{"E", float64(xlsxWidthBase)},                                     // lang: conteúdo curto → fica na base
-		{"F", float64(len("aaaa0000aaaa0000"))},                           // hash: maior hex observado
+		{"F", float64(len("$aaaa0000aaaa0000"))},                          // hash: "$"+hex de 16 = 17 runes
 		{"H", float64(xlsxWidthBase)},                                     // divergent: "false" < base
 		{"A", float64(len("ffx/event/obj_ps3/az/azit0000/azit0000.bin"))}, // key: maior key
 		{"B", float64(xlsxWidthBase)},                                     // id: "chunk_07" (8) < base
@@ -248,7 +248,103 @@ func TestUnmarshalRoundTripBulk(t *testing.T) {
 				if g.Text[lang] != text {
 					t.Errorf("%s row %d %s: texto %q != %q", id, i, lang, g.Text[lang], text)
 				}
+				// O DTO volta com hex PURO — o $ do artefato morre no parse.
+				if g.Hash[lang] != row.Hash[lang] {
+					t.Errorf("%s row %d %s: hash %q != %q (DTO deveria ser bare)", id, i, lang, g.Hash[lang], row.Hash[lang])
+				}
 			}
 		}
+	}
+}
+
+// O hash de artefato sai no formato do pacote hash ("$"+hex) — a célula F
+// carrega o prefixo, também no modo sem dedup (identidade nunca sai).
+func TestMarshalHashComPrefixo(t *testing.T) {
+	marshallers := []struct {
+		nome  string
+		marsh func(dto.Collection) ([]byte, error)
+	}{
+		{"xlsx", NewXLSXFormatter().Marshal},
+		{"xlsx-no-dedup", XLSXFormatterNoDedup{}.Marshal},
+	}
+	for _, m := range marshallers {
+		t.Run(m.nome, func(t *testing.T) {
+			raw, err := m.marsh(sampleCollection())
+			if err != nil {
+				t.Fatalf("marshal: %v", err)
+			}
+			f, err := excelize.OpenReader(strings.NewReader(string(raw)))
+			if err != nil {
+				t.Fatalf("open: %v", err)
+			}
+			defer f.Close()
+			for _, cell := range []string{"F2", "F3"} {
+				got, err := f.GetCellValue("Sheet1", cell)
+				if err != nil {
+					t.Fatalf("GetCellValue(%s): %v", cell, err)
+				}
+				if !strings.HasPrefix(got, "$") {
+					t.Errorf("%s: célula de hash %q deveria ter prefixo $", cell, got)
+				}
+			}
+		})
+	}
+}
+
+// manualWorkbook monta um XLSX in-memory com o header do formato e UMA
+// linha de conteúdo — matéria-prima dos testes de política de import.
+func manualWorkbook(t *testing.T, row []string) []byte {
+	t.Helper()
+	f := excelize.NewFile()
+	sheet := "Sheet1"
+	f.SetSheetName(f.GetSheetName(0), sheet)
+	for i, h := range xlsxHeader {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		f.SetCellValue(sheet, cell, h)
+	}
+	for i, v := range row {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 2)
+		f.SetCellValue(sheet, cell, v)
+	}
+	buf, err := f.WriteToBuffer()
+	if err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	return buf.Bytes()
+}
+
+// Política estrita do import: hash sem o prefixo $ é artefato do formato
+// antigo — erro claro mandando re-exportar (a mesma régua do .strings).
+func TestUnmarshalRejeitaHashSemPrefixo(t *testing.T) {
+	row := []string{
+		"ffx/event/obj_ps3/az/azit0000/azit0000.bin",
+		"azit0000", "", "0", "us", "aaaa0000aaaa0000", "Texto", "false",
+	}
+	if _, err := NewXLSXFormatter().Unmarshal(manualWorkbook(t, row)); err == nil ||
+		!strings.Contains(err.Error(), "prefixo $") {
+		t.Fatalf("esperava erro citando prefixo $, veio: %v", err)
+	}
+}
+
+// Célula de hash vazia é tolerada: artefato feito à mão — o import
+// recalcula o hash pelo texto (usHash).
+func TestUnmarshalToleraHashVazio(t *testing.T) {
+	row := []string{
+		"ffx/event/obj_ps3/az/azit0000/azit0000.bin",
+		"azit0000", "", "0", "us", "", "Texto feito à mão", "false",
+	}
+	got, err := NewXLSXFormatter().Unmarshal(manualWorkbook(t, row))
+	if err != nil {
+		t.Fatalf("hash vazio deveria ser tolerado: %v", err)
+	}
+	entry, ok := got["azit0000"]
+	if !ok || len(entry.Rows) != 1 {
+		t.Fatalf("row sumiu no import de artefato manual: %+v", got)
+	}
+	if got := entry.Rows[0].Text["us"]; got != "Texto feito à mão" {
+		t.Errorf("texto %q != %q", got, "Texto feito à mão")
+	}
+	if got := entry.Rows[0].Hash["us"]; got != "" {
+		t.Errorf("hash deveria voltar vazio para o serviço recalcular, veio %q", got)
 	}
 }

@@ -122,8 +122,8 @@ func TestIsDedupEligibleIgnoresEdgeTags(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		if got := VisibleCore(c.text); got != c.core {
-			t.Errorf("%s: VisibleCore(%q) = %q, esperado %q", c.name, c.text, got, c.core)
+		if got := visibleCore(c.text); got != c.core {
+			t.Errorf("%s: visibleCore(%q) = %q, esperado %q", c.name, c.text, got, c.core)
 			continue
 		}
 		if got := IsDedupEligible(c.text); got != c.want {

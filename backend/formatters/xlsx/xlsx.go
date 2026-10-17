@@ -210,12 +210,13 @@ func (XLSXFormatter) MarshalLangs(c dto.Collection, langs []string) ([]byte, err
 				if h == "" {
 					h = hash.Sum64Hex(text)
 				}
+				ph := hash.Prefix(h)
 
 				// Dedup: no idioma default, textos repetidos viram ref "$hash"
 				value := text
 				if lang == common.DefaultLocalization && !row.Divergent && hash.IsDedupEligible(text) {
 					if _, dup := seen[h]; dup {
-						value = "$" + h
+						value = ph
 					} else {
 						seen[h] = text
 					}
@@ -231,19 +232,19 @@ func (XLSXFormatter) MarshalLangs(c dto.Collection, langs []string) ([]byte, err
 				f.SetCellValue(sheet, fmt.Sprintf("C%d", rowIdx), row.Name)
 				f.SetCellValue(sheet, fmt.Sprintf("D%d", rowIdx), row.Index)
 				f.SetCellValue(sheet, fmt.Sprintf("E%d", rowIdx), lang)
-				f.SetCellValue(sheet, fmt.Sprintf("F%d", rowIdx), h)
+				f.SetCellValue(sheet, fmt.Sprintf("F%d", rowIdx), ph)
 				f.SetCellValue(sheet, fmt.Sprintf("G%d", rowIdx), value)
 				f.SetCellValue(sheet, fmt.Sprintf("H%d", rowIdx), divergent)
 
 				// Alimenta as larguras: TODAS as colunas observam o
-				// conteúdo (runes) — hash pega o hex de 16, divergent o
+				// conteúdo (runes) — hash pega o "$"+hex de 17, divergent o
 				// "true"/"false".
 				widths.observe(colKey, key)
 				widths.observe(colID, id)
 				widths.observe(colName, row.Name)
 				widths.observe(colIndex, strconv.Itoa(row.Index))
 				widths.observe(colLang, lang)
-				widths.observe(colHash, h)
+				widths.observe(colHash, ph)
 				widths.observe(colText, value)
 				widths.observe(colDivergent, divergent)
 
@@ -396,11 +397,11 @@ func (XLSXFormatter) Unmarshal(data []byte) (dto.Collection, error) {
 			continue
 		}
 		lang := rec[4]
-		hashHex := rec[5]
+		hashHex, _ := hash.Strip(rec[5])
 		text := rec[6]
 		divergent := rec[7] == "true"
 
-		if lang == common.DefaultLocalization && !divergent && text != "" && !strings.HasPrefix(text, "$") {
+		if lang == common.DefaultLocalization && !divergent && text != "" && !hash.IsRef(text) {
 			if _, exists := table[hashHex]; !exists {
 				table[hashHex] = text
 			}
@@ -422,7 +423,13 @@ func (XLSXFormatter) Unmarshal(data []byte) (dto.Collection, error) {
 		name := rec[2]
 		indexStr := rec[3]
 		lang := rec[4]
-		hashHex := rec[5]
+		// Polícia estrita do formato: todo hash de artefato tem prefixo $
+		// (a mesma régua do .strings). Célula vazia é tolerada — artefato
+		// feito à mão, o import recalcula pelo texto.
+		hashHex, hasPrefix := hash.Strip(rec[5])
+		if !hasPrefix && hashHex != "" {
+			return nil, fmt.Errorf("hash %q sem prefixo $ (re-exporte o arquivo no formato atual)", rec[5])
+		}
 		text := rec[6]
 		divergent := rec[7] == "true"
 
@@ -431,8 +438,7 @@ func (XLSXFormatter) Unmarshal(data []byte) (dto.Collection, error) {
 		}
 
 		// Resolve referências "$hash"
-		if strings.HasPrefix(text, "$") {
-			refHash := strings.TrimPrefix(text, "$")
+		if refHash, isRef := hash.Strip(text); isRef {
 			if canonical, ok := table[refHash]; ok {
 				text = canonical
 			}
@@ -581,6 +587,7 @@ func marshalNoDedupLangs(c dto.Collection, langs []string) ([]byte, error) {
 				if h == "" {
 					h = hash.Sum64Hex(text)
 				}
+				ph := hash.Prefix(h) // hash no formato de artefato: "$"+hex
 				divergent := "false"
 				if row.Divergent {
 					divergent = "true"
@@ -590,7 +597,7 @@ func marshalNoDedupLangs(c dto.Collection, langs []string) ([]byte, error) {
 				f.SetCellValue(sheet, fmt.Sprintf("C%d", rowIdx), row.Name)
 				f.SetCellValue(sheet, fmt.Sprintf("D%d", rowIdx), row.Index)
 				f.SetCellValue(sheet, fmt.Sprintf("E%d", rowIdx), lang)
-				f.SetCellValue(sheet, fmt.Sprintf("F%d", rowIdx), h)
+				f.SetCellValue(sheet, fmt.Sprintf("F%d", rowIdx), ph)
 				f.SetCellValue(sheet, fmt.Sprintf("G%d", rowIdx), text)
 				f.SetCellValue(sheet, fmt.Sprintf("H%d", rowIdx), divergent)
 				// Mesma régua do MarshalLangs: todas observam o conteúdo.
@@ -599,7 +606,7 @@ func marshalNoDedupLangs(c dto.Collection, langs []string) ([]byte, error) {
 				widths.observe(colName, row.Name)
 				widths.observe(colIndex, strconv.Itoa(row.Index))
 				widths.observe(colLang, lang)
-				widths.observe(colHash, h)
+				widths.observe(colHash, ph)
 				widths.observe(colText, text)
 				widths.observe(colDivergent, divergent)
 				rowIdx++
