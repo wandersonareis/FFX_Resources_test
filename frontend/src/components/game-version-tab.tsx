@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Save } from "lucide-react";
 import { useSelector } from "@tanstack/react-store";
 import { SetUnsavedEdits } from "@/bindings/ffxresources/app";
 import { KIND_LABELS } from "@/lib/ffx/display-names";
@@ -10,21 +9,13 @@ import { useEditDraft } from "@/lib/ffx/edit-draft";
 import { useWailsEvent } from "@/lib/ffx/use-wails-event";
 import { saveAllDrafts } from "@/lib/ffx/save-all";
 import { setActiveFile } from "@/lib/ffx/active-file-store";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { LAYOUT_DEFAULTS_PX } from "@/lib/ffx/layout-storage";
 import { usePersistedLayout } from "@/lib/ffx/use-persisted-layout";
-import { SHORTCUTS, shortcutTip } from "@/lib/ffx/shortcuts";
 import { invalidateTextSearchResults } from "@/lib/ffx/search-store";
 import { warmTextSearch } from "@/lib/ffx/tree-data";
 import {
@@ -33,6 +24,7 @@ import {
 } from "@/components/entry-view/entry-view-store";
 import { ContentTree } from "@/components/entry-view/content-tree";
 import { EntryTable } from "@/components/entry-view/entry-table";
+import { TableBar } from "@/components/entry-view/entry-table/table-bar";
 import { ImageActionDialogs } from "@/components/dialogs/image-action-dialogs";
 import { ImagePanel } from "@/components/entry-view/image-panel";
 import { TranslationDialog } from "@/components/dialogs/translation-dialog";
@@ -126,53 +118,18 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
         <ResizableHandle withHandle />
 
         <ResizablePanel id="main" minSize={300}>
-          <main className="h-full min-w-0 p-2 px-4 overflow-auto">
-            <div className="flex items-center justify-between gap-4">
-              <h3 className="flex gap-2 items-center text-primary text-lg font-malva-medium">
-                {KIND_LABELS[activeKind]}
-                {/* O span volta ao Malva padrão (Regular, família base),
-                    só desanimado. */}
-                {selectedEntry ? (
-                  <span className="opacity-70">
-                    {" "}
-                    · {selectedEntry.label}
-                  </span>
-                ) : null}
-                {progress ? (
-                  <Badge
-                    variant="outline"
-                    className={
-                      progress.translated >= progress.total &&
-                      progress.total > 0
-                        ? "text-success border-success/40"
-                        : "text-muted-foreground"
-                    }
-                  >
-                    {progress.translated}/{progress.total} linhas traduzidas (
-                    {progress.pct}%)
-                  </Badge>
-                ) : null}
-              </h3>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  {/* O botão desabilitado não dispara pointer events, então o
-                      trigger é o span envoltório (padrão Radix p/ disabled). */}
-                  <span className="inline-flex">
-                    <Button
-                      disabled={!hasDirty || saving}
-                      onClick={() => void onSaveAll()}
-                    >
-                      <Save size={18} />
-                      {saving ? "Salvando…" : "Salvar"}
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {shortcutTip(SHORTCUTS.save.label, SHORTCUTS.save.keys)}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-
+          <main className="h-full min-w-0 flex flex-col p-2 px-4">
+            <TableBar
+              kindLabel={KIND_LABELS[activeKind]}
+              entryLabel={selectedEntry?.label ?? null}
+              progress={progress}
+              hasDirty={hasDirty}
+              saving={saving}
+              onSave={() => void onSaveAll()}
+            />
+            {/* Único rolante da aba: a barra está fora do overflow, então só
+                as linhas rolam (o cabeçalho gruda em top-0 desse wrapper). */}
+            <div className="min-h-0 flex-1 overflow-y-auto">
             {selectedEntry ? (
               // images não tem rows: ocupa o lugar da tabela a pré-visualização
               // + ações (extrair/salvar/importar) da textura.
@@ -188,6 +145,7 @@ export function GameVersionTab({ version }: { version: GameVersionId }) {
                 Selecione um arquivo no sidebar.
               </p>
             )}
+            </div>
           </main>
         </ResizablePanel>
       </ResizablePanelGroup>

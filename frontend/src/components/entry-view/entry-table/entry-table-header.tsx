@@ -36,12 +36,19 @@ export function EntryTableHeader({
   };
 
   return (
-    <TableHeader>
+    // sticky nas CÉLULAS (e não só no thead): com border-collapse (preflight
+    // do Tailwind) o Chromium pinta o thead sticky atrás das linhas do corpo,
+    // que passam por cima — th sticky pinta na ordem correta. top-0 é o topo
+    // do rolante da aba (a barra de título/Salvar fica FORA dele, num
+    // componente separado), então o cabeçalho gruda logo embaixo da barra.
+    // z menor que a barra: em qualquer coincidência ela passa por baixo.
+    <TableHeader className="sticky top-0 z-[5]">
       {table.getHeaderGroups().map((headerGroup) => (
         <TableRow key={headerGroup.id}>
           {headerGroup.headers.map((header) => (
             <TableHead
               key={header.id}
+              className="sticky top-0 z-[5] bg-background"
               style={{ width: widthOf(header.column.id) }}
             >
               {header.isPlaceholder ? null : <table.FlexRender header={header} />}

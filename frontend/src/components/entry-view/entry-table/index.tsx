@@ -94,7 +94,11 @@ export function EntryTable({ view }: { view: EntryView }) {
       {/* table-fixed: as larguras vêm do <thead> (definidas no header) em
           vez do conteúdo — é o que garante o "#" travado e o 50/50 entre
           Original e Traduzido, em vez de crescer com o texto de cada linha. */}
-      <Table className="table-fixed">
+      {/* overflow-visible: com overflow-x no wrapper o scrollport vira o
+          próprio container e o <thead> sticky enxergaria ele (que não rola)
+          em vez do painel. O table-fixed mantém as colunas somando 100%, então
+          não há overflow horizontal a conter aqui. */}
+      <Table className="table-fixed" containerClassName="overflow-visible">
         <EntryTableHeader table={table} />
         <EntryTableBody
           table={table}
